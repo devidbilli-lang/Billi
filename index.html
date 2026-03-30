@@ -26,9 +26,9 @@ button:hover{filter:brightness(1.12);}
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
-
+ 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby7Ugdhi1TBPyyo6o0rErJbhf-C3pSHWCod19_7SVU-Zbv9-fmGMpHIbYqp01C1z17E_w/exec";
-
+ 
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" },
   { id:"L2", nome:"Linea 2 - Saldatura",    colore:"#ff6b35", icona:"" },
@@ -36,7 +36,7 @@ const LINEE_DEFAULT = [
   { id:"L4", nome:"Linea 4 - Collaudo",     colore:"#3b82f6", icona:"" },
   { id:"L5", nome:"Linea 5 - Imballaggio",  colore:"#f59e0b", icona:"" },
 ];
-
+ 
 const now     = () => new Date();
 const fmt     = d => d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 const fmtFull = d => d.toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
@@ -46,7 +46,7 @@ const store = {
   get:(k,d)=>{ try{ const v=sessionStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } },
   set:(k,v)=>{ try{ sessionStorage.setItem(k,JSON.stringify(v)); }catch{} }
 };
-
+ 
 // API Sheets
 const api = {
   async config() {
@@ -60,7 +60,7 @@ const api = {
   },
   async reset(){ try{ await fetch(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
 };
-
+ 
 // Hook Sheets
 function useSheets() {
   const [linee,setLinee]         = useState(LINEE_DEFAULT);
@@ -83,7 +83,7 @@ function useSheets() {
   useEffect(()=>{ load(); },[load]);
   return { linee, operatori, skuList, sync, ts, reload:load };
 }
-
+ 
 // Calcola tappe (linea+sku+ms)
 function tappe(s) {
   const fine = s.fine ? new Date(s.fine) : now();
@@ -106,7 +106,7 @@ function tappe(s) {
   }
   return out;
 }
-
+ 
 // Stili
 const S = {
   scr:  {minHeight:"100vh",background:"linear-gradient(135deg,#050a14,#0a1628)"},
@@ -138,7 +138,7 @@ const MS = {
   an: {flex:1,padding:10,background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"},
   cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
 };
-
+ 
 // Suggerimenti operatori
 function SugOp({ val, list, onSel }) {
   if(!val||val.length<2||!list.length) return null;
@@ -156,7 +156,7 @@ function SugOp({ val, list, onSel }) {
     </div>
   );
 }
-
+ 
 // Suggerimenti SKU
 function SugSku({ val, list, onSel }) {
   if(!val||val.length<1||!list||!list.length) return null;
@@ -175,7 +175,7 @@ function SugSku({ val, list, onSel }) {
     </div>
   );
 }
-
+ 
 // Cambio SKU inline (stessa linea)
 function CambioSkuInline({ sess, skuList, onOk, onClose }) {
   const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
@@ -218,7 +218,7 @@ function CambioSkuInline({ sess, skuList, onOk, onClose }) {
     </div>
   );
 }
-
+ 
 // Modal Trasferimento
 function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
   const [dest,setDest]       = useState(null);
@@ -270,7 +270,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
     </div>
   );
 }
-
+ 
 // Riepilogo linea
 function RiepLinea({ sessioni, linee }) {
   const gmap = {};
@@ -295,7 +295,7 @@ function RiepLinea({ sessioni, linee }) {
     </div>
   );
 }
-
+ 
 // Riepilogo SKU
 function RiepSku({ sessioni, linee }) {
   const totMap = {};
@@ -335,7 +335,7 @@ function RiepSku({ sessioni, linee }) {
     </div>
   );
 }
-
+ 
 // CheckIn
 function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, skuList }) {
   const [mode,setMode]           = useState("menu");
@@ -349,12 +349,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
   const [cOp,setCOp]             = useState("");
   const [cSku,setCSku]           = useState("");
   const [opSelezionati,setOpSelezionati] = useState([]);
+ 
   const [oraRef, setOraRef] = useState(now());
   useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
-
+ 
   const sessAtt = k => sessioni.find(s=>s.matricola===k&&!s.fine);
   const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setMode("menu"); };
-
+ 
   if(mode==="result"&&ris){
     const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
@@ -377,10 +378,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
       </div>
     );
   }
-
+ 
   if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"){
     const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
+ 
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
@@ -390,13 +392,17 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
         <div style={S.bod}>
           <div style={S.card}>
             <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":"Trasferimento"}</h2>
+ 
+            {/* Cerca operatore */}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Cerca operatore</label>
-              <input style={S.inp} placeholder="Nome o cognome..." value={mats} onChange={e=>{setMats(e.target.value.toUpperCase());setErr("");}}/>
+              <input style={S.inp} placeholder="Nome o cognome..." value={mats}
+                onChange={e=>{setMats(e.target.value.toUpperCase());setErr("");}}/>
               {mats.length>=2&&(
                 <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                   {sessioni.filter(s=>!s.fine&&(s.nome.toUpperCase().includes(mats)||s.cognome.toUpperCase().includes(mats)||s.matricola.includes(mats))).slice(0,4).map(s=>(
-                    <div key={s.id} onClick={()=>setMats(s.matricola)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center"}}
+                    <div key={s.id} onClick={()=>setMats(s.matricola)}
+                      style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <span style={{fontSize:13,color:"#94a3b8"}}>{s.nome} {s.cognome}</span>
                       <code style={S.sku}>{s.skuCorrente||s.sku}</code>
@@ -406,15 +412,20 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
                 </div>
               )}
             </div>
+ 
+            {/* Info sessione trovata */}
             {sf&&(
               <div style={S.sc}>
                 <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
                 <div style={{fontWeight:700,fontSize:16,color:"#f1f5f9",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
                 <code style={S.sku}>{sf.skuCorrente||sf.sku}</code>
-                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.icona} {la.nome}</span>
+                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.nome}</span>
                 <div style={{fontSize:12,color:"#64748b",marginTop:8}}>{fmtFull(new Date(sf.inizio))}</div>
               </div>
             )}
+ 
+ 
+ 
             {err&&<div style={S.err}>{err}</div>}
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{onCheckout(sf.id);setRis({tipo:"checkout",sess:sf});setMode("result");}}>Fine Turno</button>}
             {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{onTrasf(sf.id,ld,ns);setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result");}} onClose={reset}/>}
@@ -425,7 +436,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
       </div>
     );
   }
-
+ 
   if(mode==="checkin"){
     return (
       <div style={S.scr}>
@@ -436,7 +447,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
         <div style={S.bod}>
           <div style={S.card}>
             <h2 style={S.cT}>Registra Presenza</h2>
-
+ 
             {/* ── Selezione operatori multipla ── */}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Operatori ({opSelezionati.length} selezionati)</label>
@@ -489,7 +500,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
                 </div>
               )}
             </div>
-
+ 
             {/* ── SKU ── */}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>SKU Articolo</label>
@@ -501,7 +512,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
               )}
               <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b44"}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
             </div>
-
+ 
             {/* ── Linea ── */}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Linea di Produzione</label>
@@ -515,7 +526,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
                 ))}
               </div>
             </div>
-
+ 
             {err&&<div style={S.err}>{err}</div>}
             <button style={S.bCI} onClick={()=>{
               setErr("");
@@ -545,7 +556,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
       </div>
     );
   }
-
+ 
   return (
     <div style={S.scr}>
       <header style={S.hdr}>
@@ -569,38 +580,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
     </div>
   );
 }
-
+ 
 // Dashboard
-function ModalPassword({ linea, onOk, onClose }) {
-  const [pwd, setPwd] = useState("");
-  const [err, setErr] = useState("");
-  return (
-    <div style={MS.ov}>
-      <div style={{...MS.md, maxWidth:360}}>
-        <div style={MS.mh}>
-          <span style={MS.mt}>🔒 Password Linea</span>
-          <button style={MS.mx} onClick={onClose}>X</button>
-        </div>
-        <div style={{padding:22}}>
-          <div style={{background:"#050a14",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
-            <div style={{fontSize:12,color:"#64748b",marginBottom:4}}>Linea protetta</div>
-            <div style={{fontWeight:700,color:linea.colore}}>{linea.id} — {linea.nome}</div>
-          </div>
-          <label style={S.lbl}>Password</label>
-          <input type="password" style={S.inp} placeholder="Inserisci password..." autoFocus
-            value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}}
-            onKeyDown={e=>{ if(e.key==="Enter"){ if(pwd===linea.password){onOk();}else{setErr("Password errata.");setPwd("");} } }}/>
-          {err&&<div style={{...S.err,marginTop:8}}>{err}</div>}
-          <div style={{display:"flex",gap:10,marginTop:16}}>
-            <button style={MS.an} onClick={onClose}>Annulla</button>
-            <button style={MS.cf} onClick={()=>{ if(pwd===linea.password){onOk();}else{setErr("Password errata.");setPwd("");} }}>Accedi</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, onCO, onTr }) {
   const [fL,setFL]        = useState("ALL");
   const [fS,setFS]        = useState("ALL");
@@ -608,34 +589,24 @@ function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, on
   const [mod,setMod]      = useState(null);
   const [tab,setTab]      = useState("sessioni");
   const [,setTk]          = useState(0);
-  const [sbloccate,setSbloccate] = useState({});   // { lineaId: true }
-  const [modPwd,setModPwd]       = useState(null); // linea che richiede pwd
-  const [pendingAction,setPending] = useState(null); // azione dopo sblocco
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
-
-  // Verifica se una linea è accessibile (no password o già sbloccata)
-  const isAccessibile = (l) => !l.password || sbloccate[l.id];
-
-  // Esegui azione su linea — chiede password se necessario
-  const conPassword = (linea, azione) => {
-    if(isAccessibile(linea)){ azione(); }
-    else { setPending(()=>azione); setModPwd(linea); }
-  };
-
+ 
+ 
+ 
   const fil = sessioni.filter(s=>{
     const ml=fL==="ALL"||s.lineaCorrente===fL;
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
     const q=srch.toLowerCase();
     return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q));
   });
-
+ 
   const att=sessioni.filter(s=>!s.fine).length;
   const chi=sessioni.filter(s=>!!s.fine).length;
-
+ 
   return (
     <div style={{minHeight:"100vh",background:"#050a14",paddingBottom:60}}>
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);}} onClose={()=>setMod(null)}/>}
-      {modPwd&&<ModalPassword linea={modPwd} onClose={()=>{setModPwd(null);setPending(null);}} onOk={()=>{ setSbloccate(p=>({...p,[modPwd.id]:true})); if(pendingAction){pendingAction();} setModPwd(null);setPending(null); }}/>}
+ 
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
           <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{fontSize:11,fontWeight:800,color:"#e879f9",letterSpacing:3,textTransform:"uppercase"}}>Omega</span><span style={{display:"flex",alignItems:"center",gap:8,fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack <span style={{fontSize:10,background:"#00d4aa",color:"#050a14",padding:"2px 8px",borderRadius:4,fontWeight:800,letterSpacing:2}}>ADMIN</span></span></div>
@@ -645,7 +616,7 @@ function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, on
           <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{if(confirm("Reset?"))onReset();}}>Reset</button>
         </div>
       </header>
-
+ 
       <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto"}}>
         {[["Tot",sessioni.length,"#00d4aa"],["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
           <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:14,textAlign:"center"}}>
@@ -655,17 +626,15 @@ function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, on
         ))}
         {linee.map(l=>{
           const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
-          const locked=l.password&&!sbloccate[l.id];
           return (
             <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#0a1628",border:"1px solid #1e3a5f",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
-              {locked&&<span style={{position:"absolute",top:6,right:8,fontSize:12}}>🔒</span>}
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
               <div style={{fontSize:11,color:"#475569",marginTop:2,marginBottom:6}}>{l.id}</div>
               {nAtt>0&&(
-                <button onClick={()=>conPassword(l,()=>{
+                <button onClick={()=>{
                   if(confirm("Chiudere il turno di tutti gli operatori su "+l.id+"?"))
                     sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).forEach(s=>onCO(s.id));
-                })} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
+                }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
               )}
@@ -673,13 +642,13 @@ function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, on
           );
         })}
       </div>
-
+ 
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
         {[["sessioni","Sessioni"],["linee","Min. Linea"],["sku","Min. SKU"]].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{padding:"7px 16px",border:"1px solid "+(tab===t?"#00d4aa":"#1e3a5f"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#64748b"}}>{l}</button>
         ))}
       </div>
-
+ 
       {tab==="sessioni"&&(
         <div style={{padding:"0 24px 16px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
           <input style={{flex:"1 1 200px",padding:"9px 14px",background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,color:"#e2e8f0",fontSize:14,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
@@ -696,7 +665,7 @@ function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, on
           </div>
         </div>
       )}
-
+ 
       {tab==="sessioni"&&(
         <div style={{margin:"0 24px",background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,overflow:"auto"}}>
           {fil.length===0?(
@@ -739,47 +708,16 @@ function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, on
     </div>
   );
 }
-
+ 
 // App Root
-const ADMIN_PWD = "admin2024";
-
-function LoginDashboard({ linee, onLogin }) {
-  const [pwd,setPwd]   = useState("");
-  const [err,setErr]   = useState("");
-
-  const tenta = () => {
-    if(pwd === ADMIN_PWD){ onLogin("admin", null); return; }
-    const l = linee.find(l => l.password && l.password === pwd);
-    if(l){ onLogin("linea", l); return; }
-    setErr("Password non riconosciuta."); setPwd("");
-  };
-
-  return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
-      <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",animation:"fadeUp 0.4s ease",textAlign:"center"}}>
-        <div style={{fontSize:28,fontWeight:800,color:"#e879f9",letterSpacing:2,marginBottom:4}}>Omega</div>
-        <div style={{fontSize:16,fontWeight:700,color:"#00d4aa",marginBottom:4}}>ProductionTrack</div>
-        <div style={{fontSize:11,color:"#475569",letterSpacing:2,textTransform:"uppercase",marginBottom:28}}>Accesso Dashboard</div>
-        <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Inserisci la password admin o quella della tua linea</div>
-        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12}}
-          placeholder="••••••••" value={pwd}
-          onChange={e=>{setPwd(e.target.value);setErr("");}}
-          onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
-        {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
-        <button style={S.bCI} onClick={tenta}>Accedi</button>
-      </div>
-    </div>
-  );
-}
-
 function App() {
   const [view,setView]       = useState("checkin");
   const [sess,setSess]       = useState(()=>store.get("pt_v4",[]) );
-  const [accesso,setAccesso] = useState(null); // null | { ruolo:"admin"|"linea", linea: obj|null }
+ 
   const { linee, operatori, skuList, sync, ts, reload } = useSheets();
-
+ 
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
-
+ 
   const add = s => {
     setSess(p=>[s,...p]);
     api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku});
@@ -791,37 +729,24 @@ function App() {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
   };
   const rst = () => { setSess([]); api.reset(); };
-
+ 
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
-
-  // Sessioni filtrate in base al ruolo
-  const sessVisibili = accesso?.ruolo==="linea"
-    ? sess.filter(s=>s.lineaCorrente===accesso.linea.id||s.lineaInizio===accesso.linea.id)
-    : sess;
-
-  // Se sta cercando di accedere alla dashboard, mostra login
-  if(view==="dashboard"&&!accesso){
-    return <LoginDashboard linee={linee} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); }}/>;
-  }
-
+ 
+ 
+ 
   return (
     <div style={{minHeight:"100vh",background:"#050a14",color:"#e2e8f0"}}>
       <div style={{background:"#0a1628",borderBottom:"1px solid #1e3a5f",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
         <span style={{color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
         {sync==="ok"&&<span style={{color:"#475569"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
         {(sync==="ok"||sync==="errore")&&<button onClick={reload} style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>Ricarica</button>}
-        {accesso&&<button onClick={()=>{setAccesso(null);setView("checkin");}} style={{background:"transparent",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif",marginLeft:"auto"}}>Esci</button>}
       </div>
       {view!=="checkin"&&(
         <div style={{display:"flex",gap:8,padding:"12px 20px",background:"#0a1628",borderBottom:"1px solid #1e3a5f",alignItems:"center"}}>
           {[["dashboard","Dashboard"],["checkin","Check-in"]].map(([v,l])=>(
-            <button key={v} onClick={()=>{ if(v==="dashboard"&&!accesso)return; setView(v); }} style={{padding:"6px 16px",background:view===v?"#00d4aa22":"transparent",border:"1px solid "+(view===v?"#00d4aa":"#1e3a5f"),borderRadius:6,color:view===v?"#00d4aa":"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>{l}</button>
+            <button key={v} onClick={()=>setView(v)} style={{padding:"6px 16px",background:view===v?"#00d4aa22":"transparent",border:"1px solid "+(view===v?"#00d4aa":"#1e3a5f"),borderRadius:6,color:view===v?"#00d4aa":"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>{l}</button>
           ))}
-          {accesso&&(
-            <span style={{marginLeft:8,fontSize:11,color:accesso.ruolo==="admin"?"#00d4aa":"#e879f9",fontWeight:700}}>
-              {accesso.ruolo==="admin"?"👑 Admin":"🔒 "+accesso.linea.id+" – "+accesso.linea.nome}
-            </span>
-          )}
+ 
         </div>
       )}
       {view==="checkin"&&(
@@ -832,17 +757,19 @@ function App() {
           </div>
         </div>
       )}
-      {view==="dashboard"&&accesso&&(
-        <Dashboard sessioni={sessVisibili} linee={linee} skuList={skuList}
-          isAdmin={accesso.ruolo==="admin"}
-          lineaFiltro={accesso.ruolo==="linea"?accesso.linea:null}
+      {view==="dashboard"&&(
+        <Dashboard sessioni={sess} linee={linee} skuList={skuList}
+          isAdmin={true}
+          lineaFiltro={null}
           onReset={rst} onCO={co} onTr={tr}/>
       )}
     </div>
   );
 }
-
+ 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
+</body>
+</html>
 </body>
 </html>
