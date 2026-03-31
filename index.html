@@ -27,7 +27,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
  
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby7Ugdhi1TBPyyo6o0rErJbhf-C3pSHWCod19_7SVU-Zbv9-fmGMpHIbYqp01C1z17E_w/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw44yxOPQu-pQcxxOY9U1-Qi31AcIC1XYH7DjbG3Vs28HYk1HQtZzHYG-34hcRE055F0A/exec";
  
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" },
@@ -711,12 +711,33 @@ function Dashboard({ sessioni, linee, skuList, isAdmin, lineaFiltro, onReset, on
  
 // App Root
 function App() {
-  const [view,setView]       = useState("checkin");
-  const [sess,setSess]       = useState(()=>store.get("pt_v4",[]) );
- 
+  const [view,setView]             = useState("checkin");
+  const [sess,setSess]             = useState(()=>store.get("pt_v4",[]) );
+  const [sessSheets,setSessSheets] = useState([]);
+  const [dashSync,setDashSync]     = useState("caricamento");
+  const [ultimoSync2,setUltimoSync2] = useState(null);
   const { linee, operatori, skuList, sync, ts, reload } = useSheets();
  
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
+ 
+  // Carica sessioni da Sheets
+  const caricaSessioni = useCallback(async()=>{
+    setDashSync("caricamento");
+    try {
+      const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+      const j = await r.json();
+      if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni); setDashSync("ok"); setUltimoSync2(new Date()); }
+      else setDashSync("errore");
+    } catch(e){ setDashSync("errore"); }
+  },[]);
+ 
+  // Aggiorna ogni minuto quando dashboard è visibile
+  useEffect(()=>{
+    if(view!=="dashboard") return;
+    caricaSessioni();
+    const t = setInterval(caricaSessioni, 60000);
+    return ()=>clearInterval(t);
+  },[view,caricaSessioni]);
  
   const add = s => {
     setSess(p=>[s,...p]);
@@ -724,15 +745,16 @@ function App() {
   };
   const co = id => {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
+    setTimeout(caricaSessioni,3000);
   };
   const tr = (id,dest,nSku) => {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
+    setTimeout(caricaSessioni,3000);
   };
-  const rst = () => { setSess([]); api.reset(); };
+  const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,3000); };
  
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
- 
- 
+  const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
  
   return (
     <div style={{minHeight:"100vh",background:"#050a14",color:"#e2e8f0"}}>
@@ -746,7 +768,13 @@ function App() {
           {[["dashboard","Dashboard"],["checkin","Check-in"]].map(([v,l])=>(
             <button key={v} onClick={()=>setView(v)} style={{padding:"6px 16px",background:view===v?"#00d4aa22":"transparent",border:"1px solid "+(view===v?"#00d4aa":"#1e3a5f"),borderRadius:6,color:view===v?"#00d4aa":"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>{l}</button>
           ))}
- 
+          {view==="dashboard"&&(
+            <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:11,color:dashCfg.c,fontWeight:700}}>{dashCfg.t}</span>
+              {ultimoSync2&&<span style={{fontSize:10,color:"#475569"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
+              <button onClick={caricaSessioni} style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>↻</button>
+            </span>
+          )}
         </div>
       )}
       {view==="checkin"&&(
@@ -758,9 +786,8 @@ function App() {
         </div>
       )}
       {view==="dashboard"&&(
-        <Dashboard sessioni={sess} linee={linee} skuList={skuList}
-          isAdmin={true}
-          lineaFiltro={null}
+        <Dashboard sessioni={sessSheets} linee={linee} skuList={skuList}
+          isAdmin={true} lineaFiltro={null}
           onReset={rst} onCO={co} onTr={tr}/>
       )}
     </div>
