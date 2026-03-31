@@ -476,7 +476,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"){
     const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
-    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="transfer"||mode==="cambiosku");
+    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"); // transfer: password gestita sulla linea DESTINAZIONE nel modal
     const verificaPwd = () => {
       if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
       else { setErrPwd("Password errata."); setPwdLinea(""); }
@@ -555,7 +555,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result");
             }}>Fine Turno</button>}
-            {mode==="transfer"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{
+            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{
               const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){
                 // Invia evento direttamente a Sheets
