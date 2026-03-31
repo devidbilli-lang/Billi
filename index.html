@@ -312,21 +312,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
             ))}
           </div>
 
-          {/* Password linea destinazione */}
-          {dest&&lineaDest&&lineaDest.password&&(
-            <div style={{background:"#050a14",border:"1px solid #f59e0b44",borderRadius:10,padding:14,marginBottom:16}}>
-              <div style={{fontSize:12,color:"#f59e0b",fontWeight:600,marginBottom:8}}>
-                🔒 {lineaDest.nome} richiede la password
-              </div>
-              <input type="password" style={{...S.inp,borderColor:"#f59e0b44"}}
-                placeholder="Password linea destinazione..."
-                value={pwd} onChange={e=>{setPwd(e.target.value);setErrPwd("");}}
-                onKeyDown={e=>e.key==="Enter"&&conferma()}/>
-              {errPwd&&<div style={{...S.err,marginTop:8}}>{errPwd}</div>}
-            </div>
-          )}
-
-          {/* Cambio SKU */}
+          {/* Cambio SKU — prima della password */}
           <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
             <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94a3b8"}}>
               <input type="checkbox" checked={chSku} onChange={e=>setChSku(e.target.checked)} style={{accentColor:"#00d4aa",width:16,height:16}}/>
@@ -341,6 +327,20 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
               </div>
             )}
           </div>
+
+          {/* Password linea destinazione */}
+          {dest&&lineaDest&&lineaDest.password&&(
+            <div style={{background:"#050a14",border:"1px solid #f59e0b44",borderRadius:10,padding:14,marginBottom:16}}>
+              <div style={{fontSize:12,color:"#f59e0b",fontWeight:600,marginBottom:8}}>
+                🔒 {lineaDest.nome} richiede la password
+              </div>
+              <input type="password" style={{...S.inp,borderColor:"#f59e0b44"}}
+                placeholder="Password linea destinazione..."
+                value={pwd} onChange={e=>{setPwd(e.target.value);setErrPwd("");}}
+                onKeyDown={e=>e.key==="Enter"&&conferma()}/>
+              {errPwd&&<div style={{...S.err,marginTop:8}}>{errPwd}</div>}
+            </div>
+          )}
 
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
