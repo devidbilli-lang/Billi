@@ -212,7 +212,7 @@ function CambioSkuInline({ sess, skuList, onOk, onClose }) {
           <label style={S.lbl}>Nuovo SKU</label>
           {skuList.length>0&&(
             <div style={{marginBottom:8}}>
-              <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca SKU o descrizione..."
+              <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..."
                 value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
               <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");setErr("");}}/>
             </div>
@@ -597,7 +597,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <label style={S.lbl}>Operatori ({opSelezionati.length} selezionati)</label>
               {operatori.length>0&&(
                 <div style={{marginBottom:8}}>
-                  <input style={{...S.inp,borderColor:"#22c55e44"}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
+                  <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
                   {cOp.length>=2&&(
                     <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                       {operatori.filter(o=>o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase())).slice(0,6).map(o=>{
@@ -650,11 +650,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <label style={S.lbl}>SKU Articolo</label>
               {skuList.length>0&&(
                 <div style={{marginBottom:8}}>
-                  <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+                  <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
                   <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
                 </div>
               )}
-              <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b44"}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
+              <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b",borderWidth:2}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
             </div>
 
             {/* ── Linea ── */}
