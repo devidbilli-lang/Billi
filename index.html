@@ -1017,10 +1017,38 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
 }
 
 // App Root
+function LoginDashboard({ linee, onLogin }) {
+  const [pwd,setPwd] = useState("");
+  const [err,setErr] = useState("");
+  const tenta = () => {
+    if(pwd===ADMIN_PWD){ onLogin("admin",null); return; }
+    const l=linee.find(l=>l.password&&l.password===pwd);
+    if(l){ onLogin("linea",l); return; }
+    setErr("Password non riconosciuta."); setPwd("");
+  };
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
+      <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
+        <img src="logo.png" alt="Omega" style={{width:64,height:64,objectFit:"contain",marginBottom:12}}/>
+        <div style={{fontSize:26,fontWeight:800,color:"#e879f9",letterSpacing:2,marginBottom:4}}>Omega</div>
+        <div style={{fontSize:15,fontWeight:700,color:"#00d4aa",marginBottom:20}}>ProductionTrack — Dashboard</div>
+        <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Password admin o password della tua linea</div>
+        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#e879f9",borderWidth:2}}
+          placeholder="••••••••" value={pwd}
+          onChange={e=>{setPwd(e.target.value);setErr("");}}
+          onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
+        {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
+        <button style={S.bCI} onClick={tenta}>Accedi</button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [view,setView]             = useState("checkin");
   const [sess,setSess]             = useState(()=>store.get("pt_v4",[]) );
   const [sessSheets,setSessSheets] = useState([]);
+  const [accesso,setAccesso]       = useState(null);
   const [dashSync,setDashSync]     = useState("caricamento");
   const [ultimoSync2,setUltimoSync2] = useState(null);
   const { linee, operatori, skuList, sync, ts, reload } = useSheets();
