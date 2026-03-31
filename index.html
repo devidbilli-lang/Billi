@@ -497,14 +497,14 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {/* Cerca operatore */}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Cerca operatore</label>
-              <input style={S.inp} placeholder="Nome o cognome..." value={mats}
-                onChange={e=>{setMats(e.target.value.toUpperCase());setErr("");setPwdOk(false);setPwdLinea("");setErrPwd("");}}/>
+              <input style={S.inp} placeholder="Nome o cognome..." value={matsNome||mats}
+                onChange={e=>{const v=e.target.value; setMatsNome(v); setMats(v.toUpperCase()); setErr(""); setPwdOk(false); setPwdLinea(""); setErrPwd("");}}/>
               {mats.length>=2&&(
                 <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                   {[...sessioni,...(sessSheets||[])].filter((s,i,arr)=>
                     (!s.fine||s.fine===""||s.fine==null)&&
                     (operatori.length===0||matricoleAbilitate.has(s.matricola))&&
-                    (s.nome.toUpperCase().includes(mats)||s.cognome.toUpperCase().includes(mats)||s.matricola.includes(mats))&&
+                    (s.nome.toUpperCase().includes(mats)||s.cognome.toUpperCase().includes(mats)||s.matricola.includes(mats)||(matsNome&&(s.nome+" "+s.cognome).toUpperCase().includes(matsNome.toUpperCase())))&&
                     arr.findIndex(x=>x.id===s.id)===i
                   ).slice(0,4).map(s=>(
                     <div key={s.id} onClick={()=>{setMats(s.matricola);setMatsNome(s.nome+" "+s.cognome);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
