@@ -753,7 +753,7 @@ function TabOperatori({ operatori, sessioni, linee }) {
   );
 }
  
-function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, onReset, onCO, onTr }) {
+function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni }) {
   const [fL,setFL]        = useState("ALL");
   const [fS,setFS]        = useState("ALL");
   const [srch,setSrch]    = useState("");
@@ -803,8 +803,11 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
         onClose={()=>setModCO(null)}
         onOk={(pwd,setErr)=>{
           const l=getLinea(modCO.lineaCorrente,linee);
-          if(!l.password||pwd===l.password){ onCO(modCO.id); setModCO(null); }
-          else setErr("Password errata.");
+          if(!l.password||pwd===l.password){
+            if(onCOSheets) onCOSheets(modCO); else onCO(modCO.id);
+            if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+            setModCO(null);
+          } else setErr("Password errata.");
         }}/>}
  
       {/* Modal password Trasferimento da Dashboard */}
@@ -822,7 +825,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
-          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{if(confirm("Reset?"))onReset();}}>Reset</button>
+          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>setModReset(true)}>Reset</button>
         </div>
       </header>
  
@@ -844,7 +847,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
                   // sessioni da Sheets: fine può essere null, "", o "null"
                   const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null));
                   if(attiveLinea.length===0) return;
-                  const esegui = () => attiveLinea.forEach(s=>onCO(s.id));
+                  const esegui = () => {
+                    attiveLinea.forEach(s=>{ onCOSheets ? onCOSheets(s) : onCO(s.id); });
+                    if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, 3000);
+                  };
                   if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
                   setModFineTutti({linea:l, azione:esegui});
                 }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
@@ -961,6 +967,10 @@ function App() {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
     setTimeout(caricaSessioni,3000);
   };
+  // Chiude una sessione che viene da Sheets (non in sess locale)
+  const coFromSheets = s => {
+    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
+  };
   const tr = (id,dest,nSku) => {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     setTimeout(caricaSessioni,3000);
@@ -1002,7 +1012,7 @@ function App() {
       {view==="dashboard"&&(
         <Dashboard sessioni={sessSheets} linee={linee} skuList={skuList} operatori={operatori}
           isAdmin={true} lineaFiltro={null}
-          onReset={rst} onCO={co} onTr={tr}/>
+          onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr} onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}/>
       )}
     </div>
   );
