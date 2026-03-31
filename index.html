@@ -1077,8 +1077,16 @@ function App() {
       {view!=="checkin"&&(
         <div style={{display:"flex",gap:8,padding:"12px 20px",background:"#0a1628",borderBottom:"1px solid #1e3a5f",alignItems:"center"}}>
           {[["dashboard","Dashboard"],["checkin","Check-in"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setView(v)} style={{padding:"6px 16px",background:view===v?"#00d4aa22":"transparent",border:"1px solid "+(view===v?"#00d4aa":"#1e3a5f"),borderRadius:6,color:view===v?"#00d4aa":"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>{l}</button>
+            <button key={v} onClick={()=>{ if(v==="dashboard"&&!accesso){setAccesso(null);} setView(v); }} style={{padding:"6px 16px",background:view===v?"#00d4aa22":"transparent",border:"1px solid "+(view===v?"#00d4aa":"#1e3a5f"),borderRadius:6,color:view===v?"#00d4aa":"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>{l}</button>
           ))}
+          {view==="dashboard"&&accesso&&(
+            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:11,fontWeight:700,color:accesso.ruolo==="admin"?"#00d4aa":"#e879f9"}}>
+                {accesso.ruolo==="admin"?"👑 Admin":"🔒 "+accesso.linea.nome}
+              </span>
+              <button onClick={()=>{setAccesso(null);setView("checkin");}} style={{background:"transparent",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontSize:11,padding:"2px 10px",fontFamily:"'Montserrat',sans-serif"}}>Esci</button>
+            </div>
+          )}
           {view==="dashboard"&&(
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:11,color:dashCfg.c,fontWeight:700}}>{dashCfg.t}</span>
@@ -1092,14 +1100,23 @@ function App() {
         <div>
           <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList}/>
           <div style={{display:"flex",justifyContent:"center",padding:16}}>
-            <button style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#475569",fontSize:12,padding:"8px 20px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setView("dashboard")}>Dashboard</button>
+            <button style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#475569",fontSize:12,padding:"8px 20px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{setAccesso(null);setView("dashboard");}}>Dashboard</button>
           </div>
         </div>
       )}
-      {view==="dashboard"&&(
-        <Dashboard sessioni={sessSheets} linee={linee} skuList={skuList} operatori={operatori}
-          isAdmin={true} lineaFiltro={null}
-          onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr} onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}/>
+      {view==="dashboard"&&!accesso&&(
+        <LoginDashboard linee={linee} onLogin={(ruolo,linea)=>setAccesso({ruolo,linea})}/>
+      )}
+      {view==="dashboard"&&accesso&&(
+        <Dashboard
+          sessioni={accesso.ruolo==="linea"
+            ? sessSheets.filter(s=>s.lineaCorrente===accesso.linea.id||s.lineaInizio===accesso.linea.id)
+            : sessSheets}
+          linee={linee} skuList={skuList} operatori={operatori}
+          isAdmin={accesso.ruolo==="admin"}
+          lineaFiltro={accesso.ruolo==="linea"?accesso.linea:null}
+          onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr}
+          onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}/>
       )}
     </div>
   );
