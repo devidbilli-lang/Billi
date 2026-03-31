@@ -263,49 +263,87 @@ function ModalPwd({ titolo, colore, onOk, onClose }) {
 
 // Modal Trasferimento
 function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
-  const [dest,setDest]       = useState(null);
-  const [chSku,setChSku]     = useState(false);
-  const [nSku,setNSku]       = useState("");
-  const [cSku,setCSku]       = useState("");
+  const [dest,setDest]   = useState(null);
+  const [chSku,setChSku] = useState(false);
+  const [nSku,setNSku]   = useState("");
+  const [cSku,setCSku]   = useState("");
+  const [pwd,setPwd]     = useState("");
+  const [errPwd,setErrPwd] = useState("");
+  const [fase,setFase]   = useState("scelta"); // "scelta" | "password"
   const la = getLinea(sess.lineaCorrente,linee);
+  const lineaDest = dest ? getLinea(dest,linee) : null;
+
+  const conferma = () => {
+    // Se la linea destinazione ha password, chiedi prima
+    if(lineaDest && lineaDest.password) {
+      if(pwd !== lineaDest.password){ setErrPwd("Password errata."); setPwd(""); return; }
+    }
+    onOk(dest, chSku&&nSku?nSku:null);
+  };
+
   return (
     <div style={MS.ov}>
       <div style={MS.md}>
         <div style={MS.mh}><span style={MS.mt}>Trasferimento</span><button style={MS.mx} onClick={onClose}>X</button></div>
         <div style={{padding:22,maxHeight:"80vh",overflowY:"auto"}}>
+
+          {/* Info operatore */}
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
-            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
+            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id} — {la.nome}</span>
           </div>
+
+          {/* Selezione linea destinazione */}
           <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Linea destinazione</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
             {linee.filter(l=>l.id!==sess.lineaCorrente).map(l=>(
-              <button key={l.id} onClick={()=>setDest(l.id)}
-                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"10px 6px",border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:dest===l.id?(l.colore+"22"):"transparent",color:dest===l.id?l.colore:"#64748b",fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
-                <span style={{fontSize:18}}>{l.icona}</span>
-                <span style={{fontWeight:700,fontSize:12}}>{l.id}</span>
-                <span style={{fontSize:10,color:"#475569"}}>{l.nome.split("-")[1]?.trim()||l.nome}</span>
+              <button key={l.id} onClick={()=>{setDest(l.id);setPwd("");setErrPwd("");}}
+                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",
+                  border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",
+                  background:dest===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",
+                  boxShadow:dest===l.id?("0 0 16px "+l.colore+"44"):"none",
+                  fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
+                <span style={{fontSize:13,fontWeight:700,color:dest===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
+                <span style={{fontSize:10,color:dest===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.nome}</span>
+                {l.password&&<span style={{fontSize:9,color:"#f59e0b",marginTop:2}}>🔒 con password</span>}
               </button>
             ))}
           </div>
+
+          {/* Password linea destinazione */}
+          {dest&&lineaDest&&lineaDest.password&&(
+            <div style={{background:"#050a14",border:"1px solid #f59e0b44",borderRadius:10,padding:14,marginBottom:16}}>
+              <div style={{fontSize:12,color:"#f59e0b",fontWeight:600,marginBottom:8}}>
+                🔒 {lineaDest.nome} richiede la password
+              </div>
+              <input type="password" style={{...S.inp,borderColor:"#f59e0b44"}}
+                placeholder="Password linea destinazione..."
+                value={pwd} onChange={e=>{setPwd(e.target.value);setErrPwd("");}}
+                onKeyDown={e=>e.key==="Enter"&&conferma()}/>
+              {errPwd&&<div style={{...S.err,marginTop:8}}>{errPwd}</div>}
+            </div>
+          )}
+
+          {/* Cambio SKU */}
           <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
             <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94a3b8"}}>
               <input type="checkbox" checked={chSku} onChange={e=>setChSku(e.target.checked)} style={{accentColor:"#00d4aa",width:16,height:16}}/>
               Cambia anche lo SKU articolo
             </label>
-            {chSku && (
+            {chSku&&(
               <div style={{marginTop:10}}>
                 <label style={S.lbl}>Cerca nuovo SKU</label>
                 <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca SKU..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
-                <SugSku val={cSku} list={skuList} onSel={s=>{ setNSku(s.sku); setCSku(""); }}/>
+                <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");}}/>
                 <input style={{...S.inp,marginTop:8,fontFamily:"monospace"}} placeholder="SKU selezionato" value={nSku} onChange={e=>setNSku(e.target.value.toUpperCase())}/>
               </div>
             )}
           </div>
+
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
-            <button style={{...MS.cf,opacity:dest?1:0.4}} disabled={!dest} onClick={()=>dest&&onOk(dest,chSku&&nSku?nSku:null)}>Conferma</button>
+            <button style={{...MS.cf,opacity:dest?1:0.4}} disabled={!dest} onClick={conferma}>Conferma</button>
           </div>
         </div>
       </div>
