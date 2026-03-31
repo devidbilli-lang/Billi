@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Omega – ProductionTrack</title>
+<link rel="icon" type="image/png" href="logo.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -485,7 +486,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,marginBottom:2}}>Omega</div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":"Trasferimento"}</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:2}}><img src="logo.png" alt="Omega" style={{width:36,height:36,objectFit:"contain"}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1}}>Omega</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":"Trasferimento"}</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -585,7 +586,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,marginBottom:2}}>Omega</div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:2}}><img src="logo.png" alt="Omega" style={{width:36,height:36,objectFit:"contain"}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1}}>Omega</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -704,7 +705,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   return (
     <div style={S.scr}>
       <header style={S.hdr}>
-        <div style={S.logo}><div><div style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,marginBottom:2}}>Omega</div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
+        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:2}}><img src="logo.png" alt="Omega" style={{width:36,height:36,objectFit:"contain"}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1}}>Omega</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
         <div style={S.ora}>{fmt(oraRef)}</div>
       </header>
       <div style={S.bod}>
@@ -907,7 +908,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
 
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{fontSize:11,fontWeight:800,color:"#e879f9",letterSpacing:3,textTransform:"uppercase"}}>Omega</span><span style={{display:"flex",alignItems:"center",gap:8,fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
+          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><img src="logo.png" alt="Omega" style={{width:30,height:30,objectFit:"contain"}}/><span style={{fontSize:11,fontWeight:800,color:"#e879f9",letterSpacing:3,textTransform:"uppercase"}}>Omega</span></span><span style={{display:"flex",alignItems:"center",gap:8,fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
