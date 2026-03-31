@@ -917,7 +917,11 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
       </header>
 
       <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto"}}>
-        {[["Tot",sessioni.length,"#00d4aa"],["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
+        <div style={{flex:"0 0 auto",minWidth:90,background:"#f59e0b",border:"1px solid #f59e0b",borderRadius:12,padding:14,textAlign:"center"}}>
+          <div style={{fontSize:28,fontWeight:800,color:"#000",lineHeight:1}}>{sessioni.length}</div>
+          <div style={{fontSize:11,color:"#000",marginTop:4,fontWeight:700}}>Totale</div>
+        </div>
+        {[["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
           <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:14,textAlign:"center"}}>
             <div style={{fontSize:28,fontWeight:800,color:c,lineHeight:1}}>{n}</div>
             <div style={{fontSize:11,color:"#475569",marginTop:4}}>{l}</div>
