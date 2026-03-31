@@ -28,6 +28,7 @@ button:hover{filter:brightness(1.12);}
 const { useState, useEffect, useCallback } = React;
  
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwThQl9hcQtwpCmnmY7T05bSFEFNypHN2xHAZla9qoVA5_I5EyIsMjRn4i4FQifmdixGQ/exec";
+const ADMIN_PWD = "AsRoma220794!";
  
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" },
@@ -233,6 +234,33 @@ function CambioSkuInline({ sess, skuList, onOk, onClose }) {
   );
 }
  
+// ─── Modal Password Generico ─────────────────────────────────────────────
+function ModalPwd({ titolo, colore, onOk, onClose }) {
+  const [pwd,setPwd] = useState("");
+  const [err,setErr] = useState("");
+  return (
+    <div style={MS.ov}>
+      <div style={{...MS.md,maxWidth:360}}>
+        <div style={MS.mh}>
+          <span style={{...MS.mt,color:colore||"#a855f7"}}>🔒 {titolo||"Password richiesta"}</span>
+          <button style={MS.mx} onClick={onClose}>X</button>
+        </div>
+        <div style={{padding:22}}>
+          <input type="password" style={S.inp} placeholder="Inserisci password..." autoFocus
+            value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}}
+            onKeyDown={e=>e.key==="Enter"&&onOk(pwd,setErr)}/>
+          {err&&<div style={{...S.err,marginTop:8}}>{err}</div>}
+          <div style={{display:"flex",gap:10,marginTop:16}}>
+            <button style={MS.an} onClick={onClose}>Annulla</button>
+            <button style={{...MS.cf,background:"linear-gradient(135deg,"+(colore||"#a855f7")+","+(colore||"#7c3aed")+")"}}
+              onClick={()=>onOk(pwd,setErr)}>Conferma</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ 
 // Modal Trasferimento
 function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
   const [dest,setDest]       = useState(null);
@@ -399,7 +427,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
   if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"){
     const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
-    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="transfer");
+    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="transfer"||mode==="cambiosku");
     const verificaPwd = () => {
       if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
       else { setErrPwd("Password errata."); setPwdLinea(""); }
@@ -470,7 +498,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, linee, operatori, s
  
             {mode==="checkout"&&sf&&(!lineaHaPwd||pwdOk)&&<button style={S.bCO} onClick={()=>{onCheckout(sf.id);setRis({tipo:"checkout",sess:sf});setMode("result");}}>Fine Turno</button>}
             {mode==="transfer"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{onTrasf(sf.id,ld,ns);setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result");}} onClose={reset}/>}
-            {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} onOk={(ns)=>{onTrasf(sf.id,sf.lineaCorrente,ns);setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result");}} onClose={reset}/>}
+            {mode==="cambiosku"&&sf&&(!lineaHaPwd||pwdOk)&&<CambioSkuInline sess={sf} skuList={skuList} onOk={(ns)=>{onTrasf(sf.id,sf.lineaCorrente,ns);setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result");}} onClose={reset}/>}
             <button style={{...S.bBk,marginTop:16,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
           </div>
         </div>
@@ -732,6 +760,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
   const [mod,setMod]      = useState(null);
   const [tab,setTab]      = useState("sessioni");
   const [,setTk]          = useState(0);
+  const [modReset,setModReset]       = useState(false);
+  const [modFineTutti,setModFineTutti] = useState(null); // {linea, azione}
+  const [modCO,setModCO]         = useState(null); // sessione da chiudere
+  const [modTr,setModTr]         = useState(null); // sessione da trasferire
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
  
  
@@ -749,6 +781,40 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
   return (
     <div style={{minHeight:"100vh",background:"#050a14",paddingBottom:60}}>
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);}} onClose={()=>setMod(null)}/>}
+ 
+      {/* Modal password Reset */}
+      {modReset&&<ModalPwd titolo="Password Admin — Reset" colore="#ef4444"
+        onClose={()=>setModReset(false)}
+        onOk={(pwd,setErr)=>{
+          if(pwd===ADMIN_PWD){ setModReset(false); onReset(); }
+          else setErr("Password errata.");
+        }}/>}
+ 
+      {/* Modal password Fine Tutti */}
+      {modFineTutti&&<ModalPwd titolo={"Fine turno tutti — "+modFineTutti.linea.id} colore="#ef4444"
+        onClose={()=>setModFineTutti(null)}
+        onOk={(pwd,setErr)=>{
+          if(pwd===modFineTutti.linea.password){ modFineTutti.azione(); setModFineTutti(null); }
+          else setErr("Password errata.");
+        }}/>}
+ 
+      {/* Modal password Fine Turno singolo */}
+      {modCO&&<ModalPwd titolo={"Fine turno — "+modCO.nome+" "+modCO.cognome} colore="#ef4444"
+        onClose={()=>setModCO(null)}
+        onOk={(pwd,setErr)=>{
+          const l=getLinea(modCO.lineaCorrente,linee);
+          if(!l.password||pwd===l.password){ onCO(modCO.id); setModCO(null); }
+          else setErr("Password errata.");
+        }}/>}
+ 
+      {/* Modal password Trasferimento da Dashboard */}
+      {modTr&&<ModalPwd titolo={"Trasferimento — "+modTr.nome+" "+modTr.cognome} colore="#a855f7"
+        onClose={()=>setModTr(null)}
+        onOk={(pwd,setErr)=>{
+          const l=getLinea(modTr.lineaCorrente,linee);
+          if(!l.password||pwd===l.password){ setMod(modTr); setModTr(null); }
+          else setErr("Password errata.");
+        }}/>}
  
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
@@ -775,8 +841,12 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
               <div style={{fontSize:11,color:"#475569",marginTop:2,marginBottom:6}}>{l.id}</div>
               {nAtt>0&&(
                 <button onClick={()=>{
-                  if(confirm("Chiudere il turno di tutti gli operatori su "+l.id+"?"))
-                    sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).forEach(s=>onCO(s.id));
+                  // sessioni da Sheets: fine può essere null, "", o "null"
+                  const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null));
+                  if(attiveLinea.length===0) return;
+                  const esegui = () => attiveLinea.forEach(s=>onCO(s.id));
+                  if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
+                  setModFineTutti({linea:l, azione:esegui});
                 }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
