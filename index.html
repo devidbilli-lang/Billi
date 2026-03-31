@@ -440,15 +440,15 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   // Cerca sessione attiva sia in locale che in Sheets
   const sessAtt = k => {
     const key = k.trim().toUpperCase();
-    // Cerca in locale prima
     const loc = sessioni.find(s=>s.matricola===key&&!s.fine);
     if(loc) return loc;
-    // Poi cerca in Sheets (fine null, "", o undefined)
     if(sessSheets) return sessSheets.find(s=>
       s.matricola===key && (!s.fine||s.fine===""||s.fine==null)
     );
     return null;
   };
+  // Set matricole operatori abilitati da Sheets
+  const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
   const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setMode("menu"); };
 
   if(mode==="result"&&ris){
@@ -502,6 +502,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                   {[...sessioni,...(sessSheets||[])].filter((s,i,arr)=>
                     (!s.fine||s.fine===""||s.fine==null)&&
+                    (operatori.length===0||matricoleAbilitate.has(s.matricola))&&
                     (s.nome.toUpperCase().includes(mats)||s.cognome.toUpperCase().includes(mats)||s.matricola.includes(mats))&&
                     arr.findIndex(x=>x.id===s.id)===i
                   ).slice(0,4).map(s=>(
