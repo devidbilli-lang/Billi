@@ -330,11 +330,11 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
 
           {/* Password linea destinazione */}
           {dest&&lineaDest&&lineaDest.password&&(
-            <div style={{background:"#050a14",border:"1px solid #f59e0b44",borderRadius:10,padding:14,marginBottom:16}}>
-              <div style={{fontSize:12,color:"#f59e0b",fontWeight:600,marginBottom:8}}>
+            <div style={{background:"#050a14",border:"2px solid "+(lineaDest.colore||"#a855f7")+"88",borderRadius:10,padding:14,marginBottom:16}}>
+              <div style={{fontSize:12,color:lineaDest.colore||"#a855f7",fontWeight:600,marginBottom:8}}>
                 🔒 {lineaDest.id} richiede la password
               </div>
-              <input type="password" style={{...S.inp,borderColor:"#f59e0b44"}}
+              <input type="password" style={{...S.inp,borderColor:(lineaDest.colore||"#a855f7")+"88",borderWidth:2}}
                 placeholder="Password linea destinazione..."
                 value={pwd} onChange={e=>{setPwd(e.target.value);setErrPwd("");}}
                 onKeyDown={e=>e.key==="Enter"&&conferma()}/>
@@ -427,6 +427,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [ris,setRis]             = useState(null);
   const [err,setErr]             = useState("");
   const [mats,setMats]           = useState("");
+  const [matsNome,setMatsNome]   = useState(""); // nome visualizzato nel campo
   const [cOp,setCOp]             = useState("");
   const [cSku,setCSku]           = useState("");
   const [opSelezionati,setOpSelezionati] = useState([]);
@@ -449,7 +450,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   };
   // Set matricole operatori abilitati da Sheets
   const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
-  const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setMode("menu"); };
+  const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setMode("menu"); };
 
   if(mode==="result"&&ris){
     const {tipo,sess,lDest,nSku}=ris;
@@ -506,7 +507,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     (s.nome.toUpperCase().includes(mats)||s.cognome.toUpperCase().includes(mats)||s.matricola.includes(mats))&&
                     arr.findIndex(x=>x.id===s.id)===i
                   ).slice(0,4).map(s=>(
-                    <div key={s.id} onClick={()=>{setMats(s.matricola);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
+                    <div key={s.id} onClick={()=>{setMats(s.matricola);setMatsNome(s.nome+" "+s.cognome);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
                       style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <span style={{fontSize:13,color:"#94a3b8"}}>{s.nome} {s.cognome}</span>
