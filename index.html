@@ -742,23 +742,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
                   {cOp.length>=2&&(
                     <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                      {operatori.filter(o=>{
-                        if(!(o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase()))) return false;
-                        // Mostra tutti se sessSheets non caricato
-                        if(!sessSheets||sessSheets.length===0) return true;
-                        // Escludi chi ha sessione attiva su Sheets (confronto per nome+cognome)
-                        const isChiusa = s => {
-                          if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return false;
-                          // Controlla se fine è una data valida (formato italiano o ISO)
-                          const d = parseData(s.fine);
-                          return d!==null && !isNaN(d);
-                        };
-                        return !sessSheets.some(s=>
-                          !isChiusa(s)&&
-                          s.nome.toUpperCase()===o.nome.toUpperCase()&&
-                          s.cognome.toUpperCase()===o.cognome.toUpperCase()
-                        );
-                      }).slice(0,6).map(o=>{
+                      {operatori.filter(o=>
+                        o.nome.toUpperCase().includes(cOp.toUpperCase())||
+                        o.cognome.toUpperCase().includes(cOp.toUpperCase())||
+                        o.matricola.includes(cOp.toUpperCase())
+                      ).slice(0,6).map(o=>{
                         const sel=opSelezionati.some(x=>x.matricola===o.matricola);
                         return (
                           <div key={o.matricola} onClick={()=>{
