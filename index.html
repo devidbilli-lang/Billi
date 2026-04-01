@@ -28,7 +28,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby5IM57v6aewAGqWTp68FLoN6IIh57HCy8qTf6bxnCM2rZrTmpn-PCgOa8R_ffAVP0DUA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfS3TLZENVlGqg53YBehCqB4LcCotNj-_NVoo2t8omguAguBNIlrDSo5wbGqeox-WJ/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -177,7 +177,7 @@ function SugOp({ val, list, onSel }) {
 function SugSku({ val, list, onSel }) {
   if(!val||val.length<1||!list||!list.length) return null;
   const v=val.toUpperCase();
-  const m=list.filter(s=>s.sku.includes(v)||s.descrizione.toUpperCase().includes(v)).slice(0,5);
+  const m=list.filter(s=>s.sku.includes(v)||s.descrizione.toUpperCase().includes(v)||(s.collezione&&s.collezione.toUpperCase().includes(v))).slice(0,5);
   if(!m.length) return null;
   return (
     <div style={{background:"#0a1628",border:"1px solid #f59e0b44",borderRadius:8,marginTop:4,overflow:"hidden"}}>
@@ -186,6 +186,7 @@ function SugSku({ val, list, onSel }) {
           onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
           <code style={S.sku}>{s.sku}</code>
           <span style={{fontSize:12,color:"#94a3b8"}}>{s.descrizione}</span>
+          {s.collezione&&<span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f944",borderRadius:4,padding:"1px 6px",marginLeft:"auto",whiteSpace:"nowrap"}}>{s.collezione}</span>}
         </div>
       ))}
     </div>
@@ -808,7 +809,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
                 </div>
               )}
-              <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b",borderWidth:2}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
+              <div style={{position:"relative"}}>
+                <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b",borderWidth:2}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
+                {(()=>{ const skuObj=skuList.find(x=>x.sku===sku); return skuObj&&skuObj.collezione?<span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:11,color:"#e879f9",pointerEvents:"none"}}>{skuObj.collezione}</span>:null; })()}
+              </div>
             </div>
 
             {/* ── Linea ── */}
@@ -1196,7 +1200,12 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   <tr key={s.id} style={{borderBottom:"1px solid #0f1f38",background:att2?"#00d4aa06":"transparent"}}>
                     <td style={S.td}><span style={{background:"#1e3a5f",color:"#475569",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}><span style={{fontWeight:500}}>{s.nome} {s.cognome}</span></td>
-                    <td style={S.td}><code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code></td>
+                    <td style={S.td}>
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        <code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code>
+                        {(()=>{ const skuObj=skuList.find(x=>x.sku===(s.skuCorrente||s.sku)); return skuObj&&skuObj.collezione?<span style={{fontSize:10,color:"#e879f9",fontStyle:"italic"}}>{skuObj.collezione}</span>:null; })()}
+                      </div>
+                    </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{s.lineaCorrente}</span></td>
                     <td style={S.td}><span style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{fmtSafe(s.inizio)}</span></td>
                     <td style={S.td}>{s.fine?<span style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
