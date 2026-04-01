@@ -1310,7 +1310,7 @@ function App() {
   // Carica sessioni subito all'avvio e ogni minuto (indipendentemente dalla view)
   useEffect(()=>{
     caricaSessioni();
-    const t = setInterval(caricaSessioni, 60000);
+    const t = setInterval(caricaSessioni, 15000);
     return ()=>clearInterval(t);
   },[caricaSessioni]);
 
