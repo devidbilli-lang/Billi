@@ -35,137 +35,71 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfS3TLZENVlGqg
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
-  { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" },
-  { id:"L2", nome:"Linea 2 - Saldatura",    colore:"#ff6b35", icona:"" },
-  { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" },
-  { id:"L4", nome:"Linea 4 - Collaudo",     colore:"#3b82f6", icona:"" },
-  { id:"L5", nome:"Linea 5 - Imballaggio",  colore:"#f59e0b", icona:"" },
+  { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
 ];
 
 const now     = () => new Date();
 const fmt     = d => d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 const fmtFull = d => d.toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
 
-// Converte data italiana "dd/MM/yyyy HH:mm:ss" oppure ISO in oggetto Date
-const parseData = s => {
-  if(!s) return null;
+const parseData = s => { if(!s) return null;
   if(typeof s === "number") return new Date(s);
   const str = s.toString().trim();
-  // Formato italiano: dd/MM/yyyy HH:mm:ss
   const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,]+(\d{2}):(\d{2})(?::(\d{2}))?/);
   if(m) return new Date(m[3],m[2]-1,m[1],m[4],m[5],m[6]||0);
-  // ISO o altro formato
   const d = new Date(str);
   return isNaN(d)?null:d;
 };
 const fmtSafe = s => { const d=parseData(s); return d?fmtFull(d):"–"; };
 const durataStr = ms => { if(!ms||ms<0) return "-"; const m=Math.floor(ms/60000),h=Math.floor(m/60); return h>0?(h+"h "+(m%60)+"m"):(m+"m"); };
 const getLinea  = (id,linee) => linee.find(l=>l.id===id)||linee[0];
-const store = {
-  get:(k,d)=>{ try{ const v=sessionStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } },
-  set:(k,v)=>{ try{ sessionStorage.setItem(k,JSON.stringify(v)); }catch{} }
+const store = { get:(k,d)=>{ try{ const v=sessionStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } }, set:(k,v)=>{ try{ sessionStorage.setItem(k,JSON.stringify(v)); }catch{} }
 };
 
-// API Sheets
-const fetchTimeout = (url, ms=20000) => {
-  const ctrl = new AbortController();
+const fetchTimeout = (url, ms=20000) => { const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 };
-const api = {
-  async config() {
-    try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; }
-  },
-  async evento(p) {
-    try {
-      const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
-      await fetchTimeout(APPS_SCRIPT_URL+"?"+q.toString());
-    } catch(e){ console.warn(e); }
-  },
-  async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
+const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } }, async evento(p) { try { const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
+      await fetchTimeout(APPS_SCRIPT_URL+"?"+q.toString()); } catch(e){ console.warn(e); } }, async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
 };
 
-// Hook Sheets
-function useSheets() {
-  const [linee,setLinee]         = useState(LINEE_DEFAULT);
+function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
   const [operatori,setOperatori] = useState([]);
   const [skuList,setSkuList]     = useState([]);
   const [sync,setSync]           = useState("caricamento");
   const [ts,setTs]               = useState(null);
-  const load = useCallback(async()=>{
-    setSync("caricamento");
-    try {
-      const d = await api.config();
-      if(d){
-        if(d.linee&&d.linee.length) setLinee(d.linee);
+  const load = useCallback(async()=>{ setSync("caricamento");
+    try { const d = await api.config();
+      if(d){ if(d.linee&&d.linee.length) setLinee(d.linee);
         if(d.operatori) setOperatori(d.operatori);
         if(d.skuList)   setSkuList(d.skuList);
-        setSync("ok"); setTs(new Date());
-      } else setSync("errore");
-    } catch{ setSync("errore"); }
-  },[]);
+        setSync("ok"); setTs(new Date()); } else setSync("errore"); } catch{ setSync("errore"); } },[]);
   useEffect(()=>{ load(); },[load]);
   return { linee, operatori, skuList, sync, ts, reload:load };
 }
 
-// Calcola tappe (linea+sku+ms)
-function tappe(s) {
-  const fine = s.fine ? new Date(s.fine) : now();
+function tappe(s) { const fine = s.fine ? new Date(s.fine) : now();
   const out  = [];
   let cur    = new Date(s.inizio);
   let lc     = s.lineaCorrente;
   let sc     = s.skuCorrente||s.sku||"";
   const tr   = s.trasferimenti||[];
-  if(!tr.length){
-    out.push({linea:lc,sku:sc,ms:fine-cur});
-  } else {
-    const p0 = new Date(tr[0].quando);
+  if(!tr.length){ out.push({linea:lc,sku:sc,ms:fine-cur}); } else { const p0 = new Date(tr[0].quando);
     out.push({linea:tr[0].da,sku:tr[0].skuDa||sc,ms:p0-cur});
     cur=p0;
-    for(let i=0;i<tr.length;i++){
-      const t=tr[i], ft=i+1<tr.length?new Date(tr[i+1].quando):fine;
+    for(let i=0;i<tr.length;i++){ const t=tr[i], ft=i+1<tr.length?new Date(tr[i+1].quando):fine;
       out.push({linea:t.a,sku:t.skuA||t.skuDa||sc,ms:ft-cur});
-      cur=ft;
-    }
-  }
+      cur=ft; } }
   return out;
 }
 
-// Stili
-const S = {
-  scr:  {minHeight:"100vh",background:"linear-gradient(135deg,#050a14,#0a1628)"},
-  hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #1e3a5f"},
-  logo: {display:"flex",alignItems:"center",gap:12},
-  lt:   {fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1},
-  ls:   {fontSize:11,color:"#475569",letterSpacing:2,textTransform:"uppercase"},
-  ora:  {fontSize:22,fontWeight:700,color:"#00d4aa",fontFamily:"monospace",background:"#00d4aa11",padding:"4px 14px",borderRadius:8,border:"1px solid #00d4aa33"},
-  bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"},
-  card: {width:"100%",maxWidth:520,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease"},
-  cT:   {fontSize:22,fontWeight:700,color:"#f1f5f9",marginBottom:24},
-  lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#64748b",textTransform:"uppercase",marginBottom:6},
-  inp:  {width:"100%",padding:"10px 14px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,color:"#e2e8f0",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"},
-  err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16},
-  bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#00d4aa,#0891b2)",border:"none",borderRadius:10,color:"#050a14",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"},
-  bCO:  {width:"100%",padding:14,background:"linear-gradient(135deg,#ef4444,#b91c1c)",border:"none",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10},
-  bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#94a3b8",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14},
-  sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"2px 10px",borderRadius:4,fontSize:12,fontFamily:"monospace"},
-  tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"},
-  td:   {padding:"10px 14px",fontSize:13,color:"#cbd5e1",whiteSpace:"nowrap"},
-  sc:   {background:"#050a14",border:"1px solid #1e3a5f",borderRadius:10,padding:"14px 16px",marginBottom:16},
+const S = { scr:  {minHeight:"100vh",background:"linear-gradient(135deg,#050a14,#0a1628)"}, hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #1e3a5f"}, logo: {display:"flex",alignItems:"center",gap:12}, lt:   {fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1}, ls:   {fontSize:11,color:"#475569",letterSpacing:2,textTransform:"uppercase"}, ora:  {fontSize:22,fontWeight:700,color:"#00d4aa",fontFamily:"monospace",background:"#00d4aa11",padding:"4px 14px",borderRadius:8,border:"1px solid #00d4aa33"}, bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"}, card: {width:"100%",maxWidth:520,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease"}, cT:   {fontSize:22,fontWeight:700,color:"#f1f5f9",marginBottom:24}, lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#64748b",textTransform:"uppercase",marginBottom:6}, inp:  {width:"100%",padding:"10px 14px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,color:"#e2e8f0",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"}, err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}, bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#00d4aa,#0891b2)",border:"none",borderRadius:10,color:"#050a14",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, bCO:  {width:"100%",padding:14,background:"linear-gradient(135deg,#ef4444,#b91c1c)",border:"none",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}, bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#94a3b8",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}, sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"2px 10px",borderRadius:4,fontSize:12,fontFamily:"monospace"}, tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"}, td:   {padding:"10px 14px",fontSize:13,color:"#cbd5e1",whiteSpace:"nowrap"}, sc:   {background:"#050a14",border:"1px solid #1e3a5f",borderRadius:10,padding:"14px 16px",marginBottom:16},
 };
-const MS = {
-  ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000},
-  md: {background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:18,width:"90%",maxWidth:460,overflow:"hidden",animation:"fadeUp 0.3s ease"},
-  mh: {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px",borderBottom:"1px solid #1e3a5f"},
-  mt: {fontWeight:700,fontSize:16,color:"#a855f7"},
-  mx: {background:"transparent",border:"none",color:"#64748b",cursor:"pointer",fontSize:18,fontFamily:"'Montserrat',sans-serif"},
-  an: {flex:1,padding:10,background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"},
-  cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
+const MS = { ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}, md: {background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:18,width:"90%",maxWidth:460,overflow:"hidden",animation:"fadeUp 0.3s ease"}, mh: {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px",borderBottom:"1px solid #1e3a5f"}, mt: {fontWeight:700,fontSize:16,color:"#a855f7"}, mx: {background:"transparent",border:"none",color:"#64748b",cursor:"pointer",fontSize:18,fontFamily:"'Montserrat',sans-serif"}, an: {flex:1,padding:10,background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
 };
 
-// Suggerimenti operatori
-function SugOp({ val, list, onSel }) {
-  if(!val||val.length<2||!list.length) return null;
+function SugOp({ val, list, onSel }) { if(!val||val.length<2||!list.length) return null;
   const v=val.toUpperCase();
   const m=list.filter(o=>o.matricola.includes(v)||o.nome.toUpperCase().includes(v)||o.cognome.toUpperCase().includes(v)).slice(0,4);
   if(!m.length) return null;
@@ -181,9 +115,7 @@ function SugOp({ val, list, onSel }) {
   );
 }
 
-// Suggerimenti SKU
-function SugSku({ val, list, onSel }) {
-  if(!val||val.length<1||!list||!list.length) return null;
+function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.length) return null;
   const v=val.toUpperCase();
   const m=list.filter(s=>s.sku.includes(v)||s.descrizione.toUpperCase().includes(v)||(s.collezione&&s.collezione.toUpperCase().includes(v))).slice(0,5);
   if(!m.length) return null;
@@ -201,9 +133,7 @@ function SugSku({ val, list, onSel }) {
   );
 }
 
-// Cambio SKU inline (stessa linea)
-function CambioSkuInline({ sess, skuList, onOk, onClose }) {
-  const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
+function CambioSkuInline({ sess, skuList, onOk, onClose }) { const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
   const [cSku,setCSku]   = useState("");
   const [err,setErr]     = useState("");
   return (
@@ -232,11 +162,9 @@ function CambioSkuInline({ sess, skuList, onOk, onClose }) {
           {err&&<div style={{...S.err,marginTop:8}}>{err}</div>}
           <div style={{display:"flex",gap:10,marginTop:16}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
-            <button style={{...MS.cf,background:"linear-gradient(135deg,#f59e0b,#d97706)"}} onClick={()=>{
-              if(!nSku.trim()){setErr("Inserisci lo SKU.");return;}
+            <button style={{...MS.cf,background:"linear-gradient(135deg,#f59e0b,#d97706)"}} onClick={()=>{ if(!nSku.trim()){setErr("Inserisci lo SKU.");return;}
               if(nSku.trim()===( sess.skuCorrente||sess.sku)){setErr("SKU identico a quello attuale.");return;}
-              onOk(nSku.trim());
-            }}>Conferma</button>
+              onOk(nSku.trim()); }}>Conferma</button>
           </div>
         </div>
       </div>
@@ -244,9 +172,7 @@ function CambioSkuInline({ sess, skuList, onOk, onClose }) {
   );
 }
 
-// ─── Modal Password Generico ─────────────────────────────────────────────
-function ModalPwd({ titolo, colore, linea, onOk, onClose }) {
-  const [pwd,setPwd] = useState("");
+function ModalPwd({ titolo, colore, linea, onOk, onClose }) { const [pwd,setPwd] = useState("");
   const [err,setErr] = useState("");
   const c = colore||"#a855f7";
   return (
@@ -257,7 +183,7 @@ function ModalPwd({ titolo, colore, linea, onOk, onClose }) {
           <button style={MS.mx} onClick={onClose}>X</button>
         </div>
         <div style={{padding:22}}>
-          {/* Badge linea con colore */}
+          {}
           {linea&&(
             <div style={{background:linea.colore+"18",border:"1px solid "+linea.colore+"44",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontWeight:800,fontSize:14,color:linea.colore}}>{linea.id}</span>
@@ -279,9 +205,7 @@ function ModalPwd({ titolo, colore, linea, onOk, onClose }) {
   );
 }
 
-// ─── Modal Corso Formazione ──────────────────────────────────────────────
-function ModalCorso({ sess, linee, onOk, onClose }) {
-  const [nomeCorso,setNomeCorso] = useState("");
+function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCorso] = useState("");
   const [tipoUscita,setTipoUscita] = useState("sospendi"); // "sospendi" | "chiudi"
   const la = getLinea(sess.lineaCorrente, linee);
   return (
@@ -292,14 +216,14 @@ function ModalCorso({ sess, linee, onOk, onClose }) {
           <button style={MS.mx} onClick={onClose}>X</button>
         </div>
         <div style={{padding:22}}>
-          {/* Info operatore */}
+          {}
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
             <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
 
-          {/* Nome corso — solo per sospensione */}
+          {}
           {tipoUscita==="sospendi"&&(
             <div style={{marginBottom:16}}>
               <label style={S.lbl}>Nome corso / formazione</label>
@@ -308,11 +232,10 @@ function ModalCorso({ sess, linee, onOk, onClose }) {
             </div>
           )}
 
-          {/* Tipo uscita */}
+          {}
           <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Cosa succede alla produzione?</div>
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-            {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"],
-              ["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
+            {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"], ["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
             ].map(([val,tit,desc,c])=>(
               <button key={val} onClick={()=>setTipoUscita(val)}
                 style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
@@ -333,9 +256,7 @@ function ModalCorso({ sess, linee, onOk, onClose }) {
   );
 }
 
-// Modal Trasferimento
-function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
-  const [dest,setDest]   = useState(null);
+function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDest]   = useState(null);
   const [chSku,setChSku] = useState(false);
   const [nSku,setNSku]   = useState("");
   const [cSku,setCSku]   = useState("");
@@ -345,13 +266,8 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
   const la = getLinea(sess.lineaCorrente,linee);
   const lineaDest = dest ? getLinea(dest,linee) : null;
 
-  const conferma = () => {
-    // Se la linea destinazione ha password, chiedi prima
-    if(lineaDest && lineaDest.password) {
-      if(pwd !== lineaDest.password){ setErrPwd("Password errata."); setPwd(""); return; }
-    }
-    onOk(dest, chSku&&nSku?nSku:null);
-  };
+  const conferma = () => { if(lineaDest && lineaDest.password) { if(pwd !== lineaDest.password){ setErrPwd("Password errata."); setPwd(""); return; } }
+    onOk(dest, chSku&&nSku?nSku:null); };
 
   return (
     <div style={MS.ov}>
@@ -359,23 +275,19 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
         <div style={MS.mh}><span style={MS.mt}>Trasferimento</span><button style={MS.mx} onClick={onClose}>X</button></div>
         <div style={{padding:22,maxHeight:"80vh",overflowY:"auto"}}>
 
-          {/* Info operatore */}
+          {}
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
             <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id} — {la.nome}</span>
           </div>
 
-          {/* Selezione linea destinazione */}
+          {}
           <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Linea destinazione</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
             {linee.filter(l=>l.id!==sess.lineaCorrente).map(l=>(
               <button key={l.id} onClick={()=>{setDest(l.id);setPwd("");setErrPwd("");}}
-                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",
-                  border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",
-                  background:dest===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",
-                  boxShadow:dest===l.id?("0 0 16px "+l.colore+"44"):"none",
-                  fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
+                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px", border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer", background:dest===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)", boxShadow:dest===l.id?("0 0 16px "+l.colore+"44"):"none", fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
                 <span style={{fontSize:13,fontWeight:700,color:dest===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
                 <span style={{fontSize:10,color:dest===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.nome}</span>
                 {l.password&&<span style={{fontSize:9,color:"#f59e0b",marginTop:2}}>🔒 con password</span>}
@@ -383,7 +295,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
             ))}
           </div>
 
-          {/* Cambio SKU — prima della password */}
+          {}
           <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
             <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94a3b8"}}>
               <input type="checkbox" checked={chSku} onChange={e=>setChSku(e.target.checked)} style={{accentColor:"#00d4aa",width:16,height:16}}/>
@@ -399,7 +311,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
             )}
           </div>
 
-          {/* Password linea destinazione */}
+          {}
           {dest&&lineaDest&&lineaDest.password&&(
             <div style={{background:"#050a14",border:"2px solid "+(lineaDest.colore||"#a855f7")+"88",borderRadius:10,padding:14,marginBottom:16}}>
               <div style={{fontSize:12,color:lineaDest.colore||"#a855f7",fontWeight:600,marginBottom:8}}>
@@ -423,9 +335,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
   );
 }
 
-// Riepilogo linea
-function RiepLinea({ sessioni, linee }) {
-  const gmap = {};
+function RiepLinea({ sessioni, linee }) { const gmap = {};
   for(const s of sessioni){ for(const {linea,ms} of tappe(s)) gmap[linea]=(gmap[linea]||0)+ms; }
   const tot = Object.values(gmap).reduce((a,b)=>a+b,0);
   if(!tot) return <div style={{textAlign:"center",padding:40,color:"#475569"}}>Nessun dato</div>;
@@ -441,35 +351,22 @@ function RiepLinea({ sessioni, linee }) {
           </div>
           <span style={{color:l.colore,minWidth:42,fontSize:13,fontWeight:700,fontFamily:"monospace",textAlign:"right"}}>{Math.round(ms/60000)}m</span>
           <span style={{minWidth:34,fontSize:11,color:"#475569",textAlign:"right"}}>{pct.toFixed(0)+"%"}</span>
-        </div>);
-      })}
+        </div>); })}
       <div style={{marginTop:12,fontSize:12,color:"#64748b",borderTop:"1px solid #1e3a5f",paddingTop:10}}>Totale: <strong style={{color:"#00d4aa"}}>{durataStr(tot)}</strong></div>
     </div>
   );
 }
 
-// Riepilogo SKU con Rampa
-function RiepSku({ sessioni, linee, rampeSheets }) {
-  const [tick,setTick] = useState(0);
+function RiepSku({ sessioni, linee, rampeSheets }) { const [tick,setTick] = useState(0);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
 
-  // Costruisce mappa rampe da Sheets (fonte primaria) e sessioni locali
   const rampaMap = {};
-  for(const r of (rampeSheets||[])){
-    if(r.sku && r.rampaDal){
-      const g = Math.min(15, Math.max(1, Math.floor((now()-r.rampaDal)/(1000*60*60*24))+1));
-      if(!rampaMap[r.sku]) rampaMap[r.sku] = { dal:r.rampaDal, giorni:g, lineaId:r.lineaId };
-    }
-  }
-  for(const s of sessioni){
-    let rdal = s.rampaDal||null;
-    if(!rdal && (s.skuA||"").includes("__RAMPA__")){
-      const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime();
-    }
-    if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=Math.min(15,Math.max(1,Math.floor((now()-rdal)/(1000*60*60*24))+1)); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } }
-  }
+  for(const r of (rampeSheets||[])){ if(r.sku && r.rampaDal){ const g = Math.min(15, Math.max(1, Math.floor((now()-r.rampaDal)/(1000*60*60*24))+1));
+      if(!rampaMap[r.sku]) rampaMap[r.sku] = { dal:r.rampaDal, giorni:g, lineaId:r.lineaId }; } }
+  for(const s of sessioni){ let rdal = s.rampaDal||null;
+    if(!rdal && (s.skuA||"").includes("__RAMPA__")){ const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime(); }
+    if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=Math.min(15,Math.max(1,Math.floor((now()-rdal)/(1000*60*60*24))+1)); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } } }
 
-  // Minuti per SKU
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
 
@@ -487,8 +384,7 @@ function RiepSku({ sessioni, linee, rampeSheets }) {
   return (
     <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampa di Crescita</div>
-      {tuttiSku.map(sku=>{
-        const ms=totMap[sku]||0; const pct=totG>0?(ms/totG)*100:0; const lm=linMap[sku]||{};
+      {tuttiSku.map(sku=>{ const ms=totMap[sku]||0; const pct=totG>0?(ms/totG)*100:0; const lm=linMap[sku]||{};
         const rampa=rampaMap[sku]||null; const g=rampa?rampa.giorni:null;
         const completata=g!==null&&g>=15;
         const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
@@ -523,19 +419,15 @@ function RiepSku({ sessioni, linee, rampeSheets }) {
             {ms>0&&(
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {linee.map(l=>{ const mL=lm[l.id]||0; if(!mL||isNaN(mL)) return null;
-                  return <span key={l.id} style={{fontSize:11,background:l.colore+"18",color:l.colore,border:"1px solid "+l.colore+"44",borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>{l.id}: {Math.round(mL/60000)}m</span>;
-                })}
+                  return <span key={l.id} style={{fontSize:11,background:l.colore+"18",color:l.colore,border:"1px solid "+l.colore+"44",borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>{l.id}: {Math.round(mL/60000)}m</span>; })}
               </div>
             )}
           </div>
-        );
-      })}
+        ); })}
     </div>
   );
 }
-// CheckIn
-function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2 }) {
-  const [mode,setMode]           = useState("menu");
+function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2 }) { const [mode,setMode]           = useState("menu");
   const [nome,setNome]           = useState("");
   const [cogn,setCogn]           = useState("");
   const [sku,setSku]             = useState("");
@@ -555,28 +447,17 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [oraRef, setOraRef] = useState(now());
   useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
 
-  // Cerca sessione attiva - usa sessSheets come fonte primaria (più aggiornata)
-  const sessAtt = k => {
-    const key = k.trim().toUpperCase();
-    const isAttiva = s => {
-      if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
+  const sessAtt = k => { const key = k.trim().toUpperCase();
+    const isAttiva = s => { if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
       const d = parseData(s.fine);
-      return d===null||isNaN(d); // se fine non è una data valida, considerala attiva
-    };
-    // Prima cerca in sessSheets (fonte di verità da Sheets)
-    if(sessSheets&&sessSheets.length>0){
-      const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s));
-      if(sh) return sh;
-    }
-    // Fallback: locale (per sessioni appena create non ancora sincronizzate)
-    return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null;
-  };
-  // Set matricole operatori abilitati da Sheets
+      return d===null||isNaN(d); // se fine non è una data valida, considerala attiva };
+    if(sessSheets&&sessSheets.length>0){ const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s));
+      if(sh) return sh; }
+    return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null; };
   const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
   const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setMode("menu"); };
 
-  if(mode==="result"&&ris){
-    const {tipo,sess,lDest,nSku}=ris;
+  if(mode==="result"&&ris){ const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
     const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
     return (
@@ -586,8 +467,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <h2 style={{fontSize:24,fontWeight:800,marginBottom:8,color:cfg.c}}>{cfg.t}</h2>
           {ris.multiCount>1
             ? <p style={{color:"#94a3b8",marginBottom:12}}>{ris.multiCount} operatori registrati</p>
-            : <p style={{color:"#94a3b8",marginBottom:12}}>{sess.nome} {sess.cognome}</p>
-          }
+            : <p style={{color:"#94a3b8",marginBottom:12}}>{sess.nome} {sess.cognome}</p> }
           {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
           <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.nome}</div>
           <p style={{color:"#475569",fontSize:13,marginBottom:8}}>Ore {fmt(now())}</p>
@@ -595,17 +475,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <button style={S.bBk} onClick={reset}>Torna al Menu</button>
         </div>
       </div>
-    );
-  }
+    ); }
 
-  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){
-    const sf=sessAtt(mats.trim());
+  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){ const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
     const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"||mode==="corso"||mode==="rientro"); // transfer: password gestita sulla linea DESTINAZIONE nel modal
-    const verificaPwd = () => {
-      if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
-      else { setErrPwd("Password errata."); setPwdLinea(""); }
-    };
+    const verificaPwd = () => { if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
+      else { setErrPwd("Password errata."); setPwdLinea(""); } };
 
     return (
       <div style={S.scr}>
@@ -617,28 +493,21 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <div style={S.card}>
             <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</h2>
 
-            {/* Cerca operatore */}
+            {}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Cerca operatore</label>
               <input style={S.inp} placeholder="Nome o cognome..." value={matsNome||mats}
                 onChange={e=>{const v=e.target.value; setMatsNome(v); setMats(v.toUpperCase()); setErr(""); setPwdOk(false); setPwdLinea(""); setErrPwd("");}}/>
               {mats.length>=2&&(
                 <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                  {(sessSheets&&sessSheets.length>0 ? sessSheets : sessioni).filter((s,i,arr)=>{
-                    // Usa SOLO sessSheets come fonte di verità (aggiornato da Sheets ogni minuto)
-                    // fine deve essere assente/vuoto per considerare la sessione attiva
-                    // Usa parseData per verificare se fine è una data valida
-                    if(s.fine&&s.fine!==""&&s.fine!==null&&s.fine!=="null"){
-                      const df = parseData(s.fine);
-                      if(df!==null&&!isNaN(df)) return false; // sessione chiusa
-                    }
+                  {(sessSheets&&sessSheets.length>0 ? sessSheets : sessioni).filter((s,i,arr)=>{ if(s.fine&&s.fine!==""&&s.fine!==null&&s.fine!=="null"){ const df = parseData(s.fine);
+                      if(df!==null&&!isNaN(df)) return false; // sessione chiusa }
                     if(operatori.length>0&&!matricoleAbilitate.has(s.matricola)) return false;
                     if(mode==="rientro"&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))) return false;
                     const q=mats.toUpperCase();
                     const match=s.nome.toUpperCase().includes(q)||s.cognome.toUpperCase().includes(q)||s.matricola.toUpperCase().includes(q)||(matsNome&&(s.nome+" "+s.cognome).toUpperCase().includes(matsNome.toUpperCase()));
                     if(!match) return false;
-                    return arr.findIndex(x=>x.id===s.id)===i;
-                  }).slice(0,4).map(s=>(
+                    return arr.findIndex(x=>x.id===s.id)===i; }).slice(0,4).map(s=>(
                     <div key={s.id} onClick={()=>{setMats(s.matricola);setMatsNome(s.nome+" "+s.cognome);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
                       style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -651,7 +520,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               )}
             </div>
 
-            {/* Info sessione trovata */}
+            {}
             {sf&&(
               <div style={S.sc}>
                 <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
@@ -662,11 +531,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               </div>
             )}
 
-
-
             {err&&<div style={S.err}>{err}</div>}
 
-            {/* Password richiesta per checkout e transfer su linee protette */}
+            {}
             {sf&&lineaHaPwd&&!pwdOk&&(
               <div style={{background:"#050a14",border:"2px solid "+(la?la.colore+"88":"#f59e0b44"),borderRadius:10,padding:16,marginBottom:16}}>
                 <div style={{fontSize:13,color:la?la.colore:"#f59e0b",fontWeight:600,marginBottom:10}}>🔒 {la?la.id:""} — inserisci la password</div>
@@ -684,64 +551,37 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               </div>
             )}
 
-            {mode==="checkout"&&sf&&(!lineaHaPwd||pwdOk)&&<button style={S.bCO} onClick={()=>{
-              // Se la sessione è da Sheets usa coSheets, altrimenti onCheckout locale
-              if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); }
+            {mode==="checkout"&&sf&&(!lineaHaPwd||pwdOk)&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); }
               else onCheckout(sf.id);
-              setRis({tipo:"checkout",sess:sf});setMode("result");
-            }}>Fine Turno</button>}
-            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{
-              const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              if(isDaSheets){
-                // Invia evento direttamente a Sheets
-                const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
+              setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
+            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
                 api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn});
-                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
-              } else onTrasf(sf.id,ld,ns);
-              setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result");
-            }} onClose={reset}/>}
-            {mode==="rientro"&&sf&&(!lineaHaPwd||pwdOk)&&(()=>{
-              // Verifica che l'operatore abbia un corso sospeso
-              const corsi = sf.corsi||[];
+                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,ld,ns);
+              setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
+            {mode==="rientro"&&sf&&(!lineaHaPwd||pwdOk)&&(()=>{ const corsi = sf.corsi||[];
               const haSospeso = corsi.some(c=>c.tipo==="sospendi");
               if(!haSospeso) return <div style={{...S.err}}>Questo operatore non ha corsi sospesi.</div>;
-              return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>{
-                const isDaSheets=!sessioni.find(s=>s.id===sf.id);
+              return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>{ const isDaSheets=!sessioni.find(s=>s.id===sf.id);
                 api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
                 if(isDaSheets&&aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
-                setRis({tipo:"rientro",sess:sf});setMode("result");
-              }}>▶ Conferma Rientro in Produzione</button>;
-            })()}
-            {mode==="corso"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{
-              const isDaSheets=!sessioni.find(s=>s.id===sf.id);
-              if(tipo==="rientro"){
-                // Rientro dal corso: evento RIENTRO
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
-              } else {
-                // Sospensione: evento CORSO
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"});
-              }
+                setRis({tipo:"rientro",sess:sf});setMode("result"); }}>▶ Conferma Rientro in Produzione</button>; })()}
+            {mode==="corso"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{ const isDaSheets=!sessioni.find(s=>s.id===sf.id);
+              if(tipo==="rientro"){ api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
               if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
-              setRis({tipo:"corso",sess:sf});setMode("result");
-            }} onClose={reset}/>}
-            {mode==="cambiosku"&&sf&&(!lineaHaPwd||pwdOk)&&<CambioSkuInline sess={sf} skuList={skuList} onOk={(ns)=>{
-              const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              if(isDaSheets){
-                const sp=sf.skuCorrente||sf.sku||"";
+              setRis({tipo:"corso",sess:sf});setMode("result"); }} onClose={reset}/>}
+            {mode==="cambiosku"&&sf&&(!lineaHaPwd||pwdOk)&&<CambioSkuInline sess={sf} skuList={skuList} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
                 api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns});
-                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
-              } else onTrasf(sf.id,sf.lineaCorrente,ns);
-              setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result");
-            }} onClose={reset}/>}
+                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,sf.lineaCorrente,ns);
+              setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result"); }} onClose={reset}/>}
             <button style={{...S.bBk,marginTop:16,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
           </div>
         </div>
       </div>
-    );
-  }
+    ); }
 
-  if(mode==="checkin"){
-    return (
+  if(mode==="checkin"){ return (
       <div style={S.scr}>
         <header style={S.hdr}>
           <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
@@ -751,7 +591,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <div style={S.card}>
             <h2 style={S.cT}>Registra Presenza</h2>
 
-            {/* ── Selezione operatori multipla ── */}
+            {}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Operatori ({opSelezionati.length} selezionati)</label>
               {operatori.length>0&&(
@@ -763,26 +603,22 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                         o.nome.toUpperCase().includes(cOp.toUpperCase())||
                         o.cognome.toUpperCase().includes(cOp.toUpperCase())||
                         o.matricola.includes(cOp.toUpperCase())
-                      ).slice(0,6).map(o=>{
-                        const sel=opSelezionati.some(x=>x.matricola===o.matricola);
+                      ).slice(0,6).map(o=>{ const sel=opSelezionati.some(x=>x.matricola===o.matricola);
                         return (
-                          <div key={o.matricola} onClick={()=>{
-                            if(sel) setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola));
-                            else setOpSelezionati(p=>[...p,o]);
-                          }} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center",background:sel?"#22c55e18":"transparent"}}
+                          <div key={o.matricola} onClick={()=>{ if(sel) setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola));
+                            else setOpSelezionati(p=>[...p,o]); }} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center",background:sel?"#22c55e18":"transparent"}}
                             onMouseEnter={e=>e.currentTarget.style.background=sel?"#22c55e28":"#1e3a5f"}
                             onMouseLeave={e=>e.currentTarget.style.background=sel?"#22c55e18":"transparent"}>
                             <span style={{width:18,height:18,border:"2px solid "+(sel?"#22c55e":"#475569"),borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#22c55e",flexShrink:0}}>{sel?"✓":""}</span>
                             <span style={{fontSize:13,color:"#94a3b8"}}>{o.nome} {o.cognome}</span>
                             <span style={{fontSize:11,color:"#475569",marginLeft:"auto"}}>{o.matricola}</span>
                           </div>
-                        );
-                      })}
+                        ); })}
                     </div>
                   )}
                 </div>
               )}
-              {/* Operatori selezionati - pill list */}
+              {}
               {opSelezionati.length>0&&(
                 <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
                   {opSelezionati.map(o=>(
@@ -793,7 +629,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   ))}
                 </div>
               )}
-              {/* Fallback manuale se non ci sono operatori da Sheets */}
+              {}
               {operatori.length===0&&(
                 <div style={{display:"flex",gap:10}}>
                   <div style={{flex:1}}>
@@ -808,7 +644,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               )}
             </div>
 
-            {/* ── SKU ── */}
+            {}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>SKU Articolo</label>
               {skuList.length>0&&(
@@ -819,20 +655,18 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               )}
               <div>
                 <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b",borderWidth:2}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
-                {(()=>{
-                  const skuObj=skuList.find(x=>x.sku===sku);
+                {(()=>{ const skuObj=skuList.find(x=>x.sku===sku);
                   if(!skuObj) return null;
                   return (
                     <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,paddingLeft:4}}>
                       {skuObj.collezione&&<span style={{fontSize:14,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"3px 12px",fontWeight:700}}>{skuObj.collezione}</span>}
                       <span style={{fontSize:11,color:"#64748b"}}>{skuObj.descrizione}</span>
                     </div>
-                  );
-                })()}
+                  ); })()}
               </div>
             </div>
 
-            {/* ── Linea ── */}
+            {}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Linea di Produzione</label>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -846,7 +680,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               </div>
             </div>
 
-            {/* Rampa di Crescita */}
+            {}
             <div style={{marginBottom:18,background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,padding:"12px 14px"}}>
               <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:rampa?10:0}}>
                 <input type="checkbox" checked={rampa} onChange={e=>setRampa(e.target.checked)} style={{accentColor:"#f59e0b",width:16,height:16}}/>
@@ -860,43 +694,31 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
 
             {err&&<div style={S.err}>{err}</div>}
-            <button style={S.bCI} onClick={()=>{
-              setErr("");
-              // Costruisce lista operatori da registrare
+            <button style={S.bCI} onClick={()=>{ setErr("");
               var listaOp = opSelezionati.length > 0 ? opSelezionati : (nome.trim()&&cogn.trim() ? [{nome:nome.trim(),cognome:cogn.trim(),matricola:nome.trim().toUpperCase()+"-"+cogn.trim().toUpperCase()}] : []);
               if(listaOp.length===0){setErr("Seleziona almeno un operatore.");return;}
               if(!sku.trim()){setErr("Inserisci lo SKU.");return;}
               if(!linea){setErr("Seleziona una linea.");return;}
               var errori=[];
               var registrati=[];
-              listaOp.forEach(op=>{
-                const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
-                // Controlla sessione attiva sia in locale che su Sheets
-                const haSessioneAttiva = sessSheets.some(s=>{
-                  const nomeMatch = s.nome.toUpperCase()===op.nome.toUpperCase()&&s.cognome.toUpperCase()===op.cognome.toUpperCase();
+              listaOp.forEach(op=>{ const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
+                const haSessioneAttiva = sessSheets.some(s=>{ const nomeMatch = s.nome.toUpperCase()===op.nome.toUpperCase()&&s.cognome.toUpperCase()===op.cognome.toUpperCase();
                   if(!nomeMatch) return false;
-                  // fine deve essere assente o non una data valida
                   if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
-                  const d = parseData(s.fine); return d===null||isNaN(d);
-                });
+                  const d = parseData(s.fine); return d===null||isNaN(d); });
                 if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
                 const rampaDalTs = rampa ? now().getTime() : null;
               const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
                 onSuccess(s);
-                registrati.push(s);
-              });
+                registrati.push(s); });
               if(errori.length>0&&registrati.length===0){setErr(errori.join(", "));return;}
-              if(registrati.length>0){
-                setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
-                setMode("result");
-              }
-            }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
+              if(registrati.length>0){ setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
+                setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
             <button style={{...S.bBk,marginTop:12,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
           </div>
         </div>
       </div>
-    );
-  }
+    ); }
 
   return (
     <div style={S.scr}>
@@ -928,44 +750,34 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   );
 }
 
-// Dashboard
-// ─── Tab Operatori ───────────────────────────────────────────────────────
-function TabOperatori({ operatori, sessioni, linee }) {
-  const [,setTk] = useState(0);
+function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
   useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),30000); return()=>clearInterval(t); },[]);
   const [filtro,setFiltro] = useState("tutti"); // tutti | presenti | assenti
   const [cerca,setCerca]   = useState("");
 
-  // Per ogni operatore trova la sessione attiva
-  const stati = operatori.map(op => {
-    const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
+  const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
     const sessAtt = sessioni.find(s =>
       (s.matricola===chiave||s.matricola===op.matricola) && !s.fine
     );
     const ultimaSess = sessioni.filter(s =>
       s.matricola===chiave||s.matricola===op.matricola
     ).sort((a,b)=> (parseData(b.inizio)||0)-(parseData(a.inizio)||0))[0];
-    return { op, sessAtt, ultimaSess };
-  });
+    return { op, sessAtt, ultimaSess }; });
 
   const presenti = stati.filter(s=>s.sessAtt).length;
   const assenti  = stati.filter(s=>!s.sessAtt).length;
 
-  const filtrati = stati.filter(s=>{
-    if(filtro==="presenti") return !!s.sessAtt;
+  const filtrati = stati.filter(s=>{ if(filtro==="presenti") return !!s.sessAtt;
     if(filtro==="assenti")  return !s.sessAtt;
-    return true;
-  }).filter(s=>{
-    if(!cerca) return true;
+    return true; }).filter(s=>{ if(!cerca) return true;
     const q = cerca.toLowerCase();
     return s.op.nome.toLowerCase().includes(q) ||
            s.op.cognome.toLowerCase().includes(q) ||
-           s.op.matricola.toLowerCase().includes(q);
-  });
+           s.op.matricola.toLowerCase().includes(q); });
 
   return (
     <div>
-      {/* KPI */}
+      {}
       <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
         <div style={{background:"#f59e0b",border:"1px solid #f59e0b",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
           <div style={{fontSize:28,fontWeight:800,color:"#000",lineHeight:1}}>{operatori.length}</div>
@@ -981,11 +793,11 @@ function TabOperatori({ operatori, sessioni, linee }) {
         </div>
       </div>
 
-      {/* Campo ricerca */}
+      {}
       <input style={{...S.inp,marginBottom:12}} placeholder="Cerca operatore per nome, cognome o matricola..."
         value={cerca} onChange={e=>setCerca(e.target.value)}/>
 
-      {/* Filtri */}
+      {}
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         {[["tutti","Tutti"],["presenti","● Presenti"],["assenti","○ Assenti"]].map(([k,l])=>(
           <button key={k} onClick={()=>setFiltro(k)}
@@ -994,10 +806,9 @@ function TabOperatori({ operatori, sessioni, linee }) {
         ))}
       </div>
 
-      {/* Lista operatori */}
+      {}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-        {filtrati.map(({op,sessAtt,ultimaSess})=>{
-          const presente = !!sessAtt;
+        {filtrati.map(({op,sessAtt,ultimaSess})=>{ const presente = !!sessAtt;
           const linea = sessAtt ? getLinea(sessAtt.lineaCorrente,linee) : null;
           return (
             <div key={op.matricola} style={{background:"#0a1628",border:"1px solid "+(presente?"#22c55e44":"#1e3a5f"),borderLeft:"4px solid "+(presente?"#22c55e":"#334155"),borderRadius:12,padding:"14px 16px"}}>
@@ -1020,8 +831,7 @@ function TabOperatori({ operatori, sessioni, linee }) {
                   <div style={{color:"#475569",marginTop:4}}>
                     Inizio: {fmtSafe(sessAtt.inizio)}
                     {sessAtt.trasferimenti&&sessAtt.trasferimenti.length>0&&
-                      <span style={{marginLeft:8,color:"#a855f7"}}>{sessAtt.trasferimenti.length} trasf.</span>
-                    }
+                      <span style={{marginLeft:8,color:"#a855f7"}}>{sessAtt.trasferimenti.length} trasf.</span> }
                   </div>
                 </div>
               )}
@@ -1032,8 +842,7 @@ function TabOperatori({ operatori, sessioni, linee }) {
                 </div>
               )}
             </div>
-          );
-        })}
+          ); })}
         {filtrati.length===0&&(
           <div style={{gridColumn:"1/-1",textAlign:"center",padding:40,color:"#475569"}}>Nessun operatore trovato</div>
         )}
@@ -1042,8 +851,7 @@ function TabOperatori({ operatori, sessioni, linee }) {
   );
 }
 
-function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni }) {
-  const [fL,setFL]        = useState("ALL");
+function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni }) { const [fL,setFL]        = useState("ALL");
   const [fS,setFS]        = useState("ALL");
   const [srch,setSrch]    = useState("");
   const [mod,setMod]      = useState(null);
@@ -1056,14 +864,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [modTr,setModTr]         = useState(null); // sessione da trasferire
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
 
-
-
-  const fil = sessioni.filter(s=>{
-    const ml=fL==="ALL"||s.lineaCorrente===fL;
+  const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
     const q=srch.toLowerCase();
-    return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q));
-  });
+    return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
 
   const att=sessioni.filter(s=>!s.fine).length;
   const chi=sessioni.filter(s=>!!s.fine).length;
@@ -1072,56 +876,38 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     <div style={{minHeight:"100vh",background:"#050a14",paddingBottom:60}}>
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);}} onClose={()=>setMod(null)}/>}
 
-      {/* Modal password Reset */}
+      {}
       {modReset&&<ModalPwd titolo="Password Admin — Reset" colore="#ef4444"
         onClose={()=>setModReset(false)}
-        onOk={(pwd,setErr)=>{
-          if(pwd===ADMIN_PWD){ setModReset(false); onReset(); }
-          else setErr("Password errata.");
-        }}/>}
+        onOk={(pwd,setErr)=>{ if(pwd===ADMIN_PWD){ setModReset(false); onReset(); }
+          else setErr("Password errata."); }}/>}
 
-      {/* Modal Corso dalla Dashboard */}
+      {}
       {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
-        onOk={(tipo,nomeCorso)=>{
-          if(tipo==="rientro"){
-            // Solo evento RIENTRO — NON chiude il turno
-            api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""});
-          } else {
-            // Solo evento CORSO (sospensione) — NON chiude il turno
-            api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"});
-          }
+        onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); } else { api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
-          setModCorso(null);
-        }}/>}
+          setModCorso(null); }}/>}
 
-      {/* Modal password Fine Tutti */}
+      {}
       {modFineTutti&&<ModalPwd titolo={"Fine turno tutti — "+modFineTutti.linea.id} colore={modFineTutti.linea.colore||"#ef4444"} linea={modFineTutti.linea}
         onClose={()=>setModFineTutti(null)}
-        onOk={(pwd,setErr)=>{
-          if(pwd===modFineTutti.linea.password){ modFineTutti.azione(); setModFineTutti(null); }
-          else setErr("Password errata.");
-        }}/>}
+        onOk={(pwd,setErr)=>{ if(pwd===modFineTutti.linea.password){ modFineTutti.azione(); setModFineTutti(null); }
+          else setErr("Password errata."); }}/>}
 
-      {/* Modal password Fine Turno singolo */}
+      {}
       {modCO&&<ModalPwd titolo={modCO.nome+" "+modCO.cognome} colore={getLinea(modCO.lineaCorrente,linee).colore||"#ef4444"} linea={getLinea(modCO.lineaCorrente,linee)}
         onClose={()=>setModCO(null)}
-        onOk={(pwd,setErr)=>{
-          const l=getLinea(modCO.lineaCorrente,linee);
-          if(!l.password||pwd===l.password){
-            if(onCOSheets) onCOSheets(modCO); else onCO(modCO.id);
+        onOk={(pwd,setErr)=>{ const l=getLinea(modCO.lineaCorrente,linee);
+          if(!l.password||pwd===l.password){ if(onCOSheets) onCOSheets(modCO); else onCO(modCO.id);
             if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
-            setModCO(null);
-          } else setErr("Password errata.");
-        }}/>}
+            setModCO(null); } else setErr("Password errata."); }}/>}
 
-      {/* Modal password Trasferimento da Dashboard */}
+      {}
       {modTr&&<ModalPwd titolo={modTr.nome+" "+modTr.cognome} colore={getLinea(modTr.lineaCorrente,linee).colore||"#a855f7"} linea={getLinea(modTr.lineaCorrente,linee)}
         onClose={()=>setModTr(null)}
-        onOk={(pwd,setErr)=>{
-          const l=getLinea(modTr.lineaCorrente,linee);
+        onOk={(pwd,setErr)=>{ const l=getLinea(modTr.lineaCorrente,linee);
           if(!l.password||pwd===l.password){ setMod(modTr); setModTr(null); }
-          else setErr("Password errata.");
-        }}/>}
+          else setErr("Password errata."); }}/>}
 
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
@@ -1144,37 +930,24 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             <div style={{fontSize:11,color:"#475569",marginTop:4}}>{l}</div>
           </div>
         ))}
-        {linee.map(l=>{
-          const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
+        {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
           return (
             <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#0a1628",border:"1px solid #1e3a5f",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
               <div style={{fontSize:11,color:"#475569",marginTop:2,marginBottom:6}}>{l.id}</div>
               {nAtt>0&&(
-                <button onClick={()=>{
-                  // sessioni da Sheets: fine può essere null, "", o "null"
-                  const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
+                <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
-                  const esegui = () => {
-                    // Invia CHECKOUT in sequenza con ritardo per evitare conflitti
-                    attiveLinea.forEach((s, i) => {
-                      setTimeout(()=>{
-                        if(onCOSheets) onCOSheets(s); else onCO(s.id);
-                      }, i * 300); // 300ms tra una chiamata e l'altra
-                    });
-                    // Aggiorna dashboard dopo che tutte le chiamate sono partite
+                  const esegui = () => { attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 300); // 300ms tra una chiamata e l'altra });
                     const totaleDelay = attiveLinea.length * 300 + 3000;
-                    if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay);
-                  };
+                    if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay); };
                   if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
-                  setModFineTutti({linea:l, azione:esegui});
-                }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
+                  setModFineTutti({linea:l, azione:esegui}); }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
               )}
             </div>
-          );
-        })}
+          ); })}
       </div>
 
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
@@ -1209,8 +982,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               <thead><tr>{["#","Operatore","SKU","Linea","Inizio","Fine","Durata","N° Trasf.","Azioni"].map(h=>(
                 <th key={h} style={{padding:"12px 14px",fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#475569",textAlign:"left",borderBottom:"1px solid #1e3a5f",background:"#050a14",whiteSpace:"nowrap"}}>{h}</th>
               ))}</tr></thead>
-              <tbody>{fil.map((s,i)=>{
-                const l=getLinea(s.lineaCorrente,linee);
+              <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
                 const att2=!s.fine;
                 const dur=(()=>{ const i=parseData(s.inizio); const f=s.fine?parseData(s.fine):now(); return (i&&f)?(f-i):0; })();
                 return (
@@ -1229,28 +1001,25 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}><span style={{background:"#1e3a5f",color:"#94a3b8",padding:"2px 8px",borderRadius:4,fontSize:12,fontFamily:"monospace"}}>{durataStr(dur)}</span></td>
                     <td style={S.td}>{s.trasferimenti.length>0?<span style={{background:"#a855f722",color:"#a855f7",border:"1px solid #a855f744",padding:"2px 8px",borderRadius:4,fontSize:12}}>{s.trasferimenti.length}x</span>:<span style={{color:"#334155"}}>-</span>}</td>
                     <td style={S.td}>
-                      {(()=>{
-                        const corsi = s.corsi||[];
+                      {(()=>{ const corsi = s.corsi||[];
                         const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
-                        // inCorso: ultimo evento è CORSO sospeso (non seguito da RIENTRO o CHECKOUT)
                         const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                         const nomeCorsoAttivo = inCorso ? (ultimoCorso.nome||"Corso") : null;
                         return (
                           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                            {/* Pallino stato */}
+                            {}
                             {att2 && inCorso
                               ? <span title="Al corso" style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #06b6d4"}}/>
                               : att2
                                 ? <span title="In turno" style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #22c55e"}}/>
-                                : <span title="Fine turno" style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>
-                            }
-                            {/* Icona corso — SOLO se al corso */}
+                                : <span title="Fine turno" style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/> }
+                            {}
                             {inCorso&&(
                               <span title={"Al corso: "+nomeCorsoAttivo} style={{background:"#06b6d422",border:"1px solid #06b6d4",borderRadius:4,padding:"2px 7px",fontSize:11,color:"#06b6d4",fontWeight:700,cursor:"default",display:"flex",alignItems:"center",gap:3}}>
                                 🎓 <span style={{fontSize:10}}>{nomeCorsoAttivo}</span>
                               </span>
                             )}
-                            {/* Pulsanti azioni solo per sessioni attive */}
+                            {}
                             {att2&&(
                               <>
                                 <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #1e3a5f",borderRadius:5,color:"#94a3b8",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>setModTr(s)}>↔</button>
@@ -1259,12 +1028,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                               </>
                             )}
                           </div>
-                        );
-                      })()}
+                        ); })()}
                     </td>
                   </tr>
-                );
-              })}</tbody>
+                ); })}</tbody>
             </table>
           )}
         </div>
@@ -1277,21 +1044,15 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   );
 }
 
-// App Root
-function LoginDashboard({ linee, onLogin }) {
-  const [pwd,setPwd] = useState("");
+function LoginDashboard({ linee, onLogin }) { const [pwd,setPwd] = useState("");
   const [err,setErr] = useState("");
   const [modoAdmin,setModoAdmin] = useState(false);
 
-  const tenta = () => {
-    if(modoAdmin){
-      if(pwd===ADMIN_PWD){ onLogin("admin",null); return; }
-      setErr("Password admin errata."); setPwd(""); return;
-    }
+  const tenta = () => { if(modoAdmin){ if(pwd===ADMIN_PWD){ onLogin("admin",null); return; }
+      setErr("Password admin errata."); setPwd(""); return; }
     const l=linee.find(l=>l.password&&l.password===pwd);
     if(l){ onLogin("linea",l); return; }
-    setErr("Password non riconosciuta."); setPwd("");
-  };
+    setErr("Password non riconosciuta."); setPwd(""); };
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
       <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
@@ -1321,8 +1082,7 @@ function LoginDashboard({ linee, onLogin }) {
   );
 }
 
-function App() {
-  const [view,setView]             = useState("checkin");
+function App() { const [view,setView]             = useState("checkin");
   const [sess,setSess]             = useState(()=>store.get("pt_v4",[]) );
   const [sessSheets,setSessSheets] = useState([]);
   const [accesso,setAccesso]       = useState(null);
@@ -1332,49 +1092,29 @@ function App() {
 
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
 
-  // Carica sessioni da Sheets
   const [rampeSheets,setRampeSheets] = useState([]);
 
-  const caricaSessioni = useCallback(async()=>{
-    setDashSync("caricamento");
-    try {
-      const ctrl2 = new AbortController();
+  const caricaSessioni = useCallback(async()=>{ setDashSync("caricamento");
+    try { const ctrl2 = new AbortController();
       const tid2 = setTimeout(()=>ctrl2.abort(), 25000);
       const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni", {signal:ctrl2.signal}).finally(()=>clearTimeout(tid2));
       const j = await r.json();
-      if(j.ok&&j.data.sessioni){
-        setSessSheets(j.data.sessioni);
-        // Aggiorna rampe da Sheets
+      if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni);
         if(j.data.rampe) setRampeSheets(j.data.rampe);
-        setDashSync("ok"); setUltimoSync2(new Date());
-      } else setDashSync("errore");
-    } catch(e){ setDashSync("errore"); }
-  },[]);
+        setDashSync("ok"); setUltimoSync2(new Date()); } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
 
-  // Carica sessioni subito all'avvio e ogni minuto (indipendentemente dalla view)
-  useEffect(()=>{
-    caricaSessioni();
+  useEffect(()=>{ caricaSessioni();
     const t = setInterval(caricaSessioni, 15000);
-    return ()=>clearInterval(t);
-  },[caricaSessioni]);
+    return ()=>clearInterval(t); },[caricaSessioni]);
 
-  const add = s => {
-    setSess(p=>[s,...p]);
-    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
-  };
-  const co = id => {
-    setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
-    setTimeout(caricaSessioni,3000);
-  };
-  // Chiude una sessione che viene da Sheets (non in sess locale)
-  const coFromSheets = s => {
-    if(!s||!s.id) return;
-    api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
-  };
-  const tr = (id,dest,nSku) => {
-    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
-    setTimeout(caricaSessioni,3000);
-  };
+  const add = s => { setSess(p=>[s,...p]);
+    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")}); };
+  const co = id => { setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
+    setTimeout(caricaSessioni,3000); };
+  const coFromSheets = s => { if(!s||!s.id) return;
+    api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); };
+  const tr = (id,dest,nSku) => { setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
+    setTimeout(caricaSessioni,3000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,3000); };
 
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
