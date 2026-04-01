@@ -542,8 +542,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const sessAtt = k => {
     const key = k.trim().toUpperCase();
     const isAttiva = s => {
-      const fv = s.fine && s.fine!=="" && s.fine!=="null" && s.fine!==null && String(s.fine).length>3;
-      return !fv;
+      if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
+      const d = parseData(s.fine);
+      return d===null||isNaN(d); // se fine non è una data valida, considerala attiva
     };
     // Prima cerca in sessSheets (fonte di verità da Sheets)
     if(sessSheets&&sessSheets.length>0){
@@ -609,8 +610,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   {(sessSheets&&sessSheets.length>0 ? sessSheets : sessioni).filter((s,i,arr)=>{
                     // Usa SOLO sessSheets come fonte di verità (aggiornato da Sheets ogni minuto)
                     // fine deve essere assente/vuoto per considerare la sessione attiva
-                    const fineValida = s.fine && s.fine!=="" && s.fine!=="null" && s.fine!==null && String(s.fine).length>3;
-                    if(fineValida) return false;
+                    // Usa parseData per verificare se fine è una data valida
+                    if(s.fine&&s.fine!==""&&s.fine!==null&&s.fine!=="null"){
+                      const df = parseData(s.fine);
+                      if(df!==null&&!isNaN(df)) return false; // sessione chiusa
+                    }
                     if(operatori.length>0&&!matricoleAbilitate.has(s.matricola)) return false;
                     if(mode==="rientro"&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))) return false;
                     const q=mats.toUpperCase();
@@ -743,8 +747,14 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                         // Mostra tutti se sessSheets non caricato
                         if(!sessSheets||sessSheets.length===0) return true;
                         // Escludi chi ha sessione attiva su Sheets (confronto per nome+cognome)
+                        const isChiusa = s => {
+                          if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return false;
+                          // Controlla se fine è una data valida (formato italiano o ISO)
+                          const d = parseData(s.fine);
+                          return d!==null && !isNaN(d);
+                        };
                         return !sessSheets.some(s=>
-                          (!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&
+                          !isChiusa(s)&&
                           s.nome.toUpperCase()===o.nome.toUpperCase()&&
                           s.cognome.toUpperCase()===o.cognome.toUpperCase()
                         );
