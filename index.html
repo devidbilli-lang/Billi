@@ -28,7 +28,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwThQl9hcQtwpCmnmY7T05bSFEFNypHN2xHAZla9qoVA5_I5EyIsMjRn4i4FQifmdixGQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHYD8MIyhuZ36ygshv2yaw3-cuFtZREBKPKXpQMaIc23Gglb-GBgxV8T0qsNBcbVjt0g/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -487,7 +487,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,marginBottom:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":"Trasferimento"}</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":"Trasferimento"}</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -588,7 +588,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,marginBottom:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -707,7 +707,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   return (
     <div style={S.scr}>
       <header style={S.hdr}>
-        <div style={S.logo}><div><div style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,marginBottom:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
+        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
             <span style={{fontSize:10,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
@@ -916,7 +916,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
 
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{fontSize:20,fontWeight:800,color:"#e879f9",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
+          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:20,fontWeight:800,color:"#e879f9",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
@@ -1041,7 +1041,7 @@ function LoginDashboard({ linee, onLogin }) {
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
       <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
-        <div style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,marginBottom:8,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6}}/><span style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
         <div style={{fontSize:15,fontWeight:700,color:"#00d4aa",marginBottom:20}}>ProductionTrack — Dashboard</div>
         <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Password admin o password della tua linea</div>
         <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#e879f9",borderWidth:2}}
