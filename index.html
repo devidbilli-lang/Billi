@@ -740,20 +740,14 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                       {operatori.filter(o=>{
                         if(!(o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase()))) return false;
-                        // Escludi chi ha già una sessione attiva
-                        const chiave = o.nome.toUpperCase()+"-"+o.cognome.toUpperCase();
-                        const isAttivo = s => {
-                          const fv = s.fine && s.fine!=="" && s.fine!=="null" && s.fine!==null && String(s.fine).length>3;
-                          return !fv;
-                        };
-                        const haSessione = [...(sessSheets||[]),...sessioni].some(s=>
-                          isAttivo(s) && (
-                            s.matricola===chiave ||
-                            s.matricola===o.matricola ||
-                            (s.nome.toUpperCase()===o.nome.toUpperCase() && s.cognome.toUpperCase()===o.cognome.toUpperCase())
-                          )
+                        // Mostra tutti se sessSheets non caricato
+                        if(!sessSheets||sessSheets.length===0) return true;
+                        // Escludi chi ha sessione attiva su Sheets (confronto per nome+cognome)
+                        return !sessSheets.some(s=>
+                          (!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&
+                          s.nome.toUpperCase()===o.nome.toUpperCase()&&
+                          s.cognome.toUpperCase()===o.cognome.toUpperCase()
                         );
-                        return !haSessione;
                       }).slice(0,6).map(o=>{
                         const sel=opSelezionati.some(x=>x.matricola===o.matricola);
                         return (
