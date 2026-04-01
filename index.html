@@ -601,13 +601,16 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 onChange={e=>{const v=e.target.value; setMatsNome(v); setMats(v.toUpperCase()); setErr(""); setPwdOk(false); setPwdLinea(""); setErrPwd("");}}/>
               {mats.length>=2&&(
                 <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                  {[...sessioni,...(sessSheets||[])].filter((s,i,arr)=>
-                    (!s.fine||s.fine===""||s.fine==null)&&
-                    (operatori.length===0||matricoleAbilitate.has(s.matricola))&&
-                    (mode!=="rientro"||(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")))&&
-                    (s.nome.toUpperCase().includes(mats)||s.cognome.toUpperCase().includes(mats)||s.matricola.includes(mats)||(matsNome&&(s.nome+" "+s.cognome).toUpperCase().includes(matsNome.toUpperCase())))&&
-                    arr.findIndex(x=>x.id===s.id)===i
-                  ).slice(0,4).map(s=>(
+                  {[...sessioni,...(sessSheets||[])].filter((s,i,arr)=>{
+                    const fineValida = s.fine && s.fine!=="" && s.fine!=="null" && s.fine!==null;
+                    if(fineValida) return false;
+                    if(operatori.length>0&&!matricoleAbilitate.has(s.matricola)) return false;
+                    if(mode==="rientro"&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))) return false;
+                    const q=mats.toUpperCase();
+                    const match=s.nome.toUpperCase().includes(q)||s.cognome.toUpperCase().includes(q)||s.matricola.toUpperCase().includes(q)||(matsNome&&(s.nome+" "+s.cognome).toUpperCase().includes(matsNome.toUpperCase()));
+                    if(!match) return false;
+                    return arr.findIndex(x=>x.id===s.id)===i;
+                  }).slice(0,4).map(s=>(
                     <div key={s.id} onClick={()=>{setMats(s.matricola);setMatsNome(s.nome+" "+s.cognome);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
                       style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
