@@ -28,7 +28,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9RgTMA1_n4kKHwtERO4vtw7I_xrMr_L2bnKNyhTIYmW4SLT5wVyHK03LHVrbUwrfuOw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby96GCEOAuPOi-S0s1Su-_CpQ6cNQ-gBxTthNQiOD6YdXydEED-XfQq2k-5tVbbuHKMBA/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -430,91 +430,90 @@ function RiepLinea({ sessioni, linee }) {
 }
 
 // Riepilogo SKU con Rampa
-function RiepSku({ sessioni, linee }) {
-  const [,setTk] = useState(0);
-  useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
+function RiepSku({ sessioni, linee, rampeSheets }) {
+  const [tick,setTick] = useState(0);
+  useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
 
-  const totMap  = {}; // sku -> ms totali
-  const linMap  = {}; // sku -> { lineaId -> ms }
-  const rampaMap= {}; // sku -> { dal: timestamp }
-
-  for(const s of sessioni){
-    // Legge rampaDal dalla sessione (campo diretto da Sheets o da locale)
-    let rampaDal = s.rampaDal || null;
-    // Fallback: controlla skuA con __RAMPA__
-    if(!rampaDal){
-      const skuAraw = s.skuA||"";
-      if(skuAraw.includes("__RAMPA__")){
-        const parts = skuAraw.split("__RAMPA__");
-        const d = new Date(parts[1]);
-        if(!isNaN(d)) rampaDal = d.getTime();
-      }
-    }
-    if(rampaDal){
-      const sku = s.skuCorrente||s.sku||"";
-      if(sku && !rampaMap[sku]) rampaMap[sku] = { dal: rampaDal };
-    }
-    for(const {linea,sku,ms} of tappe(s)){
-      if(!sku||!ms||isNaN(ms)) continue;
-      totMap[sku]=(totMap[sku]||0)+ms;
-      if(!linMap[sku]) linMap[sku]={};
-      linMap[sku][linea]=(linMap[sku][linea]||0)+ms;
+  // Costruisce mappa rampe da Sheets (fonte primaria) e sessioni locali
+  const rampaMap = {};
+  for(const r of (rampeSheets||[])){
+    if(r.sku && r.rampaDal){
+      const g = Math.min(15, Math.max(1, Math.floor((now()-r.rampaDal)/(1000*60*60*24))+1));
+      if(!rampaMap[r.sku]) rampaMap[r.sku] = { dal:r.rampaDal, giorni:g, lineaId:r.lineaId };
     }
   }
+  for(const s of sessioni){
+    let rdal = s.rampaDal||null;
+    if(!rdal && (s.skuA||"").includes("__RAMPA__")){
+      const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime();
+    }
+    if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=Math.min(15,Math.max(1,Math.floor((now()-rdal)/(1000*60*60*24))+1)); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } }
+  }
 
-  const keys = Object.keys(totMap).sort();
-  if(!keys.length) return <div style={{textAlign:"center",padding:40,color:"#475569"}}>Nessun dato</div>;
-  const totG = Object.values(totMap).filter(v=>!isNaN(v)).reduce((a,b)=>a+b,0);
-  if(!totG) return <div style={{textAlign:"center",padding:40,color:"#475569"}}>Nessun dato</div>;
+  // Minuti per SKU
+  const totMap={}, linMap={};
+  for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
 
-  // Trova rampa per sku
-  const getRampa = (sku) => {
-    if(!rampaMap[sku]) return null;
-    const giorni = Math.min(15, Math.floor((now()-rampaMap[sku].dal)/(1000*60*60*24))+1);
-    return giorni > 0 ? giorni : 1;
-  };
+  const tuttiSku = [...new Set([...Object.keys(rampaMap),...Object.keys(totMap)])].sort();
+  const totG = Object.values(totMap).filter(v=>!isNaN(v)).reduce((a,b)=>a+b,0)||1;
+
+  if(!tuttiSku.length) return (
+    <div style={{textAlign:"center",padding:60,color:"#475569"}}>
+      <div style={{fontSize:40,marginBottom:12}}>📈</div>
+      <div style={{fontSize:14,fontWeight:600,color:"#64748b",marginBottom:8}}>Nessuna Rampa di Crescita attiva</div>
+      <div style={{fontSize:12,color:"#334155"}}>Attiva la rampa al check-in spuntando "Avvia Rampa di Crescita"</div>
+    </div>
+  );
 
   return (
     <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
-      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:14}}>Minuti per SKU</div>
-      {keys.map(sku=>{
-        const ms  = totMap[sku]||0;
-        const pct = totG>0?(ms/totG)*100:0;
-        const lm  = linMap[sku]||{};
-        const rampaGiorni = getRampa(sku);
-        if(!ms||isNaN(ms)) return null;
+      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampa di Crescita</div>
+      {tuttiSku.map(sku=>{
+        const ms=totMap[sku]||0; const pct=totG>0?(ms/totG)*100:0; const lm=linMap[sku]||{};
+        const rampa=rampaMap[sku]||null; const g=rampa?rampa.giorni:null;
+        const completata=g!==null&&g>=15;
+        const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
+        const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
-          <div key={sku} style={{marginBottom:16,paddingBottom:14,borderBottom:"1px solid #0f1f38"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-              <code style={{...S.sku,minWidth:80}}>{sku}</code>
-              {/* Badge Rampa */}
-              {rampaGiorni!==null&&(
-                <span style={{display:"flex",alignItems:"center",gap:4,background:"#f59e0b22",border:"1px solid #f59e0b66",borderRadius:6,padding:"2px 8px",fontSize:11,color:"#f59e0b",fontWeight:700}}>
-                  📈 {rampaGiorni}/15
-                  <div style={{width:40,height:5,background:"#0f1f38",borderRadius:3,overflow:"hidden",marginLeft:2}}>
-                    <div style={{height:"100%",width:(rampaGiorni/15*100)+"%",background:rampaGiorni>=15?"#22c55e":"#f59e0b",borderRadius:3}}/>
-                  </div>
-                </span>
-              )}
-              <div style={{flex:1,height:10,background:"#0f1f38",borderRadius:6,overflow:"hidden"}}>
-                <div style={{height:"100%",width:pct+"%",background:"#f59e0b",borderRadius:6,transition:"width 0.6s"}}/>
+          <div key={sku} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #0f1f38"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <code style={{...S.sku,minWidth:80,fontSize:13}}>{sku}</code>
+              {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:11}}>{lineaObj.id}</span>}
+              {ms>0&&<span style={{fontSize:11,color:"#64748b",marginLeft:"auto"}}>{Math.round(ms/60000)}m · {pct.toFixed(0)}%</span>}
+            </div>
+            {g!==null&&(
+              <div style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <span style={{fontSize:14,fontWeight:700,color:colRampa,display:"flex",alignItems:"center",gap:8}}>
+                    📈 Giorno {g} / 15
+                    {completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800}}>✓ COMPLETATA</span>}
+                  </span>
+                  <span style={{fontSize:12,color:colRampa,fontWeight:700}}>{Math.round(g/15*100)}%</span>
+                </div>
+                <div style={{height:18,background:"#0f1f38",borderRadius:9,overflow:"hidden",position:"relative"}}>
+                  <div style={{height:"100%",width:(g/15*100)+"%",background:completata?"linear-gradient(90deg,#22c55e,#16a34a)":"linear-gradient(90deg,#f59e0b,#d97706)",borderRadius:9,transition:"width 0.8s ease"}}/>
+                  {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(i=>(
+                    <div key={i} style={{position:"absolute",top:0,bottom:0,left:(i/15*100)+"%",width:1,background:"#050a14",opacity:0.5}}/>
+                  ))}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:3,fontSize:9,color:"#334155"}}>
+                  <span>1</span><span>5</span><span>10</span><span>15</span>
+                </div>
               </div>
-              <span style={{color:"#f59e0b",minWidth:52,fontSize:13,fontWeight:700,fontFamily:"monospace",textAlign:"right"}}>{Math.round(ms/60000)}m</span>
-              <span style={{minWidth:34,fontSize:11,color:"#475569",textAlign:"right"}}>{pct.toFixed(0)+"%"}</span>
-            </div>
-            <div style={{paddingLeft:16,display:"flex",flexWrap:"wrap",gap:6}}>
-              {linee.map(l=>{ const mL=lm[l.id]||0; if(!mL||isNaN(mL)) return null;
-                return <span key={l.id} style={{fontSize:11,background:l.colore+"18",color:l.colore,border:"1px solid "+l.colore+"44",borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>{l.id}: {Math.round(mL/60000)}m</span>;
-              })}
-            </div>
+            )}
+            {ms>0&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {linee.map(l=>{ const mL=lm[l.id]||0; if(!mL||isNaN(mL)) return null;
+                  return <span key={l.id} style={{fontSize:11,background:l.colore+"18",color:l.colore,border:"1px solid "+l.colore+"44",borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>{l.id}: {Math.round(mL/60000)}m</span>;
+                })}
+              </div>
+            )}
           </div>
         );
       })}
-      <div style={{fontSize:12,color:"#64748b",paddingTop:4}}>Totale: <strong style={{color:"#f59e0b"}}>{durataStr(totG)}</strong></div>
     </div>
   );
 }
-
 // CheckIn
 function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2 }) {
   const [mode,setMode]           = useState("menu");
@@ -968,7 +967,7 @@ function TabOperatori({ operatori, sessioni, linee }) {
   );
 }
 
-function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni }) {
+function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni }) {
   const [fL,setFL]        = useState("ALL");
   const [fS,setFS]        = useState("ALL");
   const [srch,setSrch]    = useState("");
@@ -976,6 +975,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
   const [tab,setTab]      = useState("sessioni");
   const [,setTk]          = useState(0);
   const [modReset,setModReset]       = useState(false);
+  const [modCorso,setModCorso]       = useState(null);
   const [modFineTutti,setModFineTutti] = useState(null); // {linea, azione}
   const [modCO,setModCO]         = useState(null); // sessione da chiudere
   const [modTr,setModTr]         = useState(null); // sessione da trasferire
@@ -1003,6 +1003,16 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
         onOk={(pwd,setErr)=>{
           if(pwd===ADMIN_PWD){ setModReset(false); onReset(); }
           else setErr("Password errata.");
+        }}/>}
+
+      {/* Modal Corso dalla Dashboard */}
+      {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
+        onOk={(tipo,nomeCorso)=>{
+          if(onCOSheets) onCOSheets(modCorso);
+          api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:tipo==="chiudi"?"":modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"});
+          if(tipo==="chiudi"&&onCOSheets) onCOSheets(modCorso);
+          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+          setModCorso(null);
         }}/>}
 
       {/* Modal password Fine Tutti */}
@@ -1082,7 +1092,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
       </div>
 
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
-        {[["sessioni","Sessioni"],["operatori","Operatori"],["linee","Min. Linea"],["sku","Min. SKU"]].map(([t,l])=>(
+        {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"]].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{padding:"7px 16px",border:"1px solid "+(tab===t?"#00d4aa":"#1e3a5f"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#64748b"}}>{l}</button>
         ))}
       </div>
@@ -1140,8 +1150,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, isAdmin, lineaFiltro, 
           )}
         </div>
       )}
-      {tab==="linee"&&<div style={{margin:"0 24px"}}><RiepLinea sessioni={fil} linee={linee}/></div>}
-      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={fil} linee={linee}/></div>}
+      
+      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       <div style={{height:40}}/>
     </div>
@@ -1187,13 +1197,19 @@ function App() {
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
 
   // Carica sessioni da Sheets
+  const [rampeSheets,setRampeSheets] = useState([]);
+
   const caricaSessioni = useCallback(async()=>{
     setDashSync("caricamento");
     try {
       const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
       const j = await r.json();
-      if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni); setDashSync("ok"); setUltimoSync2(new Date()); }
-      else setDashSync("errore");
+      if(j.ok&&j.data.sessioni){
+        setSessSheets(j.data.sessioni);
+        // Aggiorna rampe da Sheets
+        if(j.data.rampe) setRampeSheets(j.data.rampe);
+        setDashSync("ok"); setUltimoSync2(new Date());
+      } else setDashSync("errore");
     } catch(e){ setDashSync("errore"); }
   },[]);
 
