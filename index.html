@@ -479,7 +479,7 @@ function RiepSku({ sessioni, linee, rampeSheets }) {
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <code style={{...S.sku,minWidth:80,fontSize:13}}>{sku}</code>
               {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:11}}>{lineaObj.id}</span>}
-              {ms>0&&<span style={{fontSize:11,color:"#64748b",marginLeft:"auto"}}>{Math.round(ms/60000)}m · {pct.toFixed(0)}%</span>}
+
             </div>
             {g!==null&&(
               <div style={{marginBottom:10}}>
