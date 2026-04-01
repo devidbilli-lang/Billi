@@ -1140,7 +1140,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             <div style={{textAlign:"center",padding:60,color:"#475569"}}>Nessuna sessione</div>
           ):(
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{["#","Operatore","SKU","Linea","Inizio","Fine","Durata","Tr.","Azioni"].map(h=>(
+              <thead><tr>{["#","Operatore","SKU","Linea","Inizio","Fine","Durata","N° Trasf.","Azioni"].map(h=>(
                 <th key={h} style={{padding:"12px 14px",fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#475569",textAlign:"left",borderBottom:"1px solid #1e3a5f",background:"#050a14",whiteSpace:"nowrap"}}>{h}</th>
               ))}</tr></thead>
               <tbody>{fil.map((s,i)=>{
@@ -1159,23 +1159,28 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}>{s.trasferimenti.length>0?<span style={{background:"#a855f722",color:"#a855f7",border:"1px solid #a855f744",padding:"2px 8px",borderRadius:4,fontSize:12}}>{s.trasferimenti.length}x</span>:<span style={{color:"#334155"}}>-</span>}</td>
                     <td style={S.td}>
                       {(()=>{
-                        // Controlla se la sessione ha un corso in sospeso
                         const corsi = s.corsi||[];
                         const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                         const inCorso = ultimoCorso && ultimoCorso.tipo==="sospendi" && !s.fine;
                         return (
-                          <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
+                          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                            {/* Pallino stato */}
+                            {att2
+                              ? <span title="In turno" style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #22c55e"}}/>
+                              : <span title="Fine turno" style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>
+                            }
+                            {/* Icona corso sospeso */}
                             {inCorso&&(
-                              <span title={"In corso: "+(ultimoCorso.nome||"CORSO")} style={{background:"#06b6d422",border:"1px solid #06b6d466",borderRadius:6,padding:"3px 8px",fontSize:11,color:"#06b6d4",fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
-                                🎓 <span style={{fontSize:10}}>{ultimoCorso.nome||"Corso"}</span>
-                                <span style={{fontSize:9,color:"#475569"}}>⏸ sospeso</span>
+                              <span title={"🎓 "+( ultimoCorso.nome||"Corso")+" — in sospeso"} style={{background:"#06b6d422",border:"1px solid #06b6d466",borderRadius:4,padding:"1px 6px",fontSize:11,color:"#06b6d4",fontWeight:700,cursor:"default"}}>
+                                🎓
                               </span>
                             )}
+                            {/* Pulsanti azioni solo per sessioni attive */}
                             {att2&&(
                               <>
-                                <button style={{padding:"4px 8px",background:"transparent",border:"1px solid #1e3a5f",borderRadius:6,color:"#94a3b8",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12}} onClick={()=>setModTr(s)}>↔</button>
-                                <button style={{padding:"4px 8px",background:"transparent",border:"1px solid #06b6d444",borderRadius:6,color:"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12}} onClick={()=>setModCorso(s)}>🎓</button>
-                                <button style={{padding:"4px 8px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12}} onClick={()=>setModCO(s)}>✕</button>
+                                <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #1e3a5f",borderRadius:5,color:"#94a3b8",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>setModTr(s)}>↔</button>
+                                <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #06b6d444",borderRadius:5,color:"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>setModCorso(s)}>🎓</button>
+                                <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #ef444466",borderRadius:5,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>setModCO(s)}>✕</button>
                               </>
                             )}
                           </div>
