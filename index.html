@@ -236,24 +236,32 @@ function CambioSkuInline({ sess, skuList, onOk, onClose }) {
 }
 
 // ─── Modal Password Generico ─────────────────────────────────────────────
-function ModalPwd({ titolo, colore, onOk, onClose }) {
+function ModalPwd({ titolo, colore, linea, onOk, onClose }) {
   const [pwd,setPwd] = useState("");
   const [err,setErr] = useState("");
+  const c = colore||"#a855f7";
   return (
     <div style={MS.ov}>
-      <div style={{...MS.md,maxWidth:360}}>
-        <div style={MS.mh}>
-          <span style={{...MS.mt,color:colore||"#a855f7"}}>🔒 {titolo||"Password richiesta"}</span>
+      <div style={{...MS.md,maxWidth:380,border:"1px solid "+c+"44"}}>
+        <div style={{...MS.mh,borderBottom:"1px solid "+c+"33",background:c+"11"}}>
+          <span style={{...MS.mt,color:c}}>🔒 {titolo||"Password richiesta"}</span>
           <button style={MS.mx} onClick={onClose}>X</button>
         </div>
         <div style={{padding:22}}>
-          <input type="password" style={S.inp} placeholder="Inserisci password..." autoFocus
+          {/* Badge linea con colore */}
+          {linea&&(
+            <div style={{background:linea.colore+"18",border:"1px solid "+linea.colore+"44",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontWeight:800,fontSize:14,color:linea.colore}}>{linea.id}</span>
+              <span style={{fontSize:12,color:"#94a3b8"}}>{linea.nome}</span>
+            </div>
+          )}
+          <input type="password" style={{...S.inp,borderColor:c+"66",borderWidth:2}} placeholder="Inserisci password..." autoFocus
             value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}}
             onKeyDown={e=>e.key==="Enter"&&onOk(pwd,setErr)}/>
           {err&&<div style={{...S.err,marginTop:8}}>{err}</div>}
           <div style={{display:"flex",gap:10,marginTop:16}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
-            <button style={{...MS.cf,background:"linear-gradient(135deg,"+(colore||"#a855f7")+","+(colore||"#7c3aed")+")"}}
+            <button style={{...MS.cf,background:"linear-gradient(135deg,"+c+","+c+"bb)"}}
               onClick={()=>onOk(pwd,setErr)}>Conferma</button>
           </div>
         </div>
@@ -1074,7 +1082,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         }}/>}
 
       {/* Modal password Fine Turno singolo */}
-      {modCO&&<ModalPwd titolo={"Fine turno — "+modCO.nome+" "+modCO.cognome} colore="#ef4444"
+      {modCO&&<ModalPwd titolo={"Fine turno — "+modCO.nome+" "+modCO.cognome} colore="#ef4444" linea={getLinea(modCO.lineaCorrente,linee)}
         onClose={()=>setModCO(null)}
         onOk={(pwd,setErr)=>{
           const l=getLinea(modCO.lineaCorrente,linee);
@@ -1086,7 +1094,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         }}/>}
 
       {/* Modal password Trasferimento da Dashboard */}
-      {modTr&&<ModalPwd titolo={"Trasferimento — "+modTr.nome+" "+modTr.cognome} colore="#a855f7"
+      {modTr&&<ModalPwd titolo={"Trasferimento — "+modTr.nome+" "+modTr.cognome} colore="#a855f7" linea={getLinea(modTr.lineaCorrente,linee)}
         onClose={()=>setModTr(null)}
         onOk={(pwd,setErr)=>{
           const l=getLinea(modTr.lineaCorrente,linee);
