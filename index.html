@@ -1028,9 +1028,13 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       {/* Modal Corso dalla Dashboard */}
       {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
         onOk={(tipo,nomeCorso)=>{
-          if(onCOSheets) onCOSheets(modCorso);
-          api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:tipo==="chiudi"?"":modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"});
-          if(tipo==="chiudi"&&onCOSheets) onCOSheets(modCorso);
+          if(tipo==="rientro"){
+            // Solo evento RIENTRO — NON chiude il turno
+            api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""});
+          } else {
+            // Solo evento CORSO (sospensione) — NON chiude il turno
+            api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"});
+          }
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
           setModCorso(null);
         }}/>}
