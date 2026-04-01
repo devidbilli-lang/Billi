@@ -28,7 +28,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3LjBtJM0oLVQH43XhZGaLmAEkQG-l8AbsRKUCOB2KvPg1Mz7CMPR51E1MvaabulPsSA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9RgTMA1_n4kKHwtERO4vtw7I_xrMr_L2bnKNyhTIYmW4SLT5wVyHK03LHVrbUwrfuOw/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -436,26 +436,23 @@ function RiepSku({ sessioni, linee }) {
 
   const totMap  = {}; // sku -> ms totali
   const linMap  = {}; // sku -> { lineaId -> ms }
-  const rampaMap= {}; // sku+lineaId -> { dal: Date, linea: id }
+  const rampaMap= {}; // sku -> { dal: timestamp }
 
   for(const s of sessioni){
-    // Controlla se questa sessione ha la rampa
-    const skuAraw = s.skuA||"";
-    if(skuAraw.includes("__RAMPA__")){
-      const [skuPulito,dalStr] = skuAraw.split("__RAMPA__");
-      const dal = new Date(dalStr);
-      if(!isNaN(dal)){
-        const key = (s.skuCorrente||s.sku||skuPulito)+"__"+s.lineaCorrente;
-        if(!rampaMap[key]) rampaMap[key]={ dal, lineaId:s.lineaCorrente, sku:s.skuCorrente||s.sku||skuPulito };
+    // Legge rampaDal dalla sessione (campo diretto da Sheets o da locale)
+    let rampaDal = s.rampaDal || null;
+    // Fallback: controlla skuA con __RAMPA__
+    if(!rampaDal){
+      const skuAraw = s.skuA||"";
+      if(skuAraw.includes("__RAMPA__")){
+        const parts = skuAraw.split("__RAMPA__");
+        const d = new Date(parts[1]);
+        if(!isNaN(d)) rampaDal = d.getTime();
       }
     }
-    // Controlla anche in sessioni da Sheets: rampaDal
-    if(s.rampaDal){
-      const dal = new Date(s.rampaDal);
-      if(!isNaN(dal)){
-        const key = (s.skuCorrente||s.sku)+"__"+s.lineaCorrente;
-        if(!rampaMap[key]) rampaMap[key]={ dal, lineaId:s.lineaCorrente, sku:s.skuCorrente||s.sku };
-      }
+    if(rampaDal){
+      const sku = s.skuCorrente||s.sku||"";
+      if(sku && !rampaMap[sku]) rampaMap[sku] = { dal: rampaDal };
     }
     for(const {linea,sku,ms} of tappe(s)){
       if(!sku||!ms||isNaN(ms)) continue;
@@ -470,21 +467,11 @@ function RiepSku({ sessioni, linee }) {
   const totG = Object.values(totMap).filter(v=>!isNaN(v)).reduce((a,b)=>a+b,0);
   if(!totG) return <div style={{textAlign:"center",padding:40,color:"#475569"}}>Nessun dato</div>;
 
-  // Trova rampa per ogni sku
-  const getRampa = (sku, lineaId) => {
-    const key = sku+"__"+lineaId;
-    if(rampaMap[key]){
-      const giorni = Math.min(15, Math.floor((now()-rampaMap[key].dal)/(1000*60*60*24))+1);
-      return giorni;
-    }
-    // cerca per sku su qualsiasi linea
-    for(const k of Object.keys(rampaMap)){
-      if(k.startsWith(sku+"__") && rampaMap[k]) {
-        const giorni = Math.min(15, Math.floor((now()-rampaMap[k].dal)/(1000*60*60*24))+1);
-        return giorni;
-      }
-    }
-    return null;
+  // Trova rampa per sku
+  const getRampa = (sku) => {
+    if(!rampaMap[sku]) return null;
+    const giorni = Math.min(15, Math.floor((now()-rampaMap[sku].dal)/(1000*60*60*24))+1);
+    return giorni > 0 ? giorni : 1;
   };
 
   return (
@@ -494,13 +481,7 @@ function RiepSku({ sessioni, linee }) {
         const ms  = totMap[sku]||0;
         const pct = totG>0?(ms/totG)*100:0;
         const lm  = linMap[sku]||{};
-        // Cerca rampa su tutte le linee di questo sku
-        let rampaGiorni = null;
-        let rampaLineaId = null;
-        for(const lid of Object.keys(lm)){
-          const g = getRampa(sku, lid);
-          if(g!==null){ rampaGiorni=g; rampaLineaId=lid; break; }
-        }
+        const rampaGiorni = getRampa(sku);
         if(!ms||isNaN(ms)) return null;
         return (
           <div key={sku} style={{marginBottom:16,paddingBottom:14,borderBottom:"1px solid #0f1f38"}}>
