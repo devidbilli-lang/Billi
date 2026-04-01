@@ -1194,9 +1194,13 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
 function LoginDashboard({ linee, onLogin }) {
   const [pwd,setPwd] = useState("");
   const [err,setErr] = useState("");
+  const [modoAdmin,setModoAdmin] = useState(false);
+
   const tenta = () => {
-    // Admin: accesso diretto senza password
-    if(pwd===""||pwd===ADMIN_PWD){ onLogin("admin",null); return; }
+    if(modoAdmin){
+      if(pwd===ADMIN_PWD){ onLogin("admin",null); return; }
+      setErr("Password admin errata."); setPwd(""); return;
+    }
     const l=linee.find(l=>l.password&&l.password===pwd);
     if(l){ onLogin("linea",l); return; }
     setErr("Password non riconosciuta."); setPwd("");
@@ -1212,10 +1216,19 @@ function LoginDashboard({ linee, onLogin }) {
           onChange={e=>{setPwd(e.target.value);setErr("");}}
           onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
         {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <button style={S.bCI} onClick={tenta}>Accedi con password linea</button>
-          <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={()=>onLogin("admin",null)}>👑 Entra come Admin</button>
-        </div>
+        {!modoAdmin&&(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <button style={S.bCI} onClick={tenta}>Accedi con password linea</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
+          </div>
+        )}
+        {modoAdmin&&(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{fontSize:12,color:"#e879f9",marginBottom:4,textAlign:"center",fontWeight:600}}>👑 Accesso Admin — inserisci la password</div>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={tenta}>Conferma</button>
+            <button style={{...S.bBk,textAlign:"center"}} onClick={()=>{setModoAdmin(false);setPwd("");setErr("");}}>← Indietro</button>
+          </div>
+        )}
       </div>
     </div>
   );
