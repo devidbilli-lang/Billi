@@ -429,40 +429,105 @@ function RiepLinea({ sessioni, linee }) {
   );
 }
 
-// Riepilogo SKU
+// Riepilogo SKU con Rampa
 function RiepSku({ sessioni, linee }) {
-  const totMap = {};
-  const linMap = {};
+  const [,setTk] = useState(0);
+  useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
+
+  const totMap  = {}; // sku -> ms totali
+  const linMap  = {}; // sku -> { lineaId -> ms }
+  const rampaMap= {}; // sku+lineaId -> { dal: Date, linea: id }
+
   for(const s of sessioni){
+    // Controlla se questa sessione ha la rampa
+    const skuAraw = s.skuA||"";
+    if(skuAraw.includes("__RAMPA__")){
+      const [skuPulito,dalStr] = skuAraw.split("__RAMPA__");
+      const dal = new Date(dalStr);
+      if(!isNaN(dal)){
+        const key = (s.skuCorrente||s.sku||skuPulito)+"__"+s.lineaCorrente;
+        if(!rampaMap[key]) rampaMap[key]={ dal, lineaId:s.lineaCorrente, sku:s.skuCorrente||s.sku||skuPulito };
+      }
+    }
+    // Controlla anche in sessioni da Sheets: rampaDal
+    if(s.rampaDal){
+      const dal = new Date(s.rampaDal);
+      if(!isNaN(dal)){
+        const key = (s.skuCorrente||s.sku)+"__"+s.lineaCorrente;
+        if(!rampaMap[key]) rampaMap[key]={ dal, lineaId:s.lineaCorrente, sku:s.skuCorrente||s.sku };
+      }
+    }
     for(const {linea,sku,ms} of tappe(s)){
-      if(!sku) continue;
+      if(!sku||!ms||isNaN(ms)) continue;
       totMap[sku]=(totMap[sku]||0)+ms;
       if(!linMap[sku]) linMap[sku]={};
       linMap[sku][linea]=(linMap[sku][linea]||0)+ms;
     }
   }
+
   const keys = Object.keys(totMap).sort();
   if(!keys.length) return <div style={{textAlign:"center",padding:40,color:"#475569"}}>Nessun dato</div>;
-  const totG = Object.values(totMap).reduce((a,b)=>a+b,0);
+  const totG = Object.values(totMap).filter(v=>!isNaN(v)).reduce((a,b)=>a+b,0);
+  if(!totG) return <div style={{textAlign:"center",padding:40,color:"#475569"}}>Nessun dato</div>;
+
+  // Trova rampa per ogni sku
+  const getRampa = (sku, lineaId) => {
+    const key = sku+"__"+lineaId;
+    if(rampaMap[key]){
+      const giorni = Math.min(15, Math.floor((now()-rampaMap[key].dal)/(1000*60*60*24))+1);
+      return giorni;
+    }
+    // cerca per sku su qualsiasi linea
+    for(const k of Object.keys(rampaMap)){
+      if(k.startsWith(sku+"__") && rampaMap[k]) {
+        const giorni = Math.min(15, Math.floor((now()-rampaMap[k].dal)/(1000*60*60*24))+1);
+        return giorni;
+      }
+    }
+    return null;
+  };
+
   return (
     <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:14}}>Minuti per SKU</div>
-      {keys.map(sku=>{ const ms=totMap[sku]; const pct=totG>0?(ms/totG)*100:0; const lm=linMap[sku]||{};
-        return (<div key={sku} style={{marginBottom:16,paddingBottom:14,borderBottom:"1px solid #0f1f38"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-            <code style={{...S.sku,minWidth:80}}>{sku}</code>
-            <div style={{flex:1,height:10,background:"#0f1f38",borderRadius:6,overflow:"hidden"}}>
-              <div style={{height:"100%",width:pct+"%",background:"#f59e0b",borderRadius:6,transition:"width 0.6s"}}/>
+      {keys.map(sku=>{
+        const ms  = totMap[sku]||0;
+        const pct = totG>0?(ms/totG)*100:0;
+        const lm  = linMap[sku]||{};
+        // Cerca rampa su tutte le linee di questo sku
+        let rampaGiorni = null;
+        let rampaLineaId = null;
+        for(const lid of Object.keys(lm)){
+          const g = getRampa(sku, lid);
+          if(g!==null){ rampaGiorni=g; rampaLineaId=lid; break; }
+        }
+        if(!ms||isNaN(ms)) return null;
+        return (
+          <div key={sku} style={{marginBottom:16,paddingBottom:14,borderBottom:"1px solid #0f1f38"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+              <code style={{...S.sku,minWidth:80}}>{sku}</code>
+              {/* Badge Rampa */}
+              {rampaGiorni!==null&&(
+                <span style={{display:"flex",alignItems:"center",gap:4,background:"#f59e0b22",border:"1px solid #f59e0b66",borderRadius:6,padding:"2px 8px",fontSize:11,color:"#f59e0b",fontWeight:700}}>
+                  📈 {rampaGiorni}/15
+                  <div style={{width:40,height:5,background:"#0f1f38",borderRadius:3,overflow:"hidden",marginLeft:2}}>
+                    <div style={{height:"100%",width:(rampaGiorni/15*100)+"%",background:rampaGiorni>=15?"#22c55e":"#f59e0b",borderRadius:3}}/>
+                  </div>
+                </span>
+              )}
+              <div style={{flex:1,height:10,background:"#0f1f38",borderRadius:6,overflow:"hidden"}}>
+                <div style={{height:"100%",width:pct+"%",background:"#f59e0b",borderRadius:6,transition:"width 0.6s"}}/>
+              </div>
+              <span style={{color:"#f59e0b",minWidth:52,fontSize:13,fontWeight:700,fontFamily:"monospace",textAlign:"right"}}>{Math.round(ms/60000)}m</span>
+              <span style={{minWidth:34,fontSize:11,color:"#475569",textAlign:"right"}}>{pct.toFixed(0)+"%"}</span>
             </div>
-            <span style={{color:"#f59e0b",minWidth:42,fontSize:13,fontWeight:700,fontFamily:"monospace",textAlign:"right"}}>{Math.round(ms/60000)}m</span>
-            <span style={{minWidth:34,fontSize:11,color:"#475569",textAlign:"right"}}>{pct.toFixed(0)+"%"}</span>
+            <div style={{paddingLeft:16,display:"flex",flexWrap:"wrap",gap:6}}>
+              {linee.map(l=>{ const mL=lm[l.id]||0; if(!mL||isNaN(mL)) return null;
+                return <span key={l.id} style={{fontSize:11,background:l.colore+"18",color:l.colore,border:"1px solid "+l.colore+"44",borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>{l.id}: {Math.round(mL/60000)}m</span>;
+              })}
+            </div>
           </div>
-          <div style={{paddingLeft:16,display:"flex",flexWrap:"wrap",gap:6}}>
-            {linee.map(l=>{ const mL=lm[l.id]||0; if(!mL) return null;
-              return <span key={l.id} style={{fontSize:11,background:l.colore+"18",color:l.colore,border:"1px solid "+l.colore+"44",borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>{l.id}: {Math.round(mL/60000)}m</span>;
-            })}
-          </div>
-        </div>);
+        );
       })}
       <div style={{fontSize:12,color:"#64748b",paddingTop:4}}>Totale: <strong style={{color:"#f59e0b"}}>{durataStr(totG)}</strong></div>
     </div>
