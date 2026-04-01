@@ -282,18 +282,20 @@ function ModalCorso({ sess, linee, onOk, onClose }) {
             <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
 
-          {/* Nome corso */}
-          <div style={{marginBottom:16}}>
-            <label style={S.lbl}>Nome corso / formazione</label>
-            <input style={{...S.inp,borderColor:"#06b6d4",borderWidth:2}} placeholder="es. Sicurezza sul lavoro..."
-              value={nomeCorso} onChange={e=>setNomeCorso(e.target.value)}/>
-          </div>
+          {/* Nome corso — solo per sospensione */}
+          {tipoUscita==="sospendi"&&(
+            <div style={{marginBottom:16}}>
+              <label style={S.lbl}>Nome corso / formazione</label>
+              <input style={{...S.inp,borderColor:"#06b6d4",borderWidth:2}} placeholder="es. Sicurezza sul lavoro..."
+                value={nomeCorso} onChange={e=>setNomeCorso(e.target.value)}/>
+            </div>
+          )}
 
           {/* Tipo uscita */}
           <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Cosa succede alla produzione?</div>
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-            {[["sospendi","⏸ Sospendo la produzione — tornerò dopo","L'operatore rientra in produzione al termine del corso","#06b6d4"],
-              ["chiudi","⏹ Chiudo il turno — non torno in produzione oggi","La sessione viene chiusa definitivamente","#ef4444"]
+            {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"],
+              ["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
             ].map(([val,tit,desc,c])=>(
               <button key={val} onClick={()=>setTipoUscita(val)}
                 style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
@@ -553,7 +555,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   if(mode==="result"&&ris){
     const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
-    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Corso Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
+    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
     return (
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
         <div style={{textAlign:"center",padding:40,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
@@ -681,8 +683,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             })()}
             {mode==="corso"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{
               const isDaSheets=!sessioni.find(s=>s.id===sf.id);
-              api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:tipo==="chiudi"?"":sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"});
-              if(tipo==="chiudi"){ if(isDaSheets){api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CHECKOUT",lineaDa:sf.lineaCorrente,lineaA:"",skuDa:sf.skuCorrente||sf.sku||"",skuA:""});}else{onCheckout(sf.id);} }
+              if(tipo==="rientro"){
+                // Rientro dal corso: evento RIENTRO
+                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
+              } else {
+                // Sospensione: evento CORSO
+                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"});
+              }
               if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
               setRis({tipo:"corso",sess:sf});setMode("result");
             }} onClose={reset}/>}
@@ -853,7 +860,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <h2 style={S.cT}>Cosa vuoi fare?</h2>
           <p style={{fontSize:12,color:"#475569",marginBottom:20}}>{fmtFull(oraRef)}</p>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Stacca dalla produzione per corso","#06b6d4"],["rientro","Rientro da Corso","Riprendi la produzione dopo il corso","#10b981"]].map(([m,t,d,c])=>(
+            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
               <button key={m} onClick={()=>setMode(m)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
                 <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
                 <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:13,color:"#64748b"}}>{d}</div></div>
@@ -1165,9 +1172,11 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                         return (
                           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                             {/* Pallino stato */}
-                            {att2
-                              ? <span title="In turno" style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #22c55e"}}/>
-                              : <span title="Fine turno" style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>
+                            {att2 && inCorso
+                              ? <span title="Al corso" style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #06b6d4"}}/>
+                              : att2
+                                ? <span title="In turno" style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #22c55e"}}/>
+                                : <span title="Fine turno" style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>
                             }
                             {/* Icona corso sospeso */}
                             {inCorso&&(
