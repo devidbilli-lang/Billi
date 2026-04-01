@@ -806,7 +806,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               listaOp.forEach(op=>{
                 const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
                 if(sessioni.find(s=>s.matricola===k&&!s.fine)){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
-                const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[]};
+                const rampaDalTs = rampa ? now().getTime() : null;
+              const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
                 onSuccess(s);
                 registrati.push(s);
               });
@@ -1205,7 +1206,7 @@ function App() {
 
   const add = s => {
     setSess(p=>[s,...p]);
-    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa?"__RAMPA__"+new Date(s.rampaDal).toISOString():"")});
+    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
   };
   const co = id => {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
