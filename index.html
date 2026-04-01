@@ -728,7 +728,15 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
                   {cOp.length>=2&&(
                     <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                      {operatori.filter(o=>o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase())).slice(0,6).map(o=>{
+                      {operatori.filter(o=>{
+                        if(!(o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase()))) return false;
+                        // Escludi chi ha già una sessione attiva (in locale o da Sheets)
+                        const chiave = o.nome.toUpperCase()+"-"+o.cognome.toUpperCase();
+                        const haSessione = [...sessioni,...(sessSheets||[])].some(s=>
+                          (s.matricola===chiave||s.matricola===o.matricola)&&(!s.fine||s.fine===""||s.fine==null)
+                        );
+                        return !haSessione;
+                      }).slice(0,6).map(o=>{
                         const sel=opSelezionati.some(x=>x.matricola===o.matricola);
                         return (
                           <div key={o.matricola} onClick={()=>{
