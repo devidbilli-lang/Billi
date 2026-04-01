@@ -28,7 +28,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHYD8MIyhuZ36ygshv2yaw3-cuFtZREBKPKXpQMaIc23Gglb-GBgxV8T0qsNBcbVjt0g/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyOpLEP1Qa2vKPxc59fWj_IjyIW1ilgBfoIYKLTGStvUpT8idXXQZSOnt8fuJpu0yVX/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -262,6 +262,58 @@ function ModalPwd({ titolo, colore, onOk, onClose }) {
   );
 }
 
+// ─── Modal Corso Formazione ──────────────────────────────────────────────
+function ModalCorso({ sess, linee, onOk, onClose }) {
+  const [nomeCorso,setNomeCorso] = useState("");
+  const [tipoUscita,setTipoUscita] = useState("sospendi"); // "sospendi" | "chiudi"
+  const la = getLinea(sess.lineaCorrente, linee);
+  return (
+    <div style={MS.ov}>
+      <div style={{...MS.md,maxWidth:400}}>
+        <div style={MS.mh}>
+          <span style={{...MS.mt,color:"#06b6d4"}}>🎓 Corso / Formazione</span>
+          <button style={MS.mx} onClick={onClose}>X</button>
+        </div>
+        <div style={{padding:22}}>
+          {/* Info operatore */}
+          <div style={S.sc}>
+            <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
+            <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
+            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
+          </div>
+
+          {/* Nome corso */}
+          <div style={{marginBottom:16}}>
+            <label style={S.lbl}>Nome corso / formazione</label>
+            <input style={{...S.inp,borderColor:"#06b6d4",borderWidth:2}} placeholder="es. Sicurezza sul lavoro..."
+              value={nomeCorso} onChange={e=>setNomeCorso(e.target.value)}/>
+          </div>
+
+          {/* Tipo uscita */}
+          <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Cosa succede alla produzione?</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+            {[["sospendi","⏸ Sospendo la produzione — tornerò dopo","L'operatore rientra in produzione al termine del corso","#06b6d4"],
+              ["chiudi","⏹ Chiudo il turno — non torno in produzione oggi","La sessione viene chiusa definitivamente","#ef4444"]
+            ].map(([val,tit,desc,c])=>(
+              <button key={val} onClick={()=>setTipoUscita(val)}
+                style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
+                <span style={{fontWeight:700,color:tipoUscita===val?c:"#94a3b8",fontSize:13}}>{tit}</span>
+                <span style={{fontSize:11,color:"#475569"}}>{desc}</span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{display:"flex",gap:10}}>
+            <button style={MS.an} onClick={onClose}>Annulla</button>
+            <button style={{...MS.cf,background:"linear-gradient(135deg,#06b6d4,#0284c7)"}}
+              onClick={()=>onOk(tipoUscita, nomeCorso||"CORSO")}>Conferma</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Modal Trasferimento
 function ModalTrasf({ sess, linee, skuList, onOk, onClose }) {
   const [dest,setDest]   = useState(null);
@@ -431,6 +483,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [cOp,setCOp]             = useState("");
   const [cSku,setCSku]           = useState("");
   const [opSelezionati,setOpSelezionati] = useState([]);
+  const [rampa,setRampa]                 = useState(false);
   const [pwdLinea,setPwdLinea]           = useState("");
   const [pwdOk,setPwdOk]                 = useState(false);
   const [errPwd,setErrPwd]               = useState("");
@@ -450,12 +503,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   };
   // Set matricole operatori abilitati da Sheets
   const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
-  const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setMode("menu"); };
+  const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setMode("menu"); };
 
   if(mode==="result"&&ris){
     const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
-    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"}}[tipo];
+    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Corso Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"}}[tipo];
     return (
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
         <div style={{textAlign:"center",padding:40,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
@@ -475,10 +528,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     );
   }
 
-  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"){
+  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"){
     const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
-    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"); // transfer: password gestita sulla linea DESTINAZIONE nel modal
+    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"||mode==="corso"); // transfer: password gestita sulla linea DESTINAZIONE nel modal
     const verificaPwd = () => {
       if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
       else { setErrPwd("Password errata."); setPwdLinea(""); }
@@ -487,12 +540,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":"Trasferimento"}</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":"Trasferimento"}</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
           <div style={S.card}>
-            <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":"Trasferimento"}</h2>
+            <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":"Trasferimento"}</h2>
 
             {/* Cerca operatore */}
             <div style={{marginBottom:18}}>
@@ -567,6 +620,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
               } else onTrasf(sf.id,ld,ns);
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result");
+            }} onClose={reset}/>}
+            {mode==="corso"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{
+              const isDaSheets=!sessioni.find(s=>s.id===sf.id);
+              api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:tipo==="chiudi"?"":sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"});
+              if(tipo==="chiudi"){ if(isDaSheets){api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CHECKOUT",lineaDa:sf.lineaCorrente,lineaA:"",skuDa:sf.skuCorrente||sf.sku||"",skuA:""});}else{onCheckout(sf.id);} }
+              if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
+              setRis({tipo:"corso",sess:sf});setMode("result");
             }} onClose={reset}/>}
             {mode==="cambiosku"&&sf&&(!lineaHaPwd||pwdOk)&&<CambioSkuInline sess={sf} skuList={skuList} onOk={(ns)=>{
               const isDaSheets = !sessioni.find(s=>s.id===sf.id);
@@ -674,6 +734,19 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               </div>
             </div>
 
+            {/* Rampa di Crescita */}
+            <div style={{marginBottom:18,background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,padding:"12px 14px"}}>
+              <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:rampa?10:0}}>
+                <input type="checkbox" checked={rampa} onChange={e=>setRampa(e.target.checked)} style={{accentColor:"#f59e0b",width:16,height:16}}/>
+                <span style={{fontSize:13,color:"#f59e0b",fontWeight:600}}>📈 Avvia Rampa di Crescita (15 giorni)</span>
+              </label>
+              {rampa&&(
+                <div style={{fontSize:11,color:"#475569",marginTop:4,paddingLeft:24}}>
+                  Il conteggio partirà da oggi. Troverai il progresso nel foglio Riepilogo.
+                </div>
+              )}
+            </div>
+
             {err&&<div style={S.err}>{err}</div>}
             <button style={S.bCI} onClick={()=>{
               setErr("");
@@ -721,7 +794,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <h2 style={S.cT}>Cosa vuoi fare?</h2>
           <p style={{fontSize:12,color:"#475569",marginBottom:20}}>{fmtFull(oraRef)}</p>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["checkout","Fine Turno","Chiudi la sessione","#ef4444"]].map(([m,t,d,c])=>(
+            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Stacca dalla produzione per corso","#06b6d4"],["checkout","Fine Turno","Chiudi la sessione","#ef4444"]].map(([m,t,d,c])=>(
               <button key={m} onClick={()=>setMode(m)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
                 <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
                 <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:13,color:"#64748b"}}>{d}</div></div>
@@ -1086,7 +1159,7 @@ function App() {
 
   const add = s => {
     setSess(p=>[s,...p]);
-    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku});
+    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa?"__RAMPA__"+new Date(s.rampaDal).toISOString():"")});
   };
   const co = id => {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
