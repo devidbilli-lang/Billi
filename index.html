@@ -553,7 +553,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   if(mode==="result"&&ris){
     const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
-    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Corso Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"}}[tipo];
+    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Corso Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
     return (
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
         <div style={{textAlign:"center",padding:40,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
@@ -573,10 +573,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     );
   }
 
-  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"){
+  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){
     const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
-    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"||mode==="corso"); // transfer: password gestita sulla linea DESTINAZIONE nel modal
+    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"||mode==="corso"||mode==="rientro"); // transfer: password gestita sulla linea DESTINAZIONE nel modal
     const verificaPwd = () => {
       if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
       else { setErrPwd("Password errata."); setPwdLinea(""); }
@@ -585,12 +585,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":"Trasferimento"}</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
           <div style={S.card}>
-            <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":"Trasferimento"}</h2>
+            <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</h2>
 
             {/* Cerca operatore */}
             <div style={{marginBottom:18}}>
@@ -602,6 +602,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   {[...sessioni,...(sessSheets||[])].filter((s,i,arr)=>
                     (!s.fine||s.fine===""||s.fine==null)&&
                     (operatori.length===0||matricoleAbilitate.has(s.matricola))&&
+                    (mode!=="rientro"||(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")))&&
                     (s.nome.toUpperCase().includes(mats)||s.cognome.toUpperCase().includes(mats)||s.matricola.includes(mats)||(matsNome&&(s.nome+" "+s.cognome).toUpperCase().includes(matsNome.toUpperCase())))&&
                     arr.findIndex(x=>x.id===s.id)===i
                   ).slice(0,4).map(s=>(
@@ -666,6 +667,18 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               } else onTrasf(sf.id,ld,ns);
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result");
             }} onClose={reset}/>}
+            {mode==="rientro"&&sf&&(!lineaHaPwd||pwdOk)&&(()=>{
+              // Verifica che l'operatore abbia un corso sospeso
+              const corsi = sf.corsi||[];
+              const haSospeso = corsi.some(c=>c.tipo==="sospendi");
+              if(!haSospeso) return <div style={{...S.err}}>Questo operatore non ha corsi sospesi.</div>;
+              return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>{
+                const isDaSheets=!sessioni.find(s=>s.id===sf.id);
+                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
+                if(isDaSheets&&aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
+                setRis({tipo:"rientro",sess:sf});setMode("result");
+              }}>▶ Conferma Rientro in Produzione</button>;
+            })()}
             {mode==="corso"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{
               const isDaSheets=!sessioni.find(s=>s.id===sf.id);
               api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:tipo==="chiudi"?"":sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"});
@@ -840,7 +853,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <h2 style={S.cT}>Cosa vuoi fare?</h2>
           <p style={{fontSize:12,color:"#475569",marginBottom:20}}>{fmtFull(oraRef)}</p>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Stacca dalla produzione per corso","#06b6d4"],["checkout","Fine Turno","Chiudi la sessione","#ef4444"]].map(([m,t,d,c])=>(
+            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Stacca dalla produzione per corso","#06b6d4"],["rientro","Rientro da Corso","Riprendi la produzione dopo il corso","#10b981"]].map(([m,t,d,c])=>(
               <button key={m} onClick={()=>setMode(m)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
                 <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
                 <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:13,color:"#64748b"}}>{d}</div></div>
