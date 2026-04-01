@@ -538,15 +538,20 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [oraRef, setOraRef] = useState(now());
   useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
 
-  // Cerca sessione attiva sia in locale che in Sheets
+  // Cerca sessione attiva - usa sessSheets come fonte primaria (più aggiornata)
   const sessAtt = k => {
     const key = k.trim().toUpperCase();
-    const loc = sessioni.find(s=>s.matricola===key&&!s.fine);
-    if(loc) return loc;
-    if(sessSheets) return sessSheets.find(s=>
-      s.matricola===key && (!s.fine||s.fine===""||s.fine==null)
-    );
-    return null;
+    const isAttiva = s => {
+      const fv = s.fine && s.fine!=="" && s.fine!=="null" && s.fine!==null && String(s.fine).length>3;
+      return !fv;
+    };
+    // Prima cerca in sessSheets (fonte di verità da Sheets)
+    if(sessSheets&&sessSheets.length>0){
+      const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s));
+      if(sh) return sh;
+    }
+    // Fallback: locale (per sessioni appena create non ancora sincronizzate)
+    return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null;
   };
   // Set matricole operatori abilitati da Sheets
   const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
@@ -601,8 +606,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 onChange={e=>{const v=e.target.value; setMatsNome(v); setMats(v.toUpperCase()); setErr(""); setPwdOk(false); setPwdLinea(""); setErrPwd("");}}/>
               {mats.length>=2&&(
                 <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                  {[...sessioni,...(sessSheets||[])].filter((s,i,arr)=>{
-                    const fineValida = s.fine && s.fine!=="" && s.fine!=="null" && s.fine!==null;
+                  {(sessSheets&&sessSheets.length>0 ? sessSheets : sessioni).filter((s,i,arr)=>{
+                    // Usa SOLO sessSheets come fonte di verità (aggiornato da Sheets ogni minuto)
+                    // fine deve essere assente/vuoto per considerare la sessione attiva
+                    const fineValida = s.fine && s.fine!=="" && s.fine!=="null" && s.fine!==null && String(s.fine).length>3;
                     if(fineValida) return false;
                     if(operatori.length>0&&!matricoleAbilitate.has(s.matricola)) return false;
                     if(mode==="rientro"&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))) return false;
