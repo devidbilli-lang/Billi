@@ -1074,7 +1074,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         }}/>}
 
       {/* Modal password Fine Tutti */}
-      {modFineTutti&&<ModalPwd titolo={"Fine turno tutti — "+modFineTutti.linea.id} colore="#ef4444"
+      {modFineTutti&&<ModalPwd titolo={"Fine turno tutti — "+modFineTutti.linea.id} colore={modFineTutti.linea.colore||"#ef4444"} linea={modFineTutti.linea}
         onClose={()=>setModFineTutti(null)}
         onOk={(pwd,setErr)=>{
           if(pwd===modFineTutti.linea.password){ modFineTutti.azione(); setModFineTutti(null); }
@@ -1082,7 +1082,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         }}/>}
 
       {/* Modal password Fine Turno singolo */}
-      {modCO&&<ModalPwd titolo={"Fine turno — "+modCO.nome+" "+modCO.cognome} colore="#ef4444" linea={getLinea(modCO.lineaCorrente,linee)}
+      {modCO&&<ModalPwd titolo={modCO.nome+" "+modCO.cognome} colore={getLinea(modCO.lineaCorrente,linee).colore||"#ef4444"} linea={getLinea(modCO.lineaCorrente,linee)}
         onClose={()=>setModCO(null)}
         onOk={(pwd,setErr)=>{
           const l=getLinea(modCO.lineaCorrente,linee);
@@ -1094,7 +1094,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         }}/>}
 
       {/* Modal password Trasferimento da Dashboard */}
-      {modTr&&<ModalPwd titolo={"Trasferimento — "+modTr.nome+" "+modTr.cognome} colore="#a855f7" linea={getLinea(modTr.lineaCorrente,linee)}
+      {modTr&&<ModalPwd titolo={modTr.nome+" "+modTr.cognome} colore={getLinea(modTr.lineaCorrente,linee).colore||"#a855f7"} linea={getLinea(modTr.lineaCorrente,linee)}
         onClose={()=>setModTr(null)}
         onOk={(pwd,setErr)=>{
           const l=getLinea(modTr.lineaCorrente,linee);
