@@ -28,7 +28,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby96GCEOAuPOi-S0s1Su-_CpQ6cNQ-gBxTthNQiOD6YdXydEED-XfQq2k-5tVbbuHKMBA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby5IM57v6aewAGqWTp68FLoN6IIh57HCy8qTf6bxnCM2rZrTmpn-PCgOa8R_ffAVP0DUA/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -1168,7 +1168,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                       {(()=>{
                         const corsi = s.corsi||[];
                         const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
-                        const inCorso = ultimoCorso && ultimoCorso.tipo==="sospendi" && !s.fine;
+                        // inCorso: ultimo evento è CORSO sospeso (non seguito da RIENTRO o CHECKOUT)
+                        const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
+                        const nomeCorsoAttivo = inCorso ? (ultimoCorso.nome||"Corso") : null;
                         return (
                           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                             {/* Pallino stato */}
@@ -1178,10 +1180,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                                 ? <span title="In turno" style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #22c55e"}}/>
                                 : <span title="Fine turno" style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>
                             }
-                            {/* Icona corso sospeso */}
+                            {/* Icona corso — SOLO se al corso */}
                             {inCorso&&(
-                              <span title={"🎓 "+( ultimoCorso.nome||"Corso")+" — in sospeso"} style={{background:"#06b6d422",border:"1px solid #06b6d466",borderRadius:4,padding:"1px 6px",fontSize:11,color:"#06b6d4",fontWeight:700,cursor:"default"}}>
-                                🎓
+                              <span title={"Al corso: "+nomeCorsoAttivo} style={{background:"#06b6d422",border:"1px solid #06b6d4",borderRadius:4,padding:"2px 7px",fontSize:11,color:"#06b6d4",fontWeight:700,cursor:"default",display:"flex",alignItems:"center",gap:3}}>
+                                🎓 <span style={{fontSize:10}}>{nomeCorsoAttivo}</span>
                               </span>
                             )}
                             {/* Pulsanti azioni solo per sessioni attive */}
