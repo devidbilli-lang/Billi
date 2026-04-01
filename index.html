@@ -842,7 +842,15 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               var registrati=[];
               listaOp.forEach(op=>{
                 const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
-                if(sessioni.find(s=>s.matricola===k&&!s.fine)){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
+                // Controlla sessione attiva sia in locale che su Sheets
+                const haSessioneAttiva = sessSheets.some(s=>{
+                  const nomeMatch = s.nome.toUpperCase()===op.nome.toUpperCase()&&s.cognome.toUpperCase()===op.cognome.toUpperCase();
+                  if(!nomeMatch) return false;
+                  // fine deve essere assente o non una data valida
+                  if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
+                  const d = parseData(s.fine); return d===null||isNaN(d);
+                });
+                if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
                 const rampaDalTs = rampa ? now().getTime() : null;
               const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
                 onSuccess(s);
