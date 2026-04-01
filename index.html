@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Nexus – ProductionBilli</title>
+<title>Nexus – ProductionTrack</title>
 <link rel="icon" type="image/png" href="logo.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -1087,11 +1087,18 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               {nAtt>0&&(
                 <button onClick={()=>{
                   // sessioni da Sheets: fine può essere null, "", o "null"
-                  const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null));
+                  const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
                   const esegui = () => {
-                    attiveLinea.forEach(s=>{ onCOSheets ? onCOSheets(s) : onCO(s.id); });
-                    if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, 3000);
+                    // Invia CHECKOUT in sequenza con ritardo per evitare conflitti
+                    attiveLinea.forEach((s, i) => {
+                      setTimeout(()=>{
+                        if(onCOSheets) onCOSheets(s); else onCO(s.id);
+                      }, i * 300); // 300ms tra una chiamata e l'altra
+                    });
+                    // Aggiorna dashboard dopo che tutte le chiamate sono partite
+                    const totaleDelay = attiveLinea.length * 300 + 3000;
+                    if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay);
                   };
                   if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
                   setModFineTutti({linea:l, azione:esegui});
@@ -1279,7 +1286,8 @@ function App() {
   };
   // Chiude una sessione che viene da Sheets (non in sess locale)
   const coFromSheets = s => {
-    api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
+    if(!s||!s.id) return;
+    api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
   };
   const tr = (id,dest,nSku) => {
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
