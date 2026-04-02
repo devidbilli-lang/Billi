@@ -889,14 +889,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
-                  if(!confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) return;
-                  attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 300); });
-                  const totaleDelay = attiveLinea.length * 300 + 3000;
-                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay);
-                  return;
-                  const esegui = () => {};
-                  if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.nome+"?")) esegui(); return; }
-                  if(confirm("Chiudere tutti i turni della linea "+l.id+"?")) esegui(); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
+                  if(!confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.nome+"?")) return;
+                  attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 800); });
+                  const totaleDelay = attiveLinea.length * 800 + 3000;
+                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
               )}
