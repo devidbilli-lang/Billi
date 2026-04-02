@@ -710,7 +710,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
       <div style={S.bod}>
         <div style={S.card}>
           <h2 style={S.cT}>Cosa vuoi fare?</h2>
-          <p style={{fontSize:12,color:"#475569",marginBottom:20}}>{fmtFull(oraRef)}</p>
+          <p style={{fontSize:16,color:"#ffffff",fontWeight:600,marginBottom:20,fontFamily:"'Montserrat',sans-serif"}}>{fmtFull(oraRef)}</p>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
               <button key={m} onClick={()=>setMode(m)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
@@ -906,20 +906,20 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
 
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
         {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"]].map(([t,l])=>(
-          <button key={t} onClick={()=>setTab(t)} style={{padding:"7px 16px",border:"1px solid "+(tab===t?"#00d4aa":"#1e3a5f"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#64748b"}}>{l}</button>
+          <button key={t} onClick={()=>setTab(t)} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#334155"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#ffffff"}}>{l}</button>
         ))}
       </div>
 
       {tab==="sessioni"&&(
         <div style={{padding:"0 24px 16px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-          <input style={{flex:"1 1 200px",padding:"9px 14px",background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,color:"#e2e8f0",fontSize:14,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
+          <input style={{flex:"1 1 200px",padding:"12px 16px",background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,color:"#ffffff",fontSize:16,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[["ALL","Tutti"],["attive","Attive"],["chiuse","Chiuse"]].map(([k,l])=>(
               <button key={k} onClick={()=>setFS(k)} style={{padding:"6px 12px",border:"1px solid #1e3a5f",borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:fS===k?"#00d4aa":"transparent",color:fS===k?"#000":"#94a3b8"}}>{l}</button>
             ))}
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            <button onClick={()=>setFL("ALL")} style={{padding:"6px 12px",border:"1px solid #1e3a5f",borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:fL==="ALL"?"#1e3a5f":"transparent",color:"#94a3b8",display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
+            <button onClick={()=>setFL("ALL")} style={{padding:"6px 12px",border:"1px solid #1e3a5f",borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL==="ALL"?"#00d4aa22":"transparent",color:fL==="ALL"?"#00d4aa":"#ffffff",border:"2px solid "+(fL==="ALL"?"#00d4aa":"#334155"),display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
             {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
               <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"6px 12px",border:"1px solid "+l.colore,borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:fL===l.id?l.colore:"transparent",color:fL===l.id?"#000":l.colore}}>{l.id}</button>
             ))}
