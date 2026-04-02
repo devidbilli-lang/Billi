@@ -146,7 +146,7 @@ function CambioSkuInline({ sess, skuList, onOk, onClose }) { const [nSku,setNSku
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
               <code style={S.sku}>Attuale: {sess.skuCorrente||sess.sku||"-"}</code>
-              <span style={{color:"#475569",fontSize:12}}>→ Linea: {sess.lineaCorrente}</span>
+              <span style={{color:"#475569",fontSize:12}}>→ Linea: {getLinea(sess.lineaCorrente,linee).nome}</span>
             </div>
           </div>
           <label style={S.lbl}>Nuovo SKU</label>
@@ -331,7 +331,7 @@ function RiepLinea({ sessioni, linee }) { const gmap = {};
       <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#00d4aa",marginBottom:14}}>Minuti per Linea</div>
       {linee.map(l=>{ const ms=gmap[l.id]||0; if(!ms) return null; const pct=tot>0?(ms/tot)*100:0;
         return (<div key={l.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-          <span style={{color:l.colore,fontWeight:700,minWidth:32,fontSize:13}}>{l.id}</span>
+          <span style={{color:l.colore,fontWeight:700,minWidth:32,fontSize:13}}>{l.nome}</span>
           
           <div style={{flex:1,height:10,background:"#0f1f38",borderRadius:6,overflow:"hidden"}}>
             <div style={{height:"100%",width:pct+"%",background:l.colore,borderRadius:6,transition:"width 0.6s"}}/>
@@ -499,7 +499,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                       onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <span style={{fontSize:13,color:"#94a3b8"}}>{s.nome} {s.cognome}</span>
                       <code style={S.sku}>{s.skuCorrente||s.sku}</code>
-                      <span style={{...S.tag,background:getLinea(s.lineaCorrente,linee).colore+"22",color:getLinea(s.lineaCorrente,linee).colore,borderColor:getLinea(s.lineaCorrente,linee).colore+"44",fontSize:11}}>{s.lineaCorrente}</span>
+                      <span style={{...S.tag,background:getLinea(s.lineaCorrente,linee).colore+"22",color:getLinea(s.lineaCorrente,linee).colore,borderColor:getLinea(s.lineaCorrente,linee).colore+"44",fontSize:11}}>{getLinea(s.lineaCorrente,linee).nome}</span>
                     </div>
                   ))}
                 </div>
@@ -895,7 +895,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay);
                   return;
                   const esegui = () => {};
-                  if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
+                  if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.nome+"?")) esegui(); return; }
                   if(confirm("Chiudere tutti i turni della linea "+l.id+"?")) esegui(); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
