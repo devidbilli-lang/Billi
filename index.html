@@ -950,9 +950,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                       </div>
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{s.lineaCorrente}</span></td>
-                    <td style={S.td}><span style={{fontSize:15,color:"#ffffff",fontFamily:"monospace"}}>{fmtSafe(s.inizio)}</span></td>
-                    <td style={S.td}>{s.fine?<span style={{fontSize:15,color:"#ffffff",fontFamily:"monospace"}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
-                    <td style={S.td}><span style={{background:"#1e3a5f",color:"#94a3b8",padding:"2px 8px",borderRadius:4,fontSize:12,fontFamily:"monospace"}}>{durataStr(dur)}</span></td>
+                    <td style={S.td}><span style={{fontSize:13,color:"#ffffff",fontFamily:"'Montserrat',sans-serif",fontWeight:500}}>{fmtSafe(s.inizio)}</span></td>
+                    <td style={S.td}>{s.fine?<span style={{fontSize:13,color:"#ffffff",fontFamily:"'Montserrat',sans-serif",fontWeight:500}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
+                    <td style={S.td}><span style={{background:"#1e3a5f",color:"#ffffff",padding:"4px 10px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{durataStr(dur)}</span></td>
                     <td style={S.td}>{s.trasferimenti.length>0?<span style={{background:"#a855f722",color:"#a855f7",border:"1px solid #a855f744",padding:"2px 8px",borderRadius:4,fontSize:12}}>{s.trasferimenti.length}x</span>:<span style={{color:"#334155"}}>-</span>}</td>
                     <td style={S.td}>
                       {(()=>{ const corsi = s.corsi||[];
