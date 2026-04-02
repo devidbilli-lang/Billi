@@ -893,7 +893,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   return;
                   const esegui = () => {};
                   if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
-                  if(confirm("Chiudere tutti i turni della linea "+l.id+"?")) esegui(); }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
+                  if(confirm("Chiudere tutti i turni della linea "+l.id+"?")) esegui(); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
               )}
@@ -995,7 +995,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   );
 }
 
-function LoginDashboard({ linee, onLogin }) { const [pwd,setPwd] = useState("");
+function LoginDashboard({ linee, sync, onLogin }) { const [pwd,setPwd] = useState("");
   const [err,setErr] = useState("");
   const [modoAdmin,setModoAdmin] = useState(false);
 
@@ -1004,6 +1004,14 @@ function LoginDashboard({ linee, onLogin }) { const [pwd,setPwd] = useState("");
     const l=linee.find(l=>l.password&&l.password===pwd);
     if(l){ onLogin("linea",l); return; }
     setErr("Password non riconosciuta."); setPwd(""); };
+  if(sync==="caricamento") return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)",flexDirection:"column",gap:16}}>
+      <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8}}/>
+      <span style={{fontSize:28,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+      <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
+    </div>
+  );
+
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
       <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
@@ -1072,7 +1080,7 @@ function App() { const [view,setView]             = useState("login");
   const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
 
   if(!accesso && view !== "login") {
-    return <LoginDashboard linee={linee} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>;
+    return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>;
   }
 
   return (
@@ -1113,7 +1121,7 @@ function App() { const [view,setView]             = useState("login");
         </div>
       )}
       {view==="login"&&(
-        <LoginDashboard linee={linee} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>
+        <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>
       )}
       {view==="dashboard"&&accesso&&(
         <Dashboard
