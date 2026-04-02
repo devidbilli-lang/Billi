@@ -419,6 +419,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [cogn,setCogn]           = useState("");
   const [sku,setSku]             = useState("");
   const [linea,setLinea]         = useState(null);
+  useEffect(()=>{ if(lineaFiltro) setLinea(lineaFiltro); },[lineaFiltro]);
   const [ris,setRis]             = useState(null);
   const [err,setErr]             = useState("");
   const [mats,setMats]           = useState("");
@@ -641,7 +642,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Linea di Produzione</label>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                {linee.map(l=>(
+                {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
                   <button key={l.id} onClick={()=>setLinea(l)}
                     style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",border:"1px solid "+(linea?.id===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",background:linea?.id===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",boxShadow:linea?.id===l.id?("0 0 16px "+l.colore+"44"):"none",fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
                     <span style={{fontSize:13,fontWeight:700,color:linea?.id===l.id?l.colore:"#94a3b8"}}>{l.nome}</span>
