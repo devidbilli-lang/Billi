@@ -915,7 +915,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           <input style={{flex:"1 1 200px",padding:"12px 16px",background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,color:"#ffffff",fontSize:16,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[["ALL","Tutti"],["attive","Attive"],["chiuse","Chiuse"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setFS(k)} style={{padding:"6px 12px",border:"1px solid #1e3a5f",borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:fS===k?"#00d4aa":"transparent",color:fS===k?"#000":"#94a3b8"}}>{l}</button>
+              <button key={k} onClick={()=>setFS(k)} style={{padding:"10px 20px",border:"2px solid #334155",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fS===k?"#00d4aa":"transparent",color:fS===k?"#000":"#ffffff"}}>{l}</button>
             ))}
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
