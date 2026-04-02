@@ -266,7 +266,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
   const la = getLinea(sess.lineaCorrente,linee);
   const lineaDest = dest ? getLinea(dest,linee) : null;
 
-  const conferma = () => { if(lineaDest && lineaDest.password) { if(pwd !== lineaDest.password){ setErrPwd("Password errata."); setPwd(""); return; } }
+  const conferma = () => {
     onOk(dest, chSku&&nSku?nSku:null); };
 
   return (
@@ -312,19 +312,6 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
           </div>
 
           {}
-          {dest&&lineaDest&&lineaDest.password&&(
-            <div style={{background:"#050a14",border:"2px solid "+(lineaDest.colore||"#a855f7")+"88",borderRadius:10,padding:14,marginBottom:16}}>
-              <div style={{fontSize:12,color:lineaDest.colore||"#a855f7",fontWeight:600,marginBottom:8}}>
-                🔒 {lineaDest.id} richiede la password
-              </div>
-              <input type="password" style={{...S.inp,borderColor:(lineaDest.colore||"#a855f7")+"88",borderWidth:2}}
-                placeholder="Password linea destinazione..."
-                value={pwd} onChange={e=>{setPwd(e.target.value);setErrPwd("");}}
-                onKeyDown={e=>e.key==="Enter"&&conferma()}/>
-              {errPwd&&<div style={{...S.err,marginTop:8}}>{errPwd}</div>}
-            </div>
-          )}
-
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
             <button style={{...MS.cf,opacity:dest?1:0.4}} disabled={!dest} onClick={conferma}>Conferma</button>
@@ -480,9 +467,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 
   if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){ const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
-    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"||mode==="corso"||mode==="rientro");
-    const verificaPwd = () => { if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
-      else { setErrPwd("Password errata."); setPwdLinea(""); } };
+    const lineaHaPwd = false; // password rimossa: login unico all'avvio
 
     return (
       <div style={S.scr}>
@@ -535,22 +520,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {err&&<div style={S.err}>{err}</div>}
 
             {}
-            {sf&&lineaHaPwd&&!pwdOk&&(
-              <div style={{background:"#050a14",border:"2px solid "+(la?la.colore+"88":"#f59e0b44"),borderRadius:10,padding:16,marginBottom:16}}>
-                <div style={{fontSize:13,color:la?la.colore:"#f59e0b",fontWeight:600,marginBottom:10}}>🔒 {la?la.id:""} — inserisci la password</div>
-                <input type="password" style={{...S.inp,borderColor:la?la.colore+"88":"#f59e0b44",borderWidth:2,marginBottom:8}}
-                  placeholder="Password linea..." value={pwdLinea}
-                  onChange={e=>{setPwdLinea(e.target.value);setErrPwd("");}}
-                  onKeyDown={e=>e.key==="Enter"&&verificaPwd()}/>
-                {errPwd&&<div style={{...S.err,marginBottom:8}}>{errPwd}</div>}
-                <button style={{...S.bCI,background:la?"linear-gradient(135deg,"+la.colore+","+la.colore+"bb)":"linear-gradient(135deg,#f59e0b,#d97706)",color:la&&["#f59e0b","#22c55e","#00d4aa"].includes(la.colore)?"#000":"white"}} onClick={verificaPwd}>Sblocca</button>
-              </div>
-            )}
-            {sf&&lineaHaPwd&&pwdOk&&(
-              <div style={{background:"#22c55e11",border:"1px solid #22c55e44",borderRadius:8,padding:"8px 14px",marginBottom:12,fontSize:12,color:"#22c55e"}}>
-                ✓ Linea sbloccata
-              </div>
-            )}
+
 
             {mode==="checkout"&&sf&&(!lineaHaPwd||pwdOk)&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); }
               else onCheckout(sf.id);
@@ -867,6 +837,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [modFineTutti,setModFineTutti] = useState(null);
   const [modCO,setModCO]         = useState(null);
   const [modTr,setModTr]         = useState(null);
+  useEffect(()=>{ if(modCO){ const l=getLinea(modCO.lineaCorrente,linee); if(onCOSheets) onCOSheets(modCO); else onCO(modCO.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCO(null); } },[modCO]);
+  useEffect(()=>{ if(modTr){ setMod(modTr); setModTr(null); } },[modTr]);
+  useEffect(()=>{ if(modReset){ onReset(); setModReset(false); } },[modReset]);
+  useEffect(()=>{ if(modFineTutti){ modFineTutti.azione(); setModFineTutti(null); } },[modFineTutti]);
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
 
   const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
@@ -879,40 +853,22 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
 
   return (
     <div style={{minHeight:"100vh",background:"#050a14",paddingBottom:60}}>
-      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);}} onClose={()=>setMod(null)}/>}
+      
 
       {}
-      {modReset&&<ModalPwd titolo="Password Admin — Reset" colore="#ef4444"
-        onClose={()=>setModReset(false)}
-        onOk={(pwd,setErr)=>{ if(pwd===ADMIN_PWD){ setModReset(false); onReset(); }
-          else setErr("Password errata."); }}/>}
+      
 
       {}
-      {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
-        onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); } else { api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
-          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
-          setModCorso(null); }}/>}
+      
 
       {}
-      {modFineTutti&&<ModalPwd titolo={"Fine turno tutti — "+modFineTutti.linea.id} colore={modFineTutti.linea.colore||"#ef4444"} linea={modFineTutti.linea}
-        onClose={()=>setModFineTutti(null)}
-        onOk={(pwd,setErr)=>{ if(pwd===modFineTutti.linea.password){ modFineTutti.azione(); setModFineTutti(null); }
-          else setErr("Password errata."); }}/>}
+      
 
       {}
-      {modCO&&<ModalPwd titolo={modCO.nome+" "+modCO.cognome} colore={getLinea(modCO.lineaCorrente,linee).colore||"#ef4444"} linea={getLinea(modCO.lineaCorrente,linee)}
-        onClose={()=>setModCO(null)}
-        onOk={(pwd,setErr)=>{ const l=getLinea(modCO.lineaCorrente,linee);
-          if(!l.password||pwd===l.password){ if(onCOSheets) onCOSheets(modCO); else onCO(modCO.id);
-            if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
-            setModCO(null); } else setErr("Password errata."); }}/>}
+      
 
       {}
-      {modTr&&<ModalPwd titolo={modTr.nome+" "+modTr.cognome} colore={getLinea(modTr.lineaCorrente,linee).colore||"#a855f7"} linea={getLinea(modTr.lineaCorrente,linee)}
-        onClose={()=>setModTr(null)}
-        onOk={(pwd,setErr)=>{ const l=getLinea(modTr.lineaCorrente,linee);
-          if(!l.password||pwd===l.password){ setMod(modTr); setModTr(null); }
-          else setErr("Password errata."); }}/>}
+      
 
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
@@ -920,7 +876,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
-          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>setModReset(true)}>Reset</button>
+          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ if(confirm("Confermi il reset di tutte le sessioni?")) onReset(); }}>Reset</button>
         </div>
       </header>
 
@@ -943,11 +899,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
-                  const esegui = () => { attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 300); });
-                    const totaleDelay = attiveLinea.length * 300 + 3000;
-                    if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay); };
+                  if(!confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) return;
+                  attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 300); });
+                  const totaleDelay = attiveLinea.length * 300 + 3000;
+                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay);
+                  return;
+                  const esegui = () => {};
                   if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
-                  setModFineTutti({linea:l, azione:esegui}); }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
+                  if(confirm("Chiudere tutti i turni della linea "+l.id+"?")) esegui(); }} style={{fontSize:10,padding:"3px 8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
               )}
@@ -1029,7 +988,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                               <>
                                 <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #1e3a5f",borderRadius:5,color:"#94a3b8",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>setModTr(s)}>↔</button>
                                 <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #06b6d444",borderRadius:5,color:"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>setModCorso(s)}>🎓</button>
-                                <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #ef444466",borderRadius:5,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>setModCO(s)}>✕</button>
+                                <button style={{padding:"3px 7px",background:"transparent",border:"1px solid #ef444466",borderRadius:5,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11}} onClick={()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); }}>✕</button>
                               </>
                             )}
                           </div>
@@ -1087,7 +1046,7 @@ function LoginDashboard({ linee, onLogin }) { const [pwd,setPwd] = useState("");
   );
 }
 
-function App() { const [view,setView]             = useState("checkin");
+function App() { const [view,setView]             = useState("login");
   const [sess,setSess]             = useState(()=>store.get("pt_v4",[]) );
   const [sessSheets,setSessSheets] = useState([]);
   const [accesso,setAccesso]       = useState(null);
@@ -1125,6 +1084,10 @@ function App() { const [view,setView]             = useState("checkin");
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
   const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
 
+  if(!accesso && view !== "login") {
+    return <LoginDashboard linee={linee} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>;
+  }
+
   return (
     <div style={{minHeight:"100vh",background:"#050a14",color:"#e2e8f0"}}>
       <div style={{background:"#0a1628",borderBottom:"1px solid #1e3a5f",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
@@ -1142,7 +1105,7 @@ function App() { const [view,setView]             = useState("checkin");
               <span style={{fontSize:11,fontWeight:700,color:accesso.ruolo==="admin"?"#00d4aa":"#e879f9"}}>
                 {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:700}}>{"🔒 "+accesso.linea.id}</span>}
               </span>
-              <button onClick={()=>{setAccesso(null);setView("checkin");}} style={{background:"transparent",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontSize:11,padding:"2px 10px",fontFamily:"'Montserrat',sans-serif"}}>Esci</button>
+              <button onClick={()=>{setAccesso(null);setView("login");}} style={{background:"transparent",border:"1px solid #ef444466",borderRadius:4,color:"#ef4444",cursor:"pointer",fontSize:11,padding:"2px 10px",fontFamily:"'Montserrat',sans-serif"}}>Esci</button>
             </div>
           )}
           {view==="dashboard"&&(
@@ -1156,14 +1119,14 @@ function App() { const [view,setView]             = useState("checkin");
       )}
       {view==="checkin"&&(
         <div>
-          <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2}/>
+          <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null}/>
           <div style={{display:"flex",justifyContent:"center",padding:16}}>
-            <button style={{background:"#1e3a5f",border:"2px solid #00d4aa",borderRadius:10,color:"#ffffff",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}} onClick={()=>{setAccesso(null);setView("dashboard");}}>Dashboard</button>
+            <button style={{background:"#1e3a5f",border:"2px solid #00d4aa",borderRadius:10,color:"#ffffff",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}} onClick={()=>setView("dashboard")}>Dashboard</button>
           </div>
         </div>
       )}
-      {view==="dashboard"&&!accesso&&(
-        <LoginDashboard linee={linee} onLogin={(ruolo,linea)=>setAccesso({ruolo,linea})}/>
+      {view==="login"&&(
+        <LoginDashboard linee={linee} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>
       )}
       {view==="dashboard"&&accesso&&(
         <Dashboard
