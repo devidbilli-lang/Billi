@@ -380,6 +380,7 @@ function RiepSku({ sessioni, linee, rampeSheets }) { const [tick,setTick] = useS
           <div key={sku} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #0f1f38"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <code style={{...S.sku,minWidth:80,fontSize:13}}>{sku}</code>
+              {(()=>{ const skuObj=skuList.find(x=>x.sku===sku); return skuObj&&skuObj.collezione?<span style={{fontSize:12,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 10px",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.collezione}</span>:null; })()}
               {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{lineaObj.nome}</span>}
 
             </div>
