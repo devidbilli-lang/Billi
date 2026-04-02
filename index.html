@@ -566,6 +566,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {}
             <div style={{marginBottom:18}}>
               <label style={S.lbl}>Operatori ({opSelezionati.length} selezionati)</label>
+              {(()=>{ try{ const ult=JSON.parse(localStorage.getItem("pt_ultima_selezione")||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
               {operatori.length>0&&(
                 <div style={{marginBottom:8}}>
                   <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
@@ -684,6 +685,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 registrati.push(s); });
               if(errori.length>0&&registrati.length===0){setErr(errori.join(", "));return;}
               if(registrati.length>0){
+                // Salva selezione per riuso futuro
+                try{ localStorage.setItem("pt_ultima_selezione", JSON.stringify(listaOp)); }catch(e){}
                 // Invia gli eventi in sequenza con 500ms di delay tra uno e l'altro
                 registrati.forEach((s, idx) => {
                   setTimeout(() => { onSuccess(s); }, idx * 500);
