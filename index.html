@@ -344,7 +344,7 @@ function RiepLinea({ sessioni, linee }) { const gmap = {};
   );
 }
 
-function RiepSku({ sessioni, linee, rampeSheets }) { const [tick,setTick] = useState(0);
+function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
 
   const rampaMap = {};
@@ -991,7 +991,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         </div>
       )}
       
-      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]}/></div>}
+      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       <div style={{height:40}}/>
     </div>
