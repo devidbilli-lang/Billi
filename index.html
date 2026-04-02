@@ -206,7 +206,7 @@ function ModalPwd({ titolo, colore, linea, onOk, onClose }) { const [pwd,setPwd]
 }
 
 function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCorso] = useState("");
-  const [tipoUscita,setTipoUscita] = useState("sospendi"); // "sospendi" | "chiudi"
+  const [tipoUscita,setTipoUscita] = useState("sospendi");
   const la = getLinea(sess.lineaCorrente, linee);
   return (
     <div style={MS.ov}>
@@ -262,7 +262,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
   const [cSku,setCSku]   = useState("");
   const [pwd,setPwd]     = useState("");
   const [errPwd,setErrPwd] = useState("");
-  const [fase,setFase]   = useState("scelta"); // "scelta" | "password"
+  const [fase,setFase]   = useState("scelta");
   const la = getLinea(sess.lineaCorrente,linee);
   const lineaDest = dest ? getLinea(dest,linee) : null;
 
@@ -435,7 +435,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [ris,setRis]             = useState(null);
   const [err,setErr]             = useState("");
   const [mats,setMats]           = useState("");
-  const [matsNome,setMatsNome]   = useState(""); // nome visualizzato nel campo
+  const [matsNome,setMatsNome]   = useState("");
   const [cOp,setCOp]             = useState("");
   const [cSku,setCSku]           = useState("");
   const [opSelezionati,setOpSelezionati] = useState([]);
@@ -450,7 +450,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const sessAtt = k => { const key = k.trim().toUpperCase();
     const isAttiva = s => { if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
       const d = parseData(s.fine);
-      return d===null||isNaN(d); // se fine non è una data valida, considerala attiva };
+      return d===null||isNaN(d);
+    };
     if(sessSheets&&sessSheets.length>0){ const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s));
       if(sh) return sh; }
     return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null; };
@@ -479,7 +480,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 
   if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){ const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
-    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"||mode==="corso"||mode==="rientro"); // transfer: password gestita sulla linea DESTINAZIONE nel modal
+    const lineaHaPwd = sf && la && la.password && (mode==="checkout"||mode==="cambiosku"||mode==="corso"||mode==="rientro");
     const verificaPwd = () => { if(la&&pwdLinea===la.password){ setPwdOk(true); setErrPwd(""); }
       else { setErrPwd("Password errata."); setPwdLinea(""); } };
 
@@ -501,7 +502,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               {mats.length>=2&&(
                 <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                   {(sessSheets&&sessSheets.length>0 ? sessSheets : sessioni).filter((s,i,arr)=>{ if(s.fine&&s.fine!==""&&s.fine!==null&&s.fine!=="null"){ const df = parseData(s.fine);
-                      if(df!==null&&!isNaN(df)) return false; // sessione chiusa }
+                      if(df!==null&&!isNaN(df)) return false; }
                     if(operatori.length>0&&!matricoleAbilitate.has(s.matricola)) return false;
                     if(mode==="rientro"&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))) return false;
                     const q=mats.toUpperCase();
@@ -752,7 +753,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 
 function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
   useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),30000); return()=>clearInterval(t); },[]);
-  const [filtro,setFiltro] = useState("tutti"); // tutti | presenti | assenti
+  const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
 
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -859,9 +860,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [,setTk]          = useState(0);
   const [modReset,setModReset]       = useState(false);
   const [modCorso,setModCorso]       = useState(null);
-  const [modFineTutti,setModFineTutti] = useState(null); // {linea, azione}
-  const [modCO,setModCO]         = useState(null); // sessione da chiudere
-  const [modTr,setModTr]         = useState(null); // sessione da trasferire
+  const [modFineTutti,setModFineTutti] = useState(null);
+  const [modCO,setModCO]         = useState(null);
+  const [modTr,setModTr]         = useState(null);
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
 
   const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
@@ -938,7 +939,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
-                  const esegui = () => { attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 300); // 300ms tra una chiamata e l'altra });
+                  const esegui = () => { attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 300); });
                     const totaleDelay = attiveLinea.length * 300 + 3000;
                     if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay); };
                   if(!l.password){ if(confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+"?")) esegui(); return; }
