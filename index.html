@@ -220,7 +220,7 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
-            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
+            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.nome}</span>
           </div>
 
           {}
@@ -279,7 +279,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
-            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id} — {la.nome}</span>
+            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.nome}</span>
           </div>
 
           {}
@@ -512,7 +512,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
                 <div style={{fontWeight:700,fontSize:16,color:"#f1f5f9",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
                 <code style={S.sku}>{sf.skuCorrente||sf.sku}</code>
-                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
+                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.nome}</span>
                 <div style={{fontSize:12,color:"#64748b",marginTop:8}}>{fmtFull(new Date(sf.inizio))}</div>
               </div>
             )}
