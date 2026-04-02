@@ -1052,6 +1052,16 @@ function App() { const [view,setView]             = useState("login");
   const [ultimoSync2,setUltimoSync2] = useState(null);
   const { linee, operatori, skuList, sync, ts, reload } = useSheets();
 
+  // Aggiorna accesso.linea quando le linee reali arrivano da Sheets
+  useEffect(()=>{
+    if(sync==="ok" && accesso && accesso.ruolo==="linea" && linee.length>0){
+      const lineaAggiornata = linee.find(l=>l.id===accesso.linea.id);
+      if(lineaAggiornata && lineaAggiornata.nome !== accesso.linea.nome){
+        setAccesso({...accesso, linea: lineaAggiornata});
+      }
+    }
+  },[sync, linee]);
+
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
 
   const [rampeSheets,setRampeSheets] = useState([]);
