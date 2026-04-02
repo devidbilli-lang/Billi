@@ -949,7 +949,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                         {(()=>{ const skuObj=skuList.find(x=>x.sku===(s.skuCorrente||s.sku)); return skuObj&&skuObj.collezione?<span style={{fontSize:10,color:"#e879f9",fontStyle:"italic"}}>{skuObj.collezione}</span>:null; })()}
                       </div>
                     </td>
-                    <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{l.nome||s.lineaCorrente}</span></td>
+                    <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{l.nome}</span></td>
                     <td style={S.td}><span style={{fontSize:13,color:"#22c55e",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.inizio)}</span></td>
                     <td style={S.td}>{s.fine?<span style={{fontSize:13,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
                     <td style={S.td}><span style={{background:"#1e3a5f",color:"#ffffff",padding:"4px 10px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{durataStr(dur)}</span></td>
@@ -1111,7 +1111,7 @@ function App() { const [view,setView]             = useState("login");
           {view==="dashboard"&&accesso&&(
             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontSize:20,fontWeight:800,color:accesso.ruolo==="admin"?"#00d4aa":"#e879f9",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
-                {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.nome||accesso.linea.nome||accesso.linea.id)}</span>}
+                {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.nome||accesso.linea.id)}</span>}
               </span>
               <button onClick={()=>{setAccesso(null);setView("login");}} style={{background:"transparent",border:"2px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontSize:20,fontWeight:800,padding:"10px 24px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>Esci</button>
             </div>
