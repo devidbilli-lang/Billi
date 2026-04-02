@@ -380,7 +380,7 @@ function RiepSku({ sessioni, linee, rampeSheets }) { const [tick,setTick] = useS
           <div key={sku} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #0f1f38"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <code style={{...S.sku,minWidth:80,fontSize:13}}>{sku}</code>
-              {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:11}}>{lineaObj.id}</span>}
+              {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{lineaObj.nome}</span>}
 
             </div>
             {g!==null&&(
@@ -403,10 +403,9 @@ function RiepSku({ sessioni, linee, rampeSheets }) { const [tick,setTick] = useS
                 </div>
               </div>
             )}
-            {ms>0&&(
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {linee.map(l=>{ const mL=lm[l.id]||0; if(!mL||isNaN(mL)) return null;
-                  return <span key={l.id} style={{fontSize:11,background:l.colore+"18",color:l.colore,border:"1px solid "+l.colore+"44",borderRadius:4,padding:"2px 8px",fontFamily:"monospace"}}>{l.id}: {Math.round(mL/60000)}m</span>; })}
+            {rampa&&rampa.dal&&(
+              <div style={{fontSize:12,color:"#64748b",marginTop:4,fontFamily:"'Montserrat',sans-serif"}}>
+                🗓 Iniziata il: <span style={{color:"#f59e0b",fontWeight:700}}>{fmtFull(new Date(rampa.dal))}</span>
               </div>
             )}
           </div>
