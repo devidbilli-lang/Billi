@@ -885,7 +885,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           return (
             <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#0a1628",border:"1px solid #1e3a5f",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
-              <div style={{fontSize:13,color:"#ffffff",marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
+              <div style={{fontSize:13,color:"#ffffff",marginTop:2,marginBottom:6,fontWeight:600}}>{l.nome}</div>
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
