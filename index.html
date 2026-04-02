@@ -31,7 +31,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9_ru5EOuKWdVyeCKLPul8MG0JWXBvwI4979w0WDtd-uPAwllzj-QlaS9-iw_dgWLSpQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxr8aE-hyUAQakXmF15HDWduLIe0fkpR9BPNMjpqOkXrR3Mx1F_p46qrqaZuQGOLlsdiQ/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -1111,7 +1111,7 @@ function App() { const [view,setView]             = useState("login");
           {view==="dashboard"&&accesso&&(
             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontSize:20,fontWeight:800,color:accesso.ruolo==="admin"?"#00d4aa":"#e879f9",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
-                {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.nome||accesso.linea.id)}</span>}
+                {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.nome||accesso.linea.nome||accesso.linea.id)}</span>}
               </span>
               <button onClick={()=>{setAccesso(null);setView("login");}} style={{background:"transparent",border:"2px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontSize:20,fontWeight:800,padding:"10px 24px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>Esci</button>
             </div>
