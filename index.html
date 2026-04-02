@@ -133,7 +133,7 @@ function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.leng
   );
 }
 
-function CambioSkuInline({ sess, skuList, onOk, onClose }) { const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
+function CambioSkuInline({ sess, skuList, linee, onOk, onClose }) { const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
   const [cSku,setCSku]   = useState("");
   const [err,setErr]     = useState("");
   return (
@@ -542,7 +542,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               if(tipo==="rientro"){ api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
               if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
               setRis({tipo:"corso",sess:sf});setMode("result"); }} onClose={reset}/>}
-            {mode==="cambiosku"&&sf&&(!lineaHaPwd||pwdOk)&&<CambioSkuInline sess={sf} skuList={skuList} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+            {mode==="cambiosku"&&sf&&(!lineaHaPwd||pwdOk)&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
                 api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns});
                 if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,sf.lineaCorrente,ns);
