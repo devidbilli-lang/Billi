@@ -31,7 +31,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwUgtKk80tssHI7Ez4piPm5j5fLMT3EVMIA6IU536tUaKF8zUmYIhb-CW5hm1NgM4tzcw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9_ru5EOuKWdVyeCKLPul8MG0JWXBvwI4979w0WDtd-uPAwllzj-QlaS9-iw_dgWLSpQ/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -709,11 +709,15 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   const d = parseData(s.fine); return d===null||isNaN(d); });
                 if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
                 const rampaDalTs = rampa ? now().getTime() : null;
-              const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
-                onSuccess(s);
+                const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
                 registrati.push(s); });
               if(errori.length>0&&registrati.length===0){setErr(errori.join(", "));return;}
-              if(registrati.length>0){ setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
+              if(registrati.length>0){
+                // Invia gli eventi in sequenza con 500ms di delay tra uno e l'altro
+                registrati.forEach((s, idx) => {
+                  setTimeout(() => { onSuccess(s); }, idx * 500);
+                });
+                setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
                 setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
             <button style={{...S.bBk,marginTop:12,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
           </div>
@@ -741,7 +745,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
               <button key={m} onClick={()=>setMode(m)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
                 <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
-                <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:13,color:"#64748b"}}>{d}</div></div>
+                <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:15,color:"#ffffff",fontWeight:500}}>{d}</div></div>
               </button>
             ))}
           </div>
@@ -786,11 +790,11 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
         </div>
         <div style={{background:"#0a1628",border:"1px solid #22c55e44",borderTop:"3px solid #22c55e",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
           <div style={{fontSize:28,fontWeight:800,color:"#22c55e",lineHeight:1}}>{presenti}</div>
-          <div style={{fontSize:11,color:"#475569",marginTop:4}}>Presenti</div>
+          <div style={{fontSize:13,color:"#ffffff",marginTop:4,fontWeight:600}}>Presenti</div>
         </div>
         <div style={{background:"#0a1628",border:"1px solid #ef444444",borderTop:"3px solid #ef4444",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
           <div style={{fontSize:28,fontWeight:800,color:"#ef4444",lineHeight:1}}>{assenti}</div>
-          <div style={{fontSize:11,color:"#475569",marginTop:4}}>Assenti</div>
+          <div style={{fontSize:13,color:"#ffffff",marginTop:4,fontWeight:600}}>Assenti</div>
         </div>
       </div>
 
@@ -817,7 +821,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 <div style={{width:10,height:10,borderRadius:"50%",background:presente?"#22c55e":"#475569",flexShrink:0}}/>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:14,color:"#f1f5f9"}}>{op.nome} {op.cognome}</div>
-                  <div style={{fontSize:11,color:"#475569"}}>{op.matricola}</div>
+                  <div style={{fontSize:12,color:"#ffffff"}}>{op.matricola}</div>
                 </div>
                 <span style={{fontSize:11,fontWeight:700,color:presente?"#22c55e":"#475569",background:presente?"#22c55e18":"#1e3a5f",padding:"2px 8px",borderRadius:4}}>
                   {presente?"IN TURNO":"ASSENTE"}
@@ -928,14 +932,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         {[["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
           <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:14,textAlign:"center"}}>
             <div style={{fontSize:28,fontWeight:800,color:c,lineHeight:1}}>{n}</div>
-            <div style={{fontSize:11,color:"#475569",marginTop:4}}>{l}</div>
+            <div style={{fontSize:13,color:"#ffffff",marginTop:4,fontWeight:600}}>{l}</div>
           </div>
         ))}
         {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
           return (
             <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#0a1628",border:"1px solid #1e3a5f",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
-              <div style={{fontSize:11,color:"#475569",marginTop:2,marginBottom:6}}>{l.id}</div>
+              <div style={{fontSize:13,color:"#ffffff",marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
@@ -1154,7 +1158,7 @@ function App() { const [view,setView]             = useState("checkin");
         <div>
           <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2}/>
           <div style={{display:"flex",justifyContent:"center",padding:16}}>
-            <button style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#475569",fontSize:12,padding:"8px 20px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{setAccesso(null);setView("dashboard");}}>Dashboard</button>
+            <button style={{background:"#1e3a5f",border:"2px solid #00d4aa",borderRadius:10,color:"#ffffff",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}} onClick={()=>{setAccesso(null);setView("dashboard");}}>Dashboard</button>
           </div>
         </div>
       )}
