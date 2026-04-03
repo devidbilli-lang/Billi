@@ -31,7 +31,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxr8aE-hyUAQakXmF15HDWduLIe0fkpR9BPNMjpqOkXrR3Mx1F_p46qrqaZuQGOLlsdiQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8jEPuFxq7ZGgkIGgq86xFXVg1lRKc-dlXITAgY1XjwewljYDdpnDETBNa9NUKUTiVxA/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -870,7 +870,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
-          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ if(confirm("Confermi il reset di tutte le sessioni?")) onReset(); }}>Reset</button>
+          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
         </div>
       </header>
 
