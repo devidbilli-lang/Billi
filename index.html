@@ -458,8 +458,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             ? <p style={{color:"#94a3b8",marginBottom:12}}>{ris.multiCount} operatori registrati</p>
             : <p style={{color:"#94a3b8",marginBottom:12}}>{sess.nome} {sess.cognome}</p> }
           {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
-          <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.nome}</div>
-          <p style={{color:"#475569",fontSize:13,marginBottom:8}}>Ore {fmt(now())}</p>
+          <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.id}</div>
+          <p style={{color:"#ffffff",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
           <p style={{fontSize:11,color:"#22c55e",marginBottom:20}}>Registrato su Google Sheets</p>
           <button style={S.bBk} onClick={reset}>Torna al Menu</button>
         </div>
