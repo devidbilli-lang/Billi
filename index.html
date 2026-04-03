@@ -866,7 +866,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCorso(null); }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:20,fontWeight:800,color:"#e879f9",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
+          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>{ if(confirm("Tornare alla schermata di login?")) { setAccesso(null); setView("login"); }}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:20,fontWeight:800,color:"#e879f9",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
