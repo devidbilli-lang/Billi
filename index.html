@@ -31,7 +31,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAPH8MndFdTFi1cHTNNttwpXGE6PGR6DYqj2U1sLfWi2ashmAiJyAd2Ay7y-xFoPJnbQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypV_lZ-fXpkBtUyDbY-_CxbIoR6Lleq_Pz0rUcXNAY-mASkOobfHbRqVPXW7-ba7J_Cw/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -220,7 +220,7 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
-            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.nome}</span>
+            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
 
           {}
@@ -279,7 +279,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
-            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.nome}</span>
+            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
 
           {}
@@ -288,8 +288,8 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
             {linee.filter(l=>l.id!==sess.lineaCorrente).map(l=>(
               <button key={l.id} onClick={()=>{setDest(l.id);setPwd("");setErrPwd("");}}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px", border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer", background:dest===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)", boxShadow:dest===l.id?("0 0 16px "+l.colore+"44"):"none", fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
-                <span style={{fontSize:13,fontWeight:700,color:dest===l.id?l.colore:"#94a3b8"}}>{l.nome}</span>
-                <span style={{fontSize:10,color:dest===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.id}</span>
+                <span style={{fontSize:13,fontWeight:700,color:dest===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
+                <span style={{fontSize:10,color:dest===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.nome}</span>
                 {l.password&&<span style={{fontSize:9,color:"#f59e0b",marginTop:2}}>🔒 con password</span>}
               </button>
             ))}
@@ -381,7 +381,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <code style={{...S.sku,minWidth:80,fontSize:13}}>{sku}</code>
               {(()=>{ const skuObj=skuList.find(x=>x.sku===sku); return skuObj&&skuObj.collezione?<span style={{fontSize:12,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 10px",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.collezione}</span>:null; })()}
-              {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{lineaObj.nome}</span>}
+              {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{lineaObj.id}</span>}
 
             </div>
             {g!==null&&(
@@ -513,7 +513,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
                 <div style={{fontWeight:700,fontSize:16,color:"#f1f5f9",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
                 <code style={S.sku}>{sf.skuCorrente||sf.sku}</code>
-                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.nome}</span>
+                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
                 <div style={{fontSize:12,color:"#64748b",marginTop:8}}>{fmtFull(new Date(sf.inizio))}</div>
               </div>
             )}
@@ -646,8 +646,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
                   <button key={l.id} onClick={()=>setLinea(l)}
                     style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",border:"1px solid "+(linea?.id===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",background:linea?.id===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",boxShadow:linea?.id===l.id?("0 0 16px "+l.colore+"44"):"none",fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
-                    <span style={{fontSize:13,fontWeight:700,color:linea?.id===l.id?l.colore:"#94a3b8"}}>{l.nome}</span>
-                    <span style={{fontSize:10,color:linea?.id===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.id}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:linea?.id===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
+                    <span style={{fontSize:10,color:linea?.id===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.nome}</span>
                   </button>
                 ))}
               </div>
@@ -889,7 +889,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           return (
             <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#0a1628",border:"1px solid #1e3a5f",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
-              <div style={{fontSize:13,color:"#ffffff",marginTop:2,marginBottom:6,fontWeight:600}}>{l.nome}</div>
+              <div style={{fontSize:13,color:"#ffffff",marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
@@ -921,7 +921,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             <button onClick={()=>setFL("ALL")} style={{padding:"6px 12px",border:"1px solid #1e3a5f",borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL==="ALL"?"#00d4aa22":"transparent",color:fL==="ALL"?"#00d4aa":"#ffffff",border:"2px solid "+(fL==="ALL"?"#00d4aa":"#334155"),display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
             {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
-              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"6px 12px",border:"1px solid "+l.colore,borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:fL===l.id?l.colore:"transparent",color:fL===l.id?"#000":l.colore}}>{l.nome}</button>
+              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"6px 12px",border:"1px solid "+l.colore,borderRadius:6,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:fL===l.id?l.colore:"transparent",color:fL===l.id?"#000":l.colore}}>{l.id}</button>
             ))}
           </div>
         </div>
@@ -952,7 +952,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                         {(()=>{ const skuObj=skuList.find(x=>x.sku===(s.skuCorrente||s.sku)); return skuObj&&skuObj.collezione?<span style={{fontSize:10,color:"#e879f9",fontStyle:"italic"}}>{skuObj.collezione}</span>:null; })()}
                       </div>
                     </td>
-                    <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{l.nome}</span></td>
+                    <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{l.id}</span></td>
                     <td style={S.td}><span style={{fontSize:13,color:"#22c55e",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.inizio)}</span></td>
                     <td style={S.td}>{s.fine?<span style={{fontSize:13,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
                     <td style={S.td}><span style={{background:"#1e3a5f",color:"#ffffff",padding:"4px 10px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{durataStr(dur)}</span></td>
@@ -1114,7 +1114,7 @@ function App() { const [view,setView]             = useState("login");
           {view==="dashboard"&&accesso&&(
             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontSize:20,fontWeight:800,color:accesso.ruolo==="admin"?"#00d4aa":"#e879f9",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
-                {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.nome||accesso.linea.nome||accesso.linea.id)}</span>}
+                {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.id||accesso.linea.id)}</span>}
               </span>
               <button onClick={()=>{setAccesso(null);setView("login");}} style={{background:"transparent",border:"2px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontSize:20,fontWeight:800,padding:"10px 24px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>Esci</button>
             </div>
