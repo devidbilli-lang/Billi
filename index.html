@@ -414,7 +414,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
     </div>
   );
 }
-function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci }) { const [mode,setMode]           = useState("menu");
+function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci, rampeSheets }) { const [mode,setMode]           = useState("menu");
   const [nome,setNome]           = useState("");
   const [cogn,setCogn]           = useState("");
   const [sku,setSku]             = useState("");
@@ -654,17 +654,32 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
 
             {}
-            <div style={{marginBottom:18,background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,padding:"12px 14px"}}>
-              <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:rampa?10:0}}>
-                <input type="checkbox" checked={rampa} onChange={e=>setRampa(e.target.checked)} style={{accentColor:"#f59e0b",width:16,height:16}}/>
-                <span style={{fontSize:13,color:"#f59e0b",fontWeight:600}}>📈 Avvia Rampa di Crescita (15 giorni)</span>
-              </label>
-              {rampa&&(
+            {(()=>{
+              // Cerca se lo SKU selezionato è già in rampa
+              const skuNorm = sku.trim().toUpperCase();
+              const rampaAttiva = skuNorm ? (rampeSheets||[]).find(r=>r.sku===skuNorm) : null;
+              const giorniRampa = rampaAttiva ? Math.min(15,Math.max(1,Math.floor((now()-rampaAttiva.rampaDal)/(1000*60*60*24))+1)) : null;
+              return (
+            <div style={{marginBottom:18,background:"#050a14",border:"1px solid "+(rampaAttiva?"#f59e0b44":"#1e3a5f"),borderRadius:8,padding:"12px 14px"}}>
+              {rampaAttiva ? (
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:15,fontWeight:800,color:"#f59e0b"}}>📈 Rampa in corso — Giorno {giorniRampa} / 15</span>
+                  {giorniRampa>=15&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:800}}>✓ COMPLETATA</span>}
+                </div>
+              ) : (
+                <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:rampa?10:0}}>
+                  <input type="checkbox" checked={rampa} onChange={e=>setRampa(e.target.checked)} style={{accentColor:"#f59e0b",width:16,height:16}}/>
+                  <span style={{fontSize:13,color:"#f59e0b",fontWeight:600}}>📈 Avvia Rampa di Crescita (15 giorni)</span>
+                </label>
+              )}
+              {!rampaAttiva&&rampa&&(
                 <div style={{fontSize:11,color:"#475569",marginTop:4,paddingLeft:24}}>
                   Il conteggio partirà da oggi. Troverai il progresso nel foglio Riepilogo.
                 </div>
               )}
             </div>
+              );
+            })()}
 
             {err&&<div style={S.err}>{err}</div>}
             <button style={S.bCI} onClick={()=>{ setErr("");
@@ -1131,7 +1146,7 @@ function App() { const [view,setView]             = useState("login");
       )}
       {view==="checkin"&&(
         <div>
-          <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ setAccesso(null); setView("login"); }}/>
+          <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ setAccesso(null); setView("login"); }} rampeSheets={rampeSheets}/>
 
         </div>
       )}
