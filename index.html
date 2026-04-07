@@ -857,6 +857,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [,setTk]          = useState(0);
   const [modReset,setModReset]       = useState(false);
   const [modCorso,setModCorso]       = useState(null);
+  const [modCambioSku,setModCambioSku] = useState(null);
   const [modFineTutti,setModFineTutti] = useState(null);
   const [modCO,setModCO]         = useState(null);
   const [modTr,setModTr]         = useState(null);
@@ -877,6 +878,13 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   return (
     <div style={{minHeight:"100vh",background:"#050a14",paddingBottom:60}}>
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);if(onAggiornaSessioni)setTimeout(onAggiornaSessioni,3000);}} onClose={()=>setMod(null)}/>}
+      {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee} onClose={()=>setModCambioSku(null)} onOk={(ns)=>{
+          const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
+          if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
+          api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn});
+          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+          setModCambioSku(null);
+        }}/>}
       {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
         onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); } else { api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCorso(null); }}/>}
@@ -997,6 +1005,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                               <>
                                 <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>setMod(s)}>↔</button>
                                 <button style={{padding:"8px 12px",background:"transparent",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)} title={inCorso?"Rientro in produzione":"Invia al corso"}>{inCorso?"▶":"C"}</button>
+                                <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)} title="Cambio SKU">S</button>
                                 <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ if(!confirm("Sei sicuro di voler chiudere il turno di "+s.nome+" "+s.cognome+"?")) return; if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); }}>✕</button>
                               </>
                             )}
