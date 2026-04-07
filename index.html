@@ -947,7 +947,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             <button onClick={()=>setFL("ALL")} style={{padding:"8px 16px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL==="ALL"?"#00d4aa22":"transparent",color:fL==="ALL"?"#00d4aa":"#ffffff",border:"2px solid "+(fL==="ALL"?"#00d4aa":"#334155"),borderRadius:8,display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
             {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
-              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:"#334155"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:fL===l.id?l.colore:"#ffffff"}}>{l.id}</button>
+              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore}}>{l.id}</button>
             ))}
           </div>
         </div>
