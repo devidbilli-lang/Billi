@@ -60,6 +60,23 @@ const fetchTimeout = (url, ms=20000) => { const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 };
+// Funzione helper con retry automatico
+async function fetchConRetry(url, tentativi=3, delayMs=1000) {
+  for (let i = 0; i < tentativi; i++) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 25000);
+      const r = await fetch(url, {signal: ctrl.signal}).finally(() => clearTimeout(tid));
+      if (r.ok) return r;
+    } catch(e) {
+      if (i < tentativi - 1) {
+        await new Promise(res => setTimeout(res, delayMs * (i + 1)));
+      }
+    }
+  }
+  throw new Error('Richiesta fallita dopo ' + tentativi + ' tentativi');
+}
+
 const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } }, async evento(p) { try { const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
       await fetchTimeout(APPS_SCRIPT_URL+"?"+q.toString()); } catch(e){ console.warn(e); } }, async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
 };
@@ -947,7 +964,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             <button onClick={()=>setFL("ALL")} style={{padding:"8px 16px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL==="ALL"?"#00d4aa22":"transparent",color:fL==="ALL"?"#00d4aa":"#ffffff",border:"2px solid "+(fL==="ALL"?"#00d4aa":"#334155"),borderRadius:8,display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
             {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
-              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore}}>{l.id}</button>
+              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore}}>{l.id}</button>
             ))}
           </div>
         </div>
