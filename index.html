@@ -1139,13 +1139,11 @@ function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
               </select>
             </div>
           )}
-          {lineaFiltro&&(
-            {(()=>{ const lObj = linee.find(l=>l.id===lineaFiltro.id)||lineaFiltro; return (
+          {lineaFiltro&&(()=>{ const lObj = linee.find(l=>l.id===lineaFiltro.id)||lineaFiltro; return (
             <div style={{marginBottom:14,padding:"8px 12px",background:lObj.colore+"18",border:"1px solid "+lObj.colore,borderRadius:8}}>
               <span style={{color:lObj.colore,fontWeight:700,fontSize:14}}>{lineaFiltro.id}</span>
             </div>
-            ); })()}
-          )}
+          ); })()}
           <div style={{marginBottom:14}}>
             <label style={S.lbl}>SKU Articolo</label>
             <input style={S.inp} placeholder="Cerca SKU..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
