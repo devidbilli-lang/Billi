@@ -1312,6 +1312,8 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
 }
 
 function App() { const [view,setView]             = useState("login");
+  const [viewQualita,setViewQualita] = useState(false);
+  const [lineaQualita,setLineaQualita] = useState(null);
   const [sess,setSess]             = useState(()=>store.get("pt_v4",[]) );
   const [sessSheets,setSessSheets] = useState([]);
   const [accesso,setAccesso]       = useState(null);
