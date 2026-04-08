@@ -1322,7 +1322,8 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
     try {
       await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea.id)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0), 5, 1000);
       setMsg("✓ Salvato!");
-      setOk(""); setKo(""); setMigl(""); setCSku(""); setSku("");
+      setOk(""); setKo(""); setMigl("");
+      // Mantieni lo SKU per inserimenti successivi
       setTimeout(()=>setMsg(null), 2500);
     } catch(e){ setErr("Errore salvataggio."); }
   };
