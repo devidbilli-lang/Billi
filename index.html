@@ -929,9 +929,9 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                   <code style={S.sku}>{r.sku}</code>
                   {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</div>}
                 </td>
-                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#22c55e",textAlign:"center",fontFamily:"'Montserrat',sans-serif"}}>{r.ok||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif"}}>{r.ko||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif"}}>{r.migl||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#22c55e",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"16%"}}>{r.ok||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"16%"}}>{r.ko||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"16%"}}>{r.migl||"-"}</td>
               </tr>
             );
           })}
