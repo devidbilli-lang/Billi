@@ -1140,9 +1140,11 @@ function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
             </div>
           )}
           {lineaFiltro&&(
-            <div style={{marginBottom:14,padding:"8px 12px",background:"#10b98118",border:"1px solid #10b981",borderRadius:8}}>
-              <span style={{color:"#10b981",fontWeight:700,fontSize:14}}>{lineaFiltro.id}</span>
+            {(()=>{ const lObj = linee.find(l=>l.id===lineaFiltro.id)||lineaFiltro; return (
+            <div style={{marginBottom:14,padding:"8px 12px",background:lObj.colore+"18",border:"1px solid "+lObj.colore,borderRadius:8}}>
+              <span style={{color:lObj.colore,fontWeight:700,fontSize:14}}>{lineaFiltro.id}</span>
             </div>
+            ); })()}
           )}
           <div style={{marginBottom:14}}>
             <label style={S.lbl}>SKU Articolo</label>
@@ -1158,7 +1160,7 @@ function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
               </div>
             )}
           </div>
-          <div style={{display:"flex",gap:12,marginBottom:14}}>
+          <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#22c55e"}}>✓ Borse OK</label>
               <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
