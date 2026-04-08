@@ -483,6 +483,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
       </div>
     ); }
 
+  if(modQualita) return <ModalQualita linee={linee} skuList={skuList} lineaFiltro={lineaFiltro} onClose={()=>setModQualita(false)}/>;
+
   if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){ const sf=sessAtt(mats.trim());
     const la=sf?getLinea(sf.lineaCorrente,linee):null;
     const lineaHaPwd = false; // password rimossa: login unico all'avvio
@@ -748,8 +750,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <h2 style={S.cT}>Cosa vuoi fare?</h2>
           <p style={{fontSize:16,color:"#ffffff",fontWeight:600,marginBottom:20,fontFamily:"'Montserrat',sans-serif"}}>{fmtFull(oraRef)}</p>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
-              <button key={m} onClick={()=>setMode(m)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
+            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"],["qualita","Inserimento Qualità","Borse OK, KO e Migliorabili","#10b981"]].map(([m,t,d,c])=>(
+              <button key={m} onClick={()=>{ if(m==="qualita"){ setModQualita(true); return; } setMode(m); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
                 <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
                 <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:15,color:c,fontWeight:500,opacity:0.85}}>{d}</div></div>
               </button>
@@ -1086,6 +1088,96 @@ function LoginDashboard({ linee, sync, onLogin }) { const [pwd,setPwd] = useStat
             <button style={{...S.bBk,textAlign:"center"}} onClick={()=>{setModoAdmin(false);setPwd("");setErr("");}}>← Indietro</button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
+  const [linea, setLinea]   = useState(lineaFiltro ? lineaFiltro.id : "");
+  const [sku, setSku]       = useState("");
+  const [cSku, setCSku]     = useState("");
+  const [ok, setOk]         = useState("");
+  const [ko, setKo]         = useState("");
+  const [migl, setMigl]     = useState("");
+  const [msg, setMsg]       = useState(null);
+  const [err, setErr]       = useState("");
+
+  const skuFiltrati = skuList.filter(s =>
+    !cSku || s.sku.includes(cSku.toUpperCase()) || s.descrizione.toLowerCase().includes(cSku.toLowerCase())
+  );
+
+  const salva = async () => {
+    if (!linea) { setErr("Seleziona una linea."); return; }
+    if (!sku)   { setErr("Seleziona uno SKU."); return; }
+    if (ok==="" && ko==="" && migl==="") { setErr("Inserisci almeno un valore."); return; }
+    setErr("");
+    try {
+      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0), 5, 1000);
+      setMsg("✓ Salvato!");
+      setOk(""); setKo(""); setMigl(""); setCSku(""); setSku("");
+      setTimeout(()=>setMsg(null), 2500);
+    } catch(e) { setErr("Errore salvataggio."); }
+  };
+
+  return (
+    <div style={MS.ov}>
+      <div style={{...MS.md, maxWidth:420}}>
+        <div style={MS.mh}>
+          <span style={{...MS.mt,color:"#10b981",fontSize:16}}>📊 Inserimento Qualità</span>
+          <button style={MS.mx} onClick={onClose}>✕</button>
+        </div>
+        <div style={{padding:22}}>
+          {!lineaFiltro&&(
+            <div style={{marginBottom:14}}>
+              <label style={S.lbl}>Linea</label>
+              <select value={linea} onChange={e=>setLinea(e.target.value)} style={{...S.inp,cursor:"pointer"}}>
+                <option value="">-- Seleziona linea --</option>
+                {linee.map(l=><option key={l.id} value={l.id}>{l.id}</option>)}
+              </select>
+            </div>
+          )}
+          {lineaFiltro&&(
+            <div style={{marginBottom:14,padding:"8px 12px",background:"#10b98118",border:"1px solid #10b981",borderRadius:8}}>
+              <span style={{color:"#10b981",fontWeight:700,fontSize:14}}>{lineaFiltro.id}</span>
+            </div>
+          )}
+          <div style={{marginBottom:14}}>
+            <label style={S.lbl}>SKU Articolo</label>
+            <input style={S.inp} placeholder="Cerca SKU..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
+            {cSku&&!sku&&(
+              <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
+                {skuFiltrati.slice(0,8).map(s=>(
+                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:8,alignItems:"center"}}>
+                    <code style={S.sku}>{s.sku}</code>
+                    <span style={{fontSize:12,color:"#ffffff"}}>{s.descrizione}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:12,marginBottom:14}}>
+            <div style={{flex:1}}>
+              <label style={{...S.lbl,color:"#22c55e"}}>✓ Borse OK</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
+            </div>
+            <div style={{flex:1}}>
+              <label style={{...S.lbl,color:"#ef4444"}}>✕ Borse KO</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
+            </div>
+            <div style={{flex:1}}>
+              <label style={{...S.lbl,color:"#f59e0b"}}>~ Migliorabili</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
+            </div>
+          </div>
+          {err&&<div style={S.err}>{err}</div>}
+          {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#22c55e",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
+          <div style={{display:"flex",gap:10}}>
+            <button style={{...S.bBk,flex:1,textAlign:"center"}} onClick={onClose}>Chiudi</button>
+            <button style={{...S.bCI,flex:2,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={salva}>Salva</button>
+          </div>
+        </div>
       </div>
     </div>
   );
