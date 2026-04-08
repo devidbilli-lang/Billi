@@ -31,7 +31,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4fu-X8LPPNkXYclgwr8FkRfGrCw48hgksFr84Iz8Ab3YF51W8B78UEI7qCy8sXFYIUg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlI8qbcU91eHkNXBmIuE_jV182-rJ1pdH2No6mjHHWFz0IS2C91VAjgEPLsqKZAoH56g/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -1048,7 +1048,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   );
 }
 
-function LoginDashboard({ linee, sync, onLogin }) { const [pwd,setPwd] = useState("");
+function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd] = useState("");
   const [err,setErr] = useState("");
   const [modoAdmin,setModoAdmin] = useState(false);
 
@@ -1080,6 +1080,7 @@ function LoginDashboard({ linee, sync, onLogin }) { const [pwd,setPwd] = useStat
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <button style={S.bCI} onClick={tenta}>Accedi con password linea</button>
             <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
           </div>
         )}
         {modoAdmin&&(
@@ -1184,6 +1185,130 @@ function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
   );
 }
 
+
+function LoginQualita({ linee, sync, onLogin, onBack }) {
+  const [pwd, setPwd] = useState("");
+  const [err, setErr] = useState("");
+
+  if(sync==="caricamento") return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)",flexDirection:"column",gap:16}}>
+      <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8}}/>
+      <span style={{fontSize:28,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+      <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
+    </div>
+  );
+
+  const tenta = () => {
+    const l = linee.find(l=>l.pwdQualita&&l.pwdQualita===pwd);
+    if(l){ onLogin(l); return; }
+    setErr("Password non riconosciuta."); setPwd("");
+  };
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
+      <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}>
+          <img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6}}/>
+          <span style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+        </div>
+        <div style={{fontSize:15,fontWeight:700,color:"#10b981",marginBottom:20}}>📊 Dashboard Qualità</div>
+        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#10b981",borderWidth:2}}
+          placeholder="••••••••" value={pwd}
+          onChange={e=>{setPwd(e.target.value);setErr("");}}
+          onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
+        {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
+        <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)",marginBottom:10}} onClick={tenta}>Accedi</button>
+        <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={onBack}>← Indietro</button>
+      </div>
+    </div>
+  );
+}
+
+function DashboardQualita({ linea, linee, skuList, onEsci }) {
+  const [ok, setOk]     = useState("");
+  const [ko, setKo]     = useState("");
+  const [migl, setMigl] = useState("");
+  const [sku, setSku]   = useState("");
+  const [cSku, setCSku] = useState("");
+  const [msg, setMsg]   = useState(null);
+  const [err, setErr]   = useState("");
+  const lObj = linee.find(l=>l.id===linea.id)||linea;
+
+  const skuFiltrati = skuList.filter(s=>
+    !cSku || s.sku.includes(cSku.toUpperCase()) || s.descrizione.toLowerCase().includes(cSku.toLowerCase())
+  );
+
+  const salva = async () => {
+    if(!sku){ setErr("Seleziona uno SKU."); return; }
+    if(ok===""&&ko===""&&migl===""){ setErr("Inserisci almeno un valore."); return; }
+    setErr("");
+    try {
+      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea.id)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0), 5, 1000);
+      setMsg("✓ Salvato!");
+      setOk(""); setKo(""); setMigl(""); setCSku(""); setSku("");
+      setTimeout(()=>setMsg(null), 2500);
+    } catch(e){ setErr("Errore salvataggio."); }
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
+      <header style={{...S.hdr,borderBottom:"2px solid #10b98144"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/>
+          <div>
+            <div style={{fontSize:18,fontWeight:800,color:"#e879f9",fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div>
+            <div style={{fontSize:11,color:"#10b981",letterSpacing:2,textTransform:"uppercase"}}>Dashboard Qualità</div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <span style={{fontSize:18,fontWeight:800,color:lObj.colore,fontFamily:"'Montserrat',sans-serif"}}>🔒 {linea.id}</span>
+          <button onClick={onEsci} style={{background:"transparent",border:"2px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontSize:16,fontWeight:800,padding:"8px 20px",fontFamily:"'Montserrat',sans-serif"}}>Esci</button>
+        </div>
+      </header>
+      <div style={{display:"flex",justifyContent:"center",padding:"40px 16px"}}>
+        <div style={{width:"100%",maxWidth:480,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"32px 28px"}}>
+          <h2 style={{fontSize:20,fontWeight:700,color:"#10b981",marginBottom:24}}>📊 Inserimento Qualità</h2>
+          <div style={{marginBottom:14,padding:"8px 12px",background:lObj.colore+"18",border:"1px solid "+lObj.colore,borderRadius:8}}>
+            <span style={{color:lObj.colore,fontWeight:700,fontSize:14}}>{linea.id}</span>
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={S.lbl}>SKU Articolo</label>
+            <input style={S.inp} placeholder="Cerca SKU..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
+            {cSku&&!sku&&(
+              <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
+                {skuFiltrati.slice(0,8).map(s=>(
+                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:8,alignItems:"center"}}>
+                    <code style={S.sku}>{s.sku}</code>
+                    <span style={{fontSize:12,color:"#ffffff"}}>{s.descrizione}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {sku&&<div style={{marginTop:6}}><code style={S.sku}>{sku}</code></div>}
+          </div>
+          <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
+            <div style={{flex:1}}>
+              <label style={{...S.lbl,color:"#22c55e"}}>✓ Borse OK</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
+            </div>
+            <div style={{flex:1}}>
+              <label style={{...S.lbl,color:"#ef4444"}}>✕ Borse KO</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
+            </div>
+            <div style={{flex:1}}>
+              <label style={{...S.lbl,color:"#f59e0b"}}>~ Migliorabili</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
+            </div>
+          </div>
+          {err&&<div style={S.err}>{err}</div>}
+          {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#22c55e",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
+          <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)",width:"100%"}} onClick={salva}>Salva</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() { const [view,setView]             = useState("login");
   const [sess,setSess]             = useState(()=>store.get("pt_v4",[]) );
   const [sessSheets,setSessSheets] = useState([]);
@@ -1235,7 +1360,7 @@ function App() { const [view,setView]             = useState("login");
   const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
 
   if(!accesso && view !== "login") {
-    return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>;
+    return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")}/>;
   }
 
   return (
@@ -1274,7 +1399,7 @@ function App() { const [view,setView]             = useState("login");
         </div>
       )}
       {view==="login"&&(
-        <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }}/>
+        <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")}/>
       )}
       {view==="dashboard"&&accesso&&(
         <Dashboard
