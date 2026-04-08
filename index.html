@@ -1120,6 +1120,8 @@ function App() { const [view,setView]             = useState("login");
       const j = await r.json();
       if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni);
         if(j.data.rampe) setRampeSheets(j.data.rampe);
+        // Se Sheets è vuoto (dopo reset), svuota anche le sessioni locali
+        if(j.data.sessioni.length === 0) setSess([]);
         setDashSync("ok"); setUltimoSync2(new Date()); } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
 
   useEffect(()=>{ caricaSessioni();
