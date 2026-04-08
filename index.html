@@ -432,6 +432,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   );
 }
 function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci, rampeSheets }) { const [mode,setMode]           = useState("menu");
+  const [modQualita,setModQualita] = useState(false);
   const [nome,setNome]           = useState("");
   const [cogn,setCogn]           = useState("");
   const [sku,setSku]             = useState("");
