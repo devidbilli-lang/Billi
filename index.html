@@ -912,20 +912,22 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
       <table style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
           <tr>{[["Data","#ffffff"],["Linea","#ffffff"],["SKU","#ffffff"],["✓ OK","#22c55e"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"]].map(([h,c])=>(
-            <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"left",borderBottom:"2px solid #1e3a5f",background:"#050a14",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
+            <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2px solid #1e3a5f",background:"#050a14",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
           ))}</tr>
         </thead>
         <tbody>
           {righe.map((r,i)=>{
             const lObj = linee.find(l=>l.id===r.linea)||{colore:"#94a3b8"};
             const skuObj = skuList.find(s=>s.sku===r.sku);
+            // Formatta data da oggetto Date o stringa
+            const dataFmt = (()=>{ try { const d=new Date(r.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); } catch(e){} return r.data; })();
             return (
               <tr key={i} style={{borderBottom:"1px solid #0f1f38",background:i%2===0?"#050a14":"#0a1628"}}>
-                <td style={{padding:"10px 14px",fontSize:13,color:"#ffffff",fontFamily:"'Montserrat',sans-serif"}}>{r.data}</td>
-                <td style={{padding:"10px 14px"}}><span style={{background:lObj.colore+"22",color:lObj.colore,border:"1px solid "+lObj.colore+"44",padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{r.linea}</span></td>
-                <td style={{padding:"10px 14px"}}>
+                <td style={{padding:"10px 14px",fontSize:13,color:"#ffffff",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{dataFmt}</td>
+                <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:lObj.colore+"22",color:lObj.colore,border:"1px solid "+lObj.colore+"44",padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{r.linea}</span></td>
+                <td style={{padding:"10px 14px",textAlign:"center"}}>
                   <code style={S.sku}>{r.sku}</code>
-                  {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{skuObj.descrizione}</div>}
+                  {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</div>}
                 </td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#22c55e",textAlign:"center",fontFamily:"'Montserrat',sans-serif"}}>{r.ok||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif"}}>{r.ko||"-"}</td>
