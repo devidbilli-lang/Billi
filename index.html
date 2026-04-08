@@ -1080,7 +1080,7 @@ function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <button style={S.bCI} onClick={tenta}>Accedi con password linea</button>
             <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#eab308,#ca8a04)",color:"#000000",fontWeight:900}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
           </div>
         )}
         {modoAdmin&&(
@@ -1199,7 +1199,9 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
   );
 
   const tenta = () => {
-    const l = linee.find(l=>l.pwdQualita&&l.pwdQualita===pwd);
+    console.log("Linee disponibili:", linee.map(l=>({id:l.id,pwdQ:l.pwdQualita})));
+    console.log("Password inserita:", pwd);
+    const l = linee.find(l=>l.pwdQualita&&l.pwdQualita.trim()===pwd.trim());
     if(l){ onLogin(l); return; }
     setErr("Password non riconosciuta."); setPwd("");
   };
@@ -1211,13 +1213,13 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
           <img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6}}/>
           <span style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
         </div>
-        <div style={{fontSize:15,fontWeight:700,color:"#10b981",marginBottom:20}}>📊 Dashboard Qualità</div>
-        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#10b981",borderWidth:2}}
+        <div style={{fontSize:15,fontWeight:700,color:"#eab308",marginBottom:20}}>📊 Dashboard Qualità</div>
+        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#eab308",borderWidth:2,background:"#eab30811"}}
           placeholder="••••••••" value={pwd}
           onChange={e=>{setPwd(e.target.value);setErr("");}}
           onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
         {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
-        <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)",marginBottom:10}} onClick={tenta}>Accedi</button>
+        <button style={{...S.bCI,background:"linear-gradient(135deg,#eab308,#ca8a04)",color:"#000",fontWeight:900,marginBottom:10}} onClick={tenta}>Accedi</button>
         <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={onBack}>← Indietro</button>
       </div>
     </div>
