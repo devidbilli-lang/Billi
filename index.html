@@ -1149,7 +1149,7 @@ function App() { const [view,setView]             = useState("login");
     <div style={{minHeight:"100vh",background:"#050a14",color:"#e2e8f0"}}>
       <div style={{background:"#0a1628",borderBottom:"1px solid #1e3a5f",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
         <span style={{color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
-        {sync==="ok"&&<span style={{color:"#475569"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
+        {sync==="ok"&&<span style={{color:"#ffffff"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
         {(sync==="ok"||sync==="errore")&&<button onClick={reload} style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>Ricarica</button>}
       </div>
       {view!=="checkin"&&(
@@ -1168,7 +1168,7 @@ function App() { const [view,setView]             = useState("login");
           {view==="dashboard"&&(
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:11,color:dashCfg.c,fontWeight:700}}>{dashCfg.t}</span>
-              {ultimoSync2&&<span style={{fontSize:10,color:"#475569"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
+              {ultimoSync2&&<span style={{fontSize:10,color:"#ffffff"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
               <button onClick={caricaSessioni} style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>↻</button>
             </span>
           )}
