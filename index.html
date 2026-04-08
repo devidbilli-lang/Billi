@@ -1114,6 +1114,7 @@ function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
     if (!linea) { setErr("Seleziona una linea."); return; }
     if (!sku)   { setErr("Seleziona uno SKU."); return; }
     if (ok==="" && ko==="" && migl==="") { setErr("Inserisci almeno un valore."); return; }
+    if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
     setErr("");
     try {
       await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0), 5, 1000);
@@ -1243,6 +1244,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
   const salva = async () => {
     if(!sku){ setErr("Seleziona uno SKU."); return; }
     if(ok===""&&ko===""&&migl===""){ setErr("Inserisci almeno un valore."); return; }
+    if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
     setErr("");
     try {
       await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea.id)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0), 5, 1000);
