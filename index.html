@@ -386,7 +386,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
   if(sync==="caricamento") return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
       <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8,background:"#7c3aed",padding:4}}/>
-      <span style={{fontSize:28,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+      <span style={{fontSize:28,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
       <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
     </div>
   );
@@ -402,7 +402,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
       <div style={{width:"100%",maxWidth:400,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}>
           <img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6,background:"#7c3aed",padding:4}}/>
-          <span style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+          <span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
         </div>
         <div style={{fontSize:15,fontWeight:700,color:"#3b82f6",marginBottom:20}}>📊 Dashboard Qualità</div>
         <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#3b82f6",borderWidth:2,background:"#3b82f611"}}
@@ -577,7 +577,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}{lineaFiltro?" — "+lineaFiltro.id:""}</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}{lineaFiltro?" — "+lineaFiltro.id:""}</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -646,7 +646,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   if(mode==="checkin"){ return (
     <div style={S.scr}>
       <header style={S.hdr}>
-        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
+        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
         <div style={S.ora}>{fmt(oraRef)}</div>
       </header>
       <div style={S.bod}>
@@ -757,7 +757,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   return (
     <div style={S.scr}>
       <header style={S.hdr}>
-        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
+        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
             <span style={{fontSize:10,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
@@ -921,7 +921,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCorso(null); }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #e2e8f0"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:20,fontWeight:800,color:"#e879f9",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
+          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:3}}/><span style={{fontSize:20,fontWeight:800,color:"#7c3aed",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
@@ -929,9 +929,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         </div>
       </header>
       <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto"}}>
-        <div style={{flex:"0 0 auto",minWidth:90,background:"#f59e0b",borderRadius:12,padding:14,textAlign:"center"}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#000",lineHeight:1}}>{sessioni.length}</div>
-          <div style={{fontSize:11,color:"#000",marginTop:4,fontWeight:700}}>Totale</div>
+        <div style={{flex:"0 0 auto",minWidth:90,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:12,padding:14,textAlign:"center"}}>
+          <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{sessioni.length}</div>
+          <div style={{fontSize:11,color:"#ffffff",marginTop:4,fontWeight:700}}>Totale</div>
         </div>
         {[["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
           <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:14,textAlign:"center"}}>
@@ -994,7 +994,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #f1f5f9",background:att2?"#f0fdf4":"transparent"}}>
+                  <tr key={s.id} style={{borderBottom:"1px solid #f1f5f9",background:att2?"#f0fdf4":"#fff5f5"}}>
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
                     <td style={S.td}><code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code>
@@ -1040,14 +1040,14 @@ function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd
   if(sync==="caricamento") return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
       <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8,background:"#7c3aed",padding:4}}/>
-      <span style={{fontSize:28,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+      <span style={{fontSize:28,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
       <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
     </div>
   );
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
       <div style={{width:"100%",maxWidth:400,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6,background:"#7c3aed",padding:4}}/><span style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6,background:"#7c3aed",padding:4}}/><span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
         <div style={{fontSize:15,fontWeight:700,color:"#00d4aa",marginBottom:20}}>ProductionTrack — Dashboard</div>
         <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Password admin o password della tua linea</div>
         <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#e879f9",borderWidth:2}}
