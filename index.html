@@ -592,7 +592,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
               {operatori.length>0&&(
                 <div style={{marginBottom:8}}>
-                  <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
+                  <input style={{...S.inp,background:"#7c3aed",borderColor:"#7c3aed",borderWidth:2,color:"#ffffff"}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
                   {cOp.length>=2&&(
                     <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                       {operatori.filter(o=>
@@ -755,14 +755,14 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <p style={{fontSize:16,color:"#7c3aed",fontWeight:600,marginBottom:20,fontFamily:"'Montserrat',sans-serif"}}>{fmtFull(oraRef)}</p>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
-              <button key={m} onClick={()=>{ if(m==="qualita"){ setModQualita(true); return; } setMode(m); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#5b21b6",transition:"all 0.2s",width:"100%"}}>
+              <button key={m} onClick={()=>{ if(m==="qualita"){ setModQualita(true); return; } setMode(m); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#ffffff",border:"2px solid "+c,borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#5b21b6",transition:"all 0.2s",width:"100%"}}>
                 <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
                 <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:15,color:c,fontWeight:500,opacity:0.85}}>{d}</div></div>
               </button>
             ))}
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:10,padding:"16px 0 0"}}>
-            <button style={{background:"#ede9fe",border:"2px solid #7c3aed",borderRadius:10,color:"#7c3aed",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
+            <button style={{background:"linear-gradient(135deg,#7c3aed,#5b21b6)",border:"none",borderRadius:10,color:"#ffffff",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
             <button style={{background:"transparent",border:"2px solid #ef444466",borderRadius:10,color:"#ef4444",cursor:"pointer",fontSize:18,fontWeight:800,padding:"12px 32px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onEsci&&onEsci()}>Esci</button>
           </div>
         </div>
@@ -1080,7 +1080,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
 
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
         {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"]].map(([t,l])=>(
-          <button key={t} onClick={()=>setTab(t)} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#334155"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#ffffff"}}>{l}</button>
+          <button key={t} onClick={()=>setTab(t)} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#7c3aed":"#c4b5fd"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#ffffff"}}>{l}</button>
         ))}
       </div>
 
@@ -1090,7 +1090,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           {/* Sezione Tutti/Attive/Chiuse con sfondo separato */}
           <div style={{display:"flex",gap:6,flexWrap:"wrap",background:"#f9f8ff",border:"2px solid #c4b5fd",borderRadius:10,padding:"6px 8px"}}>
             {[["ALL","Tutti"],["attive","Attive"],["chiuse","Chiuse"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setFS(k)} style={{padding:"8px 16px",border:"2px solid "+(fS===k?"#00d4aa":"transparent"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fS===k?"#00d4aa":"transparent",color:fS===k?"#000":"#ffffff"}}>{l}</button>
+              <button key={k} onClick={()=>setFS(k)} style={{padding:"8px 16px",border:"2px solid "+(fS===k?"#00d4aa":"transparent"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fS===k?"#7c3aed":"transparent",color:fS===k?"#ffffff":"#374151"}}>{l}</button>
             ))}
           </div>
           {/* Filtri linea */}
@@ -1209,9 +1209,9 @@ function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd
         {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
         {!modoAdmin&&(
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <button style={S.bCI} onClick={tenta}>Accedi con password linea</button>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#7c3aed",fontWeight:900}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={tenta}>Accedi con password linea</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff",fontWeight:900}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
           </div>
         )}
         {modoAdmin&&(
@@ -1351,7 +1351,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
           onChange={e=>{setPwd(e.target.value);setErr("");}}
           onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
         {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
-        <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#7c3aed",fontWeight:900,marginBottom:10}} onClick={tenta}>Accedi</button>
+        <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff",fontWeight:900,marginBottom:10}} onClick={tenta}>Accedi</button>
         <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={onBack}>← Indietro</button>
       </div>
     </div>
