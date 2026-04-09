@@ -14,7 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:#050a14;font-family:'Montserrat',sans-serif;color:#e2e8f0;}
+body{background:#f3f4f6;font-family:'Montserrat',sans-serif;color:#1f1235;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
 @keyframes rowIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
@@ -22,8 +22,8 @@ tr{animation:rowIn 0.25s ease both;}
 input:focus{border-color:#00d4aa!important;outline:none;}
 button:hover{filter:brightness(1.12);}
 ::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:#0a1628;}
-::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px;}
+::-webkit-scrollbar-track{background:#f3f4f6;}
+::-webkit-scrollbar-thumb{background:#c4b5fd;border-radius:3px;}
 </style>
 </head>
 <body>
@@ -111,7 +111,7 @@ function tappe(s) { const fine = s.fine ? new Date(s.fine) : now();
   return out;
 }
 
-const S = { scr:  {minHeight:"100vh",background:"#f3f4f6"}, hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #c4b5fd"}, logo: {display:"flex",alignItems:"center",gap:12}, lt:   {fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1}, ls:   {fontSize:11,color:"#6b7280",letterSpacing:2,textTransform:"uppercase"}, ora:  {fontSize:22,fontWeight:700,color:"#00d4aa",fontFamily:"monospace",background:"#00d4aa11",padding:"4px 14px",borderRadius:8,border:"1px solid #00d4aa33"}, bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"}, card: {width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease"}, cT:   {fontSize:22,fontWeight:700,color:"#1f1235",marginBottom:24}, lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#1f1235",textTransform:"uppercase",marginBottom:6,fontWeight:600}, inp:  {width:"100%",padding:"10px 14px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,color:"#374151",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"}, err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}, bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#00d4aa,#0891b2)",border:"none",borderRadius:10,color:"#050a14",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, bCO:  {width:"100%",padding:14,background:"linear-gradient(135deg,#ef4444,#b91c1c)",border:"none",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}, bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #e8e3f8",borderRadius:8,color:"#6b7280",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}, sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"4px 12px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}, tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"}, td:   {padding:"10px 14px",fontSize:15,color:"#1f1235",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:500}, sc:   {background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:10,padding:"14px 16px",marginBottom:16},
+const S = { scr:  {minHeight:"100vh",background:"#f3f4f6"}, hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #c4b5fd"}, logo: {display:"flex",alignItems:"center",gap:12}, lt:   {fontSize:18,fontWeight:700,color:"#7c3aed",letterSpacing:1}, ls:   {fontSize:11,color:"#6b7280",letterSpacing:2,textTransform:"uppercase"}, ora:  {fontSize:22,fontWeight:700,color:"#7c3aed",fontFamily:"monospace",background:"#7c3aed11",padding:"4px 14px",borderRadius:8,border:"1px solid #c4b5fd"}, bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"}, card: {width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease"}, cT:   {fontSize:22,fontWeight:700,color:"#7c3aed",marginBottom:24}, lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#5b21b6",textTransform:"uppercase",marginBottom:6,fontWeight:600}, inp:  {width:"100%",padding:"10px 14px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,color:"#5b21b6",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"}, err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}, bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",border:"none",borderRadius:10,color:"#ffffff",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, bCO:  {width:"100%",padding:14,background:"linear-gradient(135deg,#ef4444,#b91c1c)",border:"none",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}, bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #e8e3f8",borderRadius:8,color:"#7c3aed",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}, sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"4px 12px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}, tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"}, td:   {padding:"10px 14px",fontSize:15,color:"#374151",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:500}, sc:   {background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:10,padding:"14px 16px",marginBottom:16},
 };
 const MS = { ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}, md: {background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:18,width:"90%",maxWidth:460,overflow:"hidden",animation:"fadeUp 0.3s ease"}, mh: {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px",borderBottom:"1px solid #c4b5fd"}, mt: {fontWeight:700,fontSize:16,color:"#a855f7"}, mx: {background:"transparent",border:"none",color:"#6b7280",cursor:"pointer",fontSize:18,fontFamily:"'Montserrat',sans-serif"}, an: {flex:1,padding:10,background:"transparent",border:"1px solid #e8e3f8",borderRadius:8,color:"#6b7280",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
 };
@@ -124,7 +124,7 @@ function SugOp({ val, list, onSel }) { if(!val||val.length<2||!list.length) retu
     <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,marginTop:4,overflow:"hidden"}}>
       {m.map(o=>(
         <div key={o.matricola} onClick={()=>onSel(o)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:10,alignItems:"center"}}
-          onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+          onMouseEnter={e=>e.currentTarget.style.background="#f0effe"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
           <span style={{fontSize:13,color:"#6b7280"}}>{o.nome} {o.cognome}</span>
         </div>
       ))}
@@ -140,10 +140,10 @@ function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.leng
     <div style={{background:"#ffffff",border:"1px solid #f59e0b44",borderRadius:8,marginTop:4,overflow:"hidden"}}>
       {m.map(s=>(
         <div key={s.sku+(s.collezione||"")} onClick={()=>onSel(s)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}
-          onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+          onMouseEnter={e=>e.currentTarget.style.background="#f0effe"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
           <code style={S.sku}>{s.sku}</code>
           {s.collezione&&<span style={{fontSize:11,color:"#7c3aed",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{s.collezione}</span>}
-          <span style={{fontSize:15,color:"#1f1235",flex:1}}>{s.descrizione}</span>
+          <span style={{fontSize:15,color:"#7c3aed",flex:1}}>{s.descrizione}</span>
         </div>
       ))}
     </div>
@@ -160,7 +160,7 @@ function CambioSkuInline({ sess, skuList, linee, onOk, onClose }) { const [nSku,
         <div style={{padding:22}}>
           <div style={S.sc}>
             <div style={{fontSize:10,letterSpacing:2,color:"#f59e0b",textTransform:"uppercase",marginBottom:4}}>Operatore</div>
-            <div style={{fontWeight:700,fontSize:15,color:"#1f1235",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
+            <div style={{fontWeight:700,fontSize:15,color:"#7c3aed",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
               <code style={S.sku}>Attuale: {sess.skuCorrente||sess.sku||"-"}</code>
               <span style={{color:"#6b7280",fontSize:12}}>→ Linea: {getLinea(sess.lineaCorrente,linee).nome}</span>
@@ -204,7 +204,7 @@ function ModalPwd({ titolo, colore, linea, onOk, onClose }) { const [pwd,setPwd]
           {linea&&(
             <div style={{background:linea.colore+"18",border:"1px solid "+linea.colore+"44",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontWeight:800,fontSize:14,color:linea.colore}}>{linea.id}</span>
-              <span style={{fontSize:15,color:"#1f1235"}}>{linea.nome}</span>
+              <span style={{fontSize:15,color:"#7c3aed"}}>{linea.nome}</span>
             </div>
           )}
           <input type="password" style={{...S.inp,borderColor:c+"66",borderWidth:2}} placeholder="Inserisci password..." autoFocus
@@ -235,7 +235,7 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
         <div style={{padding:22}}>
           {}
           <div style={S.sc}>
-            <div style={{fontWeight:700,fontSize:15,color:"#1f1235",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
+            <div style={{fontWeight:700,fontSize:15,color:"#7c3aed",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
             <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
@@ -255,7 +255,7 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
             {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"], ["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
             ].map(([val,tit,desc,c])=>(
               <button key={val} onClick={()=>setTipoUscita(val)}
-                style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
+                style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#e8e3f8"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
                 <span style={{fontWeight:700,color:tipoUscita===val?c:"#94a3b8",fontSize:13}}>{tit}</span>
                 <span style={{fontSize:11,color:"#6b7280"}}>{desc}</span>
               </button>
@@ -294,7 +294,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
 
           {}
           <div style={S.sc}>
-            <div style={{fontWeight:700,fontSize:15,color:"#1f1235",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
+            <div style={{fontWeight:700,fontSize:15,color:"#7c3aed",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
             <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
@@ -350,7 +350,7 @@ function RiepLinea({ sessioni, linee }) { const gmap = {};
         return (<div key={l.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
           <span style={{color:l.colore,fontWeight:700,minWidth:32,fontSize:13}}>{l.nome}</span>
           
-          <div style={{flex:1,height:10,background:"#0f1f38",borderRadius:6,overflow:"hidden"}}>
+          <div style={{flex:1,height:10,background:"#e8e3f8",borderRadius:6,overflow:"hidden"}}>
             <div style={{height:"100%",width:pct+"%",background:l.colore,borderRadius:6,transition:"width 0.6s"}}/>
           </div>
           <span style={{color:l.colore,minWidth:42,fontSize:13,fontWeight:700,fontFamily:"monospace",textAlign:"right"}}>{Math.round(ms/60000)}m</span>
@@ -410,7 +410,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                   </span>
                   <span style={{fontSize:12,color:colRampa,fontWeight:700}}>{Math.round(g/15*100)}%</span>
                 </div>
-                <div style={{height:18,background:"#0f1f38",borderRadius:9,overflow:"hidden",position:"relative"}}>
+                <div style={{height:18,background:"#e8e3f8",borderRadius:9,overflow:"hidden",position:"relative"}}>
                   <div style={{height:"100%",width:(g/15*100)+"%",background:completata?"linear-gradient(90deg,#22c55e,#16a34a)":"linear-gradient(90deg,#f59e0b,#d97706)",borderRadius:9,transition:"width 0.8s ease"}}/>
                   {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(i=>(
                     <div key={i} style={{position:"absolute",top:0,bottom:0,left:(i/15*100)+"%",width:1,background:"#f9f8ff",opacity:0.5}}/>
@@ -477,7 +477,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             : <p style={{color:"#6b7280",marginBottom:12}}>{sess.nome} {sess.cognome}</p> }
           {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
           <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.id}</div>
-          <p style={{color:"#1f1235",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
+          <p style={{color:"#7c3aed",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
           <p style={{fontSize:11,color:"#22c55e",marginBottom:20}}>Registrato su Google Sheets</p>
           <button style={S.bBk} onClick={reset}>Torna al Menu</button>
         </div>
@@ -493,7 +493,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -517,7 +517,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     return arr.findIndex(x=>x.id===s.id)===i; }).slice(0,4).map(s=>(
                     <div key={s.id} onClick={()=>{setMats(s.matricola);setMatsNome(s.nome+" "+s.cognome);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
                       style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:10,alignItems:"center"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      onMouseEnter={e=>e.currentTarget.style.background="#f0effe"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <span style={{fontSize:13,color:"#6b7280"}}>{s.nome} {s.cognome}</span>
                       <code style={S.sku}>{s.skuCorrente||s.sku}</code>
                       <span style={{...S.tag,background:getLinea(s.lineaCorrente,linee).colore+"22",color:getLinea(s.lineaCorrente,linee).colore,borderColor:getLinea(s.lineaCorrente,linee).colore+"44",fontSize:11}}>{getLinea(s.lineaCorrente,linee).nome}</span>
@@ -531,7 +531,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {sf&&(
               <div style={S.sc}>
                 <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
-                <div style={{fontWeight:700,fontSize:16,color:"#1f1235",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
+                <div style={{fontWeight:700,fontSize:16,color:"#7c3aed",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
                 <code style={S.sku}>{sf.skuCorrente||sf.sku}</code>
                 <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
                 <div style={{fontSize:12,color:"#6b7280",marginTop:8}}>{fmtFull(new Date(sf.inizio))}</div>
@@ -576,7 +576,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   if(mode==="checkin"){ return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -653,7 +653,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   return (
                     <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,paddingLeft:4}}>
                       {skuObj.collezione&&<span style={{fontSize:14,color:"#7c3aed",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"3px 12px",fontWeight:700}}>{skuObj.collezione}</span>}
-                      <span style={{fontSize:11,color:"#1f1235"}}>{skuObj.descrizione}</span>
+                      <span style={{fontSize:11,color:"#7c3aed"}}>{skuObj.descrizione}</span>
                     </div>
                   ); })()}
               </div>
@@ -737,7 +737,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   return (
     <div style={S.scr}>
       <header style={S.hdr}>
-        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
+        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
             <span style={{fontSize:10,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
@@ -749,17 +749,17 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
       <div style={S.bod}>
         <div style={S.card}>
           <h2 style={S.cT}>Cosa vuoi fare?</h2>
-          <p style={{fontSize:16,color:"#1f1235",fontWeight:600,marginBottom:20,fontFamily:"'Montserrat',sans-serif"}}>{fmtFull(oraRef)}</p>
+          <p style={{fontSize:16,color:"#7c3aed",fontWeight:600,marginBottom:20,fontFamily:"'Montserrat',sans-serif"}}>{fmtFull(oraRef)}</p>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
-              <button key={m} onClick={()=>{ if(m==="qualita"){ setModQualita(true); return; } setMode(m); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#374151",transition:"all 0.2s",width:"100%"}}>
+              <button key={m} onClick={()=>{ if(m==="qualita"){ setModQualita(true); return; } setMode(m); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#5b21b6",transition:"all 0.2s",width:"100%"}}>
                 <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
                 <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:15,color:c,fontWeight:500,opacity:0.85}}>{d}</div></div>
               </button>
             ))}
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:10,padding:"16px 0 0"}}>
-            <button style={{background:"#1e3a5f",border:"2px solid #00d4aa",borderRadius:10,color:"#1f1235",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
+            <button style={{background:"#ede9fe",border:"2px solid #7c3aed",borderRadius:10,color:"#7c3aed",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
             <button style={{background:"transparent",border:"2px solid #ef444466",borderRadius:10,color:"#ef4444",cursor:"pointer",fontSize:18,fontWeight:800,padding:"12px 32px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onEsci&&onEsci()}>Esci</button>
           </div>
         </div>
@@ -803,11 +803,11 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
         </div>
         <div style={{background:"#ffffff",border:"1px solid #22c55e44",borderTop:"3px solid #22c55e",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
           <div style={{fontSize:28,fontWeight:800,color:"#22c55e",lineHeight:1}}>{presenti}</div>
-          <div style={{fontSize:13,color:"#1f1235",marginTop:4,fontWeight:600}}>Presenti</div>
+          <div style={{fontSize:13,color:"#7c3aed",marginTop:4,fontWeight:600}}>Presenti</div>
         </div>
         <div style={{background:"#ffffff",border:"1px solid #ef444444",borderTop:"3px solid #ef4444",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
           <div style={{fontSize:28,fontWeight:800,color:"#ef4444",lineHeight:1}}>{assenti}</div>
-          <div style={{fontSize:13,color:"#1f1235",marginTop:4,fontWeight:600}}>Assenti</div>
+          <div style={{fontSize:13,color:"#7c3aed",marginTop:4,fontWeight:600}}>Assenti</div>
         </div>
       </div>
 
@@ -833,8 +833,8 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
                 <div style={{width:10,height:10,borderRadius:"50%",background:presente?"#22c55e":"#475569",flexShrink:0}}/>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:14,color:"#1f1235"}}>{op.nome} {op.cognome}</div>
-                  <div style={{fontSize:12,color:"#1f1235"}}>{op.matricola}</div>
+                  <div style={{fontWeight:700,fontSize:14,color:"#7c3aed"}}>{op.nome} {op.cognome}</div>
+                  <div style={{fontSize:12,color:"#7c3aed"}}>{op.matricola}</div>
                 </div>
                 <span style={{fontSize:11,fontWeight:700,color:presente?"#22c55e":"#475569",background:presente?"#22c55e18":"#1e3a5f",padding:"2px 8px",borderRadius:4}}>
                   {presente?"IN TURNO":"ASSENTE"}
@@ -925,7 +925,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
             const dataFmt = (()=>{ try { const d=new Date(r.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); } catch(e){} return r.data; })();
             return (
               <tr key={i} style={{borderBottom:"1px solid #f0effe",background:i%2===0?"#faf9ff":"#ffffff"}}>
-                <td style={{padding:"10px 14px",fontSize:13,color:"#1f1235",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{dataFmt}</td>
+                <td style={{padding:"10px 14px",fontSize:13,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{dataFmt}</td>
                 <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:lObj.colore+"22",color:lObj.colore,border:"1px solid "+lObj.colore+"44",padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{r.linea}</span></td>
                 <td style={{padding:"10px 14px",textAlign:"center"}}>
                   <code style={S.sku}>{r.sku}</code>
@@ -1034,7 +1034,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCorso(null); }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #c4b5fd"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:20,fontWeight:800,color:"#7c3aed",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
+          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:24,height:24,objectFit:"contain"}}/></div><span style={{fontSize:20,fontWeight:800,color:"#7c3aed",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#7c3aed",letterSpacing:1}}>ProductionTrack</span></div>
         </div>
         <div style={{display:"flex",gap:8}}>
           <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
@@ -1050,14 +1050,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         {[["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
           <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,padding:14,textAlign:"center"}}>
             <div style={{fontSize:28,fontWeight:800,color:c,lineHeight:1}}>{n}</div>
-            <div style={{fontSize:13,color:"#1f1235",marginTop:4,fontWeight:600}}>{l}</div>
+            <div style={{fontSize:13,color:"#7c3aed",marginTop:4,fontWeight:600}}>{l}</div>
           </div>
         ))}
         {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
           return (
             <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#ffffff",border:"1px solid #e8e3f8",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
-              <div style={{fontSize:13,color:"#1f1235",marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
+              <div style={{fontSize:13,color:"#7c3aed",marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
@@ -1083,7 +1083,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
 
       {tab==="sessioni"&&(
         <div style={{padding:"0 24px 16px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-          <input style={{flex:"1 1 200px",padding:"12px 16px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,color:"#1f1235",fontSize:16,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
+          <input style={{flex:"1 1 200px",padding:"12px 16px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,color:"#7c3aed",fontSize:16,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
           {/* Sezione Tutti/Attive/Chiuse con sfondo separato */}
           <div style={{display:"flex",gap:6,flexWrap:"wrap",background:"#f9f8ff",border:"2px solid #c4b5fd",borderRadius:10,padding:"6px 8px"}}>
             {[["ALL","Tutti"],["attive","Attive"],["chiuse","Chiuse"]].map(([k,l])=>(
@@ -1107,14 +1107,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           ):(
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>{[["#","#ffffff"],["Operatore","#ffffff"],["SKU","#ffffff"],["Linea","#ffffff"],["Inizio","#ffffff"],["Fine","#ffffff"],["Durata","#ffffff"],["N° Trasf.","#ffffff"],["Azioni","#ffffff"]].map(([h,hc])=>(
-                <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:2,textTransform:"uppercase",color:hc,textAlign:"left",borderBottom:"1px solid #c4b5fd",background:"#f9f8ff",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
+                <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:2,textTransform:"uppercase",color:hc,textAlign:"left",borderBottom:"1px solid #c4b5fd",background:"#7c3aed",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:700,color:"#ffffff"}}>{h}</th>
               ))}</tr></thead>
               <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
                 const att2=!s.fine;
                 const dur=(()=>{ const i=parseData(s.inizio); const f=s.fine?parseData(s.fine):now(); return (i&&f)?(f-i):0; })();
                 return (
                   <tr key={s.id} style={{borderBottom:"1px solid #f0effe",background:att2?"#00d4aa06":"transparent"}}>
-                    <td style={S.td}><span style={{background:"#1e3a5f",color:"#6b7280",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
+                    <td style={S.td}><span style={{background:"#f0effe",color:"#7c3aed",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}><span style={{fontWeight:500}}>{s.nome} {s.cognome}</span></td>
                     <td style={S.td}>
                       <div style={{display:"flex",flexDirection:"column",gap:2}}>
@@ -1128,7 +1128,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{l.id}</span></td>
                     <td style={S.td}><span style={{fontSize:13,color:"#22c55e",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.inizio)}</span></td>
                     <td style={S.td}>{s.fine?<span style={{fontSize:13,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
-                    <td style={S.td}><span style={{background:"#1e3a5f",color:"#1f1235",padding:"4px 10px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{durataStr(dur)}</span></td>
+                    <td style={S.td}><span style={{background:"#ede9fe",color:"#7c3aed",padding:"4px 10px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{durataStr(dur)}</span></td>
                     <td style={S.td}>{s.trasferimenti.length>0?<span style={{background:"#a855f722",color:"#a855f7",border:"1px solid #a855f744",padding:"2px 8px",borderRadius:4,fontSize:12}}>{s.trasferimenti.length}x</span>:<span style={{color:"#9ca3af"}}>-</span>}</td>
                     <td style={S.td}>
                       {(()=>{ const corsi = s.corsi||[];
@@ -1187,7 +1187,7 @@ function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd
     setErr("Password non riconosciuta."); setPwd(""); };
   if(sync==="caricamento") return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6",flexDirection:"column",gap:16}}>
-      <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8}}/>
+      <div style={{width:64,height:64,background:"#7c3aed",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:54,height:54,objectFit:"contain"}}/></div>
       <span style={{fontSize:28,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
       <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
     </div>
@@ -1196,7 +1196,7 @@ function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6"}}>
       <div style={{width:"100%",maxWidth:400,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6}}/><span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><div style={{width:52,height:52,background:"#7c3aed",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:44,height:44,objectFit:"contain"}}/></div><span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
         <div style={{fontSize:15,fontWeight:700,color:"#00d4aa",marginBottom:20}}>ProductionTrack — Dashboard</div>
         <div style={{fontSize:13,color:"#6b7280",marginBottom:16}}>Password admin o password della tua linea</div>
         <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#e879f9",borderWidth:2}}
@@ -1208,7 +1208,7 @@ function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <button style={S.bCI} onClick={tenta}>Accedi con password linea</button>
             <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#1f1235",fontWeight:900}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#7c3aed",fontWeight:900}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
           </div>
         )}
         {modoAdmin&&(
@@ -1282,7 +1282,7 @@ function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
                 {skuFiltrati.slice(0,8).map(s=>(
                   <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:8,alignItems:"center"}}>
                     <code style={S.sku}>{s.sku}</code>
-                    <span style={{fontSize:12,color:"#1f1235"}}>{s.descrizione}</span>
+                    <span style={{fontSize:12,color:"#7c3aed"}}>{s.descrizione}</span>
                   </div>
                 ))}
               </div>
@@ -1321,7 +1321,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
 
   if(sync==="caricamento") return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6",flexDirection:"column",gap:16}}>
-      <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8}}/>
+      <div style={{width:64,height:64,background:"#7c3aed",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:54,height:54,objectFit:"contain"}}/></div>
       <span style={{fontSize:28,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
       <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
     </div>
@@ -1339,7 +1339,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6"}}>
       <div style={{width:"100%",maxWidth:400,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}>
-          <img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6}}/>
+          <div style={{width:52,height:52,background:"#7c3aed",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:44,height:44,objectFit:"contain"}}/></div>
           <span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
         </div>
         <div style={{fontSize:15,fontWeight:700,color:"#3b82f6",marginBottom:20}}>📊 Dashboard Qualità</div>
@@ -1348,7 +1348,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
           onChange={e=>{setPwd(e.target.value);setErr("");}}
           onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
         {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
-        <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#1f1235",fontWeight:900,marginBottom:10}} onClick={tenta}>Accedi</button>
+        <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#7c3aed",fontWeight:900,marginBottom:10}} onClick={tenta}>Accedi</button>
         <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={onBack}>← Indietro</button>
       </div>
     </div>
@@ -1389,7 +1389,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
     <div style={{minHeight:"100vh",background:"#f3f4f6"}}>
       <header style={{...S.hdr,borderBottom:"2px solid #10b98144"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/>
+          <div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div>
           <div>
             <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div>
             <div style={{fontSize:11,color:"#10b981",letterSpacing:2,textTransform:"uppercase"}}>Dashboard Qualità</div>
@@ -1414,7 +1414,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
                 {skuFiltrati.slice(0,8).map(s=>(
                   <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:8,alignItems:"center"}}>
                     <code style={S.sku}>{s.sku}</code>
-                    <span style={{fontSize:12,color:"#1f1235"}}>{s.descrizione}</span>
+                    <span style={{fontSize:12,color:"#7c3aed"}}>{s.descrizione}</span>
                   </div>
                 ))}
               </div>
@@ -1517,7 +1517,7 @@ function App() { const [view,setView]             = useState("login");
     setTimeout(caricaSessioni,3000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,3000); };
 
-  const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
+  const syncCfg = {ok:{c:"#7c3aed",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
   const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
 
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
@@ -1528,10 +1528,10 @@ function App() { const [view,setView]             = useState("login");
   }
 
   return (
-    <div style={{minHeight:"100vh",background:"#f9f8ff",color:"#374151"}}>
+    <div style={{minHeight:"100vh",background:"#f9f8ff",color:"#5b21b6"}}>
       <div style={{background:"#ffffff",borderBottom:"1px solid #c4b5fd",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
         <span style={{color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
-        {sync==="ok"&&<span style={{color:"#1f1235"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
+        {sync==="ok"&&<span style={{color:"#7c3aed"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
         {(sync==="ok"||sync==="errore")&&<button onClick={reload} style={{background:"transparent",border:"1px solid #e8e3f8",borderRadius:4,color:"#6b7280",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>Ricarica</button>}
       </div>
       {view!=="checkin"&&(
@@ -1550,7 +1550,7 @@ function App() { const [view,setView]             = useState("login");
           {view==="dashboard"&&(
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:11,color:dashCfg.c,fontWeight:700}}>{dashCfg.t}</span>
-              {ultimoSync2&&<span style={{fontSize:10,color:"#1f1235"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
+              {ultimoSync2&&<span style={{fontSize:10,color:"#7c3aed"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
               <button onClick={caricaSessioni} style={{background:"transparent",border:"1px solid #e8e3f8",borderRadius:4,color:"#6b7280",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>↻</button>
             </span>
           )}
