@@ -450,7 +450,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <img src="logo.png" style={{width:22,height:22,objectFit:"contain",borderRadius:3,background:"#7c3aed",padding:2}}/>
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#e879f9",fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div>
             <div style={{fontSize:11,color:"#3b82f6",letterSpacing:2,textTransform:"uppercase"}}>Dashboard Qualità</div>
           </div>
         </div>
@@ -471,7 +471,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
             <label style={S.lbl}>SKU Articolo</label>
             <input style={S.inp} placeholder="Cerca SKU..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
             {cSku&&!sku&&(
-              <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
+              <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
                 {skuFiltrati.slice(0,8).map(s=>(
                   <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center"}}>
                     <code style={S.sku}>{s.sku}</code>
@@ -484,16 +484,16 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
           </div>
           <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#1e293b"}}>Borse Prodotte</label>
+              <label style={{...S.lbl,color:"#1e293b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse Prodotte</label>
               <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
             </div>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#ef4444"}}>✕ Borse KO</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
+              <label style={{...S.lbl,color:"#ef4444",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>✕ Borse KO</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700,color:"#ef4444"}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
             </div>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#f59e0b"}}>~ Migliorabili</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
+              <label style={{...S.lbl,color:"#f59e0b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>~ Migliorabili</label>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700,color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
             </div>
           </div>
           <div style={{marginBottom:10}}>
