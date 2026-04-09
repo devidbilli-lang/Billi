@@ -30,7 +30,7 @@ button:hover{filter:brightness(1.12);}
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyltlJESFrnLar1Guxg3l--vvThLQwV0wBhbf0UCar1wj44E6I80sMpm255ECNWqvtnLQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtYkfC7-hhe-YEpHhjE6sMuh1bAqkxctmimhiTJ-6GGg7ggQtmWu2XlnZYA2eTmwLX_Q/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -370,8 +370,8 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#22c55e",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ok||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ko||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.migl||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif"}}>{r.noteKo||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif"}}>{r.noteMigl||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{r.noteKo||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{r.noteMigl||"-"}</td>
               </tr>
             );
           })}
