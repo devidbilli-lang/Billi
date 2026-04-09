@@ -136,7 +136,7 @@ function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.leng
           onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
           <code style={S.sku}>{s.sku}</code>
           {s.collezione&&<span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{s.collezione}</span>}
-          <span style={{fontSize:15,color:"#ffffff",flex:1}}>{s.descrizione}</span>
+          <span style={{fontSize:15,color:"#1e293b",flex:1}}>{s.descrizione}</span>
         </div>
       ))}
     </div>
@@ -475,7 +475,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
                 {skuFiltrati.slice(0,8).map(s=>(
                   <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center"}}>
                     <code style={S.sku}>{s.sku}</code>
-                    <span style={{fontSize:12,color:"#ffffff"}}>{s.descrizione}</span>
+                    <span style={{fontSize:12,color:"#1e293b"}}>{s.descrizione}</span>
                   </div>
                 ))}
               </div>
