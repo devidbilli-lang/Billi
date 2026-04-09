@@ -929,19 +929,19 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         </div>
       </header>
       <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto"}}>
-        <div style={{flex:"0 0 auto",minWidth:90,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:12,padding:14,textAlign:"center"}}>
+        <div style={{flex:"0 0 110px",width:110,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:12,padding:14,textAlign:"center"}}>
           <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{sessioni.length}</div>
           <div style={{fontSize:11,color:"#ffffff",marginTop:4,fontWeight:700}}>Totale</div>
         </div>
         {[["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
-          <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:14,textAlign:"center"}}>
+          <div key={l} style={{flex:"0 0 110px",width:110,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:14,textAlign:"center"}}>
             <div style={{fontSize:28,fontWeight:800,color:c,lineHeight:1}}>{n}</div>
             <div style={{fontSize:13,color:"#1e293b",marginTop:4,fontWeight:600}}>{l}</div>
           </div>
         ))}
         {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
           return (
-            <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#ffffff",border:"1px solid #e2e8f0",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
+            <div key={l.id} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"1px solid #e2e8f0",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
               <div style={{fontSize:13,color:l.colore,marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
               {nAtt>0&&(
@@ -984,7 +984,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         <div style={{margin:"0 24px",background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
           {fil.length===0?(<div style={{textAlign:"center",padding:60,color:"#64748b"}}>Nessuna sessione</div>):(
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{[["#","#ffffff"],["Operatore","#ffffff"],["SKU","#ffffff"],["Linea","#ffffff"],["Inizio","#22c55e"],["Fine","#ef4444"],["Durata","#ffffff"],["Azioni","#ffffff"]].map(([h,hc])=>(
+              <thead><tr>{[["#","#475569"],["Operatore","#475569"],["SKU","#475569"],["Linea","#475569"],["Inizio","#22c55e"],["Fine","#ef4444"],["Durata","#475569"],["Azioni","#475569"]].map(([h,hc])=>(
                 <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:2,textTransform:"uppercase",color:hc,textAlign:"left",borderBottom:"1px solid #e2e8f0",background:"#f8fafc",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
               ))}</tr></thead>
               <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
@@ -994,7 +994,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #f1f5f9",background:att2?"#f0fdf4":"#fff5f5"}}>
+                  <tr key={s.id} style={{borderBottom:"1px solid #f1f5f9",background:att2?"#dcfce7":"#fee2e2"}}>
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
                     <td style={S.td}><code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code>
