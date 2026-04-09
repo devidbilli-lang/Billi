@@ -950,8 +950,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   if(!confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?")) return;
                   (async () => {
                     for (const s of attiveLinea) {
-                      if(onCOSheets) onCOSheets(s); else onCO(s.id);
-                      await new Promise(res => setTimeout(res, 800));
+                      await api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
                     }
                     if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, 3000);
                   })(); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
