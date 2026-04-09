@@ -477,11 +477,11 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
           )}
           <div style={{marginBottom:14}}>
             <label style={S.lbl}>SKU Articolo</label>
-            <input style={S.inp} placeholder="Cerca SKU..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
+            <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
             {cSku&&!sku&&(
               <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
                 {skuFiltrati.slice(0,8).map(s=>(
-                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center"}}>
+                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku("");}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center"}}>
                     <code style={S.sku}>{s.sku}</code>
                     <span style={{fontSize:12,color:"#1e293b"}}>{s.descrizione}</span>
                   </div>
@@ -489,9 +489,9 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
               </div>
             )}
             {sku&&(()=>{ const skuObj=skuList.find(s=>s.sku===sku); return (
-              <div style={{marginTop:6,padding:"8px 12px",background:"#86efac22",border:"1.5px solid #86efac",borderRadius:8,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                <code style={{...S.sku,background:"#86efac22",color:"#16a34a",border:"1px solid #86efac",fontWeight:800}}>{sku}</code>
-                {skuObj&&<span style={{fontSize:13,color:"#16a34a",fontWeight:600,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</span>}
+              <div style={{marginTop:6,padding:"8px 12px",background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:6,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{sku}</span>
+                {skuObj&&skuObj.descrizione&&<span style={{fontSize:13,color:"#f59e0b",fontWeight:600,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</span>}
               </div>
             ); })()}
           </div>
@@ -700,13 +700,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           </div>
           <div style={{marginBottom:18}}>
             <label style={S.lbl}>SKU Articolo</label>
-            {skuList.length>0&&(
-              <div style={{marginBottom:8}}>
-                <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
-                <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
-              </div>
-            )}
-            <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b",borderWidth:2}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
+            <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>{setCSku(e.target.value.toUpperCase());if(!e.target.value)setSku("");}}/>
+            <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
             {(()=>{ const skuObj=skuList.find(x=>x.sku===sku); return sku?(
               <div style={{marginTop:6,padding:"8px 12px",background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:6,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                 <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{sku}</span>
