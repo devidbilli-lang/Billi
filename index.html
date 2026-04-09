@@ -30,7 +30,7 @@ button:hover{filter:brightness(1.12);}
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBDS4KD5pVjHdPXHe8F3RS7-OOkVcHXHRazx15xA5FyuQ_Bq-y-HH--8IKAurxc6kvIg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6E6K-APApxklOwfiff9baeO-Ma1HWAS4Oo4pZ-FmhGc7E-WJazCk5Wv-SHgUlNgaWzg/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -350,7 +350,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
-          <tr>{[["Data","#ffffff"],["Linea","#ffffff"],["SKU","#ffffff"],["✓ OK","#22c55e"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"]].map(([h,c])=>(
+          <tr>{[["Data","#ffffff"],["Linea","#ffffff"],["SKU","#ffffff"],["Borse Prodotte","#1e293b"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"]].map(([h,c])=>(
             <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2px solid #1e3a5f",background:"#f8fafc",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
           ))}</tr>
         </thead>
@@ -367,7 +367,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                   <code style={S.sku}>{r.sku}</code>
                   {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</div>}
                 </td>
-                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#22c55e",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ok||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#1e293b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ok||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ko||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.migl||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{r.noteKo||"-"}</td>
@@ -484,7 +484,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
           </div>
           <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#22c55e"}}>✓ Borse OK</label>
+              <label style={{...S.lbl,color:"#1e293b"}}>Borse Prodotte</label>
               <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
             </div>
             <div style={{flex:1}}>
