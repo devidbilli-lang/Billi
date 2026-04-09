@@ -560,13 +560,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
     return (
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
-        <div style={{textAlign:"center",padding:40,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
+        <div style={{textAlign:"center",padding:40,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
           <div style={{width:80,height:80,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 20px",background:cfg.bg,animation:"pulse 0.6s ease"}}>{cfg.i}</div>
           <h2 style={{fontSize:24,fontWeight:800,marginBottom:8,color:cfg.c}}>{cfg.t}</h2>
-          {ris.multiCount>1 ? <p style={{color:"#94a3b8",marginBottom:12}}>{ris.multiCount} operatori registrati</p> : <p style={{color:"#94a3b8",marginBottom:12}}>{sess.nome} {sess.cognome}</p>}
+          {ris.multiCount>1 ? <p style={{color:"#475569",marginBottom:12}}>{ris.multiCount} operatori registrati</p> : <p style={{color:"#475569",marginBottom:12}}>{sess.nome} {sess.cognome}</p>}
           {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
           <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.id}</div>
-          <p style={{color:"#ffffff",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
+          <p style={{color:"#475569",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
           <p style={{fontSize:11,color:"#22c55e",marginBottom:20}}>Registrato su Google Sheets</p>
           <button style={S.bBk} onClick={reset}>Torna al Menu</button>
         </div>
