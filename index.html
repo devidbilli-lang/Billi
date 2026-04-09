@@ -119,7 +119,7 @@ function SugOp({ val, list, onSel }) { if(!val||val.length<2||!list.length) retu
       {m.map(o=>(
         <div key={o.matricola} onClick={()=>onSel(o)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:10,alignItems:"center"}}
           onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <span style={{fontSize:13,color:"#94a3b8"}}>{o.nome} {o.cognome}</span>
+          <span style={{fontSize:13,color:"#1e293b"}}>{o.nome} {o.cognome}</span>
         </div>
       ))}
     </div>
@@ -663,11 +663,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     {operatori.filter(o=>o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase())).slice(0,6).map(o=>{ const sel=opSelezionati.some(x=>x.matricola===o.matricola);
                       return (
                         <div key={o.matricola} onClick={()=>{ if(sel) setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola)); else setOpSelezionati(p=>[...p,o]); }} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:10,alignItems:"center",background:sel?"#22c55e18":"transparent"}}
-                          onMouseEnter={e=>e.currentTarget.style.background=sel?"#22c55e28":"#1e3a5f"}
+                          onMouseEnter={e=>e.currentTarget.style.background=sel?"#22c55e28":"#f1f5f9"}
                           onMouseLeave={e=>e.currentTarget.style.background=sel?"#22c55e18":"transparent"}>
                           <span style={{width:18,height:18,border:"2px solid "+(sel?"#22c55e":"#475569"),borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#22c55e",flexShrink:0}}>{sel?"✓":""}</span>
-                          <span style={{fontSize:13,color:"#94a3b8"}}>{o.nome} {o.cognome}</span>
-                          <span style={{fontSize:11,color:"#64748b",marginLeft:"auto"}}>{o.matricola}</span>
+                          <span style={{fontSize:13,color:"#1e293b"}}>{o.nome} {o.cognome}</span>
+                          <span style={{fontSize:11,color:"#94a3b8",marginLeft:"auto"}}>{o.matricola}</span>
                         </div>
                       ); })}
                   </div>
