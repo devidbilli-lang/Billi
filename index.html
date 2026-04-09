@@ -14,7 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:#f3f4f6;font-family:'Montserrat',sans-serif;color:#1f1235;}
+body{background:#050a14;font-family:'Montserrat',sans-serif;color:#e2e8f0;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
 @keyframes rowIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
@@ -22,26 +22,22 @@ tr{animation:rowIn 0.25s ease both;}
 input:focus{border-color:#00d4aa!important;outline:none;}
 button:hover{filter:brightness(1.12);}
 ::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:#f3f4f6;}
-::-webkit-scrollbar-thumb{background:#c4b5fd;border-radius:3px;}
+::-webkit-scrollbar-track{background:#0a1628;}
+::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px;}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
-
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyltlJESFrnLar1Guxg3l--vvThLQwV0wBhbf0UCar1wj44E6I80sMpm255ECNWqvtnLQ/exec";
 const ADMIN_PWD = "Nexus2026!";
-
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
 ];
-
 const now     = () => new Date();
 const fmt     = d => d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 const fmtFull = d => d.toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-
 const parseData = s => { if(!s) return null;
   if(typeof s === "number") return new Date(s);
   const str = s.toString().trim();
@@ -55,13 +51,11 @@ const durataStr = ms => { if(!ms||ms<0) return "-"; const m=Math.floor(ms/60000)
 const getLinea  = (id,linee) => linee.find(l=>l.id===id)||linee[0];
 const store = { get:(k,d)=>{ try{ const v=sessionStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } }, set:(k,v)=>{ try{ sessionStorage.setItem(k,JSON.stringify(v)); }catch{} }
 };
-
 const fetchTimeout = (url, ms=20000) => { const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 };
-// Funzione helper con retry automatico
-async function fetchConRetry(url, tentativi=3, delayMs=1000) {
+async function fetchConRetry(url, tentativi=5, delayMs=1000) {
   for (let i = 0; i < tentativi; i++) {
     try {
       const ctrl = new AbortController();
@@ -76,11 +70,11 @@ async function fetchConRetry(url, tentativi=3, delayMs=1000) {
   }
   throw new Error('Richiesta fallita dopo ' + tentativi + ' tentativi');
 }
-
-const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } }, async evento(p) { try { const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
-      await fetchTimeout(APPS_SCRIPT_URL+"?"+q.toString()); } catch(e){ console.warn(e); } }, async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
+const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } },
+  async evento(p) { try { const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
+      await fetchConRetry(APPS_SCRIPT_URL+"?"+q.toString(), 5, 1000); } catch(e){ console.warn(e); } },
+  async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
 };
-
 function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
   const [operatori,setOperatori] = useState([]);
   const [skuList,setSkuList]     = useState([]);
@@ -92,13 +86,12 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
         if(d.operatori) setOperatori(d.operatori);
         if(d.skuList)   setSkuList(d.skuList);
         setSync("ok"); setTs(new Date()); } else setSync("errore"); } catch{ setSync("errore"); } },[]);
-  useEffect(()=>{ load(); 
-    const t = setInterval(load, 60000); // ricarica operatori/linee/SKU ogni 60 secondi
+  useEffect(()=>{ load();
+    const t = setInterval(load, 60000);
     return ()=>clearInterval(t);
   },[load]);
   return { linee, operatori, skuList, sync, ts, reload:load };
 }
-
 function tappe(s) { const fine = s.fine ? new Date(s.fine) : now();
   const out  = [];
   let cur    = new Date(s.inizio);
@@ -113,46 +106,42 @@ function tappe(s) { const fine = s.fine ? new Date(s.fine) : now();
       cur=ft; } }
   return out;
 }
-
-const S = { scr:  {minHeight:"100vh",background:"#f3f4f6"}, hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #c4b5fd"}, logo: {display:"flex",alignItems:"center",gap:12}, lt:   {fontSize:18,fontWeight:700,color:"#7c3aed",letterSpacing:1}, ls:   {fontSize:11,color:"#6b7280",letterSpacing:2,textTransform:"uppercase"}, ora:  {fontSize:22,fontWeight:700,color:"#7c3aed",fontFamily:"monospace",background:"#7c3aed11",padding:"4px 14px",borderRadius:8,border:"1px solid #c4b5fd"}, bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"}, card: {width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease"}, cT:   {fontSize:22,fontWeight:700,color:"#7c3aed",marginBottom:24}, lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#5b21b6",textTransform:"uppercase",marginBottom:6,fontWeight:600}, inp:  {width:"100%",padding:"10px 14px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,color:"#5b21b6",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"}, err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}, bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",border:"none",borderRadius:10,color:"#ffffff",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, bCO:  {width:"100%",padding:14,background:"linear-gradient(135deg,#ef4444,#b91c1c)",border:"none",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}, bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #e8e3f8",borderRadius:8,color:"#7c3aed",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}, sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"4px 12px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}, tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"}, td:   {padding:"10px 14px",fontSize:15,color:"#374151",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:500}, sc:   {background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:10,padding:"14px 16px",marginBottom:16},
+const S = { scr:  {minHeight:"100vh",background:"linear-gradient(135deg,#050a14,#0a1628)"}, hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #1e3a5f"}, logo: {display:"flex",alignItems:"center",gap:12}, lt:   {fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1}, ls:   {fontSize:11,color:"#475569",letterSpacing:2,textTransform:"uppercase"}, ora:  {fontSize:22,fontWeight:700,color:"#00d4aa",fontFamily:"monospace",background:"#00d4aa11",padding:"4px 14px",borderRadius:8,border:"1px solid #00d4aa33"}, bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"}, card: {width:"100%",maxWidth:520,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease"}, cT:   {fontSize:22,fontWeight:700,color:"#f1f5f9",marginBottom:24}, lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#ffffff",textTransform:"uppercase",marginBottom:6,fontWeight:600}, inp:  {width:"100%",padding:"10px 14px",background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,color:"#e2e8f0",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"}, err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}, bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#00d4aa,#0891b2)",border:"none",borderRadius:10,color:"#050a14",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, bCO:  {width:"100%",padding:14,background:"linear-gradient(135deg,#ef4444,#b91c1c)",border:"none",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}, bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#94a3b8",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}, sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"4px 12px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}, tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"}, td:   {padding:"10px 14px",fontSize:15,color:"#ffffff",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:500}, sc:   {background:"#050a14",border:"1px solid #1e3a5f",borderRadius:10,padding:"14px 16px",marginBottom:16},
 };
-const MS = { ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}, md: {background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:18,width:"90%",maxWidth:460,overflow:"hidden",animation:"fadeUp 0.3s ease"}, mh: {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px",borderBottom:"1px solid #c4b5fd"}, mt: {fontWeight:700,fontSize:16,color:"#a855f7"}, mx: {background:"transparent",border:"none",color:"#6b7280",cursor:"pointer",fontSize:18,fontFamily:"'Montserrat',sans-serif"}, an: {flex:1,padding:10,background:"transparent",border:"1px solid #e8e3f8",borderRadius:8,color:"#6b7280",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
+const MS = { ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}, md: {background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:18,width:"90%",maxWidth:460,overflow:"hidden",animation:"fadeUp 0.3s ease"}, mh: {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px",borderBottom:"1px solid #1e3a5f"}, mt: {fontWeight:700,fontSize:16,color:"#a855f7"}, mx: {background:"transparent",border:"none",color:"#64748b",cursor:"pointer",fontSize:18,fontFamily:"'Montserrat',sans-serif"}, an: {flex:1,padding:10,background:"transparent",border:"1px solid #1e3a5f",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
 };
-
 function SugOp({ val, list, onSel }) { if(!val||val.length<2||!list.length) return null;
   const v=val.toUpperCase();
   const m=list.filter(o=>o.matricola.includes(v)||o.nome.toUpperCase().includes(v)||o.cognome.toUpperCase().includes(v)).slice(0,4);
   if(!m.length) return null;
   return (
-    <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,marginTop:4,overflow:"hidden"}}>
+    <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
       {m.map(o=>(
-        <div key={o.matricola} onClick={()=>onSel(o)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:10,alignItems:"center"}}
-          onMouseEnter={e=>e.currentTarget.style.background="#f0effe"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <span style={{fontSize:13,color:"#6b7280"}}>{o.nome} {o.cognome}</span>
+        <div key={o.matricola} onClick={()=>onSel(o)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center"}}
+          onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+          <span style={{fontSize:13,color:"#94a3b8"}}>{o.nome} {o.cognome}</span>
         </div>
       ))}
     </div>
   );
 }
-
 function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.length) return null;
   const v=val.toUpperCase();
   const m=list.filter(s=>s.sku.includes(v)||s.descrizione.toUpperCase().includes(v)||(s.collezione&&s.collezione.toUpperCase().includes(v))).slice(0,5);
   if(!m.length) return null;
   return (
-    <div style={{background:"#ffffff",border:"1px solid #f59e0b44",borderRadius:8,marginTop:4,overflow:"hidden"}}>
+    <div style={{background:"#0a1628",border:"1px solid #f59e0b44",borderRadius:8,marginTop:4,overflow:"hidden"}}>
       {m.map(s=>(
-        <div key={s.sku+(s.collezione||"")} onClick={()=>onSel(s)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}
-          onMouseEnter={e=>e.currentTarget.style.background="#f0effe"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+        <div key={s.sku+(s.collezione||"")} onClick={()=>onSel(s)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}
+          onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
           <code style={S.sku}>{s.sku}</code>
-          {s.collezione&&<span style={{fontSize:11,color:"#7c3aed",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{s.collezione}</span>}
-          <span style={{fontSize:15,color:"#7c3aed",flex:1}}>{s.descrizione}</span>
+          {s.collezione&&<span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{s.collezione}</span>}
+          <span style={{fontSize:15,color:"#ffffff",flex:1}}>{s.descrizione}</span>
         </div>
       ))}
     </div>
   );
 }
-
 function CambioSkuInline({ sess, skuList, linee, onOk, onClose }) { const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
   const [cSku,setCSku]   = useState("");
   const [err,setErr]     = useState("");
@@ -163,10 +152,10 @@ function CambioSkuInline({ sess, skuList, linee, onOk, onClose }) { const [nSku,
         <div style={{padding:22}}>
           <div style={S.sc}>
             <div style={{fontSize:10,letterSpacing:2,color:"#f59e0b",textTransform:"uppercase",marginBottom:4}}>Operatore</div>
-            <div style={{fontWeight:700,fontSize:15,color:"#7c3aed",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
+            <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
               <code style={S.sku}>Attuale: {sess.skuCorrente||sess.sku||"-"}</code>
-              <span style={{color:"#6b7280",fontSize:12}}>→ Linea: {getLinea(sess.lineaCorrente,linee).nome}</span>
+              <span style={{color:"#475569",fontSize:12}}>→ Linea: {getLinea(sess.lineaCorrente,linee).nome}</span>
             </div>
           </div>
           <label style={S.lbl}>Nuovo SKU</label>
@@ -191,40 +180,6 @@ function CambioSkuInline({ sess, skuList, linee, onOk, onClose }) { const [nSku,
     </div>
   );
 }
-
-function ModalPwd({ titolo, colore, linea, onOk, onClose }) { const [pwd,setPwd] = useState("");
-  const [err,setErr] = useState("");
-  const c = colore||"#a855f7";
-  return (
-    <div style={MS.ov}>
-      <div style={{...MS.md,maxWidth:380,border:"1px solid "+c+"44"}}>
-        <div style={{...MS.mh,borderBottom:"1px solid "+c+"33",background:c+"11"}}>
-          <span style={{...MS.mt,color:c}}>🔒 {titolo||"Password richiesta"}</span>
-          <button style={MS.mx} onClick={onClose}>X</button>
-        </div>
-        <div style={{padding:22}}>
-          {}
-          {linea&&(
-            <div style={{background:linea.colore+"18",border:"1px solid "+linea.colore+"44",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontWeight:800,fontSize:14,color:linea.colore}}>{linea.id}</span>
-              <span style={{fontSize:15,color:"#7c3aed"}}>{linea.nome}</span>
-            </div>
-          )}
-          <input type="password" style={{...S.inp,borderColor:c+"66",borderWidth:2}} placeholder="Inserisci password..." autoFocus
-            value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}}
-            onKeyDown={e=>e.key==="Enter"&&onOk(pwd,setErr)}/>
-          {err&&<div style={{...S.err,marginTop:8}}>{err}</div>}
-          <div style={{display:"flex",gap:10,marginTop:16}}>
-            <button style={MS.an} onClick={onClose}>Annulla</button>
-            <button style={{...MS.cf,background:"linear-gradient(135deg,"+c+","+c+"bb)"}}
-              onClick={()=>onOk(pwd,setErr)}>Conferma</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCorso] = useState("");
   const [tipoUscita,setTipoUscita] = useState("sospendi");
   const la = getLinea(sess.lineaCorrente, linee);
@@ -236,14 +191,11 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
           <button style={MS.mx} onClick={onClose}>X</button>
         </div>
         <div style={{padding:22}}>
-          {}
           <div style={S.sc}>
-            <div style={{fontWeight:700,fontSize:15,color:"#7c3aed",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
+            <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
             <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
-
-          {}
           {tipoUscita==="sospendi"&&(
             <div style={{marginBottom:16}}>
               <label style={S.lbl}>Nome corso / formazione</label>
@@ -251,20 +203,17 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
                 value={nomeCorso} onChange={e=>setNomeCorso(e.target.value)}/>
             </div>
           )}
-
-          {}
-          <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#6b7280",marginBottom:8}}>Cosa succede alla produzione?</div>
+          <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Cosa succede alla produzione?</div>
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-            {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"], ["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
+            {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"],["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
             ].map(([val,tit,desc,c])=>(
               <button key={val} onClick={()=>setTipoUscita(val)}
-                style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#e8e3f8"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
+                style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
                 <span style={{fontWeight:700,color:tipoUscita===val?c:"#94a3b8",fontSize:13}}>{tit}</span>
-                <span style={{fontSize:11,color:"#6b7280"}}>{desc}</span>
+                <span style={{fontSize:11,color:"#475569"}}>{desc}</span>
               </button>
             ))}
           </div>
-
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
             <button style={{...MS.cf,background:"linear-gradient(135deg,#06b6d4,#0284c7)"}}
@@ -275,63 +224,44 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
     </div>
   );
 }
-
 function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDest]   = useState(null);
   const [chSku,setChSku] = useState(false);
   const [nSku,setNSku]   = useState("");
   const [cSku,setCSku]   = useState("");
-  const [pwd,setPwd]     = useState("");
-  const [errPwd,setErrPwd] = useState("");
-  const [fase,setFase]   = useState("scelta");
-  const la = getLinea(sess.lineaCorrente,linee);
-  const lineaDest = dest ? getLinea(dest,linee) : null;
-
-  const conferma = () => {
-    onOk(dest, chSku&&nSku?nSku:null); };
-
+  const conferma = () => { onOk(dest, chSku&&nSku?nSku:null); };
   return (
     <div style={MS.ov}>
       <div style={MS.md}>
         <div style={MS.mh}><span style={MS.mt}>Trasferimento</span><button style={MS.mx} onClick={onClose}>X</button></div>
         <div style={{padding:22,maxHeight:"80vh",overflowY:"auto"}}>
-
-          {}
           <div style={S.sc}>
-            <div style={{fontWeight:700,fontSize:15,color:"#7c3aed",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
+            <div style={{fontWeight:700,fontSize:15,color:"#f1f5f9",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
-            <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
+            <span style={{...S.tag,background:getLinea(sess.lineaCorrente,linee).colore+"22",color:getLinea(sess.lineaCorrente,linee).colore,borderColor:getLinea(sess.lineaCorrente,linee).colore+"44",marginLeft:8}}>{getLinea(sess.lineaCorrente,linee).id}</span>
           </div>
-
-          {}
-          <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#6b7280",marginBottom:8}}>Linea destinazione</div>
+          <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Linea destinazione</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
             {linee.filter(l=>l.id!==sess.lineaCorrente).map(l=>(
-              <button key={l.id} onClick={()=>{setDest(l.id);setPwd("");setErrPwd("");}}
-                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px", border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer", background:dest===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)", boxShadow:dest===l.id?("0 0 16px "+l.colore+"44"):"none", fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
+              <button key={l.id} onClick={()=>setDest(l.id)}
+                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",background:dest===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
                 <span style={{fontSize:13,fontWeight:700,color:dest===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
                 <span style={{fontSize:10,color:dest===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.nome}</span>
-                {l.password&&<span style={{fontSize:9,color:"#f59e0b",marginTop:2}}>🔒 con password</span>}
               </button>
             ))}
           </div>
-
-          {}
-          <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
-            <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#6b7280"}}>
+          <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
+            <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94a3b8"}}>
               <input type="checkbox" checked={chSku} onChange={e=>setChSku(e.target.checked)} style={{accentColor:"#00d4aa",width:16,height:16}}/>
               Cambia anche SKU
             </label>
             {chSku&&(
               <div style={{marginTop:10}}>
-                <label style={S.lbl}>Cerca nuovo SKU</label>
                 <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca SKU..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
                 <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");}}/>
                 <input style={{...S.inp,marginTop:8,fontFamily:"monospace"}} placeholder="SKU selezionato" value={nSku} onChange={e=>setNSku(e.target.value.toUpperCase())}/>
               </div>
             )}
           </div>
-
-          {}
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
             <button style={{...MS.cf,opacity:dest?1:0.4}} disabled={!dest} onClick={conferma}>Conferma</button>
@@ -341,92 +271,44 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
     </div>
   );
 }
-
-function RiepLinea({ sessioni, linee }) { const gmap = {};
-  for(const s of sessioni){ for(const {linea,ms} of tappe(s)) gmap[linea]=(gmap[linea]||0)+ms; }
-  const tot = Object.values(gmap).reduce((a,b)=>a+b,0);
-  if(!tot) return <div style={{textAlign:"center",padding:40,color:"#6b7280"}}>Nessun dato</div>;
-  return (
-    <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
-      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#00d4aa",marginBottom:14}}>Minuti per Linea</div>
-      {linee.map(l=>{ const ms=gmap[l.id]||0; if(!ms) return null; const pct=tot>0?(ms/tot)*100:0;
-        return (<div key={l.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-          <span style={{color:l.colore,fontWeight:700,minWidth:32,fontSize:13}}>{l.nome}</span>
-          
-          <div style={{flex:1,height:10,background:"#e8e3f8",borderRadius:6,overflow:"hidden"}}>
-            <div style={{height:"100%",width:pct+"%",background:l.colore,borderRadius:6,transition:"width 0.6s"}}/>
-          </div>
-          <span style={{color:l.colore,minWidth:42,fontSize:13,fontWeight:700,fontFamily:"monospace",textAlign:"right"}}>{Math.round(ms/60000)}m</span>
-          <span style={{minWidth:34,fontSize:11,color:"#6b7280",textAlign:"right"}}>{pct.toFixed(0)+"%"}</span>
-        </div>); })}
-      <div style={{marginTop:12,fontSize:12,color:"#6b7280",borderTop:"1px solid #e8e3f8",paddingTop:10}}>Totale: <strong style={{color:"#00d4aa"}}>{durataStr(tot)}</strong></div>
-    </div>
-  );
-}
-
 function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
-
   const rampaMap = {};
   for(const r of (rampeSheets||[])){ if(r.sku && r.rampaDal){ const g = Math.min(15, Math.max(1, Math.floor((now()-r.rampaDal)/(1000*60*60*24))+1));
       if(!rampaMap[r.sku]) rampaMap[r.sku] = { dal:r.rampaDal, giorni:g, lineaId:r.lineaId }; } }
   for(const s of sessioni){ let rdal = s.rampaDal||null;
     if(!rdal && (s.skuA||"").includes("__RAMPA__")){ const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime(); }
     if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=Math.min(15,Math.max(1,Math.floor((now()-rdal)/(1000*60*60*24))+1)); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } } }
-
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
-
   const tuttiSku = [...new Set([...Object.keys(rampaMap),...Object.keys(totMap)])].sort();
-  const totG = Object.values(totMap).filter(v=>!isNaN(v)).reduce((a,b)=>a+b,0)||1;
-
   if(!tuttiSku.length) return (
-    <div style={{textAlign:"center",padding:60,color:"#6b7280"}}>
+    <div style={{textAlign:"center",padding:60,color:"#475569"}}>
       <div style={{fontSize:40,marginBottom:12}}>📈</div>
-      <div style={{fontSize:14,fontWeight:600,color:"#6b7280",marginBottom:8}}>Nessuna Rampa di Crescita attiva</div>
-      <div style={{fontSize:12,color:"#9ca3af"}}>Attiva la rampa al check-in spuntando "Avvia Rampa di Crescita"</div>
+      <div style={{fontSize:14,fontWeight:600,color:"#64748b",marginBottom:8}}>Nessuna Rampa di Crescita attiva</div>
     </div>
   );
-
   return (
-    <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
+    <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampa di Crescita</div>
-      {tuttiSku.map(sku=>{ const ms=totMap[sku]||0; const pct=totG>0?(ms/totG)*100:0; const lm=linMap[sku]||{};
-        const rampa=rampaMap[sku]||null; const g=rampa?rampa.giorni:null;
-        const completata=g!==null&&g>=15;
-        const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
+      {tuttiSku.map(sku=>{ const ms=totMap[sku]||0; const rampa=rampaMap[sku]||null; const g=rampa?rampa.giorni:null;
+        const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
-          <div key={sku} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #f0effe"}}>
+          <div key={sku} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #0f1f38"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <code style={{...S.sku,minWidth:80,fontSize:13}}>{sku}</code>
-              {(()=>{ const skuObj=skuList.find(x=>x.sku===sku); return skuObj&&skuObj.collezione?<span style={{fontSize:12,color:"#7c3aed",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 10px",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.collezione}</span>:null; })()}
               {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{lineaObj.id}</span>}
-
             </div>
             {g!==null&&(
               <div style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <span style={{fontSize:14,fontWeight:700,color:colRampa,display:"flex",alignItems:"center",gap:8}}>
-                    📈 Giorno {g} / 15
-                    {completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800}}>✓ COMPLETATA</span>}
-                  </span>
+                  <span style={{fontSize:14,fontWeight:700,color:colRampa}}>📈 Giorno {g} / 15{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
                   <span style={{fontSize:12,color:colRampa,fontWeight:700}}>{Math.round(g/15*100)}%</span>
                 </div>
-                <div style={{height:18,background:"#e8e3f8",borderRadius:9,overflow:"hidden",position:"relative"}}>
+                <div style={{height:18,background:"#0f1f38",borderRadius:9,overflow:"hidden",position:"relative"}}>
                   <div style={{height:"100%",width:(g/15*100)+"%",background:completata?"linear-gradient(90deg,#22c55e,#16a34a)":"linear-gradient(90deg,#f59e0b,#d97706)",borderRadius:9,transition:"width 0.8s ease"}}/>
-                  {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(i=>(
-                    <div key={i} style={{position:"absolute",top:0,bottom:0,left:(i/15*100)+"%",width:1,background:"#f9f8ff",opacity:0.5}}/>
-                  ))}
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:3,fontSize:9,color:"#9ca3af"}}>
-                  <span>1</span><span>5</span><span>10</span><span>15</span>
-                </div>
-              </div>
-            )}
-            {rampa&&rampa.dal&&(
-              <div style={{fontSize:12,color:"#6b7280",marginTop:4,fontFamily:"'Montserrat',sans-serif"}}>
-                🗓 Iniziata il: <span style={{color:"#f59e0b",fontWeight:700}}>{fmtFull(new Date(rampa.dal))}</span>
               </div>
             )}
           </div>
@@ -434,449 +316,9 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
     </div>
   );
 }
-function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci, rampeSheets }) { const [mode,setMode]           = useState("menu");
-  const [modQualita,setModQualita] = useState(false);
-  const [nome,setNome]           = useState("");
-  const [cogn,setCogn]           = useState("");
-  const [sku,setSku]             = useState("");
-  const [linea,setLinea]         = useState(null);
-  useEffect(()=>{ if(lineaFiltro) setLinea(lineaFiltro); },[lineaFiltro]);
-  const [ris,setRis]             = useState(null);
-  const [err,setErr]             = useState("");
-  const [mats,setMats]           = useState("");
-  const [matsNome,setMatsNome]   = useState("");
-  const [cOp,setCOp]             = useState("");
-  const [cSku,setCSku]           = useState("");
-  const [opSelezionati,setOpSelezionati] = useState([]);
-  const [rampa,setRampa]                 = useState(false);
-  const [pwdLinea,setPwdLinea]           = useState("");
-  const [pwdOk,setPwdOk]                 = useState(false);
-  const [errPwd,setErrPwd]               = useState("");
-
-  const [oraRef, setOraRef] = useState(now());
-  useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
-
-  const sessAtt = k => { const key = k.trim().toUpperCase();
-    const isAttiva = s => { if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
-      const d = parseData(s.fine);
-      return d===null||isNaN(d);
-    };
-    if(sessSheets&&sessSheets.length>0){ const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s));
-      if(sh) return sh; }
-    return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null; };
-  const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
-  const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setMode("menu"); };
-
-  if(mode==="result"&&ris){ const {tipo,sess,lDest,nSku}=ris;
-    const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
-    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
-    return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6"}}>
-        <div style={{textAlign:"center",padding:40,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
-          <div style={{width:80,height:80,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 20px",background:cfg.bg,animation:"pulse 0.6s ease"}}>{cfg.i}</div>
-          <h2 style={{fontSize:24,fontWeight:800,marginBottom:8,color:cfg.c}}>{cfg.t}</h2>
-          {ris.multiCount>1
-            ? <p style={{color:"#6b7280",marginBottom:12}}>{ris.multiCount} operatori registrati</p>
-            : <p style={{color:"#6b7280",marginBottom:12}}>{sess.nome} {sess.cognome}</p> }
-          {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
-          <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.id}</div>
-          <p style={{color:"#7c3aed",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
-          <p style={{fontSize:11,color:"#22c55e",marginBottom:20}}>Registrato su Google Sheets</p>
-          <button style={S.bBk} onClick={reset}>Torna al Menu</button>
-        </div>
-      </div>
-    ); }
-
-  if(modQualita) return <ModalQualita linee={linee} skuList={skuList} lineaFiltro={lineaFiltro} onClose={()=>setModQualita(false)}/>;
-
-  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){ const sf=sessAtt(mats.trim());
-    const la=sf?getLinea(sf.lineaCorrente,linee):null;
-    const lineaHaPwd = false; // password rimossa: login unico all'avvio
-
-    return (
-      <div style={S.scr}>
-        <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}{lineaFiltro?" — "+lineaFiltro.id:""}</div></div></div>
-          <div style={S.ora}>{fmt(oraRef)}</div>
-        </header>
-        <div style={S.bod}>
-          <div style={S.card}>
-            <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</h2>
-
-            {}
-            <div style={{marginBottom:18}}>
-              <label style={S.lbl}>Cerca operatore</label>
-              <input style={S.inp} placeholder="Nome o cognome..." value={matsNome||mats}
-                onChange={e=>{const v=e.target.value; setMatsNome(v); setMats(v.toUpperCase()); setErr(""); setPwdOk(false); setPwdLinea(""); setErrPwd("");}}/>
-              {mats.length>=2&&(
-                <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                  {(sessSheets&&sessSheets.length>0 ? sessSheets : sessioni).filter((s,i,arr)=>{ if(s.fine&&s.fine!==""&&s.fine!==null&&s.fine!=="null"){ const df = parseData(s.fine);
-                      if(df!==null&&!isNaN(df)) return false; }
-                    if(operatori.length>0&&!matricoleAbilitate.has(s.matricola)) return false;
-                    if(mode==="rientro"&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))) return false;
-                    const q=mats.toUpperCase();
-                    const match=s.nome.toUpperCase().includes(q)||s.cognome.toUpperCase().includes(q)||s.matricola.toUpperCase().includes(q)||(matsNome&&(s.nome+" "+s.cognome).toUpperCase().includes(matsNome.toUpperCase()));
-                    if(!match) return false;
-                    return arr.findIndex(x=>x.id===s.id)===i; }).slice(0,4).map(s=>(
-                    <div key={s.id} onClick={()=>{setMats(s.matricola);setMatsNome(s.nome+" "+s.cognome);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
-                      style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:10,alignItems:"center"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#f0effe"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <span style={{fontSize:13,color:"#6b7280"}}>{s.nome} {s.cognome}</span>
-                      <code style={S.sku}>{s.skuCorrente||s.sku}</code>
-                      <span style={{...S.tag,background:getLinea(s.lineaCorrente,linee).colore+"22",color:getLinea(s.lineaCorrente,linee).colore,borderColor:getLinea(s.lineaCorrente,linee).colore+"44",fontSize:11}}>{getLinea(s.lineaCorrente,linee).nome}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {}
-            {sf&&(
-              <div style={S.sc}>
-                <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
-                <div style={{fontWeight:700,fontSize:16,color:"#7c3aed",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
-                <code style={S.sku}>{sf.skuCorrente||sf.sku}</code>
-                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
-                <div style={{fontSize:12,color:"#6b7280",marginTop:8}}>{fmtFull(new Date(sf.inizio))}</div>
-              </div>
-            )}
-
-            {err&&<div style={S.err}>{err}</div>}
-
-            {}
-
-
-            {mode==="checkout"&&sf&&(!lineaHaPwd||pwdOk)&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); }
-              else onCheckout(sf.id);
-              setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
-            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn});
-                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,ld,ns);
-              setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
-            {mode==="rientro"&&sf&&(!lineaHaPwd||pwdOk)&&(()=>{ const corsi = sf.corsi||[];
-              const haSospeso = corsi.some(c=>c.tipo==="sospendi");
-              if(!haSospeso) return <div style={{...S.err}}>Questo operatore non ha corsi sospesi.</div>;
-              return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>{ const isDaSheets=!sessioni.find(s=>s.id===sf.id);
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
-                if(isDaSheets&&aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
-                setRis({tipo:"rientro",sess:sf});setMode("result"); }}>▶ Conferma Rientro in Produzione</button>; })()}
-            {mode==="corso"&&sf&&(!lineaHaPwd||pwdOk)&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{ const isDaSheets=!sessioni.find(s=>s.id===sf.id);
-              if(tipo==="rientro"){ api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
-              if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
-              setRis({tipo:"corso",sess:sf});setMode("result"); }} onClose={reset}/>}
-            {mode==="cambiosku"&&sf&&(!lineaHaPwd||pwdOk)&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns});
-                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,sf.lineaCorrente,ns);
-              setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result"); }} onClose={reset}/>}
-            <button style={{...S.bBk,marginTop:16,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
-          </div>
-        </div>
-      </div>
-    ); }
-
-  if(mode==="checkin"){ return (
-      <div style={S.scr}>
-        <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
-          <div style={S.ora}>{fmt(oraRef)}</div>
-        </header>
-        <div style={S.bod}>
-          <div style={S.card}>
-            <h2 style={S.cT}>Registra Presenza</h2>
-
-            {}
-            <div style={{marginBottom:18}}>
-              <label style={S.lbl}>Operatori ({opSelezionati.length} selezionati)</label>
-              {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
-              {operatori.length>0&&(
-                <div style={{marginBottom:8}}>
-                  <input style={{...S.inp,background:"#7c3aed",borderColor:"#7c3aed",borderWidth:2,color:"#ffffff"}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
-                  {cOp.length>=2&&(
-                    <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                      {operatori.filter(o=>
-                        o.nome.toUpperCase().includes(cOp.toUpperCase())||
-                        o.cognome.toUpperCase().includes(cOp.toUpperCase())||
-                        o.matricola.includes(cOp.toUpperCase())
-                      ).slice(0,6).map(o=>{ const sel=opSelezionati.some(x=>x.matricola===o.matricola);
-                        return (
-                          <div key={o.matricola} onClick={()=>{ if(sel) setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola));
-                            else setOpSelezionati(p=>[...p,o]); }} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:10,alignItems:"center",background:sel?"#22c55e18":"transparent"}}
-                            onMouseEnter={e=>e.currentTarget.style.background=sel?"#22c55e28":"#1e3a5f"}
-                            onMouseLeave={e=>e.currentTarget.style.background=sel?"#22c55e18":"transparent"}>
-                            <span style={{width:18,height:18,border:"2px solid "+(sel?"#22c55e":"#475569"),borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#22c55e",flexShrink:0}}>{sel?"✓":""}</span>
-                            <span style={{fontSize:13,color:"#6b7280"}}>{o.nome} {o.cognome}</span>
-                            <span style={{fontSize:11,color:"#6b7280",marginLeft:"auto"}}>{o.matricola}</span>
-                          </div>
-                        ); })}
-                    </div>
-                  )}
-                </div>
-              )}
-              {}
-              {opSelezionati.length>0&&(
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
-                  {opSelezionati.map(o=>(
-                    <span key={o.matricola} style={{background:"#22c55e18",border:"1px solid #22c55e44",borderRadius:20,padding:"4px 10px",fontSize:12,color:"#22c55e",display:"flex",alignItems:"center",gap:6}}>
-                      {o.nome} {o.cognome}
-                      <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {}
-              {operatori.length===0&&(
-                <div style={{display:"flex",gap:10}}>
-                  <div style={{flex:1}}>
-                    <label style={{...S.lbl,marginBottom:4}}>Nome</label>
-                    <input style={S.inp} placeholder="Mario" value={nome} onChange={e=>setNome(e.target.value)}/>
-                  </div>
-                  <div style={{flex:1}}>
-                    <label style={{...S.lbl,marginBottom:4}}>Cognome</label>
-                    <input style={S.inp} placeholder="Rossi" value={cogn} onChange={e=>setCogn(e.target.value)}/>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {}
-            <div style={{marginBottom:18}}>
-              <label style={S.lbl}>SKU Articolo</label>
-              {skuList.length>0&&(
-                <div style={{marginBottom:8}}>
-                  <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
-                  <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
-                </div>
-              )}
-              <div>
-                <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b",borderWidth:2}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
-                {(()=>{ const skuObj=skuList.find(x=>x.sku===sku);
-                  if(!skuObj) return null;
-                  return (
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,paddingLeft:4}}>
-                      {skuObj.collezione&&<span style={{fontSize:14,color:"#7c3aed",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"3px 12px",fontWeight:700}}>{skuObj.collezione}</span>}
-                      <span style={{fontSize:11,color:"#7c3aed"}}>{skuObj.descrizione}</span>
-                    </div>
-                  ); })()}
-              </div>
-            </div>
-
-            {}
-            <div style={{marginBottom:18}}>
-              <label style={S.lbl}>Linea di Produzione</label>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
-                  <button key={l.id} onClick={()=>setLinea(l)}
-                    style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",border:"1px solid "+(linea?.id===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",background:linea?.id===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",boxShadow:linea?.id===l.id?("0 0 16px "+l.colore+"44"):"none",fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
-                    <span style={{fontSize:13,fontWeight:700,color:linea?.id===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
-                    <span style={{fontSize:10,color:linea?.id===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.nome}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {}
-            {(()=>{
-              // Cerca se lo SKU selezionato è già in rampa
-              const skuNorm = sku.trim().toUpperCase();
-              const rampaAttiva = skuNorm ? (rampeSheets||[]).find(r=>r.sku===skuNorm) : null;
-              const giorniRampa = rampaAttiva ? Math.min(15,Math.max(1,Math.floor((now()-rampaAttiva.rampaDal)/(1000*60*60*24))+1)) : null;
-              return (
-            <div style={{marginBottom:18,background:"#f9f8ff",border:"1px solid "+(rampaAttiva?"#f59e0b44":"#1e3a5f"),borderRadius:8,padding:"12px 14px"}}>
-              {rampaAttiva ? (
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:15,fontWeight:800,color:"#f59e0b"}}>📈 Rampa in corso — Giorno {giorniRampa} / 15</span>
-                  {giorniRampa>=15&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:800}}>✓ COMPLETATA</span>}
-                </div>
-              ) : (
-                <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:rampa?10:0}}>
-                  <input type="checkbox" checked={rampa} onChange={e=>setRampa(e.target.checked)} style={{accentColor:"#f59e0b",width:16,height:16}}/>
-                  <span style={{fontSize:13,color:"#f59e0b",fontWeight:600}}>📈 Avvia Rampa di Crescita (15 giorni)</span>
-                </label>
-              )}
-              {!rampaAttiva&&rampa&&(
-                <div style={{fontSize:11,color:"#6b7280",marginTop:4,paddingLeft:24}}>
-                  Il conteggio partirà da oggi. Troverai il progresso nel foglio Riepilogo.
-                </div>
-              )}
-            </div>
-              );
-            })()}
-
-            {err&&<div style={S.err}>{err}</div>}
-            <button style={S.bCI} onClick={()=>{ setErr("");
-              var listaOp = opSelezionati.length > 0 ? opSelezionati : (nome.trim()&&cogn.trim() ? [{nome:nome.trim(),cognome:cogn.trim(),matricola:nome.trim().toUpperCase()+"-"+cogn.trim().toUpperCase()}] : []);
-              if(listaOp.length===0){setErr("Seleziona almeno un operatore.");return;}
-              if(!sku.trim()){setErr("Inserisci lo SKU.");return;}
-              if(!linea){setErr("Seleziona una linea.");return;}
-              var errori=[];
-              var registrati=[];
-              listaOp.forEach(op=>{ const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
-                const haSessioneAttiva = sessSheets.some(s=>{ const nomeMatch = s.nome.toUpperCase()===op.nome.toUpperCase()&&s.cognome.toUpperCase()===op.cognome.toUpperCase();
-                  if(!nomeMatch) return false;
-                  if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
-                  const d = parseData(s.fine); return d===null||isNaN(d); });
-                if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
-                const rampaDalTs = rampa ? now().getTime() : null;
-                const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
-                registrati.push(s); });
-              if(errori.length>0&&registrati.length===0){setErr(errori.join(", "));return;}
-              if(registrati.length>0){
-                // Salva selezione per riuso futuro
-                try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); localStorage.setItem(kSel, JSON.stringify(listaOp)); }catch(e){}
-                // Invia gli eventi in sequenza con 500ms di delay tra uno e l'altro
-                registrati.forEach((s, idx) => {
-                  setTimeout(() => { onSuccess(s); }, idx * 500);
-                });
-                setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
-                setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
-            <button style={{...S.bBk,marginTop:12,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
-          </div>
-        </div>
-      </div>
-    ); }
-
-  return (
-    <div style={S.scr}>
-      <header style={S.hdr}>
-        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-            <span style={{fontSize:10,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
-            {ultimoSync2&&<span style={{fontSize:10,color:dashCfg.c,fontWeight:700,display:"flex",alignItems:"center",gap:4}}><span style={{color:"#22c55e"}}>●</span> Live · {fmt(ultimoSync2)}</span>}
-          </div>
-          <div style={S.ora}>{fmt(oraRef)}</div>
-        </div>
-      </header>
-      <div style={S.bod}>
-        <div style={S.card}>
-          <h2 style={S.cT}>Cosa vuoi fare?</h2>
-          <p style={{fontSize:16,color:"#7c3aed",fontWeight:600,marginBottom:20,fontFamily:"'Montserrat',sans-serif"}}>{fmtFull(oraRef)}</p>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
-              <button key={m} onClick={()=>{ if(m==="qualita"){ setModQualita(true); return; } setMode(m); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#ffffff",border:"2px solid "+c,borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#5b21b6",transition:"all 0.2s",width:"100%"}}>
-                <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
-                <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:15,color:c,fontWeight:500,opacity:0.85}}>{d}</div></div>
-              </button>
-            ))}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:10,padding:"16px 0 0"}}>
-            <button style={{background:"linear-gradient(135deg,#7c3aed,#5b21b6)",border:"none",borderRadius:10,color:"#ffffff",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
-            <button style={{background:"transparent",border:"2px solid #ef444466",borderRadius:10,color:"#ef4444",cursor:"pointer",fontSize:18,fontWeight:800,padding:"12px 32px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onEsci&&onEsci()}>Esci</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
-  useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),30000); return()=>clearInterval(t); },[]);
-  const [filtro,setFiltro] = useState("tutti");
-  const [cerca,setCerca]   = useState("");
-
-  const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
-    const sessAtt = sessioni.find(s =>
-      (s.matricola===chiave||s.matricola===op.matricola) && !s.fine
-    );
-    const ultimaSess = sessioni.filter(s =>
-      s.matricola===chiave||s.matricola===op.matricola
-    ).sort((a,b)=> (parseData(b.inizio)||0)-(parseData(a.inizio)||0))[0];
-    return { op, sessAtt, ultimaSess }; });
-
-  const presenti = stati.filter(s=>s.sessAtt).length;
-  const assenti  = stati.filter(s=>!s.sessAtt).length;
-
-  const filtrati = stati.filter(s=>{ if(filtro==="presenti") return !!s.sessAtt;
-    if(filtro==="assenti")  return !s.sessAtt;
-    return true; }).filter(s=>{ if(!cerca) return true;
-    const q = cerca.toLowerCase();
-    return s.op.nome.toLowerCase().includes(q) ||
-           s.op.cognome.toLowerCase().includes(q) ||
-           s.op.matricola.toLowerCase().includes(q); });
-
-  return (
-    <div>
-      {}
-      <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
-        <div style={{background:"#f59e0b",border:"1px solid #f59e0b",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#000",lineHeight:1}}>{operatori.length}</div>
-          <div style={{fontSize:11,color:"#000",marginTop:4,fontWeight:700}}>Totale</div>
-        </div>
-        <div style={{background:"#ffffff",border:"1px solid #22c55e44",borderTop:"3px solid #22c55e",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#22c55e",lineHeight:1}}>{presenti}</div>
-          <div style={{fontSize:13,color:"#7c3aed",marginTop:4,fontWeight:600}}>Presenti</div>
-        </div>
-        <div style={{background:"#ffffff",border:"1px solid #ef444444",borderTop:"3px solid #ef4444",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#ef4444",lineHeight:1}}>{assenti}</div>
-          <div style={{fontSize:13,color:"#7c3aed",marginTop:4,fontWeight:600}}>Assenti</div>
-        </div>
-      </div>
-
-      {}
-      <input style={{...S.inp,marginBottom:12}} placeholder="Cerca operatore per nome, cognome o matricola..."
-        value={cerca} onChange={e=>setCerca(e.target.value)}/>
-
-      {}
-      <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {[["tutti","Tutti"],["presenti","● Presenti"],["assenti","○ Assenti"]].map(([k,l])=>(
-          <button key={k} onClick={()=>setFiltro(k)}
-            style={{padding:"6px 14px",border:"1px solid "+(filtro===k?"#00d4aa":"#1e3a5f"),borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:filtro===k?"#00d4aa22":"transparent",color:filtro===k?"#00d4aa":"#64748b"}}>{l}
-          </button>
-        ))}
-      </div>
-
-      {}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-        {filtrati.map(({op,sessAtt,ultimaSess})=>{ const presente = !!sessAtt;
-          const linea = sessAtt ? getLinea(sessAtt.lineaCorrente,linee) : null;
-          return (
-            <div key={op.matricola} style={{background:"#ffffff",border:"1px solid "+(presente?"#22c55e44":"#1e3a5f"),borderLeft:"4px solid "+(presente?"#22c55e":"#334155"),borderRadius:12,padding:"14px 16px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:presente?"#22c55e":"#475569",flexShrink:0}}/>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:14,color:"#7c3aed"}}>{op.nome} {op.cognome}</div>
-                  <div style={{fontSize:12,color:"#7c3aed"}}>{op.matricola}</div>
-                </div>
-                <span style={{fontSize:11,fontWeight:700,color:presente?"#22c55e":"#475569",background:presente?"#22c55e18":"#1e3a5f",padding:"2px 8px",borderRadius:4}}>
-                  {presente?"IN TURNO":"ASSENTE"}
-                </span>
-              </div>
-              {presente&&sessAtt&&(
-                <div style={{background:"#f9f8ff",borderRadius:8,padding:"8px 12px",fontSize:12}}>
-                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                    <span style={{color:linea.colore,fontWeight:600}}>{linea.id} — {linea.nome}</span>
-                    <code style={S.sku}>{sessAtt.skuCorrente||sessAtt.sku}</code>
-                  </div>
-                  <div style={{color:"#6b7280",marginTop:4}}>
-                    Inizio: {fmtSafe(sessAtt.inizio)}
-                    {sessAtt.trasferimenti&&sessAtt.trasferimenti.length>0&&
-                      <span style={{marginLeft:8,color:"#a855f7"}}>{sessAtt.trasferimenti.length} trasf.</span> }
-                  </div>
-                </div>
-              )}
-              {!presente&&ultimaSess&&(
-                <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>
-                  Ultimo turno: {fmtSafe(ultimaSess.inizio)}
-                  {ultimaSess.fine&&<span> → {fmtSafe(ultimaSess.fine)}</span>}
-                </div>
-              )}
-            </div>
-          ); })}
-        {filtrati.length===0&&(
-          <div style={{gridColumn:"1/-1",textAlign:"center",padding:40,color:"#6b7280"}}>Nessun operatore trovato</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
 function TabQualita({ lineaFiltro, linee, skuList }) {
   const [qualita, setQualita] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-
   React.useEffect(() => {
     const carica = async () => {
       try {
@@ -890,13 +332,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     const t = setInterval(carica, 30000);
     return () => clearInterval(t);
   }, []);
-
-  // Filtra per linea se loggato come linea
-  const dati = lineaFiltro
-    ? qualita.filter(q => q.linea === lineaFiltro.id)
-    : qualita;
-
-  // Aggrega per data+linea+sku (somma inserimenti multipli)
+  const dati = lineaFiltro ? qualita.filter(q => q.linea === lineaFiltro.id) : qualita;
   const aggMap = {};
   for (const q of dati) {
     const k = q.data + "|" + q.linea + "|" + q.sku;
@@ -908,35 +344,32 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     if (q.noteMigl) aggMap[k].noteMigl = q.noteMigl;
   }
   const righe = Object.values(aggMap).sort((a,b) => b.data > a.data ? 1 : -1);
-
-  if (loading) return <div style={{textAlign:"center",padding:40,color:"#6b7280"}}>Caricamento...</div>;
-  if (righe.length === 0) return <div style={{textAlign:"center",padding:40,color:"#6b7280",fontSize:14}}>Nessun dato qualità per oggi.</div>;
-
+  if (loading) return <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>;
+  if (righe.length === 0) return <div style={{textAlign:"center",padding:40,color:"#475569",fontSize:14}}>Nessun dato qualità per oggi.</div>;
   return (
-    <div style={{margin:"0 24px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,overflow:"auto"}}>
+    <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,overflow:"auto"}}>
       <table style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
           <tr>{[["Data","#ffffff"],["Linea","#ffffff"],["SKU","#ffffff"],["✓ OK","#22c55e"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"]].map(([h,c])=>(
-            <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2px solid #c4b5fd",background:"#f9f8ff",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
+            <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2px solid #1e3a5f",background:"#050a14",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
           ))}</tr>
         </thead>
         <tbody>
           {righe.map((r,i)=>{
             const lObj = linee.find(l=>l.id===r.linea)||{colore:"#94a3b8"};
             const skuObj = skuList.find(s=>s.sku===r.sku);
-            // Formatta data da oggetto Date o stringa
             const dataFmt = (()=>{ try { const d=new Date(r.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); } catch(e){} return r.data; })();
             return (
-              <tr key={i} style={{borderBottom:"1px solid #f0effe",background:i%2===0?"#faf9ff":"#ffffff"}}>
-                <td style={{padding:"10px 14px",fontSize:13,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{dataFmt}</td>
+              <tr key={i} style={{borderBottom:"1px solid #0f1f38",background:i%2===0?"#050a14":"#0a1628"}}>
+                <td style={{padding:"10px 14px",fontSize:13,color:"#ffffff",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{dataFmt}</td>
                 <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:lObj.colore+"22",color:lObj.colore,border:"1px solid "+lObj.colore+"44",padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{r.linea}</span></td>
                 <td style={{padding:"10px 14px",textAlign:"center"}}>
                   <code style={S.sku}>{r.sku}</code>
                   {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</div>}
                 </td>
-                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#22c55e",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"16%"}}>{r.ok||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"16%"}}>{r.ko||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"16%"}}>{r.migl||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#22c55e",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ok||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ko||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.migl||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif"}}>{r.noteKo||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif"}}>{r.noteMigl||"-"}</td>
               </tr>
@@ -947,389 +380,16 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     </div>
   );
 }
-
-function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni }) { const [fL,setFL]        = useState("ALL");
-  const [fS,setFS]        = useState("ALL");
-  const [srch,setSrch]    = useState("");
-  const [mod,setMod]      = useState(null);
-  const [tab,setTab]      = useState("sessioni");
-  const [,setTk]          = useState(0);
-  const [modReset,setModReset]       = useState(false);
-  const [modCorso,setModCorso]       = useState(null);
-  const [modCambioSku,setModCambioSku] = useState(null);
-  const [modNoteLinea,setModNoteLinea] = useState(null); // {linea, nota}
-  const [modFineTutti,setModFineTutti] = useState(null);
-  const [modCO,setModCO]         = useState(null);
-  const [modTr,setModTr]         = useState(null);
-  useEffect(()=>{ if(modCO){ const l=getLinea(modCO.lineaCorrente,linee); if(onCOSheets) onCOSheets(modCO); else onCO(modCO.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCO(null); } },[modCO]);
-  useEffect(()=>{ if(modTr){ setMod(modTr); setModTr(null); } },[modTr]);
-  useEffect(()=>{ if(modReset){ onReset(); setModReset(false); } },[modReset]);
-  useEffect(()=>{ if(modFineTutti){ modFineTutti.azione(); setModFineTutti(null); } },[modFineTutti]);
-  useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
-
-  const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
-    const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
-    const q=srch.toLowerCase();
-    return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
-
-  const att=sessioni.filter(s=>!s.fine).length;
-  const chi=sessioni.filter(s=>!!s.fine).length;
-
-  return (
-    <div style={{minHeight:"100vh",background:"#f9f8ff",paddingBottom:60}}>
-      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);if(onAggiornaSessioni)setTimeout(onAggiornaSessioni,3000);}} onClose={()=>setMod(null)}/>}
-      {modNoteLinea&&(()=>{
-        // SKU attivi oggi su questa linea
-        const skuLinea = [...new Set(sessioni.filter(s=>s.lineaCorrente===modNoteLinea.linea.id).map(s=>s.skuCorrente||s.sku).filter(Boolean))];
-        return (
-        <div style={MS.ov}>
-          <div style={{...MS.md,maxWidth:420}}>
-            <div style={MS.mh}>
-              <span style={{...MS.mt,color:"#f59e0b"}}>📝 Note Linea — {modNoteLinea.linea.id}</span>
-              <button style={MS.mx} onClick={()=>setModNoteLinea(null)}>✕</button>
-            </div>
-            <div style={{padding:22}}>
-              <div style={{marginBottom:14,padding:"8px 12px",background:modNoteLinea.linea.colore+"18",border:"1px solid "+modNoteLinea.linea.colore,borderRadius:8}}>
-                <span style={{color:modNoteLinea.linea.colore,fontWeight:700,fontSize:14}}>{modNoteLinea.linea.id}</span>
-              </div>
-              <div style={{marginBottom:14}}>
-                <label style={{...S.lbl,color:"#f59e0b"}}>SKU Articolo</label>
-                <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
-                  <option value="">-- Seleziona articolo --</option>
-                  {skuLinea.map(s=>{
-                    const skuObj = skuList.find(x=>x.sku===s);
-                    return <option key={s} value={s}>{s}{skuObj?" — "+skuObj.descrizione:""}</option>;
-                  })}
-                </select>
-              </div>
-              <div style={{marginBottom:14}}>
-                <label style={{...S.lbl,color:"#f59e0b"}}>Mancato raggiungimento obiettivo</label>
-                <textarea style={{...S.inp,minHeight:100,resize:"vertical",fontSize:14}} placeholder="Descrivi il problema..."
-                  value={modNoteLinea.nota||""} onChange={e=>setModNoteLinea({...modNoteLinea,nota:e.target.value})}/>
-              </div>
-              <div style={{display:"flex",gap:10}}>
-                <button style={{...S.bBk,flex:1,textAlign:"center"}} onClick={()=>setModNoteLinea(null)}>Chiudi</button>
-                <button style={{flex:2,padding:14,background:"linear-gradient(135deg,#f59e0b,#d97706)",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}
-                  onClick={async()=>{
-                    if(!modNoteLinea.sku){ alert("Seleziona un articolo."); return; }
-                    if(!(modNoteLinea.nota||{}).trim()){ alert("Inserisci una nota."); return; }
-                    try {
-                      await fetchConRetry(APPS_SCRIPT_URL+"?action=notariepilogo&linea="+encodeURIComponent(modNoteLinea.linea.id)+"&sku="+encodeURIComponent(modNoteLinea.sku)+"&nota="+encodeURIComponent(modNoteLinea.nota), 5, 1000);
-                      alert("✓ Nota salvata nel Riepilogo!");
-                      setModNoteLinea(null);
-                    } catch(e){ alert("Errore salvataggio."); }
-                  }}>Salva nel Riepilogo</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
-      {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee} onClose={()=>setModCambioSku(null)} onOk={(ns)=>{
-          const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
-          if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
-          api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn});
-          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
-          setModCambioSku(null);
-        }}/>}
-      {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
-        onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); } else { api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
-          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCorso(null); }}/>}
-      <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #c4b5fd"}}>
-        <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:24,height:24,objectFit:"contain"}}/></div><span style={{fontSize:20,fontWeight:800,color:"#7c3aed",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#7c3aed",letterSpacing:1}}>ProductionTrack</span></div>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
-          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
-        </div>
-      </header>
-
-      <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto"}}>
-        <div style={{flex:"0 0 auto",minWidth:90,background:"#f59e0b",border:"1px solid #f59e0b",borderRadius:12,padding:14,textAlign:"center"}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#000",lineHeight:1}}>{sessioni.length}</div>
-          <div style={{fontSize:11,color:"#000",marginTop:4,fontWeight:700}}>Totale</div>
-        </div>
-        {[["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
-          <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,padding:14,textAlign:"center"}}>
-            <div style={{fontSize:28,fontWeight:800,color:c,lineHeight:1}}>{n}</div>
-            <div style={{fontSize:13,color:"#7c3aed",marginTop:4,fontWeight:600}}>{l}</div>
-          </div>
-        ))}
-        {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
-          return (
-            <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",border:"none",borderTop:"4px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
-              <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
-              <div style={{fontSize:13,color:"#7c3aed",marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
-              {nAtt>0&&(
-                <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
-                  if(attiveLinea.length===0) return;
-                  if(!confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?")) return;
-                  attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 800); });
-                  const totaleDelay = attiveLinea.length * 800 + 3000;
-                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, totaleDelay); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
-                  Fine tutti
-                </button>
-              )}
-              <button onClick={()=>setModNoteLinea({linea:l, nota:""})} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>
-                📝 Note
-              </button>
-            </div>
-          ); })}
-      </div>
-
-      <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
-        {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"]].map(([t,l])=>(
-          <button key={t} onClick={()=>setTab(t)} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#7c3aed":"#c4b5fd"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#ffffff"}}>{l}</button>
-        ))}
-      </div>
-
-      {tab==="sessioni"&&(
-        <div style={{padding:"0 24px 16px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-          <input style={{flex:"1 1 200px",padding:"12px 16px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,color:"#7c3aed",fontSize:16,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
-          {/* Sezione Tutti/Attive/Chiuse con sfondo separato */}
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",background:"#f9f8ff",border:"2px solid #c4b5fd",borderRadius:10,padding:"6px 8px"}}>
-            {[["ALL","Tutti"],["attive","Attive"],["chiuse","Chiuse"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setFS(k)} style={{padding:"8px 16px",border:"2px solid "+(fS===k?"#00d4aa":"transparent"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fS===k?"#7c3aed":"transparent",color:fS===k?"#ffffff":"#374151"}}>{l}</button>
-            ))}
-          </div>
-          {/* Filtri linea */}
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            <button onClick={()=>setFL("ALL")} style={{padding:"8px 16px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL==="ALL"?"#00d4aa22":"transparent",color:fL==="ALL"?"#00d4aa":"#ffffff",border:"2px solid "+(fL==="ALL"?"#00d4aa":"#334155"),borderRadius:8,display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
-            {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
-              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore}}>{l.id}</button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {tab==="sessioni"&&(
-        <div style={{margin:"0 24px",background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:12,overflow:"auto"}}>
-          {fil.length===0?(
-            <div style={{textAlign:"center",padding:60,color:"#6b7280"}}>Nessuna sessione</div>
-          ):(
-            <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{[["#","#ffffff"],["Operatore","#ffffff"],["SKU","#ffffff"],["Linea","#ffffff"],["Inizio","#ffffff"],["Fine","#ffffff"],["Durata","#ffffff"],["N° Trasf.","#ffffff"],["Azioni","#ffffff"]].map(([h,hc])=>(
-                <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:2,textTransform:"uppercase",color:hc,textAlign:"left",borderBottom:"1px solid #c4b5fd",background:"#7c3aed",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:700,color:"#ffffff"}}>{h}</th>
-              ))}</tr></thead>
-              <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
-                const att2=!s.fine;
-                const dur=(()=>{ const i=parseData(s.inizio); const f=s.fine?parseData(s.fine):now(); return (i&&f)?(f-i):0; })();
-                return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #f0effe",background:att2?"#00d4aa06":"transparent"}}>
-                    <td style={S.td}><span style={{background:"#f0effe",color:"#7c3aed",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
-                    <td style={S.td}><span style={{fontWeight:500}}>{s.nome} {s.cognome}</span></td>
-                    <td style={S.td}>
-                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code>
-                          {s.rampaDal&&<span title="Rampa di Crescita attiva" style={{fontSize:13,lineHeight:1,display:"flex",alignItems:"center",gap:3,color:"#f59e0b",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>📈 {Math.min(15,Math.max(1,Math.floor((now()-s.rampaDal)/(1000*60*60*24))+1))}/15</span>}
-                        </div>
-                        {(()=>{ const skuObj=skuList.find(x=>x.sku===(s.skuCorrente||s.sku)); return skuObj&&skuObj.collezione?<span style={{fontSize:10,color:"#7c3aed",fontStyle:"italic"}}>{skuObj.collezione}</span>:null; })()}
-                      </div>
-                    </td>
-                    <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{l.id}</span></td>
-                    <td style={S.td}><span style={{fontSize:13,color:"#22c55e",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.inizio)}</span></td>
-                    <td style={S.td}>{s.fine?<span style={{fontSize:13,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
-                    <td style={S.td}><span style={{background:"#ede9fe",color:"#7c3aed",padding:"4px 10px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:600}}>{durataStr(dur)}</span></td>
-                    <td style={S.td}>{s.trasferimenti.length>0?<span style={{background:"#a855f722",color:"#a855f7",border:"1px solid #a855f744",padding:"2px 8px",borderRadius:4,fontSize:12}}>{s.trasferimenti.length}x</span>:<span style={{color:"#9ca3af"}}>-</span>}</td>
-                    <td style={S.td}>
-                      {(()=>{ const corsi = s.corsi||[];
-                        const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
-                        const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
-                        const nomeCorsoAttivo = inCorso ? (ultimoCorso.nome||"Corso") : null;
-                        return (
-                          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                            {}
-                            {att2 && inCorso
-                              ? <span title="Al corso" style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #06b6d4"}}/>
-                              : att2
-                                ? <span title="In turno" style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0,boxShadow:"0 0 6px #22c55e"}}/>
-                                : <span title="Fine turno" style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/> }
-                            {}
-                            {inCorso&&(
-                              <span title={"Al corso: "+nomeCorsoAttivo} style={{background:"#06b6d422",border:"1px solid #06b6d4",borderRadius:4,padding:"2px 7px",fontSize:11,color:"#06b6d4",fontWeight:700,cursor:"default",display:"flex",alignItems:"center",gap:3}}>
-                                🎓 <span style={{fontSize:10}}>{nomeCorsoAttivo}</span>
-                              </span>
-                            )}
-                            {}
-                            {att2&&(
-                              <>
-                                <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>setMod(s)}>↔</button>
-                                <button style={{padding:"8px 12px",background:"transparent",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)} title={inCorso?"Rientro in produzione":"Invia al corso"}>{inCorso?"▶":"C"}</button>
-                                <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)} title="Cambio SKU">S</button>
-                                <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ if(!confirm("Sei sicuro di voler chiudere il turno di "+s.nome+" "+s.cognome+"?")) return; if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); }}>✕</button>
-                              </>
-                            )}
-                          </div>
-                        ); })()}
-                    </td>
-                  </tr>
-                ); })}</tbody>
-            </table>
-          )}
-        </div>
-      )}
-      
-      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
-      {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
-      {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
-      <div style={{height:40}}/>
-    </div>
-  );
-}
-
-function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd] = useState("");
-  const [err,setErr] = useState("");
-  const [modoAdmin,setModoAdmin] = useState(false);
-
-  const tenta = () => { if(modoAdmin){ if(pwd===ADMIN_PWD){ onLogin("admin",null); return; }
-      setErr("Password admin errata."); setPwd(""); return; }
-    const l=linee.find(l=>l.password&&l.password===pwd);
-    if(l){ onLogin("linea",l); return; }
-    setErr("Password non riconosciuta."); setPwd(""); };
-  if(sync==="caricamento") return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6",flexDirection:"column",gap:16}}>
-      <div style={{width:64,height:64,background:"#7c3aed",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:54,height:54,objectFit:"contain"}}/></div>
-      <span style={{fontSize:28,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
-      <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
-    </div>
-  );
-
-  return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6"}}>
-      <div style={{width:"100%",maxWidth:400,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><div style={{width:52,height:52,background:"#7c3aed",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:44,height:44,objectFit:"contain"}}/></div><span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
-        <div style={{fontSize:15,fontWeight:700,color:"#00d4aa",marginBottom:20}}>ProductionTrack — Dashboard</div>
-        <div style={{fontSize:13,color:"#6b7280",marginBottom:16}}>Password admin o password della tua linea</div>
-        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#e879f9",borderWidth:2}}
-          placeholder="••••••••" value={pwd}
-          onChange={e=>{setPwd(e.target.value);setErr("");}}
-          onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
-        {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
-        {!modoAdmin&&(
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={tenta}>Accedi con password linea</button>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff",fontWeight:900}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
-          </div>
-        )}
-        {modoAdmin&&(
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{fontSize:12,color:"#7c3aed",marginBottom:4,textAlign:"center",fontWeight:600}}>👑 Accesso Admin — inserisci la password</div>
-            <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={tenta}>Conferma</button>
-            <button style={{...S.bBk,textAlign:"center"}} onClick={()=>{setModoAdmin(false);setPwd("");setErr("");}}>← Indietro</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-function ModalQualita({ linee, skuList, lineaFiltro, onClose }) {
-  const [linea, setLinea]   = useState(lineaFiltro ? lineaFiltro.id : "");
-  const [sku, setSku]       = useState("");
-  const [cSku, setCSku]     = useState("");
-  const [ok, setOk]         = useState("");
-  const [ko, setKo]         = useState("");
-  const [migl, setMigl]     = useState("");
-  const [msg, setMsg]       = useState(null);
-  const [err, setErr]       = useState("");
-
-  const skuFiltrati = skuList.filter(s =>
-    !cSku || s.sku.includes(cSku.toUpperCase()) || s.descrizione.toLowerCase().includes(cSku.toLowerCase())
-  );
-
-  const salva = async () => {
-    if (!linea) { setErr("Seleziona una linea."); return; }
-    if (!sku)   { setErr("Seleziona uno SKU."); return; }
-    if (ok==="" && ko==="" && migl==="") { setErr("Inserisci almeno un valore."); return; }
-    if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
-    setErr("");
-    try {
-      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0), 5, 1000);
-      setMsg("✓ Salvato!");
-      setOk(""); setKo(""); setMigl(""); setCSku(""); setSku("");
-      setTimeout(()=>setMsg(null), 2500);
-    } catch(e) { setErr("Errore salvataggio."); }
-  };
-
-  return (
-    <div style={MS.ov}>
-      <div style={{...MS.md, maxWidth:420}}>
-        <div style={MS.mh}>
-          <span style={{...MS.mt,color:"#10b981",fontSize:16}}>📊 Inserimento Qualità</span>
-          <button style={MS.mx} onClick={onClose}>✕</button>
-        </div>
-        <div style={{padding:22}}>
-          {!lineaFiltro&&(
-            <div style={{marginBottom:14}}>
-              <label style={S.lbl}>Linea</label>
-              <select value={linea} onChange={e=>setLinea(e.target.value)} style={{...S.inp,cursor:"pointer"}}>
-                <option value="">-- Seleziona linea --</option>
-                {linee.map(l=><option key={l.id} value={l.id}>{l.id}</option>)}
-              </select>
-            </div>
-          )}
-          {lineaFiltro&&(()=>{ const lObj = linee.find(l=>l.id===lineaFiltro.id)||lineaFiltro; return (
-            <div style={{marginBottom:14,padding:"8px 12px",background:lObj.colore+"18",border:"1px solid "+lObj.colore,borderRadius:8}}>
-              <span style={{color:lObj.colore,fontWeight:700,fontSize:14}}>{lineaFiltro.id}</span>
-            </div>
-          ); })()}
-          <div style={{marginBottom:14}}>
-            <label style={S.lbl}>SKU Articolo</label>
-            <input style={S.inp} placeholder="Cerca SKU..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
-            {cSku&&!sku&&(
-              <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
-                {skuFiltrati.slice(0,8).map(s=>(
-                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:8,alignItems:"center"}}>
-                    <code style={S.sku}>{s.sku}</code>
-                    <span style={{fontSize:12,color:"#7c3aed"}}>{s.descrizione}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
-            <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#22c55e"}}>✓ Borse OK</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
-            </div>
-            <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#ef4444"}}>✕ Borse KO</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
-            </div>
-            <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#f59e0b"}}>~ Migliorabili</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:700}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
-            </div>
-          </div>
-          {err&&<div style={S.err}>{err}</div>}
-          {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#22c55e",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
-          <div style={{display:"flex",gap:10}}>
-            <button style={{...S.bBk,flex:1,textAlign:"center"}} onClick={onClose}>Chiudi</button>
-            <button style={{...S.bCI,flex:2,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={salva}>Salva</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 function LoginQualita({ linee, sync, onLogin, onBack }) {
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState("");
-
   if(sync==="caricamento") return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6",flexDirection:"column",gap:16}}>
-      <div style={{width:64,height:64,background:"#7c3aed",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:54,height:54,objectFit:"contain"}}/></div>
-      <span style={{fontSize:28,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)",flexDirection:"column",gap:16}}>
+      <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8}}/>
+      <span style={{fontSize:28,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
       <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
     </div>
   );
-
   const tenta = () => {
     console.log("Linee disponibili:", linee.map(l=>({id:l.id,pwdQ:l.pwdQualita})));
     console.log("Password inserita:", pwd);
@@ -1337,13 +397,12 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
     if(l){ onLogin(l); return; }
     setErr("Password non riconosciuta."); setPwd("");
   };
-
   return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f3f4f6"}}>
-      <div style={{width:"100%",maxWidth:400,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
+      <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}>
-          <div style={{width:52,height:52,background:"#7c3aed",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:44,height:44,objectFit:"contain"}}/></div>
-          <span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+          <img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6}}/>
+          <span style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
         </div>
         <div style={{fontSize:15,fontWeight:700,color:"#3b82f6",marginBottom:20}}>📊 Dashboard Qualità</div>
         <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#3b82f6",borderWidth:2,background:"#3b82f611"}}
@@ -1351,51 +410,48 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
           onChange={e=>{setPwd(e.target.value);setErr("");}}
           onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
         {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
-        <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff",fontWeight:900,marginBottom:10}} onClick={tenta}>Accedi</button>
+        <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",fontWeight:900,marginBottom:10}} onClick={tenta}>Accedi</button>
         <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={onBack}>← Indietro</button>
       </div>
     </div>
   );
 }
-
 function DashboardQualita({ linea, linee, skuList, onEsci }) {
-  const [ok, setOk]     = useState("");
-  const [ko, setKo]     = useState("");
-  const [migl, setMigl] = useState("");
+  const [ok, setOk]         = useState("");
+  const [ko, setKo]         = useState("");
+  const [migl, setMigl]     = useState("");
   const [noteKo, setNoteKo]     = useState([{p:"",q:""}]);
   const [noteMigl, setNoteMigl] = useState([{p:"",q:""}]);
-  const [sku, setSku]   = useState("");
-  const [cSku, setCSku] = useState("");
-  const [msg, setMsg]   = useState(null);
-  const [err, setErr]   = useState("");
+  const [sku, setSku]       = useState("");
+  const [cSku, setCSku]     = useState("");
+  const [msg, setMsg]       = useState(null);
+  const [err, setErr]       = useState("");
   const lObj = linee.find(l=>l.id===linea.id)||linea;
-
   const skuFiltrati = skuList.filter(s=>
     !cSku || s.sku.includes(cSku.toUpperCase()) || s.descrizione.toLowerCase().includes(cSku.toLowerCase())
   );
-
   const salva = async () => {
     if(!sku){ setErr("Seleziona uno SKU."); return; }
     if(ok===""&&ko===""&&migl===""){ setErr("Inserisci almeno un valore."); return; }
     if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
     setErr("");
+    const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
+    const nMiglStr = noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     try {
-      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea.id)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)": "")).join(" | ")||"")+"&noteMigl="+encodeURIComponent(noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)": "")).join(" | ")||""), 5, 1000);
+      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea.id)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(nKoStr)+"&noteMigl="+encodeURIComponent(nMiglStr), 5, 1000);
       setMsg("✓ Salvato!");
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:""}]); setNoteMigl([{p:"",q:""}]);
-      // Mantieni lo SKU per inserimenti successivi
-      setTimeout(()=>setMsg(null), 2500);
     } catch(e){ setErr("Errore salvataggio."); }
+    setTimeout(()=>setMsg(null), 2500);
   };
-
   return (
-    <div style={{minHeight:"100vh",background:"#f3f4f6"}}>
-      <header style={{...S.hdr,borderBottom:"2px solid #10b98144"}}>
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
+      <header style={{...S.hdr,borderBottom:"2px solid #3b82f644"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div>
+          <img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/>
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div>
-            <div style={{fontSize:11,color:"#10b981",letterSpacing:2,textTransform:"uppercase"}}>Dashboard Qualità</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#e879f9",fontFamily:"'Montserrat',sans-serif"}}>NEXUS</div>
+            <div style={{fontSize:11,color:"#3b82f6",letterSpacing:2,textTransform:"uppercase"}}>Dashboard Qualità</div>
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -1404,20 +460,22 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
         </div>
       </header>
       <div style={{display:"flex",justifyContent:"center",padding:"40px 16px"}}>
-        <div style={{width:"100%",maxWidth:480,background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:16,padding:"32px 28px"}}>
-          <h2 style={{fontSize:20,fontWeight:700,color:"#10b981",marginBottom:24}}>📊 Inserimento Qualità</h2>
-          <div style={{marginBottom:14,padding:"8px 12px",background:lObj.colore+"18",border:"1px solid "+lObj.colore,borderRadius:8}}>
-            <span style={{color:lObj.colore,fontWeight:700,fontSize:14}}>{linea.id}</span>
-          </div>
+        <div style={{width:"100%",maxWidth:520,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"32px 28px"}}>
+          <h2 style={{fontSize:20,fontWeight:700,color:"#3b82f6",marginBottom:24}}>📊 Inserimento Qualità</h2>
+          {(()=>{ return (
+            <div style={{marginBottom:14,padding:"8px 12px",background:lObj.colore+"18",border:"1px solid "+lObj.colore,borderRadius:8}}>
+              <span style={{color:lObj.colore,fontWeight:700,fontSize:14}}>{linea.id}</span>
+            </div>
+          ); })()}
           <div style={{marginBottom:14}}>
             <label style={S.lbl}>SKU Articolo</label>
             <input style={S.inp} placeholder="Cerca SKU..." value={cSku} onChange={e=>{setCSku(e.target.value);setSku("");}}/>
             {cSku&&!sku&&(
-              <div style={{background:"#ffffff",border:"1px solid #e8e3f8",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
+              <div style={{background:"#050a14",border:"1px solid #1e3a5f",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
                 {skuFiltrati.slice(0,8).map(s=>(
-                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f0effe",display:"flex",gap:8,alignItems:"center"}}>
+                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku(s.sku);}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:8,alignItems:"center"}}>
                     <code style={S.sku}>{s.sku}</code>
-                    <span style={{fontSize:12,color:"#7c3aed"}}>{s.descrizione}</span>
+                    <span style={{fontSize:12,color:"#ffffff"}}>{s.descrizione}</span>
                   </div>
                 ))}
               </div>
@@ -1462,13 +520,557 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
           </div>
           {err&&<div style={S.err}>{err}</div>}
           {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#22c55e",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
-          <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)",width:"100%"}} onClick={salva}>Salva</button>
+          <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",width:"100%"}} onClick={salva}>Salva</button>
         </div>
       </div>
     </div>
   );
 }
-
+function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci, rampeSheets }) {
+  const [mode,setMode]           = useState("menu");
+  const [modQualita,setModQualita] = useState(false);
+  const [nome,setNome]           = useState("");
+  const [cogn,setCogn]           = useState("");
+  const [sku,setSku]             = useState("");
+  const [linea,setLinea]         = useState(null);
+  useEffect(()=>{ if(lineaFiltro) setLinea(lineaFiltro); },[lineaFiltro]);
+  const [ris,setRis]             = useState(null);
+  const [err,setErr]             = useState("");
+  const [mats,setMats]           = useState("");
+  const [matsNome,setMatsNome]   = useState("");
+  const [cOp,setCOp]             = useState("");
+  const [cSku,setCSku]           = useState("");
+  const [opSelezionati,setOpSelezionati] = useState([]);
+  const [rampa,setRampa]                 = useState(false);
+  const [pwdLinea,setPwdLinea]           = useState("");
+  const [pwdOk,setPwdOk]                 = useState(false);
+  const [errPwd,setErrPwd]               = useState("");
+  const [oraRef, setOraRef] = useState(now());
+  useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
+  const sessAtt = k => { const key = k.trim().toUpperCase();
+    const isAttiva = s => { if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
+      const d = parseData(s.fine); return d===null||isNaN(d); };
+    if(sessSheets&&sessSheets.length>0){ const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s)); if(sh) return sh; }
+    return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null; };
+  const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
+  const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setMode("menu"); };
+  if(modQualita) return null;
+  if(mode==="result"&&ris){ const {tipo,sess,lDest,nSku}=ris;
+    const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
+    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
+    return (
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
+        <div style={{textAlign:"center",padding:40,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
+          <div style={{width:80,height:80,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 20px",background:cfg.bg,animation:"pulse 0.6s ease"}}>{cfg.i}</div>
+          <h2 style={{fontSize:24,fontWeight:800,marginBottom:8,color:cfg.c}}>{cfg.t}</h2>
+          {ris.multiCount>1 ? <p style={{color:"#94a3b8",marginBottom:12}}>{ris.multiCount} operatori registrati</p> : <p style={{color:"#94a3b8",marginBottom:12}}>{sess.nome} {sess.cognome}</p>}
+          {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
+          <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.id}</div>
+          <p style={{color:"#ffffff",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
+          <p style={{fontSize:11,color:"#22c55e",marginBottom:20}}>Registrato su Google Sheets</p>
+          <button style={S.bBk} onClick={reset}>Torna al Menu</button>
+        </div>
+      </div>
+    ); }
+  if(mode==="checkout"||mode==="transfer"||mode==="cambiosku"||mode==="corso"||mode==="rientro"){ const sf=sessAtt(mats.trim());
+    const la=sf?getLinea(sf.lineaCorrente,linee):null;
+    return (
+      <div style={S.scr}>
+        <header style={S.hdr}>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}{lineaFiltro?" — "+lineaFiltro.id:""}</div></div></div>
+          <div style={S.ora}>{fmt(oraRef)}</div>
+        </header>
+        <div style={S.bod}>
+          <div style={S.card}>
+            <h2 style={S.cT}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</h2>
+            <div style={{marginBottom:18}}>
+              <label style={S.lbl}>Cerca operatore</label>
+              <input style={S.inp} placeholder="Nome o cognome..." value={matsNome||mats}
+                onChange={e=>{const v=e.target.value; setMatsNome(v); setMats(v.toUpperCase()); setErr(""); setPwdOk(false); setPwdLinea(""); setErrPwd("");}}/>
+              {mats.length>=2&&(
+                <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
+                  {(sessSheets&&sessSheets.length>0 ? sessSheets : sessioni).filter((s,i,arr)=>{ if(s.fine&&s.fine!==""&&s.fine!==null&&s.fine!=="null"){ const df = parseData(s.fine); if(df!==null&&!isNaN(df)) return false; }
+                    if(operatori.length>0&&!matricoleAbilitate.has(s.matricola)) return false;
+                    if(mode==="rientro"&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))) return false;
+                    const q=mats.toUpperCase();
+                    const match=s.nome.toUpperCase().includes(q)||s.cognome.toUpperCase().includes(q)||s.matricola.toUpperCase().includes(q)||(matsNome&&(s.nome+" "+s.cognome).toUpperCase().includes(matsNome.toUpperCase()));
+                    if(!match) return false;
+                    return arr.findIndex(x=>x.id===s.id)===i; }).slice(0,4).map(s=>(
+                    <div key={s.id} onClick={()=>{setMats(s.matricola);setMatsNome(s.nome+" "+s.cognome);setPwdOk(false);setPwdLinea("");setErrPwd("");}}
+                      style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#1e3a5f"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <span style={{fontSize:13,color:"#94a3b8"}}>{s.nome} {s.cognome}</span>
+                      <code style={S.sku}>{s.skuCorrente||s.sku}</code>
+                      <span style={{...S.tag,background:getLinea(s.lineaCorrente,linee).colore+"22",color:getLinea(s.lineaCorrente,linee).colore,borderColor:getLinea(s.lineaCorrente,linee).colore+"44",fontSize:11}}>{getLinea(s.lineaCorrente,linee).id}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {sf&&(
+              <div style={S.sc}>
+                <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
+                <div style={{fontWeight:700,fontSize:16,color:"#f1f5f9",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
+                <code style={S.sku}>{sf.skuCorrente||sf.sku}</code>
+                <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
+                <div style={{fontSize:12,color:"#64748b",marginTop:8}}>{fmtFull(new Date(sf.inizio))}</div>
+              </div>
+            )}
+            {err&&<div style={S.err}>{err}</div>}
+            {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
+              setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
+            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
+                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn});
+                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,ld,ns);
+              setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
+            {mode==="rientro"&&sf&&(()=>{ const corsi = sf.corsi||[]; const haSospeso = corsi.some(c=>c.tipo==="sospendi");
+              if(!haSospeso) return <div style={{...S.err}}>Questo operatore non ha corsi sospesi.</div>;
+              return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>{
+                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
+                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
+                setRis({tipo:"rientro",sess:sf});setMode("result"); }}>▶ Conferma Rientro in Produzione</button>; })()}
+            {mode==="corso"&&sf&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
+              if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
+              setRis({tipo:"corso",sess:sf});setMode("result"); }} onClose={reset}/>}
+            {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
+                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns});
+                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,sf.lineaCorrente,ns);
+              setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result"); }} onClose={reset}/>}
+            <button style={{...S.bBk,marginTop:16,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
+          </div>
+        </div>
+      </div>
+    ); }
+  if(mode==="checkin"){ return (
+    <div style={S.scr}>
+      <header style={S.hdr}>
+        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Inizio Turno</div></div></div>
+        <div style={S.ora}>{fmt(oraRef)}</div>
+      </header>
+      <div style={S.bod}>
+        <div style={S.card}>
+          <h2 style={S.cT}>Registra Presenza</h2>
+          <div style={{marginBottom:18}}>
+            <label style={S.lbl}>Operatori ({opSelezionati.length} selezionati)</label>
+            {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
+            {operatori.length>0&&(
+              <div style={{marginBottom:8}}>
+                <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
+                {cOp.length>=2&&(
+                  <div style={{background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,marginTop:4,overflow:"hidden"}}>
+                    {operatori.filter(o=>o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase())).slice(0,6).map(o=>{ const sel=opSelezionati.some(x=>x.matricola===o.matricola);
+                      return (
+                        <div key={o.matricola} onClick={()=>{ if(sel) setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola)); else setOpSelezionati(p=>[...p,o]); }} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #0f1f38",display:"flex",gap:10,alignItems:"center",background:sel?"#22c55e18":"transparent"}}
+                          onMouseEnter={e=>e.currentTarget.style.background=sel?"#22c55e28":"#1e3a5f"}
+                          onMouseLeave={e=>e.currentTarget.style.background=sel?"#22c55e18":"transparent"}>
+                          <span style={{width:18,height:18,border:"2px solid "+(sel?"#22c55e":"#475569"),borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#22c55e",flexShrink:0}}>{sel?"✓":""}</span>
+                          <span style={{fontSize:13,color:"#94a3b8"}}>{o.nome} {o.cognome}</span>
+                          <span style={{fontSize:11,color:"#475569",marginLeft:"auto"}}>{o.matricola}</span>
+                        </div>
+                      ); })}
+                  </div>
+                )}
+              </div>
+            )}
+            {opSelezionati.length>0&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
+                {opSelezionati.map(o=>(
+                  <span key={o.matricola} style={{background:"#22c55e18",border:"1px solid #22c55e44",borderRadius:20,padding:"4px 10px",fontSize:12,color:"#22c55e",display:"flex",alignItems:"center",gap:6}}>
+                    {o.nome} {o.cognome}
+                    <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{marginBottom:18}}>
+            <label style={S.lbl}>SKU Articolo</label>
+            {skuList.length>0&&(
+              <div style={{marginBottom:8}}>
+                <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+                <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
+              </div>
+            )}
+            <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b",borderWidth:2}} placeholder="es. SKU-001" value={sku} onChange={e=>setSku(e.target.value.toUpperCase())}/>
+          </div>
+          <div style={{marginBottom:18}}>
+            <label style={S.lbl}>Linea di Produzione</label>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
+                <button key={l.id} onClick={()=>setLinea(l)}
+                  style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",border:"1px solid "+(linea?.id===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",background:linea?.id===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
+                  <span style={{fontSize:13,fontWeight:700,color:linea?.id===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
+                  <span style={{fontSize:10,color:linea?.id===l.id?l.colore:"#64748b",textAlign:"center",lineHeight:1.3}}>{l.nome}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {(()=>{
+            const skuNorm = sku.trim().toUpperCase();
+            const rampaAttiva = skuNorm ? (rampeSheets||[]).find(r=>r.sku===skuNorm) : null;
+            const giorniRampa = rampaAttiva ? Math.min(15,Math.max(1,Math.floor((now()-rampaAttiva.rampaDal)/(1000*60*60*24))+1)) : null;
+            return (
+              <div style={{marginBottom:18,background:"#050a14",border:"1px solid "+(rampaAttiva?"#f59e0b44":"#1e3a5f"),borderRadius:8,padding:"12px 14px"}}>
+                {rampaAttiva ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:15,fontWeight:800,color:"#f59e0b"}}>📈 Rampa in corso — Giorno {giorniRampa} / 15</span>
+                    {giorniRampa>=15&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:800}}>✓ COMPLETATA</span>}
+                  </div>
+                ) : (
+                  <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+                    <input type="checkbox" checked={rampa} onChange={e=>setRampa(e.target.checked)} style={{accentColor:"#f59e0b",width:16,height:16}}/>
+                    <span style={{fontSize:13,color:"#f59e0b",fontWeight:600}}>📈 Avvia Rampa di Crescita (15 giorni)</span>
+                  </label>
+                )}
+              </div>
+            );
+          })()}
+          {err&&<div style={S.err}>{err}</div>}
+          <button style={S.bCI} onClick={()=>{ setErr("");
+            var listaOp = opSelezionati.length > 0 ? opSelezionati : (nome.trim()&&cogn.trim() ? [{nome:nome.trim(),cognome:cogn.trim(),matricola:nome.trim().toUpperCase()+"-"+cogn.trim().toUpperCase()}] : []);
+            if(listaOp.length===0){setErr("Seleziona almeno un operatore.");return;}
+            if(!sku.trim()){setErr("Inserisci lo SKU.");return;}
+            if(!linea){setErr("Seleziona una linea.");return;}
+            var errori=[]; var registrati=[];
+            listaOp.forEach(op=>{ const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
+              const haSessioneAttiva = sessSheets.some(s=>{ const nomeMatch = s.nome.toUpperCase()===op.nome.toUpperCase()&&s.cognome.toUpperCase()===op.cognome.toUpperCase();
+                if(!nomeMatch) return false;
+                if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
+                const d = parseData(s.fine); return d===null||isNaN(d); });
+              if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
+              const rampaDalTs = rampa ? now().getTime() : null;
+              const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
+              registrati.push(s); });
+            if(errori.length>0&&registrati.length===0){setErr(errori.join(", "));return;}
+            if(registrati.length>0){
+              try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); localStorage.setItem(kSel, JSON.stringify(listaOp)); }catch(e){}
+              registrati.forEach((s, idx) => { setTimeout(() => { onSuccess(s); }, idx * 500); });
+              setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
+              setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
+          <button style={{...S.bBk,marginTop:12,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
+        </div>
+      </div>
+    </div>
+  ); }
+  return (
+    <div style={S.scr}>
+      <header style={S.hdr}>
+        <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:22,fontWeight:800,color:"#e879f9",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>Registrazione Presenze</div></div></div>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+            <span style={{fontSize:10,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
+            {ultimoSync2&&<span style={{fontSize:10,color:dashCfg.c,fontWeight:700,display:"flex",alignItems:"center",gap:4}}><span style={{color:"#22c55e"}}>●</span> Live · {fmt(ultimoSync2)}</span>}
+          </div>
+          <div style={S.ora}>{fmt(oraRef)}</div>
+        </div>
+      </header>
+      <div style={S.bod}>
+        <div style={S.card}>
+          <h2 style={S.cT}>Cosa vuoi fare?</h2>
+          <p style={{fontSize:16,color:"#ffffff",fontWeight:600,marginBottom:20,fontFamily:"'Montserrat',sans-serif"}}>{fmtFull(oraRef)}</p>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {[["checkin","Inizio Turno","Registra presenza + SKU","#00d4aa"],["transfer","Trasferimento Linea","Spostati su un'altra linea","#a855f7"],["cambiosku","Cambio SKU","Cambia articolo sulla stessa linea","#f59e0b"],["corso","Corso / Formazione","Corso, formazione e rientro","#06b6d4"]].map(([m,t,d,c])=>(
+              <button key={m} onClick={()=>setMode(m)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#050a14",border:"2px solid "+c,borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#e2e8f0",transition:"all 0.2s",width:"100%"}}>
+                <div style={{width:4,height:44,borderRadius:2,background:c,flexShrink:0}}/>
+                <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:15,color:c,fontWeight:500,opacity:0.85}}>{d}</div></div>
+              </button>
+            ))}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10,padding:"16px 0 0"}}>
+            <button style={{background:"linear-gradient(135deg,#00d4aa,#0891b2)",border:"none",borderRadius:10,color:"#050a14",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
+            <button style={{background:"transparent",border:"2px solid #ef444466",borderRadius:10,color:"#ef4444",cursor:"pointer",fontSize:18,fontWeight:800,padding:"12px 32px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onEsci&&onEsci()}>Esci</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
+  useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),30000); return()=>clearInterval(t); },[]);
+  const [filtro,setFiltro] = useState("tutti");
+  const [cerca,setCerca]   = useState("");
+  const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
+    const sessAtt = sessioni.find(s => (s.matricola===chiave||s.matricola===op.matricola) && !s.fine);
+    const ultimaSess = sessioni.filter(s => s.matricola===chiave||s.matricola===op.matricola).sort((a,b)=> (parseData(b.inizio)||0)-(parseData(a.inizio)||0))[0];
+    return { op, sessAtt, ultimaSess }; });
+  const presenti = stati.filter(s=>s.sessAtt).length;
+  const assenti  = stati.filter(s=>!s.sessAtt).length;
+  const filtrati = stati.filter(s=>{ if(filtro==="presenti") return !!s.sessAtt; if(filtro==="assenti") return !s.sessAtt; return true; }).filter(s=>{ if(!cerca) return true; const q = cerca.toLowerCase(); return s.op.nome.toLowerCase().includes(q)||s.op.cognome.toLowerCase().includes(q)||s.op.matricola.toLowerCase().includes(q); });
+  return (
+    <div>
+      <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+        <div style={{background:"#f59e0b",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
+          <div style={{fontSize:28,fontWeight:800,color:"#000",lineHeight:1}}>{operatori.length}</div>
+          <div style={{fontSize:11,color:"#000",marginTop:4,fontWeight:700}}>Totale</div>
+        </div>
+        <div style={{background:"#0a1628",border:"1px solid #22c55e44",borderTop:"3px solid #22c55e",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
+          <div style={{fontSize:28,fontWeight:800,color:"#22c55e",lineHeight:1}}>{presenti}</div>
+          <div style={{fontSize:13,color:"#ffffff",marginTop:4,fontWeight:600}}>Presenti</div>
+        </div>
+        <div style={{background:"#0a1628",border:"1px solid #ef444444",borderTop:"3px solid #ef4444",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
+          <div style={{fontSize:28,fontWeight:800,color:"#ef4444",lineHeight:1}}>{assenti}</div>
+          <div style={{fontSize:13,color:"#ffffff",marginTop:4,fontWeight:600}}>Assenti</div>
+        </div>
+      </div>
+      <input style={{...S.inp,marginBottom:12}} placeholder="Cerca operatore..." value={cerca} onChange={e=>setCerca(e.target.value)}/>
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {[["tutti","Tutti"],["presenti","● Presenti"],["assenti","○ Assenti"]].map(([k,l])=>(
+          <button key={k} onClick={()=>setFiltro(k)} style={{padding:"6px 14px",border:"1px solid "+(filtro===k?"#00d4aa":"#1e3a5f"),borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:filtro===k?"#00d4aa22":"transparent",color:filtro===k?"#00d4aa":"#64748b"}}>{l}</button>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+        {filtrati.map(({op,sessAtt,ultimaSess})=>{ const presente = !!sessAtt; const linea = sessAtt ? getLinea(sessAtt.lineaCorrente,linee) : null;
+          return (
+            <div key={op.matricola} style={{background:"#0a1628",border:"1px solid "+(presente?"#22c55e44":"#1e3a5f"),borderLeft:"4px solid "+(presente?"#22c55e":"#334155"),borderRadius:12,padding:"14px 16px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:presente?"#22c55e":"#475569",flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#f1f5f9"}}>{op.nome} {op.cognome}</div>
+                  <div style={{fontSize:12,color:"#ffffff"}}>{op.matricola}</div>
+                </div>
+                <span style={{fontSize:11,fontWeight:700,color:presente?"#22c55e":"#475569",background:presente?"#22c55e18":"#1e3a5f",padding:"2px 8px",borderRadius:4}}>{presente?"IN TURNO":"ASSENTE"}</span>
+              </div>
+              {presente&&sessAtt&&(
+                <div style={{background:"#050a14",borderRadius:8,padding:"8px 12px",fontSize:12}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                    <span style={{color:linea.colore,fontWeight:600}}>{linea.id} — {linea.nome}</span>
+                    <code style={S.sku}>{sessAtt.skuCorrente||sessAtt.sku}</code>
+                  </div>
+                </div>
+              )}
+            </div>
+          ); })}
+      </div>
+    </div>
+  );
+}
+function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni }) {
+  const [fL,setFL]        = useState("ALL");
+  const [fS,setFS]        = useState("ALL");
+  const [srch,setSrch]    = useState("");
+  const [mod,setMod]      = useState(null);
+  const [tab,setTab]      = useState("sessioni");
+  const [,setTk]          = useState(0);
+  const [modCorso,setModCorso]       = useState(null);
+  const [modCambioSku,setModCambioSku] = useState(null);
+  const [modNoteLinea,setModNoteLinea] = useState(null);
+  useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
+  const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
+    const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
+    const q=srch.toLowerCase();
+    return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
+  const att=sessioni.filter(s=>!s.fine).length;
+  const chi=sessioni.filter(s=>!!s.fine).length;
+  return (
+    <div style={{minHeight:"100vh",background:"#050a14",paddingBottom:60}}>
+      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);if(onAggiornaSessioni)setTimeout(onAggiornaSessioni,3000);}} onClose={()=>setMod(null)}/>}
+      {modNoteLinea&&(()=>{
+        const skuLinea = [...new Set(sessioni.filter(s=>s.lineaCorrente===modNoteLinea.linea.id).map(s=>s.skuCorrente||s.sku).filter(Boolean))];
+        return (
+          <div style={MS.ov}>
+            <div style={{...MS.md,maxWidth:420}}>
+              <div style={MS.mh}>
+                <span style={{...MS.mt,color:"#f59e0b"}}>📝 Note Linea — {modNoteLinea.linea.id}</span>
+                <button style={MS.mx} onClick={()=>setModNoteLinea(null)}>✕</button>
+              </div>
+              <div style={{padding:22}}>
+                <div style={{marginBottom:14,padding:"8px 12px",background:modNoteLinea.linea.colore+"18",border:"1px solid "+modNoteLinea.linea.colore,borderRadius:8}}>
+                  <span style={{color:modNoteLinea.linea.colore,fontWeight:700,fontSize:14}}>{modNoteLinea.linea.id}</span>
+                </div>
+                <div style={{marginBottom:14}}>
+                  <label style={{...S.lbl,color:"#f59e0b"}}>SKU Articolo</label>
+                  <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
+                    <option value="">-- Seleziona articolo --</option>
+                    {skuLinea.map(s=>{ const skuObj = skuList.find(x=>x.sku===s); return <option key={s} value={s}>{s}{skuObj?" — "+skuObj.descrizione:""}</option>; })}
+                  </select>
+                </div>
+                <div style={{marginBottom:14}}>
+                  <label style={{...S.lbl,color:"#f59e0b"}}>Mancato raggiungimento obiettivo</label>
+                  <textarea style={{...S.inp,minHeight:100,resize:"vertical",fontSize:14}} placeholder="Descrivi il problema..."
+                    value={modNoteLinea.nota||""} onChange={e=>setModNoteLinea({...modNoteLinea,nota:e.target.value})}/>
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <button style={{...MS.an,flex:1,textAlign:"center"}} onClick={()=>setModNoteLinea(null)}>Chiudi</button>
+                  <button style={{flex:2,padding:14,background:"linear-gradient(135deg,#f59e0b,#d97706)",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}
+                    onClick={async()=>{
+                      if(!modNoteLinea.sku){ alert("Seleziona un articolo."); return; }
+                      if(!(modNoteLinea.nota||"").trim()){ alert("Inserisci una nota."); return; }
+                      try {
+                        await fetchConRetry(APPS_SCRIPT_URL+"?action=notariepilogo&linea="+encodeURIComponent(modNoteLinea.linea.id)+"&sku="+encodeURIComponent(modNoteLinea.sku)+"&nota="+encodeURIComponent(modNoteLinea.nota), 5, 1000);
+                        alert("✓ Nota salvata nel Riepilogo!");
+                        setModNoteLinea(null);
+                      } catch(e){ alert("Errore salvataggio."); }
+                    }}>Salva nel Riepilogo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee} onClose={()=>setModCambioSku(null)} onOk={(ns)=>{
+          const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
+          if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
+          api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn});
+          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+          setModCambioSku(null);
+        }}/>}
+      {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
+        onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); } else { api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
+          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); setModCorso(null); }}/>}
+      <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#0a1628",borderBottom:"1px solid #1e3a5f"}}>
+        <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",flexDirection:"column",gap:1}}><span style={{display:"flex",alignItems:"center",gap:8}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain",borderRadius:4}}/><span style={{fontSize:20,fontWeight:800,color:"#e879f9",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></span><span style={{fontSize:16,fontWeight:700,color:"#00d4aa",letterSpacing:1}}>ProductionTrack</span></div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
+          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
+        </div>
+      </header>
+      <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto"}}>
+        <div style={{flex:"0 0 auto",minWidth:90,background:"#f59e0b",borderRadius:12,padding:14,textAlign:"center"}}>
+          <div style={{fontSize:28,fontWeight:800,color:"#000",lineHeight:1}}>{sessioni.length}</div>
+          <div style={{fontSize:11,color:"#000",marginTop:4,fontWeight:700}}>Totale</div>
+        </div>
+        {[["Attive",att,"#00d4aa"],["Chiuse",chi,"#ef4444"]].map(([l,n,c])=>(
+          <div key={l} style={{flex:"0 0 auto",minWidth:90,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,padding:14,textAlign:"center"}}>
+            <div style={{fontSize:28,fontWeight:800,color:c,lineHeight:1}}>{n}</div>
+            <div style={{fontSize:13,color:"#ffffff",marginTop:4,fontWeight:600}}>{l}</div>
+          </div>
+        ))}
+        {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
+          return (
+            <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#0a1628",border:"1px solid #1e3a5f",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
+              <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
+              <div style={{fontSize:13,color:l.colore,marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
+              {nAtt>0&&(
+                <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
+                  if(attiveLinea.length===0) return;
+                  if(!confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?")) return;
+                  attiveLinea.forEach((s, i) => { setTimeout(()=>{ if(onCOSheets) onCOSheets(s); else onCO(s.id); }, i * 800); });
+                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, attiveLinea.length * 800 + 3000); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
+                  Fine tutti
+                </button>
+              )}
+              <button onClick={()=>setModNoteLinea({linea:l, nota:""})} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>
+                📝 Note
+              </button>
+            </div>
+          ); })}
+      </div>
+      <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
+        {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"]].map(([t,l])=>(
+          <button key={t} onClick={()=>setTab(t)} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#334155"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#ffffff"}}>{l}</button>
+        ))}
+      </div>
+      {tab==="sessioni"&&(
+        <div style={{padding:"0 24px 16px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+          <input style={{flex:"1 1 200px",padding:"12px 16px",background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:8,color:"#ffffff",fontSize:16,fontFamily:"'Montserrat',sans-serif",outline:"none"}} placeholder="Cerca nome, cognome, SKU..." value={srch} onChange={e=>setSrch(e.target.value)}/>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",background:"#050a14",border:"2px solid #1e3a5f",borderRadius:10,padding:"6px 8px"}}>
+            {[["ALL","Tutti"],["attive","Attive"],["chiuse","Chiuse"]].map(([k,l])=>(
+              <button key={k} onClick={()=>setFS(k)} style={{padding:"8px 16px",border:"2px solid "+(fS===k?"#00d4aa":"transparent"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fS===k?"#00d4aa":"transparent",color:fS===k?"#000":"#ffffff"}}>{l}</button>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            <button onClick={()=>setFL("ALL")} style={{padding:"8px 16px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL==="ALL"?"#00d4aa22":"transparent",color:fL==="ALL"?"#00d4aa":"#ffffff",border:"2px solid "+(fL==="ALL"?"#00d4aa":"#334155"),borderRadius:8,display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
+            {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
+              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore}}>{l.id}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {tab==="sessioni"&&(
+        <div style={{margin:"0 24px",background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:12,overflow:"auto"}}>
+          {fil.length===0?(<div style={{textAlign:"center",padding:60,color:"#475569"}}>Nessuna sessione</div>):(
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr>{[["#","#ffffff"],["Operatore","#ffffff"],["SKU","#ffffff"],["Linea","#ffffff"],["Inizio","#22c55e"],["Fine","#ef4444"],["Durata","#ffffff"],["Azioni","#ffffff"]].map(([h,hc])=>(
+                <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:2,textTransform:"uppercase",color:hc,textAlign:"left",borderBottom:"1px solid #1e3a5f",background:"#050a14",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
+              ))}</tr></thead>
+              <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
+                const att2=!s.fine;
+                const dur=(()=>{ const ini=parseData(s.inizio); const f=s.fine?parseData(s.fine):now(); return (ini&&f)?(f-ini):0; })();
+                const corsi = s.corsi||[];
+                const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
+                const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
+                return (
+                  <tr key={s.id} style={{borderBottom:"1px solid #0f1f38",background:att2?"#00d4aa06":"transparent"}}>
+                    <td style={S.td}><span style={{background:"#1e3a5f",color:"#475569",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
+                    <td style={S.td}>{s.nome} {s.cognome}</td>
+                    <td style={S.td}><code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code>
+                      {s.rampaDal&&<span style={{fontSize:13,color:"#f59e0b",fontWeight:700,marginLeft:6}}>📈 {Math.min(15,Math.max(1,Math.floor((now()-s.rampaDal)/(1000*60*60*24))+1))}/15</span>}
+                    </td>
+                    <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
+                    <td style={S.td}><span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>{fmtSafe(s.inizio)}</span></td>
+                    <td style={S.td}>{s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
+                    <td style={S.td}><span style={{background:"#1e3a5f",color:"#ffffff",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
+                    <td style={S.td}>
+                      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                        {att2&&inCorso?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
+                        {att2&&(
+                          <>
+                            <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>setMod(s)}>↔</button>
+                            <button style={{padding:"8px 12px",background:"transparent",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
+                            <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
+                            <button style={{padding:"8px 12px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ if(!confirm("Sei sicuro di voler chiudere il turno di "+s.nome+" "+s.cognome+"?")) return; if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); }}>✕</button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ); })}</tbody>
+            </table>
+          )}
+        </div>
+      )}
+      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
+      {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
+      {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
+      <div style={{height:40}}/>
+    </div>
+  );
+}
+function LoginDashboard({ linee, sync, onLogin, onQualita }) { const [pwd,setPwd] = useState("");
+  const [err,setErr] = useState("");
+  const [modoAdmin,setModoAdmin] = useState(false);
+  const tenta = () => { if(modoAdmin){ if(pwd===ADMIN_PWD){ onLogin("admin",null); return; } setErr("Password admin errata."); setPwd(""); return; }
+    const l=linee.find(l=>l.password&&l.password===pwd);
+    if(l){ onLogin("linea",l); return; }
+    setErr("Password non riconosciuta."); setPwd(""); };
+  if(sync==="caricamento") return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)",flexDirection:"column",gap:16}}>
+      <img src="logo.png" style={{width:64,height:64,objectFit:"contain",borderRadius:8}}/>
+      <span style={{fontSize:28,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+      <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Connessione a Sheets...</span>
+    </div>
+  );
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#050a14,#0a1628)"}}>
+      <div style={{width:"100%",maxWidth:400,background:"#0a1628",border:"1px solid #1e3a5f",borderRadius:16,padding:"36px 32px",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:6}}/><span style={{fontSize:32,fontWeight:800,color:"#e879f9",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
+        <div style={{fontSize:15,fontWeight:700,color:"#00d4aa",marginBottom:20}}>ProductionTrack — Dashboard</div>
+        <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Password admin o password della tua linea</div>
+        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#e879f9",borderWidth:2}}
+          placeholder="••••••••" value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&tenta()} autoFocus/>
+        {err&&<div style={{...S.err,marginBottom:12}}>{err}</div>}
+        {!modoAdmin&&(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <button style={S.bCI} onClick={tenta}>Accedi con password linea</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={()=>{setModoAdmin(true);setPwd("");setErr("");}}>👑 Entra come Admin</button>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",fontWeight:900}} onClick={()=>onQualita&&onQualita()}>📊 Dashboard Qualità</button>
+          </div>
+        )}
+        {modoAdmin&&(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{fontSize:12,color:"#e879f9",marginBottom:4,textAlign:"center",fontWeight:600}}>👑 Accesso Admin — inserisci la password</div>
+            <button style={{...S.bCI,background:"linear-gradient(135deg,#e879f9,#a855f7)"}} onClick={tenta}>Conferma</button>
+            <button style={{...S.bBk,textAlign:"center"}} onClick={()=>{setModoAdmin(false);setPwd("");setErr("");}}>← Indietro</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 function App() { const [view,setView]             = useState("login");
   const [viewQualita,setViewQualita] = useState(false);
   const [lineaQualita,setLineaQualita] = useState(null);
@@ -1478,38 +1080,26 @@ function App() { const [view,setView]             = useState("login");
   const [dashSync,setDashSync]     = useState("caricamento");
   const [ultimoSync2,setUltimoSync2] = useState(null);
   const { linee, operatori, skuList, sync, ts, reload } = useSheets();
-
-  // Aggiorna accesso.linea quando le linee reali arrivano da Sheets
   useEffect(()=>{
     if(sync==="ok" && accesso && accesso.ruolo==="linea" && linee.length>0){
       const lineaAggiornata = linee.find(l=>l.id===accesso.linea.id);
-      if(lineaAggiornata && lineaAggiornata.nome !== accesso.linea.nome){
-        setAccesso({...accesso, linea: lineaAggiornata});
-      }
+      if(lineaAggiornata && lineaAggiornata.nome !== accesso.linea.nome){ setAccesso({...accesso, linea: lineaAggiornata}); }
     }
   },[sync, linee]);
-
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
-
   const [rampeSheets,setRampeSheets] = useState([]);
-
   const caricaSessioni = useCallback(async()=>{ setDashSync("caricamento");
     try { const ctrl2 = new AbortController();
       const tid2 = setTimeout(()=>ctrl2.abort(), 25000);
       const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni", {signal:ctrl2.signal}).finally(()=>clearTimeout(tid2));
       const j = await r.json();
-      if(j.ok&&j.data.sessioni){ 
-        setSessSheets(j.data.sessioni);
+      if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni);
         if(j.data.rampe) setRampeSheets(j.data.rampe);
-        // Svuota sessioni locali solo se Sheets è completamente vuoto (dopo reset)
         if(j.data.sessioni.length === 0) setSess([]);
-        setDashSync("ok"); setUltimoSync2(new Date()); 
-      } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
-
+        setDashSync("ok"); setUltimoSync2(new Date()); } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
   useEffect(()=>{ caricaSessioni();
     const t = setInterval(caricaSessioni, 15000);
     return ()=>clearInterval(t); },[caricaSessioni]);
-
   const add = s => { setSess(p=>[s,...p]);
     api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")}); };
   const co = id => { setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
@@ -1519,8 +1109,7 @@ function App() { const [view,setView]             = useState("login");
   const tr = (id,dest,nSku) => { setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     setTimeout(caricaSessioni,3000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,3000); };
-
-  const syncCfg = {ok:{c:"#7c3aed",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
+  const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
   const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
 
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
@@ -1529,22 +1118,21 @@ function App() { const [view,setView]             = useState("login");
   if(!accesso && view !== "login") {
     return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")}/>;
   }
-
   return (
-    <div style={{minHeight:"100vh",background:"#f9f8ff",color:"#5b21b6"}}>
-      <div style={{background:"#ffffff",borderBottom:"1px solid #c4b5fd",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
+    <div style={{minHeight:"100vh",background:"#050a14",color:"#e2e8f0"}}>
+      <div style={{background:"#0a1628",borderBottom:"1px solid #1e3a5f",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
         <span style={{color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
-        {sync==="ok"&&<span style={{color:"#7c3aed"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
-        {(sync==="ok"||sync==="errore")&&<button onClick={reload} style={{background:"transparent",border:"1px solid #e8e3f8",borderRadius:4,color:"#6b7280",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>Ricarica</button>}
+        {sync==="ok"&&<span style={{color:"#ffffff"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
+        {(sync==="ok"||sync==="errore")&&<button onClick={reload} style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>Ricarica</button>}
       </div>
       {view!=="checkin"&&(
-        <div style={{display:"flex",gap:8,padding:"12px 20px",background:"#ffffff",borderBottom:"1px solid #c4b5fd",alignItems:"center"}}>
+        <div style={{display:"flex",gap:8,padding:"12px 20px",background:"#0a1628",borderBottom:"1px solid #1e3a5f",alignItems:"center"}}>
           {[["dashboard","Dashboard"],["checkin","Check-in"]].map(([v,l])=>(
             <button key={v} onClick={()=>{ if(v==="dashboard"&&!accesso){setAccesso(null);} setView(v); }} style={{padding:"10px 24px",background:view===v?"#00d4aa22":"transparent",border:"2px solid "+(view===v?"#00d4aa":"#334155"),borderRadius:8,color:view===v?"#00d4aa":"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}}>{l}</button>
           ))}
           {view==="dashboard"&&accesso&&(
             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:20,fontWeight:800,color:accesso.ruolo==="admin"?"#00d4aa":"#e879f9",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
+              <span style={{fontSize:20,fontWeight:800,fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
                 {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.id||accesso.linea.id)}</span>}
               </span>
               <button onClick={()=>{setAccesso(null);setView("login");}} style={{background:"transparent",border:"2px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontSize:20,fontWeight:800,padding:"10px 24px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>Esci</button>
@@ -1553,36 +1141,31 @@ function App() { const [view,setView]             = useState("login");
           {view==="dashboard"&&(
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:11,color:dashCfg.c,fontWeight:700}}>{dashCfg.t}</span>
-              {ultimoSync2&&<span style={{fontSize:10,color:"#7c3aed"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
-              <button onClick={caricaSessioni} style={{background:"transparent",border:"1px solid #e8e3f8",borderRadius:4,color:"#6b7280",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>↻</button>
+              {ultimoSync2&&<span style={{fontSize:10,color:"#ffffff"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
+              <button onClick={caricaSessioni} style={{background:"transparent",border:"1px solid #1e3a5f",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>↻</button>
             </span>
           )}
         </div>
       )}
       {view==="checkin"&&(
-        <div>
-          <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ setAccesso(null); setView("login"); }} rampeSheets={rampeSheets}/>
-
-        </div>
+        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ setAccesso(null); setView("login"); }} rampeSheets={rampeSheets}/>
       )}
       {view==="login"&&(
         <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")}/>
       )}
       {view==="dashboard"&&accesso&&(
         <Dashboard
-          sessioni={accesso.ruolo==="linea"
-            ? sessSheets.filter(s=>s.lineaCorrente===accesso.linea.id||s.lineaInizio===accesso.linea.id)
-            : sessSheets}
+          sessioni={accesso.ruolo==="linea" ? sessSheets.filter(s=>s.lineaCorrente===accesso.linea.id||s.lineaInizio===accesso.linea.id) : sessSheets}
           linee={linee} skuList={skuList} operatori={operatori}
           isAdmin={accesso.ruolo==="admin"}
           lineaFiltro={accesso.ruolo==="linea"?accesso.linea:null}
           onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr}
-          onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}/>
+          onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}
+          rampeSheets={rampeSheets}/>
       )}
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
