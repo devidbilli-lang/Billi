@@ -496,7 +496,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     return (
       <div style={S.scr}>
         <header style={S.hdr}>
-          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}</div></div></div>
+          <div style={S.logo}><div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}><div style={{width:32,height:32,background:"#7c3aed",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}><img src="logo.png" style={{width:28,height:28,objectFit:"contain"}}/></div><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div><div style={S.lt}>ProductionTrack</div><div style={S.ls}>{mode==="checkout"?"Fine Turno":mode==="cambiosku"?"Cambio SKU":mode==="corso"?"Corso / Formazione":mode==="rientro"?"Rientro da Corso":"Trasferimento"}{lineaFiltro?" — "+lineaFiltro.id:""}</div></div></div>
           <div style={S.ora}>{fmt(oraRef)}</div>
         </header>
         <div style={S.bod}>
@@ -1058,7 +1058,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         ))}
         {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
           return (
-            <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"#ffffff",border:"1px solid #e8e3f8",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
+            <div key={l.id} style={{flex:"0 0 auto",minWidth:120,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",border:"none",borderTop:"4px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
               <div style={{fontSize:13,color:"#7c3aed",marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
               {nAtt>0&&(
