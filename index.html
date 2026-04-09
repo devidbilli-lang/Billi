@@ -31,7 +31,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39CNVyleg_enI_mDl1fkw0_PMRwA3_Aj10505y3stmHfg_elEG_LiTfBAshI9pVhz3w/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfbsAH0sgQt1yOqEjZFrUhF2oTkJwJVMeJH-pKzrUayiqY6LyLN2JwYpSUUzbS3wvTKA/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -1416,11 +1416,13 @@ function App() { const [view,setView]             = useState("login");
       const tid2 = setTimeout(()=>ctrl2.abort(), 25000);
       const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni", {signal:ctrl2.signal}).finally(()=>clearTimeout(tid2));
       const j = await r.json();
-      if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni);
+      if(j.ok&&j.data.sessioni){ 
+        setSessSheets(j.data.sessioni);
         if(j.data.rampe) setRampeSheets(j.data.rampe);
-        // Se Sheets è vuoto (dopo reset), svuota anche le sessioni locali
+        // Svuota sessioni locali solo se Sheets è completamente vuoto (dopo reset)
         if(j.data.sessioni.length === 0) setSess([]);
-        setDashSync("ok"); setUltimoSync2(new Date()); } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
+        setDashSync("ok"); setUltimoSync2(new Date()); 
+      } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
 
   useEffect(()=>{ caricaSessioni();
     const t = setInterval(caricaSessioni, 15000);
