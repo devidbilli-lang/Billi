@@ -1359,8 +1359,8 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
   const [ok, setOk]     = useState("");
   const [ko, setKo]     = useState("");
   const [migl, setMigl] = useState("");
-  const [noteKo, setNoteKo] = useState("");
-  const [noteMigl, setNoteMigl] = useState("");
+  const [noteKo, setNoteKo]     = useState([{p:"",q:""}]);
+  const [noteMigl, setNoteMigl] = useState([{p:"",q:""}]);
   const [sku, setSku]   = useState("");
   const [cSku, setCSku] = useState("");
   const [msg, setMsg]   = useState(null);
@@ -1377,9 +1377,9 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
     if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
     setErr("");
     try {
-      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea.id)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(noteKo||"")+"&noteMigl="+encodeURIComponent(noteMigl||""), 5, 1000);
+      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(linea.id)+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)": "")).join(" | ")||"")+"&noteMigl="+encodeURIComponent(noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)": "")).join(" | ")||""), 5, 1000);
       setMsg("✓ Salvato!");
-      setOk(""); setKo(""); setMigl(""); setNoteKo(""); setNoteMigl("");
+      setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:""}]); setNoteMigl([{p:"",q:""}]);
       // Mantieni lo SKU per inserimenti successivi
       setTimeout(()=>setMsg(null), 2500);
     } catch(e){ setErr("Errore salvataggio."); }
@@ -1437,11 +1437,25 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
           </div>
           <div style={{marginBottom:10}}>
             <label style={{...S.lbl,color:"#ef4444"}}>📝 Note KO</label>
-            <input style={{...S.inp,borderColor:"#ef444466"}} placeholder="Descrivi il problema KO..." value={noteKo} onChange={e=>setNoteKo(e.target.value)}/>
+            {noteKo.map((r,i)=>(
+              <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
+                <input style={{...S.inp,flex:3,borderColor:"#ef444466"}} placeholder="Problema..." value={r.p} onChange={e=>{const a=[...noteKo];a[i]={...a[i],p:e.target.value};setNoteKo(a);}}/>
+                <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#ef444466",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteKo];a[i]={...a[i],q:e.target.value};setNoteKo(a);}}/>
+                {noteKo.length>1&&<button onClick={()=>setNoteKo(noteKo.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
+              </div>
+            ))}
+            <button onClick={()=>setNoteKo([...noteKo,{p:"",q:""}])} style={{fontSize:12,color:"#ef4444",background:"#ef444411",border:"1px solid #ef444466",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga KO</button>
           </div>
           <div style={{marginBottom:14}}>
             <label style={{...S.lbl,color:"#f59e0b"}}>📝 Note Migliorabili</label>
-            <input style={{...S.inp,borderColor:"#f59e0b66"}} placeholder="Descrivi i migliorabili..." value={noteMigl} onChange={e=>setNoteMigl(e.target.value)}/>
+            {noteMigl.map((r,i)=>(
+              <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
+                <input style={{...S.inp,flex:3,borderColor:"#f59e0b66"}} placeholder="Problema..." value={r.p} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],p:e.target.value};setNoteMigl(a);}}/>
+                <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#f59e0b66",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],q:e.target.value};setNoteMigl(a);}}/>
+                {noteMigl.length>1&&<button onClick={()=>setNoteMigl(noteMigl.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#f59e0b",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
+              </div>
+            ))}
+            <button onClick={()=>setNoteMigl([...noteMigl,{p:"",q:""}])} style={{fontSize:12,color:"#f59e0b",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga Migliorabili</button>
           </div>
           {err&&<div style={S.err}>{err}</div>}
           {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#22c55e",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
