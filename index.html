@@ -31,7 +31,7 @@ button:hover{filter:brightness(1.12);}
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2dc83UWouaoCvSGiiuP7MXKKbZqN-hyVRlyXZPgMZNzFNFoU51lC2z_FkTfTir-SPDw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyltlJESFrnLar1Guxg3l--vvThLQwV0wBhbf0UCar1wj44E6I80sMpm255ECNWqvtnLQ/exec";
 const ADMIN_PWD = "Nexus2026!";
 
 const LINEE_DEFAULT = [
@@ -954,6 +954,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [modReset,setModReset]       = useState(false);
   const [modCorso,setModCorso]       = useState(null);
   const [modCambioSku,setModCambioSku] = useState(null);
+  const [modNoteLinea,setModNoteLinea] = useState(null); // {linea, nota}
   const [modFineTutti,setModFineTutti] = useState(null);
   const [modCO,setModCO]         = useState(null);
   const [modTr,setModTr]         = useState(null);
@@ -974,6 +975,53 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   return (
     <div style={{minHeight:"100vh",background:"#050a14",paddingBottom:60}}>
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);if(onAggiornaSessioni)setTimeout(onAggiornaSessioni,3000);}} onClose={()=>setMod(null)}/>}
+      {modNoteLinea&&(()=>{
+        // SKU attivi oggi su questa linea
+        const skuLinea = [...new Set(sessioni.filter(s=>s.lineaCorrente===modNoteLinea.linea.id).map(s=>s.skuCorrente||s.sku).filter(Boolean))];
+        return (
+        <div style={MS.ov}>
+          <div style={{...MS.md,maxWidth:420}}>
+            <div style={MS.mh}>
+              <span style={{...MS.mt,color:"#f59e0b"}}>📝 Note Linea — {modNoteLinea.linea.id}</span>
+              <button style={MS.mx} onClick={()=>setModNoteLinea(null)}>✕</button>
+            </div>
+            <div style={{padding:22}}>
+              <div style={{marginBottom:14,padding:"8px 12px",background:modNoteLinea.linea.colore+"18",border:"1px solid "+modNoteLinea.linea.colore,borderRadius:8}}>
+                <span style={{color:modNoteLinea.linea.colore,fontWeight:700,fontSize:14}}>{modNoteLinea.linea.id}</span>
+              </div>
+              <div style={{marginBottom:14}}>
+                <label style={{...S.lbl,color:"#f59e0b"}}>SKU Articolo</label>
+                <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
+                  <option value="">-- Seleziona articolo --</option>
+                  {skuLinea.map(s=>{
+                    const skuObj = skuList.find(x=>x.sku===s);
+                    return <option key={s} value={s}>{s}{skuObj?" — "+skuObj.descrizione:""}</option>;
+                  })}
+                </select>
+              </div>
+              <div style={{marginBottom:14}}>
+                <label style={{...S.lbl,color:"#f59e0b"}}>Mancato raggiungimento obiettivo</label>
+                <textarea style={{...S.inp,minHeight:100,resize:"vertical",fontSize:14}} placeholder="Descrivi il problema..."
+                  value={modNoteLinea.nota||""} onChange={e=>setModNoteLinea({...modNoteLinea,nota:e.target.value})}/>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <button style={{...S.bBk,flex:1,textAlign:"center"}} onClick={()=>setModNoteLinea(null)}>Chiudi</button>
+                <button style={{flex:2,padding:14,background:"linear-gradient(135deg,#f59e0b,#d97706)",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}
+                  onClick={async()=>{
+                    if(!modNoteLinea.sku){ alert("Seleziona un articolo."); return; }
+                    if(!(modNoteLinea.nota||{}).trim()){ alert("Inserisci una nota."); return; }
+                    try {
+                      await fetchConRetry(APPS_SCRIPT_URL+"?action=notariepilogo&linea="+encodeURIComponent(modNoteLinea.linea.id)+"&sku="+encodeURIComponent(modNoteLinea.sku)+"&nota="+encodeURIComponent(modNoteLinea.nota), 5, 1000);
+                      alert("✓ Nota salvata nel Riepilogo!");
+                      setModNoteLinea(null);
+                    } catch(e){ alert("Errore salvataggio."); }
+                  }}>Salva nel Riepilogo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
       {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee} onClose={()=>setModCambioSku(null)} onOk={(ns)=>{
           const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
           if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
@@ -1020,6 +1068,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   Fine tutti
                 </button>
               )}
+              <button onClick={()=>setModNoteLinea({linea:l, nota:""})} style={{fontSize:12,fontWeight:700,padding:"6px",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>
+                📝 Note
+              </button>
             </div>
           ); })}
       </div>
