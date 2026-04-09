@@ -746,7 +746,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             if(errori.length>0&&registrati.length===0){setErr(errori.join(", "));return;}
             if(registrati.length>0){
               try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); localStorage.setItem(kSel, JSON.stringify(listaOp)); }catch(e){}
-              registrati.forEach((s, idx) => { setTimeout(() => { onSuccess(s); }, idx * 500); });
+              (async () => {
+                for (const s of registrati) {
+                  await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
+                  onSuccess(s);
+                }
+              })();
               setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
               setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
           <button style={{...S.bBk,marginTop:12,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
