@@ -92,7 +92,10 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
         if(d.operatori) setOperatori(d.operatori);
         if(d.skuList)   setSkuList(d.skuList);
         setSync("ok"); setTs(new Date()); } else setSync("errore"); } catch{ setSync("errore"); } },[]);
-  useEffect(()=>{ load(); },[load]);
+  useEffect(()=>{ load(); 
+    const t = setInterval(load, 60000); // ricarica operatori/linee/SKU ogni 60 secondi
+    return ()=>clearInterval(t);
+  },[load]);
   return { linee, operatori, skuList, sync, ts, reload:load };
 }
 
