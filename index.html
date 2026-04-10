@@ -1275,12 +1275,13 @@ function App() { const [view,setView]             = useState("login");
           <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Inserisci la password amministratore</div>
           <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#7c3aed",borderWidth:2,background:"#f1f5f9",color:"#1e293b"}}
             placeholder="••••••••" value={adminPwd} onChange={e=>{setAdminPwd(e.target.value);setAdminPwdErr("");}}
-            onKeyDown={e=>{ if(e.key==="Enter"){ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});setView("dashboard");} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}} autoFocus/>
+            onKeyDown={e=>{ if(e.key==="Enter"){ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}} autoFocus/>
           {adminPwdErr&&<div style={{...S.err,marginBottom:12}}>{adminPwdErr}</div>}
-          <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={()=>{ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});setView("dashboard");} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}>Accedi</button>
+          <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={()=>{ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}>Accedi</button>
         </div>
       </div>
     );
+    // Admin sbloccato - continua con il render normale dell'app
   }
 
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
