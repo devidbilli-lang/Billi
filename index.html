@@ -38,6 +38,7 @@ function getUrlParam(name) {
     return u.get(name);
   } catch(e) { return null; }
 }
+const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxol7H2PYAuUucijMO1GPB7tG4ac86cRMARCOD9YUjqmnchBitkSQ2qm8vilZNlwyvm9Q/exec";
 const ADMIN_PWD = "Nexus2026!";
@@ -1237,6 +1238,41 @@ function App() { const [view,setView]             = useState("login");
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,3000); };
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
   const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
+
+  // Modalità readonly - nessun login, accesso diretto
+  if(viewMode==="readonly") return (
+    <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
+      <div style={{background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+          <img src="logo.png" style={{width:32,height:32,objectFit:"contain",borderRadius:4,background:"#7c3aed",padding:2}}/>
+          <span style={{fontSize:14,fontWeight:800,color:"#7c3aed",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+        </div>
+        <span style={{marginLeft:8,fontSize:12,background:"#f59e0b22",color:"#f59e0b",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 10px",fontWeight:700}}>👁 Sola lettura</span>
+        <span style={{marginLeft:"auto",fontSize:11,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
+      </div>
+      <Dashboard sessioni={sessSheets} linee={linee} skuList={skuList} operatori={operatori} rampeSheets={rampeSheets} isAdmin={false} lineaFiltro={null} onReset={null} onCO={null} onCOSheets={null} onTr={null} onAggiornaSessioni={caricaSessioni} readOnly={true}/>
+    </div>
+  );
+
+  // Modalità admin da URL
+  if(viewMode==="admin") {
+    if(!adminUnlocked) return (
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+        <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",textAlign:"center"}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,marginBottom:24}}>
+            <img src="logo.png" style={{width:52,height:52,objectFit:"contain",borderRadius:8,background:"#7c3aed",padding:4}}/>
+            <span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+          </div>
+          <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Inserisci la password amministratore</div>
+          <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#7c3aed",borderWidth:2,background:"#f1f5f9",color:"#1e293b"}}
+            placeholder="••••••••" value={adminPwd} onChange={e=>{setAdminPwd(e.target.value);setAdminPwdErr("");}}
+            onKeyDown={e=>{ if(e.key==="Enter"){ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});setView("dashboard");} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}} autoFocus/>
+          {adminPwdErr&&<div style={{...S.err,marginBottom:12}}>{adminPwdErr}</div>}
+          <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={()=>{ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});setView("dashboard");} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}>Accedi</button>
+        </div>
+      </div>
+    );
+  }
 
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
   if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
