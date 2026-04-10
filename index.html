@@ -1164,10 +1164,19 @@ function App() { const [view,setView]             = useState("login");
   useEffect(()=>{
     const autoLinea = getUrlParam("autolinea");
     if(!autoLinea || accesso) return;
-    if(sync !== "ok") return;
+    if(sync !== "ok" || linee.length === 0) return;
     (async()=>{
       try {
-        const r = await fetchConRetry(APPS_SCRIPT_URL+"?action=autologin&linea="+encodeURIComponent(autoLinea)+"&token="+AUTO_TOKEN, 3, 1000);
+        const nomeLinea = autoLinea.replace(/_/g, " ");
+        // Prima cerca nelle linee già caricate
+        const lineaDiretta = linee.find(l => l.id.toLowerCase() === nomeLinea.toLowerCase());
+        if(lineaDiretta) {
+          setAccesso({ruolo:"linea", linea: lineaDiretta});
+          setView("checkin");
+          return;
+        }
+        // Altrimenti chiama lo script
+        const r = await fetchConRetry(APPS_SCRIPT_URL+"?action=autologin&linea="+encodeURIComponent(nomeLinea)+"&token="+AUTO_TOKEN, 3, 1000);
         const j = await r.json();
         if(j.ok && j.data && j.data.ok) {
           const l = j.data.linea;
@@ -1177,7 +1186,7 @@ function App() { const [view,setView]             = useState("login");
         }
       } catch(e){ console.warn("Auto-login fallito:", e); }
     })();
-  },[sync, accesso]);
+  },[sync, linee, accesso]);
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
   const [rampeSheets,setRampeSheets] = useState([]);
   const caricaSessioni = useCallback(async()=>{ setDashSync("caricamento");
