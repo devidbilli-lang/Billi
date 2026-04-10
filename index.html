@@ -1060,7 +1060,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}><span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>{fmtSafe(s.inizio)}</span></td>
                     <td style={S.td}>{s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}</td>
-                    <td style={S.td}><span style={{background:"#f1f5f9",color:"#64748b",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
+                    <td style={S.td}><span style={{background:"#ffffff",color:"#64748b",border:"1px solid #e2e8f0",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap"}}>
                         {att2&&inCorso?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
