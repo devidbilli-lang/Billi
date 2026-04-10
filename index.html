@@ -1272,7 +1272,7 @@ function App() { const [view,setView]             = useState("login");
         </div>
       )}
       {view==="checkin"&&(
-        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ setAccesso(null); setView("login"); }} rampeSheets={rampeSheets}/>
+        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ setAccesso(null); setView("login"); }} rampeSheets={rampeSheets} onQualita={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }}/>
       )}
       {view==="login"&&(
         <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>
