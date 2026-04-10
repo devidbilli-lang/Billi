@@ -1054,7 +1054,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   <tr key={s.id} style={{borderBottom:"1px solid #f1f5f9",background:att2?"#dcfce7":"#fee2e2"}}>
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
-                    <td style={S.td}><code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code>
+                    <td style={{...S.td,background:"#ffffff"}}><code style={S.sku}>{s.skuCorrente||s.sku||"-"}</code>
                       {s.rampaDal&&<span style={{fontSize:13,color:"#f59e0b",fontWeight:700,marginLeft:6}}>📈 {Math.min(15,Math.max(1,Math.floor((now()-s.rampaDal)/(1000*60*60*24))+1))}/15</span>}
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
