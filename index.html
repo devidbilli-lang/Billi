@@ -547,9 +547,12 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
     </div>
   );
 }
-function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci, rampeSheets }) {
+function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci, rampeSheets, onQualita }) {
   const [mode,setMode]           = useState("menu");
   const [modQualita,setModQualita] = useState(false);
+  const [modPwdQualita,setModPwdQualita] = useState(false);
+  const [pwdQualita,setPwdQualita] = useState("");
+  const [errPwdQualita,setErrPwdQualita] = useState("");
   const [nome,setNome]           = useState("");
   const [cogn,setCogn]           = useState("");
   const [sku,setSku]             = useState("");
@@ -805,11 +808,31 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:c,marginBottom:4}}>{t}</div><div style={{fontSize:15,color:c,fontWeight:500,opacity:0.85}}>{d}</div></div>
               </button>
             ))}
+            <button onClick={()=>{setModPwdQualita(true);setPwdQualita("");setErrPwdQualita("");}} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#f1f4f8",border:"2px solid #3b82f6",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
+              <div style={{width:4,height:44,borderRadius:2,background:"#3b82f6",flexShrink:0}}/>
+              <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#3b82f6",marginBottom:4}}>Qualità</div><div style={{fontSize:15,color:"#3b82f6",fontWeight:500,opacity:0.85}}>Inserimento dati qualità</div></div>
+            </button>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:10,padding:"16px 0 0"}}>
             <button style={{background:"linear-gradient(135deg,#e8e8e8,#7c3aed)",border:"none",borderRadius:10,color:"#ffffff",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
             <button style={{background:"linear-gradient(135deg,#ef4444,#b91c1c)",border:"none",borderRadius:10,color:"#ffffff",cursor:"pointer",fontSize:18,fontWeight:800,padding:"12px 32px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onEsci&&onEsci()}>Esci</button>
           </div>
+          {modPwdQualita&&(
+            <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+              <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:400,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
+                <div style={{textAlign:"center",marginBottom:20}}>
+                  <div style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>Qualità</div>
+                  <div style={{fontSize:13,color:"#64748b",marginTop:4}}>Inserisci la password qualità</div>
+                </div>
+                <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#3b82f6",borderWidth:2,background:"#f1f5f9",color:"#1e293b"}}
+                  placeholder="••••••••" value={pwdQualita} onChange={e=>{setPwdQualita(e.target.value);setErrPwdQualita("");}}
+                  onKeyDown={e=>{ if(e.key==="Enter"){ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&lObj.pwdQualita&&pwdQualita===lObj.pwdQualita){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}} autoFocus/>
+                {errPwdQualita&&<div style={{...S.err,marginBottom:12}}>{errPwdQualita}</div>}
+                <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",marginBottom:10}} onClick={()=>{ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&lObj.pwdQualita&&pwdQualita===lObj.pwdQualita){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}>Accedi</button>
+                <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>setModPwdQualita(false)}>← Annulla</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
