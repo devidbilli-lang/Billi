@@ -375,13 +375,13 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                 <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:lObj.colore+"22",color:lObj.colore,border:"1px solid "+lObj.colore+"44",padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{r.linea}</span></td>
                 <td style={{padding:"10px 14px",textAlign:"center"}}>
                   <code style={S.sku}>{r.sku}</code>
-                  {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</div>}
+                  {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:6,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</div>}
                 </td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#1e293b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ok||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ko||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.migl||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",textAlign:"left",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteKo||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",textAlign:"left",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteMigl||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteKo||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteMigl||"-"}</td>
               </tr>
             );
           })}
