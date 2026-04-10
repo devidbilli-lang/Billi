@@ -1051,7 +1051,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #f1f5f9",background:att2?"#dcfce7":"#fee2e2"}}>
+                  <tr key={s.id} style={{borderBottom:"3px solid "+(att2?"#22c55e":"#ef4444"),borderTop:"1px solid "+(att2?"#22c55e44":"#ef444444"),background:att2?"#dcfce7":"#fee2e2"}}>
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
                     <td style={S.td}><code style={{...S.sku,background:"#ffffff"}}>{s.skuCorrente||s.sku||"-"}</code>
