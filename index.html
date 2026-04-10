@@ -489,9 +489,10 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
             {cSku&&!sku&&(
               <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
                 {skuFiltrati.slice(0,8).map(s=>(
-                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku("");}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center"}}>
+                  <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku("");}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                     <code style={S.sku}>{s.sku}</code>
                     <span style={{fontSize:12,color:"#1e293b"}}>{s.descrizione}</span>
+                    {s.collezione&&<span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{s.collezione}</span>}
                   </div>
                 ))}
               </div>
