@@ -427,7 +427,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
     </div>
   );
 }
-function DashboardQualita({ linea, linee, skuList, difetti=[], onEsci }) {
+function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [ok, setOk]         = useState("");
   const [ko, setKo]         = useState("");
   const [migl, setMigl]     = useState("");
@@ -530,9 +530,9 @@ function DashboardQualita({ linea, linee, skuList, difetti=[], onEsci }) {
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
                 <input style={{...S.inp,borderColor:"#ef444466"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteKo];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteKo(a);}}/>
-                {r.cerca&&difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
+                {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
-                    {difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
+                    {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
                       <div key={di} onClick={()=>{const a=[...noteKo];a[i]={...a[i],p:d.difetto,cerca:""};setNoteKo(a);}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <span style={{fontSize:13,color:"#1e293b",fontWeight:600}}>{d.difetto}</span>
                         {d.macroArea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroArea}</span>}
@@ -553,9 +553,9 @@ function DashboardQualita({ linea, linee, skuList, difetti=[], onEsci }) {
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
                 <input style={{...S.inp,borderColor:"#f59e0b66"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteMigl(a);}}/>
-                {r.cerca&&difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
+                {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
-                    {difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
+                    {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
                       <div key={di} onClick={()=>{const a=[...noteMigl];a[i]={...a[i],p:d.difetto,cerca:""};setNoteMigl(a);}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <span style={{fontSize:13,color:"#1e293b",fontWeight:600}}>{d.difetto}</span>
                         {d.macroArea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroArea}</span>}
@@ -1313,7 +1313,7 @@ function App() { const [view,setView]             = useState("login");
   }
 
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
-  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difetti={difetti} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
+  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
 
   if(!accesso && view !== "login") {
     return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>;
