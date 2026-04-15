@@ -543,7 +543,8 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                 <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#ef444466",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteKo];a[i]={...a[i],q:e.target.value};setNoteKo(a);}}/>
                 {noteKo.length>1&&<button onClick={()=>setNoteKo(noteKo.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
-              {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&<div style={{fontSize:11,color:"#ef4444",marginTop:2,fontWeight:600}}>⚠ Valore non valido — seleziona dall'elenco</div>}
+              {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&(<div style={{fontSize:11,color:"#ef4444",marginTop:2,fontWeight:600}}>⚠ Valore non valido — seleziona dall&apos;elenco</div>)}
+            </div>
             ))}
             <button onClick={()=>setNoteKo([...noteKo,{p:"",q:""}])} style={{fontSize:12,color:"#ef4444",background:"#ef444411",border:"1px solid #ef444466",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga KO</button>
           </div>
@@ -567,7 +568,8 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                 <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#f59e0b66",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],q:e.target.value};setNoteMigl(a);}}/>
                 {noteMigl.length>1&&<button onClick={()=>setNoteMigl(noteMigl.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#f59e0b",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
-              {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontWeight:600}}>⚠ Valore non valido — seleziona dall'elenco</div>}
+              {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&(<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontWeight:600}}>⚠ Valore non valido — seleziona dall&apos;elenco</div>)}
+            </div>
             ))}
             <button onClick={()=>setNoteMigl([...noteMigl,{p:"",q:""}])} style={{fontSize:12,color:"#f59e0b",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga Migliorabili</button>
           </div>
