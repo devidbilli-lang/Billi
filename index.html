@@ -971,7 +971,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               try{
                 await fetchConRetry(APPS_SCRIPT_URL+"?action=modificaorario&sessionId="+encodeURIComponent(modOrario.sess.id)+"&campo="+modOrario.campo+"&valore="+encodeURIComponent(nuovaData.toISOString()),5,1000);
                 setModOrario(null);setSalvaOrarioErr("");
-                if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,2000);
+                if(onAggiornaSessioni) onAggiornaSessioni();
               }catch(e){setSalvaOrarioErr("Errore salvataggio.");}
             }}>Salva</button>
             <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>{setModOrario(null);setSalvaOrarioErr("");}}>← Annulla</button>
