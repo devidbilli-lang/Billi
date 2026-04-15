@@ -528,7 +528,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             {noteKo.map((r,i)=>(
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
-                <input style={{...S.inp,borderColor:"#ef444466"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteKo];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteKo(a);}}/>
+                <input style={{...S.inp,borderColor:"#ef444466"}} placeholder="Cerca difetto..." value={r.cerca||r.p||""} onChange={e=>{const a=[...noteKo];a[i]={...a[i],cerca:e.target.value,p:""};setNoteKo(a);}}/>
                 {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
                     {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
@@ -551,7 +551,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             {noteMigl.map((r,i)=>(
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
-                <input style={{...S.inp,borderColor:"#f59e0b66"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteMigl(a);}}/>
+                <input style={{...S.inp,borderColor:"#f59e0b66"}} placeholder="Cerca difetto..." value={r.cerca||r.p||""} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],cerca:e.target.value,p:""};setNoteMigl(a);}}/>
                 {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
                     {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
