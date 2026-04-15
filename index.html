@@ -283,6 +283,17 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
     </div>
   );
 }
+function aggiungiGiorniLavorativi(dataInizio, giorni) {
+  var d = new Date(dataInizio);
+  var aggiunti = 0;
+  while (aggiunti < giorni) {
+    d.setDate(d.getDate() + 1);
+    var gg = d.getDay();
+    if (gg !== 0 && gg !== 6) aggiunti++; // salta sab e dom
+  }
+  return d;
+}
+
 function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
   const rampaMap = {};
@@ -308,10 +319,21 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
           <div key={sku} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #f1f5f9"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
               <code style={{...S.sku,minWidth:80,fontSize:13}}>{sku}</code>
               {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{lineaObj.id}</span>}
             </div>
+            {rampa&&rampa.dal&&(()=>{
+              const dataInizio = new Date(rampa.dal);
+              const dataFine = aggiungiGiorniLavorativi(rampa.dal, 15);
+              const fmtD = d => d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
+              return (
+                <div style={{display:"flex",gap:16,marginBottom:8}}>
+                  <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Inizio: </span>{fmtD(dataInizio)}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Fine teorica: </span><span style={{color:completata?"#22c55e":"#f59e0b",fontWeight:700}}>{fmtD(dataFine)}</span></div>
+                </div>
+              );
+            })()}
             {g!==null&&(
               <div style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
