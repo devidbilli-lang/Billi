@@ -1371,7 +1371,8 @@ function App() { const [view,setView]             = useState("login");
           lineaFiltro={accesso.ruolo==="linea"?accesso.linea:null}
           onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr}
           onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}
-          rampeSheets={rampeSheets}/>
+          rampeSheets={rampeSheets}
+          editOrario={URL_VIEW==="admin" || accesso.ruolo==="admin"}/>
       )}
     </div>
   );
