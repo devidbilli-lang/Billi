@@ -304,7 +304,10 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
     if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=Math.min(15,Math.max(1,Math.floor((now()-rdal)/(1000*60*60*24))+1)); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } } }
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
-  const tuttiSku = [...new Set([...Object.keys(rampaMap),...Object.keys(totMap)])].sort();
+  // Mostra solo SKU con rampa che hanno ancora sessioni attive
+  const tuttiSku = [...new Set([...Object.keys(rampaMap),...Object.keys(totMap)])]
+    .filter(sku => totMap[sku] || (rampaMap[sku] && sessioni.some(s=>(s.skuCorrente||s.sku)===sku)))
+    .sort();
   if(!tuttiSku.length) return (
     <div style={{textAlign:"center",padding:60,color:"#64748b"}}>
       <div style={{fontSize:40,marginBottom:12}}>📈</div>
