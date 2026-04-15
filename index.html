@@ -447,6 +447,8 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     if(isAdminQ&&!lineaSelQ){ setErr("Seleziona una linea."); return; }
     if(!sku){ setErr("Seleziona uno SKU."); return; }
     if(ok===""&&ko===""&&migl===""){ setErr("Inserisci almeno un valore."); return; }
+    const _dv=(difettiList||[]).map(d=>d.difetto);
+    if(noteKo.some(r=>(r.cerca||r.p)&&!_dv.includes(r.cerca||r.p))||noteMigl.some(r=>(r.cerca||r.p)&&!_dv.includes(r.cerca||r.p))){ setErr("❌ Correggi i valori non validi prima di salvare."); return; }
     if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
     setErr("");
     const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
