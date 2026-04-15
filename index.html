@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPw67f07sGQgndLc9juSZQoOZ2-ekL33NMcCpps2050MCSQQYJAxgexstQtHCAO4flyQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyf_KFT0vAK9ilpKH4GE5cM66xQzUkQ6fAHNpy5CgY4QDxOEOsNkovj-tF22tGz5XpW_A/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -981,6 +981,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             }}>Salva</button>
             <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>{setModOrario(null);setSalvaOrarioErr("");}}>← Annulla</button>
             <button style={{width:"100%",padding:10,background:"#ef444411",border:"1px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700,marginTop:8}} onClick={async()=>{
+              console.log("Elimina sessione id:", modOrario.sess.id, "oggetto:", modOrario.sess);
               if(!confirm("Eliminare definitivamente questa sessione di "+modOrario.sess.nome+" "+modOrario.sess.cognome+"?")) return;
               try{
                 await fetchConRetry(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),5,1000);
