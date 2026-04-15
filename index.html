@@ -97,7 +97,6 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
         if(d.operatori) setOperatori(d.operatori);
         if(d.skuList)   setSkuList(d.skuList);
         if(d.difetti)  setDifettiList(d.difetti||[]);
-        if(d.difetti)   setDifetti(d.difetti);
         setSync("ok"); setTs(new Date()); } else setSync("errore"); } catch{ setSync("errore"); } },[]);
   useEffect(()=>{ load();
     const t = setInterval(load, 60000);
