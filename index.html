@@ -948,6 +948,27 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);if(onAggiornaSessioni)setTimeout(onAggiornaSessioni,3000);}} onClose={()=>setMod(null)}/>}
+      {modOrario&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif"}}>✏️ Modifica orario</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{modOrario.campo==="inizio"?"Inizio turno":"Fine turno"} — {modOrario.sess.nome} {modOrario.sess.cognome}</div>
+            <input type="datetime-local" style={{...S.inp,marginBottom:12}} value={modOrario.valore} onChange={e=>setModOrario({...modOrario,valore:e.target.value})}/>
+            {salvaOrarioErr&&<div style={{...S.err,marginBottom:12}}>{salvaOrarioErr}</div>}
+            <button style={{...S.bCI,marginBottom:10}} onClick={async()=>{
+              if(!modOrario.valore){setSalvaOrarioErr("Inserisci una data valida.");return;}
+              const nuovaData=new Date(modOrario.valore);
+              if(isNaN(nuovaData)){setSalvaOrarioErr("Data non valida.");return;}
+              try{
+                await fetchConRetry(APPS_SCRIPT_URL+"?action=modificaorario&sessionId="+encodeURIComponent(modOrario.sess.id)+"&campo="+modOrario.campo+"&valore="+encodeURIComponent(nuovaData.toISOString()),5,1000);
+                setModOrario(null);setSalvaOrarioErr("");
+                if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,2000);
+              }catch(e){setSalvaOrarioErr("Errore salvataggio.");}
+            }}>Salva</button>
+            <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>{setModOrario(null);setSalvaOrarioErr("");}}>← Annulla</button>
+          </div>
+        </div>
+      )}
       {modNoteLinea&&(()=>{
         const skuLinea = [...new Set(sessioni.filter(s=>s.lineaCorrente===modNoteLinea.linea.id).map(s=>s.skuCorrente||s.sku).filter(Boolean))];
         return (
