@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyqnTheaPFjfYZXxzguFg2iRKuL8SKecajf-VgrNlFDuxiKJekLWNoJuO6RUWpisNa74Q/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPw1BK2zhUe0HuusX3HMa5Crt2UK_IFNVrq4JhWYthQhbSVWp3VTaljHwQhErU_hQkGw/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -88,6 +88,8 @@ const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+
 function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
   const [operatori,setOperatori] = useState([]);
   const [skuList,setSkuList]     = useState([]);
+  const [difettiList,setDifettiList] = useState([]);
+  const [difetti,setDifetti]     = useState([]);
   const [sync,setSync]           = useState("caricamento");
   const [ts,setTs]               = useState(null);
   const load = useCallback(async()=>{ setSync("caricamento");
@@ -95,6 +97,8 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
       if(d){ if(d.linee&&d.linee.length) setLinee(d.linee);
         if(d.operatori) setOperatori(d.operatori);
         if(d.skuList)   setSkuList(d.skuList);
+        if(d.difetti)  setDifettiList(d.difetti);
+        if(d.difetti)   setDifetti(d.difetti);
         setSync("ok"); setTs(new Date()); } else setSync("errore"); } catch{ setSync("errore"); } },[]);
   useEffect(()=>{ load();
     const t = setInterval(load, 60000);
@@ -423,12 +427,12 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
     </div>
   );
 }
-function DashboardQualita({ linea, linee, skuList, onEsci }) {
+function DashboardQualita({ linea, linee, skuList, difetti=[], onEsci }) {
   const [ok, setOk]         = useState("");
   const [ko, setKo]         = useState("");
   const [migl, setMigl]     = useState("");
-  const [noteKo, setNoteKo]     = useState([{p:"",q:""}]);
-  const [noteMigl, setNoteMigl] = useState([{p:"",q:""}]);
+  const [noteKo, setNoteKo]     = useState([{p:"",q:"",cerca:""}]);
+  const [noteMigl, setNoteMigl] = useState([{p:"",q:"",cerca:""}]);
   const [sku, setSku]       = useState("");
   const [cSku, setCSku]     = useState("");
   const [msg, setMsg]       = useState(null);
@@ -451,7 +455,7 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
     try {
       await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(lineaEffettiva||"")+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(nKoStr)+"&noteMigl="+encodeURIComponent(nMiglStr), 5, 1000);
       setMsg("✓ Salvato!");
-      setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:""}]); setNoteMigl([{p:"",q:""}]);
+      setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
     } catch(e){ setErr("Errore salvataggio."); }
     setTimeout(()=>setMsg(null), 2500);
   };
@@ -524,7 +528,19 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
             <label style={{...S.lbl,color:"#ef4444"}}>📝 Note KO</label>
             {noteKo.map((r,i)=>(
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
-                <input style={{...S.inp,flex:3,borderColor:"#ef444466"}} placeholder="Problema..." value={r.p} onChange={e=>{const a=[...noteKo];a[i]={...a[i],p:e.target.value};setNoteKo(a);}}/>
+                <div style={{flex:3,position:"relative"}}>
+                <input style={{...S.inp,borderColor:"#ef444466"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteKo];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteKo(a);}}/>
+                {r.cerca&&difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
+                  <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                    {difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
+                      <div key={di} onClick={()=>{const a=[...noteKo];a[i]={...a[i],p:d.difetto,cerca:""};setNoteKo(a);}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <span style={{fontSize:13,color:"#1e293b",fontWeight:600}}>{d.difetto}</span>
+                        {d.macroArea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroArea}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
                 <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#ef444466",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteKo];a[i]={...a[i],q:e.target.value};setNoteKo(a);}}/>
                 {noteKo.length>1&&<button onClick={()=>setNoteKo(noteKo.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
@@ -535,7 +551,19 @@ function DashboardQualita({ linea, linee, skuList, onEsci }) {
             <label style={{...S.lbl,color:"#f59e0b"}}>📝 Note Migliorabili</label>
             {noteMigl.map((r,i)=>(
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
-                <input style={{...S.inp,flex:3,borderColor:"#f59e0b66"}} placeholder="Problema..." value={r.p} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],p:e.target.value};setNoteMigl(a);}}/>
+                <div style={{flex:3,position:"relative"}}>
+                <input style={{...S.inp,borderColor:"#f59e0b66"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteMigl(a);}}/>
+                {r.cerca&&difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
+                  <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                    {difetti.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
+                      <div key={di} onClick={()=>{const a=[...noteMigl];a[i]={...a[i],p:d.difetto,cerca:""};setNoteMigl(a);}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <span style={{fontSize:13,color:"#1e293b",fontWeight:600}}>{d.difetto}</span>
+                        {d.macroArea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroArea}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
                 <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#f59e0b66",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],q:e.target.value};setNoteMigl(a);}}/>
                 {noteMigl.length>1&&<button onClick={()=>setNoteMigl(noteMigl.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#f59e0b",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
@@ -1285,7 +1313,7 @@ function App() { const [view,setView]             = useState("login");
   }
 
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
-  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
+  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difetti={difetti} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
 
   if(!accesso && view !== "login") {
     return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>;
