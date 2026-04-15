@@ -956,7 +956,12 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const chi=sessioni.filter(s=>!!s.fine).length;
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
-      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{onTr(mod.id,d,ns);setMod(null);if(onAggiornaSessioni)setTimeout(onAggiornaSessioni,3000);}} onClose={()=>setMod(null)}/>}
+      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{
+        api.evento({sessionId:mod.id,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:mod.skuCorrente||mod.sku||"",tipo:"TRASFERIMENTO",lineaDa:mod.lineaCorrente,lineaA:d.id,skuDa:mod.skuCorrente||mod.sku||"",skuA:ns||mod.skuCorrente||mod.sku||""});
+        if(onTr) onTr(mod.id,d,ns);
+        setMod(null);
+        if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+      }} onClose={()=>setMod(null)}/>}
       {modOrario&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
