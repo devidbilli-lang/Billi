@@ -528,15 +528,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             {noteKo.map((r,i)=>(
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
-                <input style={{...S.inp,borderColor:r.p?"#22c55e66":"#ef444466"}} placeholder="Cerca difetto..." value={r.cerca||r.p||""} 
-                  onChange={e=>{const a=[...noteKo];a[i]={...a[i],cerca:e.target.value,p:""};setNoteKo(a);}}
-                  onBlur={()=>{
-                    const val=(r.cerca||"").trim();
-                    if(val && !(difettiList||[]).find(d=>d.difetto===val)){
-                      const a=[...noteKo];a[i]={...a[i],cerca:"",p:""};setNoteKo(a);
-                      alert("Difetto non trovato nell'elenco. Selezionalo dalla lista.");
-                    }
-                  }}/>
+                <input style={{...S.inp,borderColor:r.p?"#22c55e66":((r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))?"#ef4444":"#ef444466")}} placeholder="Cerca difetto..." value={r.cerca||r.p||""} onChange={e=>{const a=[...noteKo];a[i]={...a[i],cerca:e.target.value,p:""};setNoteKo(a);}}/>
                 {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
                     {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
@@ -551,6 +543,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                 <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#ef444466",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteKo];a[i]={...a[i],q:e.target.value};setNoteKo(a);}}/>
                 {noteKo.length>1&&<button onClick={()=>setNoteKo(noteKo.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
+              {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&<div style={{fontSize:11,color:"#ef4444",marginTop:2,fontWeight:600}}>⚠ Valore non valido — seleziona dall'elenco</div>}
             ))}
             <button onClick={()=>setNoteKo([...noteKo,{p:"",q:""}])} style={{fontSize:12,color:"#ef4444",background:"#ef444411",border:"1px solid #ef444466",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga KO</button>
           </div>
@@ -559,15 +552,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             {noteMigl.map((r,i)=>(
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
-                <input style={{...S.inp,borderColor:r.p?"#22c55e66":"#f59e0b66"}} placeholder="Cerca difetto..." value={r.cerca||r.p||""} 
-                  onChange={e=>{const a=[...noteMigl];a[i]={...a[i],cerca:e.target.value,p:""};setNoteMigl(a);}}
-                  onBlur={()=>{
-                    const val=(r.cerca||"").trim();
-                    if(val && !(difettiList||[]).find(d=>d.difetto===val)){
-                      const a=[...noteMigl];a[i]={...a[i],cerca:"",p:""};setNoteMigl(a);
-                      alert("Difetto non trovato nell'elenco. Selezionalo dalla lista.");
-                    }
-                  }}/>
+                <input style={{...S.inp,borderColor:r.p?"#22c55e66":((r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))?"#f59e0b":"#f59e0b66")}} placeholder="Cerca difetto..." value={r.cerca||r.p||""} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],cerca:e.target.value,p:""};setNoteMigl(a);}}/>
                 {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
                     {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
@@ -582,6 +567,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                 <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#f59e0b66",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],q:e.target.value};setNoteMigl(a);}}/>
                 {noteMigl.length>1&&<button onClick={()=>setNoteMigl(noteMigl.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#f59e0b",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
+              {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&<div style={{fontSize:11,color:"#f59e0b",marginTop:2,fontWeight:600}}>⚠ Valore non valido — seleziona dall'elenco</div>}
             ))}
             <button onClick={()=>setNoteMigl([...noteMigl,{p:"",q:""}])} style={{fontSize:12,color:"#f59e0b",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga Migliorabili</button>
           </div>
