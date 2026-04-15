@@ -1092,13 +1092,13 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         <span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>{fmtSafe(s.inizio)}</span>
-                        {editOrario&&<button onClick={()=>setModOrario({sess:s,campo:"inizio",valore:s.inizio?new Date(s.inizio).toISOString().slice(0,16):""})} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
+                        {editOrario&&<button onClick={()=>{ try{ const d=new Date(s.inizio); setModOrario({sess:s,campo:"inizio",valore:!isNaN(d)?d.toISOString().slice(0,16):""}); }catch(e){ setModOrario({sess:s,campo:"inizio",valore:""}); } }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
                       </div>
                     </td>
                     <td style={S.td}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         {s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}
-                        {editOrario&&<button onClick={()=>setModOrario({sess:s,campo:"fine",valore:s.fine?new Date(s.fine).toISOString().slice(0,16):""})} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
+                        {editOrario&&<button onClick={()=>{ try{ const d=new Date(s.fine); setModOrario({sess:s,campo:"fine",valore:!isNaN(d)?d.toISOString().slice(0,16):""}); }catch(e){ setModOrario({sess:s,campo:"fine",valore:""}); } }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
                       </div>
                     </td>
                     <td style={S.td}><span style={{background:"#ffffff",color:"#64748b",border:"1px solid #e2e8f0",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
