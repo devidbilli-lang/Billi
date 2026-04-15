@@ -89,7 +89,6 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
   const [operatori,setOperatori] = useState([]);
   const [skuList,setSkuList]     = useState([]);
   const [difettiList,setDifettiList] = useState([]);
-  const [difetti,setDifetti]     = useState([]);
   const [sync,setSync]           = useState("caricamento");
   const [ts,setTs]               = useState(null);
   const load = useCallback(async()=>{ setSync("caricamento");
@@ -97,14 +96,14 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
       if(d){ if(d.linee&&d.linee.length) setLinee(d.linee);
         if(d.operatori) setOperatori(d.operatori);
         if(d.skuList)   setSkuList(d.skuList);
-        if(d.difetti)  setDifettiList(d.difetti);
+        if(d.difetti)  setDifettiList(d.difetti||[]);
         if(d.difetti)   setDifetti(d.difetti);
         setSync("ok"); setTs(new Date()); } else setSync("errore"); } catch{ setSync("errore"); } },[]);
   useEffect(()=>{ load();
     const t = setInterval(load, 60000);
     return ()=>clearInterval(t);
   },[load]);
-  return { linee, operatori, skuList, sync, ts, reload:load };
+  return { linee, operatori, skuList, difettiList, sync, ts, reload:load };
 }
 function tappe(s) { const fine = s.fine ? new Date(s.fine) : now();
   const out  = [];
@@ -530,12 +529,12 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
                 <input style={{...S.inp,borderColor:"#ef444466"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteKo];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteKo(a);}}/>
-                {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
+                {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
-                    {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
+                    {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
                       <div key={di} onClick={()=>{const a=[...noteKo];a[i]={...a[i],p:d.difetto,cerca:""};setNoteKo(a);}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <span style={{fontSize:13,color:"#1e293b",fontWeight:600}}>{d.difetto}</span>
-                        {d.macroArea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroArea}</span>}
+                        {d.macroarea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroarea}</span>}
                       </div>
                     ))}
                   </div>
@@ -553,12 +552,12 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
                 <div style={{flex:3,position:"relative"}}>
                 <input style={{...S.inp,borderColor:"#f59e0b66"}} placeholder="Cerca difetto..." value={r.cerca!==undefined?r.cerca:r.p} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],cerca:e.target.value,p:e.target.value};setNoteMigl(a);}}/>
-                {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
+                {r.cerca&&difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).length>0&&(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
-                    {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroArea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
+                    {difettiList.filter(d=>d.difetto.toLowerCase().includes(r.cerca.toLowerCase())||d.macroarea.toLowerCase().includes(r.cerca.toLowerCase())).slice(0,8).map((d,di)=>(
                       <div key={di} onClick={()=>{const a=[...noteMigl];a[i]={...a[i],p:d.difetto,cerca:""};setNoteMigl(a);}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <span style={{fontSize:13,color:"#1e293b",fontWeight:600}}>{d.difetto}</span>
-                        {d.macroArea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroArea}</span>}
+                        {d.macroarea&&<span style={{fontSize:11,color:"#7c3aed",background:"#f3f0ff",border:"1px solid #c4b5fd",borderRadius:4,padding:"1px 6px"}}>{d.macroarea}</span>}
                       </div>
                     ))}
                   </div>
@@ -1206,7 +1205,7 @@ function App() { const [view,setView]             = useState("login");
   const [accesso,setAccesso]       = useState(null);
   const [dashSync,setDashSync]     = useState("caricamento");
   const [ultimoSync2,setUltimoSync2] = useState(null);
-  const { linee, operatori, skuList, sync, ts, reload } = useSheets();
+  const { linee, operatori, skuList, difettiList, sync, ts, reload } = useSheets();
   useEffect(()=>{
     if(sync==="ok" && accesso && accesso.ruolo==="linea" && linee.length>0){
       const lineaAggiornata = linee.find(l=>l.id===accesso.linea.id);
