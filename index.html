@@ -403,7 +403,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                 <td style={{padding:"10px 14px",textAlign:"center"}}>
                   <code style={S.sku}>{r.sku}</code>
                   {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:6,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</div>}
-                  {skuObj&&skuObj.collezione&&skuObj.collezione.trim()&&<div style={{fontSize:11,color:"#e879f9",fontWeight:700,marginTop:2}}>{skuObj.collezione.trim()}</div>}
+                  {skuObj&&skuObj.collezione&&skuObj.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",fontWeight:700,marginLeft:6,background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px"}}>{skuObj.collezione.trim()}</span>}
                 </td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#1e293b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ok||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ef4444",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>{r.ko||"-"}</td>
@@ -1154,9 +1154,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
-                    <td style={S.td}><code style={{...S.sku,background:"#ffffff"}}>{s.skuCorrente||s.sku||"-"}</code>
-                      {(()=>{const sk=skuList.find(x=>x.sku===(s.skuCorrente||s.sku));return sk&&sk.collezione&&sk.collezione.trim()?(<div style={{fontSize:11,color:"#e879f9",fontWeight:700,marginTop:3}}>{sk.collezione.trim()}</div>):null;})()}
-                      {s.rampaDal&&<span style={{fontSize:13,color:"#f59e0b",fontWeight:700,marginLeft:6}}>📈 {Math.min(15,Math.max(1,Math.floor((now()-s.rampaDal)/(1000*60*60*24))+1))}/15</span>}
+                    <td style={S.td}>
+                      {(()=>{const sk=skuList.find(x=>x.sku===(s.skuCorrente||s.sku)); return (
+                        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"1px solid #f59e0b44",borderRadius:4,padding:"3px 8px",flexWrap:"wrap",justifyContent:"center"}}>
+                          <code style={{...S.sku,background:"transparent",border:"none",padding:0}}>{s.skuCorrente||s.sku||"-"}</code>
+                          {sk&&sk.collezione&&sk.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:3,padding:"1px 5px"}}>{sk.collezione.trim()}</span>}
+                        </div>
+                      );})()}
+                      {s.rampaDal&&<div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {Math.min(15,Math.max(1,Math.floor((now()-s.rampaDal)/(1000*60*60*24))+1))}/15</div>}
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}>
