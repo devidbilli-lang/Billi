@@ -1035,6 +1035,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         setMod(null);
         if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
       }} onClose={()=>setMod(null)}/>}
+      {modalConferma&&<ModalConferma titolo={modalConferma.titolo} messaggio={modalConferma.messaggio} colorBtn={modalConferma.colorBtn||"ef4444"} testoBtn={modalConferma.testoBtn||"Conferma"} onConferma={modalConferma.onOk} onAnnulla={()=>setModalConferma(null)}/>}
       {modOrario&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
@@ -1054,13 +1055,13 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             }}>Salva</button>
             <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>{setModOrario(null);setSalvaOrarioErr("");}}>← Annulla</button>
             <button style={{width:"100%",padding:10,background:"#ef444411",border:"1px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700,marginTop:8}} onClick={async()=>{
-              console.log("Elimina sessione id:", modOrario.sess.id, "oggetto:", modOrario.sess);
-              if(!confirm("Eliminare definitivamente questa sessione di "+modOrario.sess.nome+" "+modOrario.sess.cognome+"?")) return;
-              try{
-                await fetchConRetry(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),5,1000);
-                setModOrario(null);setSalvaOrarioErr("");
-                if(onAggiornaSessioni) onAggiornaSessioni();
-              }catch(e){setSalvaOrarioErr("Errore eliminazione.");}
+              setModOrario(null);
+              setModalConferma({
+                titolo:"Elimina sessione",
+                messaggio:"Eliminare definitivamente la sessione di "+modOrario.sess.nome+" "+modOrario.sess.cognome+"?",
+                colorBtn:"ef4444", testoBtn:"🗑 Elimina",
+                onOk:async()=>{ setModalConferma(null); try{ await fetchConRetry(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),5,1000); setSalvaOrarioErr(""); if(onAggiornaSessioni) onAggiornaSessioni(); }catch(e){ setSalvaOrarioErr("Errore eliminazione."); } }
+              });
             }}>🗑 Elimina sessione</button>
           </div>
         </div>
@@ -1146,13 +1147,13 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
-                  if(!confirm("Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?")) return;
-                  (async () => {
-                    for (const s of attiveLinea) {
-                      await api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
-                    }
-                    if(onAggiornaSessioni) setTimeout(onAggiornaSessioni, 3000);
-                  })(); }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
+                  setModalConferma({
+                    titolo:"Fine tutti i turni",
+                    messaggio:"Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?",
+                    colorBtn:"ef4444", testoBtn:"✕ Chiudi tutti",
+                    onOk:()=>{ setModalConferma(null); (async()=>{ for(const s of attiveLinea){ await api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); } if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); })(); }
+                  });
+                }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
                   Fine tutti
                 </button>
               )}
