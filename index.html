@@ -1011,6 +1011,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   const [modOrario, setModOrario] = React.useState(null); // {sess, campo:'inizio'|'fine', valore}
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
+  const [modalConferma, setModalConferma] = React.useState(null);
   const [fL,setFL]        = useState("ALL");
   const [fS,setFS]        = useState("ALL");
   const [srch,setSrch]    = useState("");
