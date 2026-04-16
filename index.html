@@ -283,6 +283,21 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
     </div>
   );
 }
+function ModalConferma({ titolo, messaggio, onConferma, onAnnulla, colorBtn="ef4444", testoBtn="Conferma" }) {
+  return (
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
+      <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
+        <div style={{fontSize:18,fontWeight:800,color:"#1e293b",marginBottom:12}}>{titolo}</div>
+        <div style={{fontSize:14,color:"#475569",marginBottom:24,lineHeight:1.6}}>{messaggio}</div>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{flex:1,padding:"11px 0",background:"#"+colorBtn,border:"none",borderRadius:8,color:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700}} onClick={onConferma}>{testoBtn}</button>
+          <button style={{flex:1,padding:"11px 0",background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700}} onClick={onAnnulla}>Annulla</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function aggiungiGiorniLavorativi(dataInizio, giorni) {
   var d = new Date(dataInizio);
   var aggiunti = 0;
