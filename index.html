@@ -475,23 +475,53 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     if(!sku){ setErr("Seleziona uno SKU."); return; }
     if(ok===""&&ko===""&&migl===""){ setErr("Inserisci almeno un valore."); return; }
     const _dv=(difettiList||[]).map(d=>d.difetto);
-    // Blocca se ci sono righe con campo compilato ma difetto non valido O campo vuoto ma quantità inserita
-    const _koErr = noteKo.some(r=>{
-      const val=(r.cerca||r.p||"").trim();
-      const qty=(r.q||"").trim();
-      if(!val && qty) return true; // quantità senza difetto
-      if(val && !_dv.includes(val)) return true; // difetto non nell'elenco
-      return false;
-    });
-    const _miErr = noteMigl.some(r=>{
-      const val=(r.cerca||r.p||"").trim();
-      const qty=(r.q||"").trim();
-      if(!val && qty) return true;
-      if(val && !_dv.includes(val)) return true;
-      return false;
-    });
-    if(_koErr){ setErr("❌ Note KO: seleziona un difetto dall'elenco per ogni riga compilata."); return; }
-    if(_miErr){ setErr("❌ Note Migliorabili: seleziona un difetto dall'elenco per ogni riga compilata."); return; }
+    const _koVal = Number(ko)||0;
+    const _miVal = Number(migl)||0;
+
+    // Validazione Note KO: obbligatorie solo se KO > 0
+    if(_koVal > 0) {
+      const _koRigheCompilate = noteKo.filter(r=>(r.cerca||r.p||"").trim()||(r.q||"").trim());
+      // Se KO > 0 ci deve essere almeno una nota
+      if(_koRigheCompilate.length === 0){ setErr("❌ Hai inserito Borse KO ma non hai compilato le Note KO."); return; }
+      // Ogni riga compilata deve avere sia difetto che quantità validi
+      for(var ki=0;ki<noteKo.length;ki++){
+        const val=(noteKo[ki].cerca||noteKo[ki].p||"").trim();
+        const qty=(noteKo[ki].q||"").trim();
+        if(val && !qty){ setErr("❌ Note KO riga "+(ki+1)+": inserisci la quantità."); return; }
+        if(qty && !val){ setErr("❌ Note KO riga "+(ki+1)+": seleziona il difetto dall'elenco."); return; }
+        if(val && !_dv.includes(val)){ setErr("❌ Note KO riga "+(ki+1)+": difetto non valido, seleziona dall'elenco."); return; }
+      }
+    } else {
+      // KO = 0: le note non sono obbligatorie ma se compilate devono essere valide
+      for(var ki2=0;ki2<noteKo.length;ki2++){
+        const val=(noteKo[ki2].cerca||noteKo[ki2].p||"").trim();
+        const qty=(noteKo[ki2].q||"").trim();
+        if(val && !_dv.includes(val)){ setErr("❌ Note KO riga "+(ki2+1)+": difetto non valido."); return; }
+        if(val && !qty){ setErr("❌ Note KO riga "+(ki2+1)+": inserisci la quantità."); return; }
+        if(qty && !val){ setErr("❌ Note KO riga "+(ki2+1)+": seleziona il difetto dall'elenco."); return; }
+      }
+    }
+
+    // Validazione Note Migliorabili: obbligatorie solo se Migliorabili > 0
+    if(_miVal > 0) {
+      const _miRigheCompilate = noteMigl.filter(r=>(r.cerca||r.p||"").trim()||(r.q||"").trim());
+      if(_miRigheCompilate.length === 0){ setErr("❌ Hai inserito Borse Migliorabili ma non hai compilato le Note Migliorabili."); return; }
+      for(var mi=0;mi<noteMigl.length;mi++){
+        const val=(noteMigl[mi].cerca||noteMigl[mi].p||"").trim();
+        const qty=(noteMigl[mi].q||"").trim();
+        if(val && !qty){ setErr("❌ Note Migliorabili riga "+(mi+1)+": inserisci la quantità."); return; }
+        if(qty && !val){ setErr("❌ Note Migliorabili riga "+(mi+1)+": seleziona il difetto dall'elenco."); return; }
+        if(val && !_dv.includes(val)){ setErr("❌ Note Migliorabili riga "+(mi+1)+": difetto non valido, seleziona dall'elenco."); return; }
+      }
+    } else {
+      for(var mi2=0;mi2<noteMigl.length;mi2++){
+        const val=(noteMigl[mi2].cerca||noteMigl[mi2].p||"").trim();
+        const qty=(noteMigl[mi2].q||"").trim();
+        if(val && !_dv.includes(val)){ setErr("❌ Note Migliorabili riga "+(mi2+1)+": difetto non valido."); return; }
+        if(val && !qty){ setErr("❌ Note Migliorabili riga "+(mi2+1)+": inserisci la quantità."); return; }
+        if(qty && !val){ setErr("❌ Note Migliorabili riga "+(mi2+1)+": seleziona il difetto dall'elenco."); return; }
+      }
+    }
     if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
     setErr("");
     const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
