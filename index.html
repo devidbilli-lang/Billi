@@ -475,7 +475,23 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     if(!sku){ setErr("Seleziona uno SKU."); return; }
     if(ok===""&&ko===""&&migl===""){ setErr("Inserisci almeno un valore."); return; }
     const _dv=(difettiList||[]).map(d=>d.difetto);
-    if(noteKo.some(r=>(r.cerca||r.p)&&!_dv.includes(r.cerca||r.p))||noteMigl.some(r=>(r.cerca||r.p)&&!_dv.includes(r.cerca||r.p))){ setErr("❌ Correggi i valori non validi prima di salvare."); return; }
+    // Blocca se ci sono righe con campo compilato ma difetto non valido O campo vuoto ma quantità inserita
+    const _koErr = noteKo.some(r=>{
+      const val=(r.cerca||r.p||"").trim();
+      const qty=(r.q||"").trim();
+      if(!val && qty) return true; // quantità senza difetto
+      if(val && !_dv.includes(val)) return true; // difetto non nell'elenco
+      return false;
+    });
+    const _miErr = noteMigl.some(r=>{
+      const val=(r.cerca||r.p||"").trim();
+      const qty=(r.q||"").trim();
+      if(!val && qty) return true;
+      if(val && !_dv.includes(val)) return true;
+      return false;
+    });
+    if(_koErr){ setErr("❌ Note KO: seleziona un difetto dall'elenco per ogni riga compilata."); return; }
+    if(_miErr){ setErr("❌ Note Migliorabili: seleziona un difetto dall'elenco per ogni riga compilata."); return; }
     if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
     setErr("");
     const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
