@@ -1139,20 +1139,30 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               </>)}
               {step==="sku"&&(<>
                 <div style={{fontSize:13,color:"#475569",marginBottom:12}}>Seleziona lo <strong>SKU</strong> su cui lavoreranno gli operatori trasferiti su <strong>{modTrasf.lineaDest.id}</strong></div>
-                <div style={{position:"relative",marginBottom:10}}>
-                  <input type="text" autoFocus placeholder="Cerca SKU..." style={{...S.inp,fontSize:13}} value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value,skuNuovo:""})}/>
-                  {modTrasf.cercaSku&&skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).length>0&&(
-                    <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
-                      {skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).slice(0,8).map((s,i)=>(
-                        <div key={i} onClick={()=>setModTrasf({...modTrasf,skuNuovo:s.sku,cercaSku:s.sku})} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                          <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.sku}</span>
-                          <span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}{s.collezione?" · "+s.collezione:""}</span>
-                        </div>
-                      ))}
+                {(()=>{
+                  const skuSelObj = modTrasf.skuNuovo ? skuList.find(s=>s.sku===modTrasf.skuNuovo) : null;
+                  return modTrasf.skuNuovo ? (
+                    <div style={{background:"#f59e0b11",border:"2px solid #f59e0b66",borderRadius:10,padding:"12px 14px",marginBottom:12,cursor:"pointer"}} onClick={()=>setModTrasf({...modTrasf,skuNuovo:"",cercaSku:""})}>
+                      <div style={{fontSize:13,fontWeight:800,color:"#f59e0b"}}>{modTrasf.skuNuovo}</div>
+                      {skuSelObj&&skuSelObj.descrizione&&<div style={{fontSize:12,color:"#f59e0b",marginTop:3}}>{skuSelObj.descrizione}{skuSelObj.collezione&&skuSelObj.collezione.trim()&&<span style={{marginLeft:8,background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",color:"#e879f9",fontWeight:700}}>{skuSelObj.collezione}</span>}</div>}
+                      <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>Tocca per cambiare</div>
                     </div>
-                  )}
-                </div>
-                {modTrasf.skuNuovo&&<div style={{background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:13,fontWeight:700,color:"#f59e0b"}}>✓ SKU: {modTrasf.skuNuovo}</div>}
+                  ) : (
+                    <div style={{position:"relative",marginBottom:10}}>
+                      <input type="text" autoFocus placeholder="Cerca SKU..." style={{...S.inp,fontSize:13}} value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value,skuNuovo:""})}/>
+                      {modTrasf.cercaSku&&skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).length>0&&(
+                        <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                          {skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).slice(0,8).map((s,i)=>(
+                            <div key={i} onClick={()=>setModTrasf({...modTrasf,skuNuovo:s.sku,cercaSku:s.sku})} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                              <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.sku}</span>
+                              <span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}{s.collezione&&<span style={{color:"#e879f9",fontWeight:700,marginLeft:4}}>{s.collezione}</span>}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {modTrasf.skuNuovo&&(
                   <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
                     onClick={()=>setModTrasf({...modTrasf,step:"pwd",pwd:"",errPwd:""})}>
