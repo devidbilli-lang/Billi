@@ -385,11 +385,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
         const hh = now.getHours(); const mm = now.getMinutes();
         const minDaInizio = (hh*60+mm) < 360 ? 0 : Math.min(480, (hh*60+mm) - 360); // dalle 6:00
         const percTempo = Math.min(100, Math.round(minDaInizio/480*100));
-        // Se borse% >= tempo% siamo in vantaggio (verde), altrimenti in ritardo (rosso)
-        const ritardo = percBorse < percTempo;
+        // Obiettivo borse all'ora attuale del turno
+        const oreTrascorse = minDaInizio / 60;
+        const obiettivoOraAttuale = ob60 * oreTrascorse;
+        // Delta: quante borse sono avanti/indietro rispetto all'obiettivo ora
+        const deltaB = borse - obiettivoOraAttuale;
+        const ritardo = deltaB < 0;
+        // Colore basato su quanto si è in ritardo rispetto all'obiettivo orario
+        // verde se in pari o avanti, scala verso rosso
+        const pctRitardo = obiettivoOraAttuale > 0 ? Math.abs(deltaB) / ob60 * 100 : 0;
+        const colore = !ritardo ? "#22c55e" : pctRitardo <= 10 ? "#84cc16" : pctRitardo <= 25 ? "#f59e0b" : pctRitardo <= 50 ? "#f97316" : "#ef4444";
         const delta = percTempo - percBorse;
-        // Colore graduale: verde -> giallo -> rosso
-        const colore = delta <= 0 ? "#22c55e" : delta <= 10 ? "#84cc16" : delta <= 20 ? "#f59e0b" : delta <= 35 ? "#f97316" : "#ef4444";
         return (
           <div style={{marginTop:20,padding:"0 4px"}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,alignItems:"center"}}>
