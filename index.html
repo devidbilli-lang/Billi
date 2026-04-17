@@ -381,6 +381,51 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
           </div>
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
+
+      {/* Barra progresso 8 ore */}
+      {ob60!==null&&(()=>{
+        const ob8ore = ob60 * 8;
+        const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
+        // Calcola ora attuale nel turno (assumiamo turno da 06:00 o da inizio primo operatore)
+        const now = new Date();
+        const hh = now.getHours(); const mm = now.getMinutes();
+        const minDaInizio = (hh*60+mm) < 360 ? 0 : Math.min(480, (hh*60+mm) - 360); // dalle 6:00
+        const percTempo = Math.min(100, Math.round(minDaInizio/480*100));
+        // Se borse% >= tempo% siamo in vantaggio (verde), altrimenti in ritardo (rosso)
+        const ritardo = percBorse < percTempo;
+        const delta = percTempo - percBorse;
+        // Colore graduale: verde -> giallo -> rosso
+        const colore = delta <= 0 ? "#22c55e" : delta <= 10 ? "#84cc16" : delta <= 20 ? "#f59e0b" : delta <= 35 ? "#f97316" : "#ef4444";
+        return (
+          <div style={{marginTop:20,padding:"0 4px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,alignItems:"center"}}>
+              <span style={{fontSize:11,fontWeight:700,color:"#64748b"}}>Avanzamento turno (8h)</span>
+              <span style={{fontSize:12,fontWeight:800,color:colore}}>{percBorse}% prodotto {ritardo?<span style={{color:"#ef4444"}}>· -{delta}% rispetto al target</span>:<span style={{color:"#22c55e"}}>· in linea ✓</span>}</span>
+            </div>
+            {/* Barra target (grigia) */}
+            <div style={{position:"relative",height:22,background:"#f1f5f9",borderRadius:11,overflow:"hidden"}}>
+              {/* Indicatore tempo trascorso */}
+              <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo+"%",background:"#e2e8f0",borderRadius:11,transition:"width 1s ease"}}/>
+              {/* Barra borse prodotte */}
+              <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:11,transition:"width 1s ease",backgroundImage:"repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.15) 12px,rgba(255,255,255,0.15) 14px)"}}>
+              </div>
+              {/* Indicatore tempo */}
+              <div style={{position:"absolute",top:0,left:percTempo+"%",height:"100%",width:2,background:"#475569",transform:"translateX(-1px)"}}/>
+              <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{fontSize:10,fontWeight:800,color:"#ffffff",textShadow:"0 1px 2px rgba(0,0,0,0.4)"}}>{borse} / {ob8ore} borse</span>
+              </div>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
+              <span style={{fontSize:9,color:"#94a3b8"}}>06:00</span>
+              <span style={{fontSize:9,color:"#475569",fontWeight:600}}>⬆ ora</span>
+              <span style={{fontSize:9,color:"#94a3b8"}}>14:00</span>
+            </div>
+            <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:4}}>
+              Obiettivo 8h: {ob8ore} borse · Prodotte: {borse} · Rimanenti: {Math.max(0,ob8ore-borse)}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
