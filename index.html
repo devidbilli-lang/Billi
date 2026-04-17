@@ -1290,7 +1290,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             <div style={{fontSize:13,color:"#1e293b",marginTop:4,fontWeight:600}}>{l}</div>
           </div>
         ))}
-        {linee.map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
+        {linee.filter(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length; if(lineaFiltro) return l.id===lineaFiltro.id; if(isAdmin) return nAtt>0; return true; }).map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
           return (
             <div key={l.id} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"1px solid #e2e8f0",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative",display:"flex",flexDirection:"column"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
