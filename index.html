@@ -320,7 +320,7 @@ function GaugeEfficienza({ valore, label, size=160 }) {
   );
 }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
+function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLinea }) {
   const [tick, setTick] = React.useState(0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
@@ -346,17 +346,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
     <div style={{padding:"16px 12px",display:"flex",flexDirection:"column",flex:1}}>
       {/* Info linea - stessa larghezza delle 3 card principali */}
       <div style={{display:"flex",gap:12,marginBottom:20}}>
-        <div style={{flex:1,background:"linear-gradient(135deg,#0284c7,#0369a1)",borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:"0 4px 16px rgba(2,132,199,0.2)"}}>
+        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>OPERATORI</div>
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{nOp}</div>
           <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>attivi</div>
         </div>
-        <div style={{flex:2,background:"linear-gradient(135deg,#f59e0b,#d97706)",borderRadius:16,padding:"10px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(245,158,11,0.2)"}}>
+        <div style={{flex:2,background:`linear-gradient(135deg,${coloreLinea}dd,${coloreLinea}99)`,borderRadius:16,padding:"10px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>SKU</div>
           <div style={{fontSize:22,fontWeight:900,color:"#ffffff",lineHeight:1.2,wordBreak:"break-word"}}>{skuPiu||"—"}</div>
           <div style={{fontSize:16,color:"rgba(255,255,255,0.95)",marginTop:4,fontWeight:700}}>{skuObj?.descrizione||""}</div>
         </div>
-        <div style={{flex:1,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:"0 4px 16px rgba(124,58,237,0.2)"}}>
+        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea}bb,${coloreLinea}88)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>TAKT TIME</div>
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc||"—"}</div>
           <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>min/borsa</div>
@@ -367,7 +367,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
       {ob60!==null?(
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           {/* Obiettivo 1 ora */}
-          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(124,58,237,0.3)"}}>
+          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#64748b,#475569)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(71,85,105,0.3)"}}>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO 1 ORA</div>
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60}</div>
             <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>borse</div>
@@ -379,7 +379,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
             <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>borse</div>
           </div>
           {/* Obiettivo giornaliero */}
-          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#0f172a,#1e293b)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.2)"}}>
+          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#1d4ed8,#1e40af)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(29,78,216,0.3)"}}>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO 8H</div>
             <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60*8}</div>
             <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>pcs</div>
@@ -486,6 +486,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList })
                   lineaId={l.id}
                   skuList={skuList||[]}
                   borseOggi={d.borseOggi||0}
+                coloreLinea={l.colore||"#7c3aed"}
                 />
               </div>
             </div>
