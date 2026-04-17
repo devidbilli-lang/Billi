@@ -438,7 +438,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
                     <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
                       <div style={{width:1,height:4,background:"#94a3b8"}}/>
                       <span style={{fontSize:12,color:"#7c3aed",fontWeight:700,whiteSpace:"nowrap"}}>{String(ora).padStart(2,"0")}:00</span>
-                      {isOra&&<span style={{fontSize:12,color:"#7c3aed",fontWeight:800}}>{borseTarget} pcs</span>}
+                      {isOra&&<span style={{fontSize:12,color:"#1a1a00",fontWeight:900,background:"#ffff00",borderRadius:4,padding:"1px 5px"}}>{borseTarget} pcs</span>}
                     </div>
                   );
                 })}
