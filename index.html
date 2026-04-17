@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3tMlvJkqLNU4si2J_Mlf3aIr72_DySAgRwR0jGIlZdxFyO5fvO_AcxTznh-erH6TNug/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_beW0EGoXUuJ1Wc1yXK1FBvP2B1X3snplHTsNcX3ge8uWxCG-u99n0Xh3y6CJNjwW/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -292,6 +292,88 @@ function ModalConferma({ titolo, messaggio, onConferma, onAnnulla, colorBtn="ef4
         <div style={{display:"flex",gap:10}}>
           <button style={{flex:1,padding:"11px 0",background:"#"+colorBtn,border:"none",borderRadius:8,color:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700}} onClick={onConferma}>{testoBtn}</button>
           <button style={{flex:1,padding:"11px 0",background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700}} onClick={onAnnulla}>Annulla</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GaugeEfficienza({ valore, label, size=160 }) {
+  const v = valore !== null ? Math.min(100, Math.max(0, valore)) : null;
+  const colore = v === null ? "#cbd5e1" : v >= 80 ? "#22c55e" : v >= 60 ? "#f59e0b" : "#ef4444";
+  const r = (size/2) - 18;
+  const circ = 2 * Math.PI * r;
+  const dash = v !== null ? (v/100)*circ : 0;
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+      <svg width={size} height={size} viewBox={"0 0 "+size+" "+size}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={14}/>
+        {v !== null && <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={colore} strokeWidth={14}
+          strokeDasharray={dash+" "+(circ-dash)} strokeDashoffset={circ/4}
+          strokeLinecap="round" style={{transition:"stroke-dasharray 0.8s ease"}}/>}
+        <text x={size/2} y={size/2+6} textAnchor="middle" fontSize={v!==null?28:18} fontWeight={800} fill={colore} fontFamily="Montserrat,sans-serif">
+          {v !== null ? v+"%" : "—"}
+        </text>
+      </svg>
+      <div style={{fontSize:13,fontWeight:700,color:"#475569",fontFamily:"'Montserrat',sans-serif"}}>{label}</div>
+    </div>
+  );
+}
+
+function TabProduzione({ dati, skuList }) {
+  if (!dati) return (
+    <div style={{textAlign:"center",padding:60,color:"#64748b"}}>
+      <div style={{fontSize:32,marginBottom:12}}>🏭</div>
+      <div style={{fontSize:14,fontWeight:600}}>Caricamento dati produzione...</div>
+    </div>
+  );
+  const { settimana, oggi } = dati;
+  const giorniLabel = ["Lun","Mar","Mer","Gio","Ven"];
+  const maxEff = Math.max(100, ...settimana.map(g=>g.efficienza||0));
+  return (
+    <div style={{padding:"0 0 24px"}}>
+      {/* Gauge efficienza oggi */}
+      <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"24px 20px",marginBottom:12,textAlign:"center"}}>
+        <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#7c3aed",marginBottom:16,fontWeight:700}}>📊 Efficienza Oggi</div>
+        <div style={{display:"flex",justifyContent:"center",gap:32,flexWrap:"wrap"}}>
+          <GaugeEfficienza valore={oggi.efficienza} label="Efficienza" size={160}/>
+          <div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:12}}>
+            <div style={{background:"#f8fafc",borderRadius:8,padding:"10px 18px",textAlign:"left"}}>
+              <div style={{fontSize:11,color:"#64748b",fontWeight:600}}>Min. Lavorati</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#1e293b"}}>{oggi.minLavorati||0}'</div>
+            </div>
+            <div style={{background:"#f8fafc",borderRadius:8,padding:"10px 18px",textAlign:"left"}}>
+              <div style={{fontSize:11,color:"#64748b",fontWeight:600}}>Min. Prodotti (borse×TC)</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#7c3aed"}}>{oggi.minProdotti||0}'</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Istogramma settimana */}
+      <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"24px 20px"}}>
+        <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#7c3aed",marginBottom:16,fontWeight:700}}>📈 Efficienza Settimana</div>
+        <div style={{display:"flex",alignItems:"flex-end",gap:10,height:160,padding:"0 8px"}}>
+          {settimana.map((g,i)=>{
+            const eff = g.efficienza;
+            const h = eff !== null ? Math.max(4, Math.round(eff/maxEff*140)) : 4;
+            const colore = eff === null ? "#e2e8f0" : eff >= 80 ? "#22c55e" : eff >= 60 ? "#f59e0b" : "#ef4444";
+            const isOggi = g.giorno === (settimana.find(x=>x.efficienza!==null)||{}).giorno;
+            return (
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                <div style={{fontSize:11,fontWeight:700,color:colore}}>{eff!==null?eff+"%":""}</div>
+                <div style={{width:"100%",height:h,background:colore,borderRadius:"4px 4px 0 0",transition:"height 0.6s ease",minHeight:4}}/>
+                <div style={{fontSize:11,fontWeight:700,color:"#475569"}}>{giorniLabel[i]}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",gap:12,marginTop:16,justifyContent:"center",flexWrap:"wrap"}}>
+          {[["#22c55e","≥ 80%"],["#f59e0b","60-79%"],["#ef4444","< 60%"],["#e2e8f0","No dati"]].map(([c,l])=>(
+            <div key={l} style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:12,height:12,borderRadius:2,background:c}}/>
+              <span style={{fontSize:11,color:"#64748b"}}>{l}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -1039,7 +1121,8 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   );
 }
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
-  const [modOrario, setModOrario] = React.useState(null); // {sess, campo:'inizio'|'fine', valore}
+  const [modOrario, setModOrario] = React.useState(null);
+  const [datiProd, setDatiProd] = React.useState(null); // {sess, campo:'inizio'|'fine', valore}
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
   const [modalConferma, setModalConferma] = React.useState(null);
   const [fL,setFL]        = useState("ALL");
@@ -1320,8 +1403,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           ); })}
       </div>
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
-        {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"]].map(([t,l])=>(
-          <button key={t} onClick={()=>setTab(t)} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#e2e8f0"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#475569"}}>{l}</button>
+        {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"],["produzione","🏭 Produzione"]].map(([t,l])=>(
+          <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok) setDatiProd(j.data.dati); }).catch(()=>{}); } }} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#e2e8f0"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#475569"}}>{l}</button>
         ))}
       </div>
       {tab==="sessioni"&&(
@@ -1401,6 +1484,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
+      {tab==="produzione"&&<div style={{margin:"0 24px"}}><TabProduzione dati={datiProd} skuList={skuList}/></div>}
       <div style={{height:40}}/>
     </div>
   );
