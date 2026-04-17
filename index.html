@@ -1295,25 +1295,27 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             <div key={l.id} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"1px solid #e2e8f0",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
               <div style={{fontSize:13,color:l.colore,marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
-              {nAtt>0&&(
-                <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
-                  if(attiveLinea.length===0) return;
-                  setModalConferma({
-                    titolo:"Fine tutti i turni",
-                    messaggio:"Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?",
-                    colorBtn:"ef4444", testoBtn:"✕ Chiudi tutti",
-                    onOk:()=>{ setModalConferma(null); (async()=>{ for(const s of attiveLinea){ await api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); } if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); })(); }
-                  });
-                }} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>
-                  Fine tutti
-                </button>
-              )}
-              <button onClick={()=>setModTrasf({lineaDest:l})} style={{fontSize:11,fontWeight:700,padding:"4px 8px",background:"#a855f711",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>↔ Trasf.</button>
-              {(!lineaFiltro || lineaFiltro.id === l.id) && (
-                <button onClick={()=>setModNoteLinea({linea:l, nota:""})} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>
-                  📝 Note
-                </button>
-              )}
+              <div style={{display:"flex",gap:4,marginTop:6}}>
+                {nAtt>0&&(
+                  <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
+                    if(attiveLinea.length===0) return;
+                    setModalConferma({
+                      titolo:"Fine tutti i turni",
+                      messaggio:"Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?",
+                      colorBtn:"ef4444", testoBtn:"✕ Chiudi tutti",
+                      onOk:()=>{ setModalConferma(null); (async()=>{ for(const s of attiveLinea){ await api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); } if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); })(); }
+                    });
+                  }} style={{flex:1,fontSize:11,fontWeight:700,padding:"6px 4px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>
+                    ✕ Fine tutti
+                  </button>
+                )}
+                <button onClick={()=>setModTrasf({lineaDest:l})} style={{flex:1,fontSize:11,fontWeight:700,padding:"6px 4px",background:"#a855f711",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>↔ Trasf.</button>
+                {(!lineaFiltro || lineaFiltro.id === l.id) && (
+                  <button onClick={()=>setModNoteLinea({linea:l, nota:""})} style={{flex:1,fontSize:11,fontWeight:700,padding:"6px 4px",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>
+                    📝 Note
+                  </button>
+                )}
+              </div>
             </div>
           ); })}
       </div>
