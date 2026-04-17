@@ -1130,47 +1130,79 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 </div>
                 {(modTrasf.opSelezionati||[]).length>0&&(
                   <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
-                    onClick={()=>setModTrasf({...modTrasf,step:"pwd",pwd:"",errPwd:""})}>
+                    onClick={()=>setModTrasf({...modTrasf,step:"sku",skuNuovo:"",cercaSku:""})}>
                     Avanti → ({(modTrasf.opSelezionati||[]).length} operatori)
                   </button>
                 )}
                 <button style={{width:"100%",padding:10,background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}
                   onClick={()=>setModTrasf(null)}>← Annulla</button>
               </>)}
-              {step==="pwd"&&(<>
-                <div style={{fontSize:13,color:"#475569",marginBottom:12}}>Inserisci la password di <strong>{modTrasf.lineaDest.id}</strong> per confermare il trasferimento</div>
-                <input type="password" autoFocus style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:8,borderColor:"#a855f7",borderWidth:2}}
-                  placeholder="••••••••" value={modTrasf.pwd||""}
-                  onChange={e=>setModTrasf({...modTrasf,pwd:e.target.value,errPwd:""})}
-                  onKeyDown={async e=>{if(e.key==="Enter"){
-                    const lObj=linee.find(l=>l.id===modTrasf.lineaDest.id);
-                    if(modTrasf.pwd===lObj?.password||modTrasf.pwd===ADMIN_PWD){
-                      const ops=(modTrasf.opSelezionati||[]).map(id=>sessioni.find(s=>s.id===id)).filter(Boolean);
-                      for(const s of ops){
-                        await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku||"",tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:s.skuCorrente||s.sku||"",skuA:s.skuCorrente||s.sku||""});
-                        if(onTr) onTr(s.id,modTrasf.lineaDest.id,s.skuCorrente||s.sku);
-                      }
-                      setModTrasf(null);
-                      if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
-                    } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
-                  }}}/>
-                {modTrasf.errPwd&&<div style={{...S.err,marginBottom:8}}>{modTrasf.errPwd}</div>}
-                <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
-                  onClick={async()=>{
-                    const lObj=linee.find(l=>l.id===modTrasf.lineaDest.id);
-                    if(modTrasf.pwd===lObj?.password||modTrasf.pwd===ADMIN_PWD){
-                      const ops=(modTrasf.opSelezionati||[]).map(id=>sessioni.find(s=>s.id===id)).filter(Boolean);
-                      for(const s of ops){
-                        await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku||"",tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:s.skuCorrente||s.sku||"",skuA:s.skuCorrente||s.sku||""});
-                        if(onTr) onTr(s.id,modTrasf.lineaDest.id,s.skuCorrente||s.sku);
-                      }
-                      setModTrasf(null);
-                      if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
-                    } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
-                  }}>↔ Conferma Trasferimento</button>
+              {step==="sku"&&(<>
+                <div style={{fontSize:13,color:"#475569",marginBottom:12}}>Seleziona lo <strong>SKU</strong> su cui lavoreranno gli operatori trasferiti su <strong>{modTrasf.lineaDest.id}</strong></div>
+                <div style={{position:"relative",marginBottom:10}}>
+                  <input type="text" autoFocus placeholder="Cerca SKU..." style={{...S.inp,fontSize:13}} value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value,skuNuovo:""})}/>
+                  {modTrasf.cercaSku&&skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).length>0&&(
+                    <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                      {skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).slice(0,8).map((s,i)=>(
+                        <div key={i} onClick={()=>setModTrasf({...modTrasf,skuNuovo:s.sku,cercaSku:s.sku})} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.sku}</span>
+                          <span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}{s.collezione?" · "+s.collezione:""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {modTrasf.skuNuovo&&<div style={{background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:13,fontWeight:700,color:"#f59e0b"}}>✓ SKU: {modTrasf.skuNuovo}</div>}
+                {modTrasf.skuNuovo&&(
+                  <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
+                    onClick={()=>setModTrasf({...modTrasf,step:"pwd",pwd:"",errPwd:""})}>
+                    Avanti → Conferma password
+                  </button>
+                )}
                 <button style={{width:"100%",padding:10,background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}
-                  onClick={()=>setModTrasf({...modTrasf,step:"selOp",pwd:"",errPwd:""})}>← Indietro</button>
+                  onClick={()=>setModTrasf({...modTrasf,step:"selOp"})}>← Indietro</button>
               </>)}
+              {step==="pwd"&&(()=>{
+                const lDestObj = linee.find(l=>l.id===modTrasf.lineaDest.id);
+                const coloreLinea = lDestObj?.colore||"#a855f7";
+                const eseguiTrasf = async () => {
+                  const ops=(modTrasf.opSelezionati||[]).map(id=>sessioni.find(s=>s.id===id)).filter(Boolean);
+                  for(const s of ops){
+                    const skuDestinazione=modTrasf.skuNuovo||s.skuCorrente||s.sku||"";
+                    await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuDestinazione,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:s.skuCorrente||s.sku||"",skuA:skuDestinazione});
+                    if(onTr) onTr(s.id,modTrasf.lineaDest.id,skuDestinazione);
+                  }
+                  setModTrasf(null);
+                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+                };
+                return (<>
+                  <div style={{background:coloreLinea+"22",border:"1px solid "+coloreLinea+"66",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:14,height:14,borderRadius:"50%",background:coloreLinea,flexShrink:0}}/>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:800,color:coloreLinea}}>{modTrasf.lineaDest.id}</div>
+                      {lDestObj&&<div style={{fontSize:11,color:"#64748b"}}>{lDestObj.nome}</div>}
+                    </div>
+                  </div>
+                  <div style={{fontSize:13,color:"#475569",marginBottom:10}}>Inserisci la password per confermare il trasferimento</div>
+                  <input type="password" autoFocus style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:8,borderColor:coloreLinea,borderWidth:2,background:coloreLinea+"11"}}
+                    placeholder="••••••••" value={modTrasf.pwd||""}
+                    onChange={e=>setModTrasf({...modTrasf,pwd:e.target.value,errPwd:""})}
+                    onKeyDown={e=>{if(e.key==="Enter"){
+                      if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
+                        setModalConferma({titolo:"Conferma trasferimento",messaggio:(modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · SKU: "+modTrasf.skuNuovo:""),colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:eseguiTrasf});
+                      } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
+                    }}}/>
+                  {modTrasf.errPwd&&<div style={{...S.err,marginBottom:8}}>{modTrasf.errPwd}</div>}
+                  <button style={{width:"100%",padding:11,background:coloreLinea,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
+                    onClick={()=>{
+                      if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
+                        setModalConferma({titolo:"Conferma trasferimento",messaggio:(modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · SKU: "+modTrasf.skuNuovo:""),colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:eseguiTrasf});
+                      } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
+                    }}>↔ Conferma Trasferimento</button>
+                  <button style={{width:"100%",padding:10,background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}
+                    onClick={()=>setModTrasf({...modTrasf,step:"sku",pwd:"",errPwd:""})}>← Indietro</button>
+                </>);
+              })()}
             </div>
           </div>
         );
