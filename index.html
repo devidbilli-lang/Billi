@@ -359,15 +359,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
       </div>
 
       {/* Obiettivi grandi */}
-      {ob15!==null?(
+      {ob60!==null?(
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-          {/* Obiettivo 15 min */}
-          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#0284c7,#0369a1)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(2,132,199,0.3)"}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO 15 MIN</div>
-            <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob15}</div>
-            <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>borse</div>
-          </div>
-          {/* Obiettivo 1 ora + effettivo */}
+          {/* Obiettivo 1 ora */}
           <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(124,58,237,0.3)"}}>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO 1 ORA</div>
             <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60}</div>
@@ -415,13 +409,25 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
                 <span style={{fontSize:10,fontWeight:800,color:"#ffffff",textShadow:"0 1px 2px rgba(0,0,0,0.4)"}}>{borse} / {ob8ore} borse</span>
               </div>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
+            {/* Tacche orarie con obiettivo takttime */}
+            <div style={{position:"relative",height:16,marginTop:2}}>
+              {[1,2,3,4,5,6,7].map(h=>{
+                const pct=h/8*100;
+                const borseTarget=Math.round(ob60*h);
+                return (
+                  <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center"}}>
+                    <div style={{width:1,height:6,background:"#cbd5e1"}}/>
+                    <span style={{fontSize:8,color:"#94a3b8",whiteSpace:"nowrap"}}>{borseTarget}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
               <span style={{fontSize:9,color:"#94a3b8"}}>06:00</span>
-              <span style={{fontSize:9,color:"#475569",fontWeight:600}}>⬆ ora</span>
               <span style={{fontSize:9,color:"#94a3b8"}}>14:00</span>
             </div>
             <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:4}}>
-              Obiettivo 8h: {ob8ore} borse · Prodotte: {borse} · Rimanenti: {Math.max(0,ob8ore-borse)}
+              Takttime: {ob60} b/h · Obiettivo 8h: {ob8ore} · Prodotte: {borse} · Rimanenti: {Math.max(0,ob8ore-borse)}
             </div>
           </div>
         );
