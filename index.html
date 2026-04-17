@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_beW0EGoXUuJ1Wc1yXK1FBvP2B1X3snplHTsNcX3ge8uWxCG-u99n0Xh3y6CJNjwW/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzll8e_3PPc_PeMtWycMTvfWoI3crkNUIYuujL8g9JFXABbEEjn6kMEqWWdLoGlIf38Ew/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -320,61 +320,94 @@ function GaugeEfficienza({ valore, label, size=160 }) {
   );
 }
 
-function TabProduzione({ dati, skuList }) {
+function CardLineaProduzione({ lineaId, dati, colore }) {
+  const giorniLabel = ["Lun","Mar","Mer","Gio","Ven"];
+  const { settimana, oggi } = dati;
+  const maxEff = Math.max(100, ...settimana.map(g=>g.efficienza||0));
+  return (
+    <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderTop:"3px solid "+colore,borderRadius:12,padding:"16px 14px",marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+        <div style={{width:10,height:10,borderRadius:"50%",background:colore}}/>
+        <div style={{fontSize:13,fontWeight:800,color:"#1e293b"}}>{lineaId}</div>
+      </div>
+      <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:14,flexWrap:"wrap"}}>
+        <GaugeEfficienza valore={oggi.efficienza} label="Oggi" size={100}/>
+        <div style={{display:"flex",flexDirection:"column",gap:6,flex:1}}>
+          <div style={{background:"#f8fafc",borderRadius:6,padding:"6px 10px"}}>
+            <div style={{fontSize:10,color:"#64748b",fontWeight:600}}>Min. Lavorati</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#1e293b"}}>{oggi.minLavorati||0}'</div>
+          </div>
+          <div style={{background:"#f8fafc",borderRadius:6,padding:"6px 10px"}}>
+            <div style={{fontSize:10,color:"#64748b",fontWeight:600}}>Min. Prodotti</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#7c3aed"}}>{oggi.minProdotti||0}'</div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:"flex",alignItems:"flex-end",gap:4,height:80}}>
+        {settimana.map((g,i)=>{
+          const eff=g.efficienza;
+          const h=eff!==null?Math.max(3,Math.round(eff/maxEff*70)):3;
+          const c=eff===null?"#e2e8f0":eff>=80?"#22c55e":eff>=60?"#f59e0b":"#ef4444";
+          return (
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+              <div style={{fontSize:9,fontWeight:700,color:c}}>{eff!==null?eff+"%":""}</div>
+              <div style={{width:"100%",height:h,background:c,borderRadius:"3px 3px 0 0",minHeight:3}}/>
+              <div style={{fontSize:9,color:"#94a3b8"}}>{giorniLabel[i]}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TabProduzione({ dati, linee, isAdmin, lineaFiltro }) {
+  const [lineaSel, setLineaSel] = React.useState("");
   if (!dati) return (
     <div style={{textAlign:"center",padding:60,color:"#64748b"}}>
       <div style={{fontSize:32,marginBottom:12}}>🏭</div>
       <div style={{fontSize:14,fontWeight:600}}>Caricamento dati produzione...</div>
     </div>
   );
-  const { settimana, oggi } = dati;
-  const giorniLabel = ["Lun","Mar","Mer","Gio","Ven"];
-  const maxEff = Math.max(100, ...settimana.map(g=>g.efficienza||0));
+  const { perLinea } = dati;
+
+  // Determina quali linee mostrare
+  let lineeVis = [];
+  if (lineaFiltro) {
+    // Reparto: solo la propria linea
+    lineeVis = linee.filter(l=>l.id===lineaFiltro.id);
+  } else if (isAdmin) {
+    // Admin: selettore linea
+    const lFilt = lineaSel ? linee.filter(l=>l.id===lineaSel) : linee;
+    lineeVis = lFilt;
+  } else {
+    lineeVis = linee;
+  }
+
   return (
     <div style={{padding:"0 0 24px"}}>
-      {/* Gauge efficienza oggi */}
-      <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"24px 20px",marginBottom:12,textAlign:"center"}}>
-        <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#7c3aed",marginBottom:16,fontWeight:700}}>📊 Efficienza Oggi</div>
-        <div style={{display:"flex",justifyContent:"center",gap:32,flexWrap:"wrap"}}>
-          <GaugeEfficienza valore={oggi.efficienza} label="Efficienza" size={160}/>
-          <div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:12}}>
-            <div style={{background:"#f8fafc",borderRadius:8,padding:"10px 18px",textAlign:"left"}}>
-              <div style={{fontSize:11,color:"#64748b",fontWeight:600}}>Min. Lavorati</div>
-              <div style={{fontSize:22,fontWeight:800,color:"#1e293b"}}>{oggi.minLavorati||0}'</div>
-            </div>
-            <div style={{background:"#f8fafc",borderRadius:8,padding:"10px 18px",textAlign:"left"}}>
-              <div style={{fontSize:11,color:"#64748b",fontWeight:600}}>Min. Prodotti (borse×TC)</div>
-              <div style={{fontSize:22,fontWeight:800,color:"#7c3aed"}}>{oggi.minProdotti||0}'</div>
-            </div>
-          </div>
+      {isAdmin && !lineaFiltro && (
+        <div style={{marginBottom:12}}>
+          <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{...{width:"100%",padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}}>
+            <option value="">Tutte le linee</option>
+            {linee.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
+          </select>
         </div>
+      )}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+        {lineeVis.map(l=>{
+          const d = perLinea[l.id];
+          if (!d) return null;
+          return <CardLineaProduzione key={l.id} lineaId={l.id} dati={d} colore={l.colore||"#7c3aed"}/>;
+        })}
       </div>
-      {/* Istogramma settimana */}
-      <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"24px 20px"}}>
-        <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#7c3aed",marginBottom:16,fontWeight:700}}>📈 Efficienza Settimana</div>
-        <div style={{display:"flex",alignItems:"flex-end",gap:10,height:160,padding:"0 8px"}}>
-          {settimana.map((g,i)=>{
-            const eff = g.efficienza;
-            const h = eff !== null ? Math.max(4, Math.round(eff/maxEff*140)) : 4;
-            const colore = eff === null ? "#e2e8f0" : eff >= 80 ? "#22c55e" : eff >= 60 ? "#f59e0b" : "#ef4444";
-            const isOggi = g.giorno === (settimana.find(x=>x.efficienza!==null)||{}).giorno;
-            return (
-              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                <div style={{fontSize:11,fontWeight:700,color:colore}}>{eff!==null?eff+"%":""}</div>
-                <div style={{width:"100%",height:h,background:colore,borderRadius:"4px 4px 0 0",transition:"height 0.6s ease",minHeight:4}}/>
-                <div style={{fontSize:11,fontWeight:700,color:"#475569"}}>{giorniLabel[i]}</div>
-              </div>
-            );
-          })}
-        </div>
-        <div style={{display:"flex",gap:12,marginTop:16,justifyContent:"center",flexWrap:"wrap"}}>
-          {[["#22c55e","≥ 80%"],["#f59e0b","60-79%"],["#ef4444","< 60%"],["#e2e8f0","No dati"]].map(([c,l])=>(
-            <div key={l} style={{display:"flex",alignItems:"center",gap:5}}>
-              <div style={{width:12,height:12,borderRadius:2,background:c}}/>
-              <span style={{fontSize:11,color:"#64748b"}}>{l}</span>
-            </div>
-          ))}
-        </div>
+      <div style={{display:"flex",gap:12,marginTop:16,justifyContent:"center",flexWrap:"wrap"}}>
+        {[["#22c55e","≥ 80%"],["#f59e0b","60-79%"],["#ef4444","< 60%"],["#e2e8f0","No dati"]].map(([c,lb])=>(
+          <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{width:12,height:12,borderRadius:2,background:c}}/>
+            <span style={{fontSize:11,color:"#64748b"}}>{lb}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1484,7 +1517,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
-      {tab==="produzione"&&<div style={{margin:"0 24px"}}><TabProduzione dati={datiProd} skuList={skuList}/></div>}
+      {tab==="produzione"&&<div style={{margin:"0 24px"}}><TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro}/></div>}
       <div style={{height:40}}/>
     </div>
   );
