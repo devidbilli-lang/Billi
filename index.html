@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGnIdsOC07MZYpGEIN_3-lO1pfsmuUhpiglCBu0ZAKgqG2AZ_3SRLGCXMtFUSqJ_9I1A/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1lVPm6_ANz_rUFj4NtTPbTWoxCDMnRYPps6GizO7bgskWUVXDy332gJXcpWn3lRf2vg/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -320,10 +320,9 @@ function GaugeEfficienza({ valore, label, size=160 }) {
   );
 }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList }) {
+function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   const nOp = sessAttive.length;
-  if(nOp===0) return <div style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",textAlign:"center",fontSize:11,color:"#94a3b8"}}>Nessun operatore attivo</div>;
   const skuCount={};
   sessAttive.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk)skuCount[sk]=(skuCount[sk]||0)+1;});
   const skuPiu=Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
@@ -331,132 +330,57 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList }) {
   const tc=skuObj?.tc||0;
   const ob15=tc>0?Math.floor(nOp*(15/tc)):null;
   const ob60=tc>0?Math.floor(nOp*(60/tc)):null;
+  const borse=borseOggi||0;
+  const colBorse=ob60&&borse>=ob60?"#22c55e":ob60&&borse>=ob60*0.8?"#f59e0b":"#ef4444";
+
+  if(nOp===0) return (
+    <div style={{textAlign:"center",padding:"32px 16px",color:"#94a3b8"}}>
+      <div style={{fontSize:40,marginBottom:8}}>⏸</div>
+      <div style={{fontSize:14,fontWeight:600}}>Nessun operatore attivo</div>
+    </div>
+  );
+
   return (
-    <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:"12px 14px"}}>
-      <div style={{fontSize:10,color:"#0284c7",fontWeight:700,letterSpacing:1,marginBottom:8}}>⚡ OBIETTIVO REAL TIME</div>
-      <div style={{display:"flex",gap:6,marginBottom:8}}>
-        <div style={{flex:1,background:"#fff",borderRadius:6,padding:"5px 6px",textAlign:"center"}}>
-          <div style={{fontSize:9,color:"#64748b",fontWeight:600}}>Operatori</div>
-          <div style={{fontSize:16,fontWeight:900,color:"#0284c7"}}>{nOp}</div>
+    <div style={{padding:"16px 12px"}}>
+      {/* Info linea */}
+      <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:20,flexWrap:"wrap"}}>
+        <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 16px",textAlign:"center",minWidth:80}}>
+          <div style={{fontSize:10,color:"#64748b",fontWeight:600}}>Operatori</div>
+          <div style={{fontSize:28,fontWeight:900,color:"#0284c7"}}>{nOp}</div>
         </div>
-        <div style={{flex:2,background:"#fff",borderRadius:6,padding:"5px 6px",textAlign:"center",overflow:"hidden"}}>
-          <div style={{fontSize:9,color:"#64748b",fontWeight:600}}>SKU prevalente</div>
-          <div style={{fontSize:10,fontWeight:700,color:"#f59e0b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{skuPiu||"—"}</div>
+        <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 16px",textAlign:"center",minWidth:80}}>
+          <div style={{fontSize:10,color:"#64748b",fontWeight:600}}>SKU</div>
+          <div style={{fontSize:12,fontWeight:700,color:"#f59e0b",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{skuPiu||"—"}</div>
         </div>
-        <div style={{flex:1,background:"#fff",borderRadius:6,padding:"5px 6px",textAlign:"center"}}>
-          <div style={{fontSize:9,color:"#64748b",fontWeight:600}}>TC</div>
-          <div style={{fontSize:16,fontWeight:900,color:"#7c3aed"}}>{tc||"—"}</div>
+        <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 16px",textAlign:"center",minWidth:80}}>
+          <div style={{fontSize:10,color:"#64748b",fontWeight:600}}>TC (min)</div>
+          <div style={{fontSize:28,fontWeight:900,color:"#7c3aed"}}>{tc||"—"}</div>
         </div>
       </div>
+
+      {/* Obiettivi grandi */}
       {ob15!==null?(
-        <div style={{display:"flex",gap:6}}>
-          <div style={{flex:1,background:"#22c55e",borderRadius:8,padding:"8px 6px",textAlign:"center"}}>
-            <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",fontWeight:600}}>15 min</div>
-            <div style={{fontSize:20,fontWeight:900,color:"#fff"}}>{ob15}<span style={{fontSize:11}}> b.</span></div>
+        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+          {/* Obiettivo 15 min */}
+          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#0284c7,#0369a1)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(2,132,199,0.3)"}}>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO 15 MIN</div>
+            <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob15}</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>borse</div>
           </div>
-          <div style={{flex:1,background:"#0284c7",borderRadius:8,padding:"8px 6px",textAlign:"center"}}>
-            <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",fontWeight:600}}>1 ora</div>
-            <div style={{fontSize:20,fontWeight:900,color:"#fff"}}>{ob60}<span style={{fontSize:11}}> b.</span></div>
+          {/* Obiettivo 1 ora + effettivo */}
+          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(124,58,237,0.3)"}}>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO 1 ORA</div>
+            <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60}</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>borse</div>
+          </div>
+          {/* Borse prodotte oggi */}
+          <div style={{flex:1,minWidth:140,background:borse>0?`linear-gradient(135deg,${colBorse},${colBorse}cc)`:"linear-gradient(135deg,#64748b,#475569)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>PRODOTTE OGGI</div>
+            <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{borse}</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>borse</div>
           </div>
         </div>
-      ):<div style={{fontSize:11,color:"#94a3b8",textAlign:"center"}}>TC non definito</div>}
-    </div>
-  );
-}
-
-function TortaEfficienza({ perLinea, linee, lineaFiltro }) {
-  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee;
-  const dati = lineeVis.map(l=>{
-    const d = perLinea[l.id];
-    if(!d) return null;
-    // Media efficienza settimana corrente
-    const sett = d.storico[d.storico.length-1];
-    const validi = sett.giorni.filter(g=>g.efficienza!==null);
-    const media = validi.length>0 ? Math.round(validi.reduce((a,g)=>a+g.efficienza,0)/validi.length) : null;
-    return { id:l.id, colore:l.colore||"#7c3aed", media };
-  }).filter(Boolean).filter(d=>d.media!==null);
-
-  if(dati.length===0) return <div style={{textAlign:"center",padding:40,color:"#94a3b8",fontSize:13}}>Nessun dato efficienza questa settimana</div>;
-
-  const size=220; const cx=size/2; const cy=size/2; const r=80; const ri=50;
-  let tot=dati.reduce((a,d)=>a+d.media,0);
-  let angolo=0;
-  const fette=dati.map(d=>{
-    const perc=d.media/tot;
-    const startA=angolo;
-    angolo+=perc*2*Math.PI;
-    const endA=angolo;
-    const x1=cx+r*Math.cos(startA-Math.PI/2); const y1=cy+r*Math.sin(startA-Math.PI/2);
-    const x2=cx+r*Math.cos(endA-Math.PI/2);   const y2=cy+r*Math.sin(endA-Math.PI/2);
-    const xi1=cx+ri*Math.cos(startA-Math.PI/2); const yi1=cy+ri*Math.sin(startA-Math.PI/2);
-    const xi2=cx+ri*Math.cos(endA-Math.PI/2);   const yi2=cy+ri*Math.sin(endA-Math.PI/2);
-    const lg=perc>0.5?1:0;
-    return {...d,path:`M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 ${lg} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${ri} ${ri} 0 ${lg} 0 ${xi1} ${yi1} Z`};
-  });
-
-  return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-      <svg width={size} height={size} viewBox={"0 0 "+size+" "+size}>
-        {fette.map((f,i)=><path key={i} d={f.path} fill={f.colore} stroke="#fff" strokeWidth={2}/>)}
-        <text x={cx} y={cy-6} textAnchor="middle" fontSize={11} fill="#64748b" fontFamily="Montserrat,sans-serif">Efficienza</text>
-        <text x={cx} y={cy+10} textAnchor="middle" fontSize={11} fill="#64748b" fontFamily="Montserrat,sans-serif">settimana</text>
-      </svg>
-      <div style={{display:"flex",flexWrap:"wrap",gap:"4px 12px",justifyContent:"center"}}>
-        {dati.map(d=>(
-          <div key={d.id} style={{display:"flex",alignItems:"center",gap:5}}>
-            <div style={{width:10,height:10,borderRadius:"50%",background:d.colore}}/>
-            <span style={{fontSize:11,color:"#475569",fontWeight:600}}>{d.id}: <strong>{d.media}%</strong></span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function IstogrammaSettimana({ perLinea, linee, lineaFiltro }) {
-  const giorniLabel=["Lun","Mar","Mer","Gio","Ven"];
-  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee;
-  // Costruisci lista settimane disponibili
-  const primLinea = perLinea[lineeVis[0]?.id];
-  const settimane = primLinea ? primLinea.storico.map((s,i)=>({label:s.label,idx:i})) : [];
-  const [settSel, setSettSel] = React.useState(settimane.length-1);
-  if(!primLinea) return null;
-
-  const maxEff=100;
-  const giorniSett = lineeVis.map(l=>{
-    const d=perLinea[l.id]; if(!d) return null;
-    return {id:l.id,colore:l.colore||"#7c3aed",giorni:d.storico[settSel]?.giorni||[]};
-  }).filter(Boolean);
-
-  return (
-    <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <div style={{fontSize:12,fontWeight:700,color:"#475569"}}>📊 Efficienza per giorno</div>
-        <select value={settSel} onChange={e=>setSettSel(Number(e.target.value))} style={{fontSize:12,padding:"4px 8px",border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",color:"#1e293b",fontFamily:"'Montserrat',sans-serif"}}>
-          {settimane.map((s,i)=><option key={i} value={i}>{s.label}</option>)}
-        </select>
-      </div>
-      <div style={{display:"flex",gap:8,alignItems:"flex-end",height:180}}>
-        {giorniLabel.map((gl,gi)=>(
-          <div key={gi} style={{flex:1,display:"flex",flexDirection:"column",gap:2,alignItems:"stretch"}}>
-            {giorniSett.map((l,li)=>{
-              const eff=l.giorni[gi]?.efficienza;
-              const h=eff!==null&&eff!==undefined?Math.max(4,Math.round(eff/maxEff*160)):0;
-              const c=eff===null||eff===undefined?"#e2e8f0":eff>=80?"#22c55e":eff>=60?"#f59e0b":"#ef4444";
-              return <div key={li} title={l.id+": "+(eff!==null?eff+"%":"—")} style={{width:"100%",height:h,background:c,borderRadius:gi===0?"3px":"2px",transition:"height 0.5s ease",opacity:0.85}}/>;
-            })}
-            <div style={{textAlign:"center",fontSize:11,color:"#94a3b8",marginTop:2}}>{gl}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:"4px 10px",marginTop:10,justifyContent:"center"}}>
-        {giorniSett.map(l=>(
-          <div key={l.id} style={{display:"flex",alignItems:"center",gap:4}}>
-            <div style={{width:10,height:10,borderRadius:2,background:l.colore}}/>
-            <span style={{fontSize:10,color:"#64748b"}}>{l.id}</span>
-          </div>
-        ))}
-      </div>
+      ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
     </div>
   );
 }
@@ -470,7 +394,6 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList })
     </div>
   );
   const { perLinea } = dati;
-  const lineaFiltroEff = lineaFiltro || (lineaSel ? {id:lineaSel} : null);
   const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee);
 
   return (
@@ -481,42 +404,25 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList })
           {linee.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
         </select>
       )}
-
-      {/* Riga superiore: torta + istogramma */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:14,marginBottom:14}}>
-        <div style={{background:"#fff",borderRadius:14,padding:"20px 16px"}}>
-          <div style={{fontSize:11,fontWeight:700,color:"#7c3aed",letterSpacing:1,marginBottom:12}}>🥧 MEDIA SETTIMANA</div>
-          <TortaEfficienza perLinea={perLinea} linee={linee} lineaFiltro={lineaFiltroEff}/>
-        </div>
-        <div style={{background:"#fff",borderRadius:14,padding:"20px 16px"}}>
-          <IstogrammaSettimana perLinea={perLinea} linee={linee} lineaFiltro={lineaFiltroEff}/>
-        </div>
-      </div>
-
-      {/* Riga inferiore: card obiettivo real time per linea */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:14}}>
         {lineeVis.map(l=>{
           const d=perLinea[l.id]; if(!d) return null;
           return (
-            <div key={l.id} style={{background:"#fff",borderTop:"3px solid "+(l.colore||"#7c3aed"),borderRadius:12,padding:"14px 12px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+            <div key={l.id} style={{background:"#fff",borderTop:"4px solid "+(l.colore||"#7c3aed"),borderRadius:14,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:10,height:10,borderRadius:"50%",background:l.colore||"#7c3aed"}}/>
-                <div style={{fontSize:13,fontWeight:800,color:"#1e293b"}}>{l.id}</div>
-                <div style={{marginLeft:"auto",fontSize:11,color:"#94a3b8"}}>{l.nome}</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#1e293b"}}>{l.id}</div>
+                <div style={{fontSize:11,color:"#94a3b8",marginLeft:4}}>{l.nome}</div>
               </div>
-              <ObiettivoProduzione sessioni={sessioni||[]} lineaId={l.id} skuList={skuList||[]}/>
+              <ObiettivoProduzione
+                sessioni={sessioni||[]}
+                lineaId={l.id}
+                skuList={skuList||[]}
+                borseOggi={d.borseOggi||0}
+              />
             </div>
           );
         })}
-      </div>
-
-      <div style={{display:"flex",gap:12,marginTop:14,justifyContent:"center",flexWrap:"wrap"}}>
-        {[["#22c55e","≥ 80%"],["#f59e0b","60-79%"],["#ef4444","< 60%"],["#e2e8f0","No dati"]].map(([c,lb])=>(
-          <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
-            <div style={{width:12,height:12,borderRadius:2,background:c,border:"1px solid #e2e8f0"}}/>
-            <span style={{fontSize:11,color:"#64748b"}}>{lb}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
