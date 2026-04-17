@@ -478,6 +478,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [cSku, setCSku]     = useState("");
   const [msg, setMsg]       = useState(null);
   const [err, setErr]       = useState("");
+  const [modalConfermaQ, setModalConfermaQ] = useState(null);
   const [lineaSelQ, setLineaSelQ] = useState("");
   const isAdminQ = !linea;
   const lineaEffettiva = isAdminQ ? lineaSelQ : linea?.id;
@@ -537,8 +538,13 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         if(qty && !val){ setErr("❌ Note Migliorabili riga "+(mi2+1)+": seleziona il difetto dall'elenco."); return; }
       }
     }
-    if(!confirm("Confermi il salvataggio?\nSKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0))) return;
-    setErr("");
+    // Mostra modal di conferma
+    setModalConfermaQ({
+      titolo: "Conferma salvataggio",
+      messaggio: "SKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0),
+      onOk: async () => {
+        setModalConfermaQ(null);
+        setErr("");
     const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     const nMiglStr = noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     try {
@@ -546,10 +552,19 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
       setMsg("✓ Salvato!");
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
     } catch(e){ setErr("Errore salvataggio."); }
-    setTimeout(()=>setMsg(null), 2500);
+        setTimeout(()=>setMsg(null), 2500);
+      }
+    });
+    return;
   };
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
+      {modalConfermaQ&&<ModalConferma
+        titolo={modalConfermaQ.titolo}
+        messaggio={<div style={{whiteSpace:"pre-line"}}>{modalConfermaQ.messaggio}</div>}
+        colorBtn="22c55e" testoBtn="✓ Salva"
+        onConferma={modalConfermaQ.onOk}
+        onAnnulla={()=>setModalConfermaQ(null)}/>}
       <header style={{...S.hdr,borderBottom:"2px solid #3b82f644"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div>
