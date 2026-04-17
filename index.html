@@ -321,6 +321,8 @@ function GaugeEfficienza({ valore, label, size=160 }) {
 }
 
 function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   const nOp = sessAttive.length;
   const skuCount={};
@@ -382,9 +384,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
         const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
         // Calcola ora attuale nel turno (assumiamo turno da 06:00 o da inizio primo operatore)
         const now = new Date();
-        const hh = now.getHours(); const mm = now.getMinutes();
-        const minDaInizio = (hh*60+mm) < 360 ? 0 : Math.min(480, (hh*60+mm) - 360); // dalle 6:00
-        const percTempo = Math.min(100, Math.round(minDaInizio/480*100));
+        const hh = now.getHours(); const mm = now.getMinutes(); const ss = now.getSeconds();
+        const secDaInizio = (hh*3600+mm*60+ss) < 21600 ? 0 : Math.min(28800, (hh*3600+mm*60+ss) - 21600); // dalle 6:00, 28800 sec = 8h
+        const minDaInizio = secDaInizio / 60;
+        const percTempo = Math.min(100, secDaInizio/28800*100); // decimale preciso
         // Obiettivo borse all'ora attuale del turno
         const oreTrascorse = minDaInizio / 60;
         const obiettivoOraAttuale = ob60 * oreTrascorse;
@@ -405,12 +408,12 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
             {/* Barra target (grigia) */}
             <div style={{position:"relative",height:22,background:"#f1f5f9",borderRadius:11,overflow:"hidden"}}>
               {/* Indicatore tempo trascorso */}
-              <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo+"%",background:"#e2e8f0",borderRadius:11,transition:"width 1s ease"}}/>
+              <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo+"%",background:"#e2e8f0",borderRadius:11}}/>
               {/* Barra borse prodotte */}
               <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:11,transition:"width 1s ease",backgroundImage:"repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.15) 12px,rgba(255,255,255,0.15) 14px)"}}>
               </div>
               {/* Indicatore tempo */}
-              <div style={{position:"absolute",top:0,left:percTempo+"%",height:"100%",width:2,background:"#475569",transform:"translateX(-1px)"}}/>
+              <div style={{position:"absolute",top:0,left:percTempo.toFixed(4)+"%",height:"100%",width:2,background:"#475569",transform:"translateX(-1px)"}}/>
               <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <span style={{fontSize:10,fontWeight:800,color:"#ffffff",textShadow:"0 1px 2px rgba(0,0,0,0.4)"}}>{borse} / {ob8ore} borse</span>
               </div>
