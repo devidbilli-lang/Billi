@@ -397,43 +397,44 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
         const delta = percTempo - percBorse;
         return (
           <div style={{marginTop:20,padding:"0 4px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,alignItems:"center"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center"}}>
               <span style={{fontSize:11,fontWeight:700,color:"#64748b"}}>Avanzamento turno (8h)</span>
-              <span style={{fontSize:12,fontWeight:800,color:colore}}>{ritardo?<span style={{color:colore}}>⬇ {Math.abs(Math.round(deltaB))} b. in ritardo</span>:<span style={{color:"#22c55e"}}>✓ In linea</span>}</span>
+              <span style={{fontSize:12,fontWeight:800}}>{ritardo?<span style={{color:colore}}>⬇ {Math.abs(Math.round(deltaB))} b. in ritardo</span>:<span style={{color:"#22c55e"}}>✓ In linea</span>}</span>
             </div>
-            {/* Barra target (grigia) */}
-            <div style={{position:"relative",height:22,background:"#f1f5f9",borderRadius:11,overflow:"hidden"}}>
-              {/* Indicatore tempo trascorso */}
-              <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo+"%",background:"#e2e8f0",borderRadius:11}}/>
-              {/* Barra borse prodotte */}
-              <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:11,transition:"width 1s ease",backgroundImage:"repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.15) 12px,rgba(255,255,255,0.15) 14px)"}}>
+            {/* Contenitore barra + indicatore senza overflow hidden */}
+            <div style={{position:"relative",paddingTop:10}}>
+              {/* Freccia indicatore tempo */}
+              <div style={{position:"absolute",top:0,left:percTempo.toFixed(3)+"%",transform:"translateX(-50%)",zIndex:20}}>
+                <div style={{width:0,height:0,borderLeft:"6px solid transparent",borderRight:"6px solid transparent",borderTop:"8px solid #1e293b",margin:"0 auto"}}/>
               </div>
-              {/* Indicatore tempo */}
-              <div style={{position:"absolute",top:-4,left:percTempo.toFixed(4)+"%",height:"calc(100% + 8px)",width:3,background:"#1e293b",transform:"translateX(-1px)",borderRadius:2,boxShadow:"0 0 4px rgba(0,0,0,0.5)",zIndex:10}}>
-                <div style={{position:"absolute",top:-6,left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"5px solid transparent",borderRight:"5px solid transparent",borderTop:"6px solid #1e293b"}}/>
+              {/* Barra sfondo */}
+              <div style={{position:"relative",height:24,background:"#e2e8f0",borderRadius:12}}>
+                {/* Barra borse prodotte */}
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:12,backgroundImage:"repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.2) 12px,rgba(255,255,255,0.2) 14px)"}}/>
+                {/* Linea verticale tempo */}
+                <div style={{position:"absolute",top:0,left:percTempo.toFixed(3)+"%",height:"100%",width:3,background:"#1e293b",transform:"translateX(-50%)",borderRadius:2,zIndex:10}}/>
+                {/* Testo centrale */}
+                <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}>
+                  <span style={{fontSize:10,fontWeight:800,color:"#ffffff",textShadow:"0 1px 3px rgba(0,0,0,0.5)"}}>{borse} / {ob8ore}</span>
+                </div>
               </div>
-              <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <span style={{fontSize:10,fontWeight:800,color:"#ffffff",textShadow:"0 1px 2px rgba(0,0,0,0.4)"}}>{borse} / {ob8ore} borse</span>
+              {/* Tacche orarie */}
+              <div style={{position:"relative",height:20,marginTop:2}}>
+                {[0,1,2,3,4,5,6,7,8].map(h=>{
+                  const pct=h/8*100;
+                  const ora=6+h;
+                  const borseTarget=Math.round(ob60*h);
+                  const isOra=h>0&&h<8;
+                  return (
+                    <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+                      <div style={{width:1,height:4,background:"#94a3b8"}}/>
+                      <span style={{fontSize:8,color:"#475569",fontWeight:600,whiteSpace:"nowrap"}}>{String(ora).padStart(2,"0")}:00</span>
+                      {isOra&&<span style={{fontSize:8,color:colore,fontWeight:700}}>{borseTarget}b</span>}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            {/* Tacche orarie con obiettivo takttime */}
-            <div style={{position:"relative",height:16,marginTop:2}}>
-              {[1,2,3,4,5,6,7].map(h=>{
-                const pct=h/8*100;
-                const borseTarget=Math.round(ob60*h);
-                return (
-                  <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center"}}>
-                    <div style={{width:1,height:6,background:"#cbd5e1"}}/>
-                    <span style={{fontSize:8,color:"#94a3b8",whiteSpace:"nowrap"}}>{borseTarget}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
-              <span style={{fontSize:9,color:"#94a3b8"}}>06:00</span>
-              <span style={{fontSize:9,color:"#94a3b8"}}>14:00</span>
-            </div>
-
           </div>
         );
       })()}
