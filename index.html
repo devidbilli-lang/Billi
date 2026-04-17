@@ -378,24 +378,20 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
 
-      {/* Barra progresso 8 ore */}
+      {/* Barra progresso 8 ore - usa tick per aggiornamento al secondo */}
       {ob60!==null&&(()=>{
+        void tick; // forza re-render ogni secondo
         const ob8ore = ob60 * 8;
         const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
-        // Calcola ora attuale nel turno (assumiamo turno da 06:00 o da inizio primo operatore)
         const now = new Date();
         const hh = now.getHours(); const mm = now.getMinutes(); const ss = now.getSeconds();
-        const secDaInizio = (hh*3600+mm*60+ss) < 21600 ? 0 : Math.min(28800, (hh*3600+mm*60+ss) - 21600); // dalle 6:00, 28800 sec = 8h
+        const secDaInizio = (hh*3600+mm*60+ss) < 21600 ? 0 : Math.min(28800, (hh*3600+mm*60+ss) - 21600);
         const minDaInizio = secDaInizio / 60;
-        const percTempo = Math.min(100, secDaInizio/28800*100); // decimale preciso
-        // Obiettivo borse all'ora attuale del turno
+        const percTempo = Math.min(100, secDaInizio/28800*100);
         const oreTrascorse = minDaInizio / 60;
         const obiettivoOraAttuale = ob60 * oreTrascorse;
-        // Delta: quante borse sono avanti/indietro rispetto all'obiettivo ora
         const deltaB = borse - obiettivoOraAttuale;
         const ritardo = deltaB < 0;
-        // Colore basato su quanto si è in ritardo rispetto all'obiettivo orario
-        // verde se in pari o avanti, scala verso rosso
         const pctRitardo = obiettivoOraAttuale > 0 ? Math.abs(deltaB) / ob60 * 100 : 0;
         const colore = !ritardo ? "#22c55e" : pctRitardo <= 10 ? "#84cc16" : pctRitardo <= 25 ? "#f59e0b" : pctRitardo <= 50 ? "#f97316" : "#ef4444";
         const delta = percTempo - percBorse;
@@ -403,7 +399,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
           <div style={{marginTop:20,padding:"0 4px"}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,alignItems:"center"}}>
               <span style={{fontSize:11,fontWeight:700,color:"#64748b"}}>Avanzamento turno (8h)</span>
-              <span style={{fontSize:12,fontWeight:800,color:colore}}>{percBorse}% prodotto {ritardo?<span style={{color:"#ef4444"}}>· -{delta}% rispetto al target</span>:<span style={{color:"#22c55e"}}>· in linea ✓</span>}</span>
+              <span style={{fontSize:12,fontWeight:800,color:colore}}>{ritardo?<span style={{color:colore}}>⬇ {Math.abs(Math.round(deltaB))} b. in ritardo</span>:<span style={{color:"#22c55e"}}>✓ In linea</span>}</span>
             </div>
             {/* Barra target (grigia) */}
             <div style={{position:"relative",height:22,background:"#f1f5f9",borderRadius:11,overflow:"hidden"}}>
@@ -435,9 +431,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi }) {
               <span style={{fontSize:9,color:"#94a3b8"}}>06:00</span>
               <span style={{fontSize:9,color:"#94a3b8"}}>14:00</span>
             </div>
-            <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:4}}>
-              Takttime: {ob60} b/h · Obiettivo 8h: {ob8ore} · Prodotte: {borse} · Rimanenti: {Math.max(0,ob8ore-borse)}
-            </div>
+
           </div>
         );
       })()}
