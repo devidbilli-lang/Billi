@@ -1108,9 +1108,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               <div style={{fontSize:17,fontWeight:800,color:"#a855f7",marginBottom:4}}>↔ Trasferimento verso {modTrasf.lineaDest.id}</div>
               <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>Seleziona operatori da trasferire</div>
               {step==="selOp"&&(<>
-                <div style={{maxHeight:260,overflowY:"auto",marginBottom:12}}>
+                <input type="text" placeholder="🔍 Cerca operatore..." style={{...S.inp,marginBottom:10,fontSize:13}} value={modTrasf.cerca||""} onChange={e=>setModTrasf({...modTrasf,cerca:e.target.value})}/>
+                <div style={{maxHeight:240,overflowY:"auto",marginBottom:12}}>
                   {tuttiAttivi.length===0&&<div style={{color:"#64748b",fontSize:13,textAlign:"center",padding:16}}>Nessun operatore attivo</div>}
-                  {tuttiAttivi.map(s=>{
+                  {tuttiAttivi.filter(s=>{ const q=(modTrasf.cerca||"").toLowerCase(); return !q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.skuCorrente||s.sku||"").toLowerCase().includes(q)||s.lineaCorrente.toLowerCase().includes(q); }).map(s=>{
                     const sel=(modTrasf.opSelezionati||[]).includes(s.id);
                     const lObj=getLinea(s.lineaCorrente,linee);
                     return (<div key={s.id} onClick={()=>{
@@ -1265,7 +1266,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   Fine tutti
                 </button>
               )}
-              <button onClick={()=>setModTrasf({lineaDest:l})} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#a855f711",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>↔ Trasferimento</button>
+              <button onClick={()=>setModTrasf({lineaDest:l})} style={{fontSize:11,fontWeight:700,padding:"4px 8px",background:"#a855f711",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>↔ Trasf.</button>
               {(!lineaFiltro || lineaFiltro.id === l.id) && (
                 <button onClick={()=>setModNoteLinea({linea:l, nota:""})} style={{fontSize:14,fontWeight:700,padding:"8px",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%",marginTop:4}}>
                   📝 Note
