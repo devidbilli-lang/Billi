@@ -333,18 +333,16 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const setOreExtra = v => { setOreExtraRaw(v); try{ localStorage.setItem(storKey, v); }catch{} };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
-  // Calcola orario inizio turno dal primo check-in
-  const _tutteInizio = sessioni
+  // Primo check-in della linea
+  const _primoTs = sessioni
     .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
-    .map(s=>{ try{ const d=parseData(s.inizio); return d?d.getTime():Infinity; }catch{return Infinity;} })
-    .filter(t=>isFinite(t)&&t>0);
-  const _primoCheckin = _tutteInizio.length>0 ? Math.min(..._tutteInizio) : null;
-  const _oraInizioTurno = _primoCheckin ? new Date(_primoCheckin) : null;
-  const _secInizioTurno = _oraInizioTurno ? _oraInizioTurno.getHours()*3600+_oraInizioTurno.getMinutes()*60+_oraInizioTurno.getSeconds() : 6*3600;
-  const labelInizio = _oraInizioTurno ? String(_oraInizioTurno.getHours()).padStart(2,"0")+":"+String(_oraInizioTurno.getMinutes()).padStart(2,"0") : "06:00";
-  const _oreFineH = _oraInizioTurno ? _oraInizioTurno.getHours()+oreTotali : 6+oreTotali;
-  const _minFineM = _oraInizioTurno ? _oraInizioTurno.getMinutes() : 0;
-  const labelFine = String(Math.floor(_oreFineH)%24).padStart(2,"0")+":"+String(_minFineM).padStart(2,"0");
+    .map(s=>parseData(s.inizio)).filter(Boolean)
+    .reduce((min,d)=>(!min||d<min)?d:min, null);
+  const _secInizioTurno = _primoTs ? _primoTs.getHours()*3600+_primoTs.getMinutes()*60 : 6*3600;
+  const labelInizio = _primoTs ? String(_primoTs.getHours()).padStart(2,"0")+":"+String(_primoTs.getMinutes()).padStart(2,"0") : "06:00";
+  const _oreFineH = _secInizioTurno/3600 + oreTotali;
+  const _minFine = Math.round((_oreFineH % 1)*60);
+  const labelFine = String(Math.floor(_oreFineH)%24).padStart(2,"0")+":"+String(_minFine).padStart(2,"0");
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   // Conta matricole uniche su tutta la giornata (incluse sessioni chiuse), escluse riparazioni
   const tutteSessioniLinea = sessioni.filter(s=>
