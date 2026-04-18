@@ -346,6 +346,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
   const ob15=tc>0?Math.floor(nOp*(15/tc)):null;
   const ob60=tc>0?Math.floor(nOpProduzione*(60/tc)):null;
   const borse=borseOggi||0;
+  const ko=borseKO||0;
+  const migl=borseMigl||0;
+  const pctQualita = borse>0 ? Math.round((borse-ko-migl)/borse*100) : null;
+  const colQualita = pctQualita===null?"#94a3b8":pctQualita>=95?"#22c55e":pctQualita>=85?"#f59e0b":"#ef4444";
   const colBorse=ob60&&borse>=ob60?"#22c55e":ob60&&borse>=ob60*0.8?"#f59e0b":"#ef4444";
 
   if(nOp===0) return (
