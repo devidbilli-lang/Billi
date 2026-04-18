@@ -466,9 +466,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
             </div>
             {/* Prossimo obiettivo */}
             {prossimaOra <= oraTurnoFine && prossimaOra > 6 && (
-              <div style={{marginTop:12,background:"#ffff0022",border:"2px solid #ffff00",borderRadius:10,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <span style={{fontSize:13,fontWeight:700,color:"#475569"}}>🎯 Prossimo obiettivo alle <strong style={{color:"#7c3aed"}}>{prossimaOraLabel}</strong></span>
-                <span style={{fontSize:20,fontWeight:900,color:"#1a1a00",background:"#ffff00",borderRadius:8,padding:"4px 12px"}}>{borseAProssimaOra} pcs</span>
+              <div style={{marginTop:12,border:"2px solid #ffff00",borderRadius:14,overflow:"hidden"}}>
+                {/* Card 1: scritta prossimo obiettivo */}
+                <div style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",padding:"14px 20px",textAlign:"center"}}>
+                  <div style={{fontSize:15,fontWeight:800,color:"#ffffff",letterSpacing:0.5}}>
+                    🎯 Prossimo obiettivo alle <span style={{color:"#ffff00"}}>{prossimaOraLabel}</span>
+                  </div>
+                </div>
+                {/* Card 2: valore */}
+                <div style={{background:"linear-gradient(135deg,#6d28d9,#5b21b6)",padding:"16px 20px",textAlign:"center"}}>
+                  <span style={{fontSize:48,fontWeight:900,color:"#1a1a00",background:"#ffff00",borderRadius:12,padding:"6px 28px",display:"inline-block",lineHeight:1.2}}>{borseAProssimaOra} pcs</span>
+                </div>
               </div>
             )}
           </div>
