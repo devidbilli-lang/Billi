@@ -457,7 +457,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
                 <div style={{height:"100%",width:percTempo.toFixed(4)+"%",background:"#61ffa9",borderRadius:40,transition:"width 0.3s"}}/>
                 {/* Tacche orarie interne */}
                 {Array.from({length:oreTotali-1},(_,h)=>h+1).map(h=>(
-                  <div key={h} style={{position:"absolute",top:0,left:(h/oreTotali*100)+"%",height:"100%",width:2,background:"rgba(0,0,0,0.15)",transform:"translateX(-50%)"}}/>
+                  <div key={h} style={{position:"absolute",top:0,left:(h/oreTotali*100)+"%",height:"100%",width:2,background:"rgba(200,200,200,0.5)",transform:"translateX(-50%)"}}/>
                 ))}
               </div>
               {/* Orari sotto */}
