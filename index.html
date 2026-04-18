@@ -328,7 +328,9 @@ function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
 function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLinea }) {
   const [tick, setTick] = React.useState(0);
-  const [oreExtra, setOreExtra] = React.useState(0); // straordinario in ore
+  const storKey = "straord_"+lineaId;
+  const [oreExtra, setOreExtraRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(storKey); return v?parseFloat(v):0; }catch{return 0;} });
+  const setOreExtra = v => { setOreExtraRaw(v); try{ localStorage.setItem(storKey, v); }catch{} };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
