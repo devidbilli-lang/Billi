@@ -519,12 +519,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 </div>
                 {/* Card 2: valore + counter */}
                 <div style={{background:"linear-gradient(135deg,#6d28d9,#5b21b6)",padding:"16px 20px",textAlign:"center"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                    <span style={{fontSize:72,fontWeight:900,lineHeight:1}}>
-                      <span style={{color:borse>=borseAProssimaOra?"#61ffa9":"#ff6161"}}>{borse}</span>
-                      <span style={{color:"#ffffff"}}>/</span>
-                    </span>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:20}}>
                     <span style={{fontSize:72,fontWeight:900,color:"#1a1a00",background:"#ffff00",borderRadius:12,padding:"4px 20px",display:"inline-block",lineHeight:1}}>{borseAProssimaOra}</span>
+                    <div style={{width:32,height:32,borderRadius:"50%",background:borse>=borseAProssimaOra?"#61ffa9":"#ff6161",boxShadow:`0 0 12px ${borse>=borseAProssimaOra?"#61ffa9":"#ff6161"}`}}/>
                   </div>
                 </div>
               </div>
@@ -1361,13 +1358,16 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   const [modOrario, setModOrario] = React.useState(null);
   const [datiProd, setDatiProd] = React.useState(null);
-  const setDatiProdRef = React.useRef(setDatiProd);
-  React.useEffect(()=>{ setDatiProdRef.current = setDatiProd; },[setDatiProd]);
-  // Refresh produzione ogni 15s sempre (non solo quando tab=produzione)
   React.useEffect(()=>{
-    const refreshProd = ()=>{ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProdRef.current(d); } }).catch(()=>{}); };
-    refreshProd();
-    const tp = setInterval(refreshProd, 15000);
+    const caricaProd = async () => {
+      try {
+        const r = await fetch(APPS_SCRIPT_URL+"?action=produzione");
+        const j = await r.json();
+        if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }
+      } catch(e){}
+    };
+    caricaProd();
+    const tp = setInterval(caricaProd, 30000);
     return ()=>clearInterval(tp);
   },[]);
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
