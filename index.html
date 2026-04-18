@@ -410,33 +410,24 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO</div>
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc>0?Math.floor(maxOpGiorno*(60/tc))*oreTotali:0}</div>
           </div>
-          {/* % Qualità - archetto gauge */}
-          {pctQualita!==null&&(()=>{
-            const size=160; const r=60; const cx=size/2; const cy=size/2+10;
-            // Archetto: semicerchio dal basso (angolo 200° a 340°, totale 280° apertura)
-            const startA = 130 * Math.PI/180;
-            const endA   = 410 * Math.PI/180;
-            const totalA = endA - startA;
-            const fillA  = startA + totalA*(pctQualita/100);
-            const x1bg=cx+r*Math.cos(startA); const y1bg=cy+r*Math.sin(startA);
-            const x2bg=cx+r*Math.cos(endA);   const y2bg=cy+r*Math.sin(endA);
-            const x1=cx+r*Math.cos(startA);   const y1=cy+r*Math.sin(startA);
-            const x2=cx+r*Math.cos(fillA);    const y2=cy+r*Math.sin(fillA);
-            const lgFill = totalA*(pctQualita/100) > Math.PI ? 1 : 0;
-            return (
-              <div style={{flex:1,minWidth:140,background:"#1e293b",borderRadius:16,padding:"16px 12px",textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",fontWeight:700,letterSpacing:1,marginBottom:4}}>% QUALITÀ</div>
-                <svg width={size} height={size*0.7} viewBox={`0 0 ${size} ${size*0.7}`}>
-                  {/* Sfondo archetto */}
-                  <path d={`M ${x1bg} ${y1bg} A ${r} ${r} 0 1 1 ${x2bg} ${y2bg}`} fill="none" stroke="#334155" strokeWidth={14} strokeLinecap="round"/>
-                  {/* Riempimento */}
-                  {pctQualita>0&&<path d={`M ${x1} ${y1} A ${r} ${r} 0 ${lgFill} 1 ${x2} ${y2}`} fill="none" stroke={colQualita} strokeWidth={14} strokeLinecap="round"/>}
-                  <text x={cx} y={cy-2} textAnchor="middle" fontSize={28} fontWeight={900} fill={colQualita} fontFamily="Montserrat,sans-serif">{pctQualita}%</text>
-                </svg>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.6)",marginTop:2}}>KO:{ko} · Migl:{migl}</div>
+          {/* Card qualità KO e Migl */}
+          <div style={{flex:1,minWidth:140,background:"#1e293b",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",display:"flex",flexDirection:"column",justifyContent:"center",gap:16}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
+              <span style={{fontSize:32}}>😢</span>
+              <div>
+                <div style={{fontSize:11,color:"#ef4444",fontWeight:700,letterSpacing:1}}>KO</div>
+                <div style={{fontSize:56,fontWeight:900,color:"#ef4444",lineHeight:1}}>{ko}</div>
               </div>
-            );
-          })()}
+            </div>
+            <div style={{height:1,background:"rgba(255,255,255,0.1)"}}/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
+              <span style={{fontSize:32}}>😐</span>
+              <div>
+                <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,letterSpacing:1}}>MIGLIORABILI</div>
+                <div style={{fontSize:56,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{migl}</div>
+              </div>
+            </div>
+          </div>
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
 
