@@ -435,8 +435,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           </div>
           {/* Borse prodotte oggi */}
           <div style={{flex:1,minWidth:140,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(97,255,169,0.3)"}}>
-            <div style={{fontSize:11,color:"rgba(0,0,0,0.6)",fontWeight:700,letterSpacing:1,marginBottom:4}}>BORSE PRODOTTE</div>
-            <div style={{fontSize:72,fontWeight:900,color:"#000000",lineHeight:1}}>{borse}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>BORSE PRODOTTE</div>
+            <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{borse}</div>
           </div>
           {/* Obiettivo giornaliero */}
           <div style={{flex:1,minWidth:140,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
@@ -517,9 +517,12 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                     🎯 Prossimo obiettivo alle <span style={{color:"#ffff00"}}>{prossimaOraLabel}</span>
                   </div>
                 </div>
-                {/* Card 2: valore */}
+                {/* Card 2: valore + counter */}
                 <div style={{background:"linear-gradient(135deg,#6d28d9,#5b21b6)",padding:"16px 20px",textAlign:"center"}}>
-                  <span style={{fontSize:72,fontWeight:900,color:"#1a1a00",background:"#ffff00",borderRadius:12,padding:"6px 28px",display:"inline-block",lineHeight:1}}>{borseAProssimaOra} pcs</span>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap"}}>
+                    <span style={{fontSize:72,fontWeight:900,color:"#1a1a00",background:"#ffff00",borderRadius:12,padding:"6px 28px",display:"inline-block",lineHeight:1}}>{borseAProssimaOra}</span>
+                    <span style={{fontSize:36,fontWeight:900,color:borse>=borseAProssimaOra?"#61ffa9":"#ff6161",lineHeight:1}}>{borse}/{borseAProssimaOra}</span>
+                  </div>
                 </div>
               </div>
             )}
