@@ -1361,13 +1361,15 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   const [modOrario, setModOrario] = React.useState(null);
   const [datiProd, setDatiProd] = React.useState(null);
+  const setDatiProdRef = React.useRef(setDatiProd);
+  React.useEffect(()=>{ setDatiProdRef.current = setDatiProd; },[setDatiProd]);
+  // Refresh produzione ogni 15s sempre (non solo quando tab=produzione)
   React.useEffect(()=>{
-    if(tab!=="produzione") return;
-    const refreshProd = ()=>{ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); } }).catch(()=>{}); };
+    const refreshProd = ()=>{ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProdRef.current(d); } }).catch(()=>{}); };
     refreshProd();
-    const tp = setInterval(refreshProd, 60000);
+    const tp = setInterval(refreshProd, 15000);
     return ()=>clearInterval(tp);
-  },[tab]);
+  },[]);
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
   const [modalConferma, setModalConferma] = React.useState(null);
   const [fL,setFL]        = useState("ALL");
@@ -1868,8 +1870,6 @@ function App() { const [view,setView]             = useState("login");
         if(j.data.rampe) setRampeSheets(j.data.rampe);
         if(j.data.sessioni.length === 0) setSess([]);
         setDashSync("ok"); setUltimoSync2(new Date());
-        // Aggiorna anche dati produzione ad ogni sync
-        fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); } }).catch(()=>{});
         } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
   useEffect(()=>{ caricaSessioni();
     const t = setInterval(caricaSessioni, 15000);
