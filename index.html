@@ -334,8 +334,13 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
-  // Massimo operatori del giorno dal Riepilogo Sheets
-  const maxOpGiorno = maxOpOggi || sessAttive.length;
+  // Conta matricole uniche su tutta la giornata (incluse sessioni chiuse), escluse riparazioni
+  const tutteSessioniLinea = sessioni.filter(s=>
+    (s.lineaCorrente===lineaId||s.lineaInizio===lineaId) &&
+    !isSkuSpeciale(s.skuCorrente||s.sku||"")
+  );
+  const matricoleUniche = [...new Set(tutteSessioniLinea.map(s=>s.matricola).filter(Boolean))];
+  const maxOpGiorno = matricoleUniche.length > 0 ? matricoleUniche.length : (maxOpOggi||sessAttive.length);
   const nOp = sessAttive.length;
   const skuCount={};
   sessAttive.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk&&!isSkuSpeciale(sk))skuCount[sk]=(skuCount[sk]||0)+1;});
