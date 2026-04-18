@@ -328,21 +328,17 @@ function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
 function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea }) {
   const [tick, setTick] = React.useState(0);
+  const _now = new Date(); // si ricalcola ad ogni tick
+  const _hh = _now.getHours(); const _mm = _now.getMinutes(); const _ss = _now.getSeconds();
+  const _secOra = _hh*3600+_mm*60+_ss;
   const storKey = "straord_"+lineaId;
   const [oreExtra, setOreExtraRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(storKey); return v?parseFloat(v):0; }catch{return 0;} });
   const setOreExtra = v => { setOreExtraRaw(v); try{ localStorage.setItem(storKey, v); }catch{} };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
-  // Primo check-in della linea
-  const _primoTs = sessioni
-    .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
-    .map(s=>parseData(s.inizio)).filter(Boolean)
-    .reduce((min,d)=>(!min||d<min)?d:min, null);
-  const _secInizioTurno = _primoTs ? _primoTs.getHours()*3600+_primoTs.getMinutes()*60 : 6*3600;
-  const labelInizio = _primoTs ? String(_primoTs.getHours()).padStart(2,"0")+":"+String(_primoTs.getMinutes()).padStart(2,"0") : "06:00";
-  const _oreFineH = _secInizioTurno/3600 + oreTotali;
-  const _minFine = Math.round((_oreFineH % 1)*60);
-  const labelFine = String(Math.floor(_oreFineH)%24).padStart(2,"0")+":"+String(_minFine).padStart(2,"0");
+  const _secInizioTurno = 6*3600;
+  const labelInizio = "06:00";
+  const labelFine = String(6+Math.floor(oreTotali)).padStart(2,"0")+":"+(oreTotali%1>0?"30":"00");
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   // Conta matricole uniche su tutta la giornata (incluse sessioni chiuse), escluse riparazioni
   const tutteSessioniLinea = sessioni.filter(s=>
@@ -428,8 +424,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 <div style={{fontSize:10,color:"rgba(255,255,255,0.6)",fontWeight:600,marginBottom:2}}>REALE</div>
                 {(()=>{
                   // Ritmo reale: borse prodotte / ore trascorse
-                  const now2=new Date();
-                  const secTr2=(now2.getHours()*3600+now2.getMinutes()*60+now2.getSeconds());
+                  const secTr2=_secOra;
                   const oreCorr=secTr2<_secInizioTurno?0:(secTr2-_secInizioTurno)/3600;
                   const ritmoBorse=oreCorr>0?borse/oreCorr:0;
                   const colRT=ob60?ritmoBorse>=ob60?"#61ffa9":ritmoBorse>=ob60*0.8?"#fbbf24":"#ff6161":"#ffffff";
@@ -488,9 +483,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         void tick; // forza re-render ogni secondo
         const ob8ore = ob60 * oreTotali;
         const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
-        const now = new Date();
-        const hh = now.getHours(); const mm = now.getMinutes(); const ss = now.getSeconds();
-        const secOra = hh*3600+mm*60+ss;
+        const secOra = _secOra;
+        const hh = _hh; const mm = _mm; const ss = _ss;
         const secTotali = oreTotali * 3600;
         const secDaInizio = secOra < _secInizioTurno ? 0 : Math.min(secTotali, secOra - _secInizioTurno);
         const minDaInizio = secDaInizio / 60;
