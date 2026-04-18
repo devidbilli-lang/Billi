@@ -531,8 +531,11 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             )}
             {/* Barra tempo - sotto il prossimo obiettivo */}
             <div style={{marginTop:12}}>
-              <div style={{position:"relative",height:80,background:"#e2e8f0",borderRadius:40,overflow:"hidden"}}>
-                <div style={{height:"100%",width:percTempo.toFixed(4)+"%",background:"#61ffa9",borderRadius:40,transition:"width 0.3s"}}/>
+              <div style={{position:"relative",height:80,background:`linear-gradient(90deg,${coloreLinea}99,${coloreLinea}44)`,borderRadius:40,overflow:"hidden"}}>
+                {/* Barra borse prodotte su obiettivo totale - verde leggero */}
+                {ob8ore>0&&<div style={{position:"absolute",top:0,left:0,height:"100%",width:Math.min(100,borse/ob8ore*100).toFixed(3)+"%",background:"rgba(97,255,169,0.25)",borderRadius:40,transition:"width 0.5s"}}/>}
+                {/* Barra tempo */}
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(4)+"%",background:"rgba(255,255,255,0.18)",borderRadius:40,transition:"width 0.3s",borderRight:"3px solid rgba(255,255,255,0.6)"}}/>
 
               </div>
               {/* Orari sotto */}
