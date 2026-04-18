@@ -563,7 +563,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
     <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampa di Crescita</div>
       {tuttiSku.map(sku=>{ const ms=totMap[sku]||0; const rampa=rampaMap[sku]||null; const g=rampa?rampa.giorni:null;
-        const completata=g!==null&&g>=15; const colRampa=completata?"#61ffa9":g!==null?"#f59e0b":"#475569";
+        const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
           <div key={sku} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #f1f5f9"}}>
@@ -578,14 +578,14 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               return (
                 <div style={{display:"flex",gap:16,marginBottom:8}}>
                   <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Inizio: </span>{fmtD(dataInizio)}</div>
-                  <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Fine teorica: </span><span style={{color:completata?"#61ffa9":"#f59e0b",fontWeight:700}}>{fmtD(dataFine)}</span></div>
+                  <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Fine teorica: </span><span style={{color:completata?"#22c55e":"#f59e0b",fontWeight:700}}>{fmtD(dataFine)}</span></div>
                 </div>
               );
             })()}
             {g!==null&&(
               <div style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <span style={{fontSize:14,fontWeight:700,color:colRampa}}>📈 Giorno {g} / 15{completata&&<span style={{background:"#61ffa9",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:colRampa}}>📈 Giorno {g} / 15{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
                   <span style={{fontSize:12,color:colRampa,fontWeight:700}}>{Math.round(g/15*100)}%</span>
                 </div>
                 <div style={{height:18,background:"#e2e8f0",borderRadius:9,overflow:"hidden",position:"relative"}}>
@@ -911,7 +911,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             <button onClick={()=>setNoteMigl([...noteMigl,{p:"",q:""}])} style={{fontSize:12,color:"#f59e0b",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga Migliorabili</button>
           </div>
           {err&&<div style={S.err}>{err}</div>}
-          {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#61ffa9",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
+          {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#22c55e",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
           <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",width:"100%"}} onClick={salva}>Salva</button>
         </div>
       </div>
@@ -962,7 +962,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
           <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.id}</div>
           <p style={{color:"#475569",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
-          <p style={{fontSize:11,color:"#61ffa9",marginBottom:20}}>Registrato su Google Sheets</p>
+          <p style={{fontSize:11,color:"#22c55e",marginBottom:20}}>Registrato su Google Sheets</p>
           <button style={S.bBk} onClick={reset}>Torna al Menu</button>
         </div>
       </div>
@@ -1052,7 +1052,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
             {operatori.length>0&&(
               <div style={{marginBottom:8}}>
-                <input style={{...S.inp,borderColor:"#61ffa9",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
+                <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
                 {cOp.length>=2&&(
                   <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,marginTop:4,overflow:"hidden"}}>
                     {operatori.filter(o=>o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase())).slice(0,6).map(o=>{ const sel=opSelezionati.some(x=>x.matricola===o.matricola);
@@ -1060,7 +1060,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                         <div key={o.matricola} onClick={()=>{ if(sel) setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola)); else setOpSelezionati(p=>[...p,o]); }} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:10,alignItems:"center",background:sel?"#22c55e18":"transparent"}}
                           onMouseEnter={e=>e.currentTarget.style.background=sel?"#22c55e28":"#f1f5f9"}
                           onMouseLeave={e=>e.currentTarget.style.background=sel?"#22c55e18":"transparent"}>
-                          <span style={{width:18,height:18,border:"2px solid "+(sel?"#61ffa9":"#475569"),borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#61ffa9",flexShrink:0}}>{sel?"✓":""}</span>
+                          <span style={{width:18,height:18,border:"2px solid "+(sel?"#22c55e":"#475569"),borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#22c55e",flexShrink:0}}>{sel?"✓":""}</span>
                           <span style={{fontSize:13,color:"#1e293b"}}>{o.nome} {o.cognome}</span>
                           <span style={{fontSize:11,color:"#94a3b8",marginLeft:"auto"}}>{o.matricola}</span>
                         </div>
@@ -1072,7 +1072,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {opSelezionati.length>0&&(
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
                 {opSelezionati.map(o=>(
-                  <span key={o.matricola} style={{background:"#22c55e18",border:"1px solid #22c55e44",borderRadius:20,padding:"4px 10px",fontSize:12,color:"#61ffa9",display:"flex",alignItems:"center",gap:6}}>
+                  <span key={o.matricola} style={{background:"#22c55e18",border:"1px solid #22c55e44",borderRadius:20,padding:"4px 10px",fontSize:12,color:"#22c55e",display:"flex",alignItems:"center",gap:6}}>
                     {o.nome} {o.cognome}
                     <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
                   </span>
@@ -1113,7 +1113,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 {rampaAttiva ? (
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:15,fontWeight:800,color:"#f59e0b"}}>📈 Rampa in corso — Giorno {giorniRampa} / 15</span>
-                    {giorniRampa>=15&&<span style={{background:"#61ffa9",color:"#000",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:800}}>✓ COMPLETATA</span>}
+                    {giorniRampa>=15&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:800}}>✓ COMPLETATA</span>}
                   </div>
                 ) : (
                   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
@@ -1161,7 +1161,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
       <header style={S.hdr}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
-          {ultimoSync2&&<span style={{fontSize:10,color:"#61ffa9",fontWeight:700}}>● Live</span>}
+          {ultimoSync2&&<span style={{fontSize:10,color:"#22c55e",fontWeight:700}}>● Live</span>}
         </div>
         <div style={S.ora}>{fmt(oraRef)}</div>
       </header>
@@ -1228,7 +1228,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
           <div style={{fontSize:11,color:"#ffffff",marginTop:4,fontWeight:700}}>Totale</div>
         </div>
         <div style={{background:"#f8fafc",border:"1px solid #22c55e44",borderTop:"3px solid #22c55e",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#61ffa9",lineHeight:1}}>{presenti}</div>
+          <div style={{fontSize:28,fontWeight:800,color:"#22c55e",lineHeight:1}}>{presenti}</div>
           <div style={{fontSize:13,color:"#1e293b",marginTop:4,fontWeight:600}}>Presenti</div>
         </div>
         <div style={{background:"#f8fafc",border:"1px solid #ef444444",borderTop:"3px solid #ef4444",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
@@ -1245,14 +1245,14 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {filtrati.map(({op,sessAtt,ultimaSess})=>{ const presente = !!sessAtt; const linea = sessAtt ? getLinea(sessAtt.lineaCorrente,linee) : null;
           return (
-            <div key={op.matricola} style={{background:presente?"#ffffff":"#f8fafc",border:"1px solid "+(presente?"#61ffa9":"#e1e1e1"),borderLeft:"4px solid "+(presente?"#61ffa9":"#e1e1e1"),borderRadius:12,padding:"14px 16px"}}>
+            <div key={op.matricola} style={{background:presente?"#ffffff":"#f8fafc",border:"1px solid "+(presente?"#22c55e":"#e1e1e1"),borderLeft:"4px solid "+(presente?"#22c55e":"#e1e1e1"),borderRadius:12,padding:"14px 16px"}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:presente?"#61ffa9":"#cbd5e1",flexShrink:0}}/>
+                <div style={{width:10,height:10,borderRadius:"50%",background:presente?"#22c55e":"#cbd5e1",flexShrink:0}}/>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:14,color:"#1e293b"}}>{op.nome} {op.cognome}</div>
                   <div style={{fontSize:12,color:"#ffffff"}}>{op.matricola}</div>
                 </div>
-                <span style={{fontSize:11,fontWeight:700,color:presente?"#61ffa9":"#475569",background:presente?"#22c55e18":"#e1e1e1",padding:"2px 8px",borderRadius:4}}>{presente?"IN TURNO":"ASSENTE"}</span>
+                <span style={{fontSize:11,fontWeight:700,color:presente?"#22c55e":"#475569",background:presente?"#22c55e18":"#e1e1e1",padding:"2px 8px",borderRadius:4}}>{presente?"IN TURNO":"ASSENTE"}</span>
               </div>
               {presente&&sessAtt&&(
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 12px",fontSize:12}}>
@@ -1506,7 +1506,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><img src="logo_Nexus.png" style={{width:48,height:48,objectFit:"contain",borderRadius:6,background:"#7c3aed",padding:3}}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
         </div>
         <div style={{display:"flex",gap:8}}>
-          <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#61ffa9",fontWeight:700}}>SHEETS LIVE</span>
+          <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
           <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
         </div>
       </header>
@@ -1575,7 +1575,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         <div style={{margin:"0 24px",background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
           {fil.length===0?(<div style={{textAlign:"center",padding:60,color:"#64748b"}}>Nessuna sessione</div>):(
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{[["#","#475569"],["Operatore","#475569"],["SKU","#475569"],["Linea","#475569"],["Inizio","#61ffa9"],["Fine","#ef4444"],["Durata","#475569"],["Azioni","#475569"]].map(([h,hc])=>(
+              <thead><tr>{[["#","#475569"],["Operatore","#475569"],["SKU","#475569"],["Linea","#475569"],["Inizio","#22c55e"],["Fine","#ef4444"],["Durata","#475569"],["Azioni","#475569"]].map(([h,hc])=>(
                 <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:2,textTransform:"uppercase",color:hc,textAlign:"center",borderBottom:"1px solid #e2e8f0",background:"#f8fafc",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
               ))}</tr></thead>
               <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
@@ -1600,7 +1600,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                        <span style={{fontSize:13,color:"#61ffa9",fontWeight:600}}>{fmtSafe(s.inizio)}</span>
+                        <span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>{fmtSafe(s.inizio)}</span>
                         {editOrario&&<button onClick={()=>{ try{ const d=new Date(s.inizio); setModOrario({sess:s,campo:"inizio",valore:!isNaN(d)?d.toISOString().slice(0,16):""}); }catch(e){ setModOrario({sess:s,campo:"inizio",valore:""}); } }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
                       </div>
                     </td>
@@ -1613,10 +1613,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}><span style={{background:"#ffffff",color:"#64748b",border:"1px solid #e2e8f0",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap"}}>
-                        {att2&&inCorso?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#61ffa9",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
+                        {att2&&inCorso?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
                         {att2&&(
                           <>
-                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#61ffa9":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
+                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ setModalConferma({titolo:"Chiudi turno",messaggio:"Chiudere il turno di "+s.nome+" "+s.cognome+"?",colorBtn:"ef4444",testoBtn:"✕ Chiudi turno",onOk:()=>{ setModalConferma(null); if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); }}); }}>✕</button>
                           </>
@@ -1786,8 +1786,8 @@ function App() { const [view,setView]             = useState("login");
     setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
     setTimeout(caricaSessioni,3000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,3000); };
-  const syncCfg = {ok:{c:"#61ffa9",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
-  const dashCfg = {ok:{c:"#61ffa9",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
+  const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
+  const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
 
   // Modalità readonly - nessun login, accesso diretto
   if(URL_VIEW==="readonly") {
