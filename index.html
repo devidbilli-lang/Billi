@@ -427,46 +427,52 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
         const pctRitardo = obiettivoOraAttuale > 0 ? Math.abs(deltaB) / ob60 * 100 : 0;
         const colore = !ritardo ? "#22c55e" : pctRitardo <= 10 ? "#84cc16" : pctRitardo <= 25 ? "#f59e0b" : pctRitardo <= 50 ? "#f97316" : "#ef4444";
         const delta = percTempo - percBorse;
+        // Prossimo obiettivo orario
+        const oraAttuale = hh + mm/60;
+        const prossimaOra = Math.ceil(oraAttuale);
+        const prossimaOraLabel = String(prossimaOra).padStart(2,"0")+":00";
+        const borseAProssimaOra = Math.round(ob60*(prossimaOra-6));
+        const minutiAlProssimo = (prossimaOra*60) - (hh*60+mm);
+
         return (
           <div style={{marginTop:20,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center"}}>
-              <span style={{fontSize:11,fontWeight:700,color:"#64748b"}}>Avanzamento turno (8h)</span>
-              <span style={{fontSize:12,fontWeight:800}}>{ritardo?<span style={{color:colore}}>⬇ {Math.abs(Math.round(deltaB))} b. in ritardo</span>:<span style={{color:"#22c55e"}}>✓ In linea</span>}</span>
+              <span style={{fontSize:11,fontWeight:700,color:"#64748b"}}>Avanzamento turno</span>
+              <span style={{fontSize:12,fontWeight:800}}>{ritardo?<span style={{color:colore}}>⬇ {Math.abs(Math.round(deltaB))} pcs in ritardo</span>:<span style={{color:"#22c55e"}}>✓ In linea</span>}</span>
             </div>
-            {/* Contenitore barra + indicatore senza overflow hidden */}
-            <div style={{position:"relative",paddingTop:10}}>
-              {/* Freccia indicatore tempo */}
-              <div style={{position:"absolute",top:0,left:percTempo.toFixed(3)+"%",transform:"translateX(-50%)",zIndex:20}}>
-                <div style={{width:0,height:0,borderLeft:"6px solid transparent",borderRight:"6px solid transparent",borderTop:"8px solid #1e293b",margin:"0 auto"}}/>
+            {/* Contenitore barra */}
+            <div style={{position:"relative",paddingTop:14}}>
+              {/* Freccia indicatore - allineata con la linea verticale */}
+              <div style={{position:"absolute",top:2,left:"calc("+percTempo.toFixed(4)+"% )",transform:"translateX(-50%)",zIndex:20,pointerEvents:"none"}}>
+                <div style={{width:0,height:0,borderLeft:"7px solid transparent",borderRight:"7px solid transparent",borderTop:"10px solid #1e293b"}}/>
               </div>
-              {/* Barra sfondo */}
-              <div style={{position:"relative",height:64,background:"#e2e8f0",borderRadius:32}}>
-                {/* Barra borse prodotte */}
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:12,backgroundImage:"repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.2) 12px,rgba(255,255,255,0.2) 14px)"}}/>
-                {/* Linea verticale tempo */}
-                <div style={{position:"absolute",top:0,left:percTempo.toFixed(3)+"%",height:"100%",width:4,background:"#1e293b",transform:"translateX(-50%)",borderRadius:2,zIndex:10}}/>
-                {/* Testo centrale */}
-                <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}>
-                  <span style={{fontSize:22,fontWeight:900,color:"#ffffff",textShadow:"0 1px 3px rgba(0,0,0,0.5)"}}>{borse} / {ob8ore} pcs</span>
+              {/* Barra */}
+              <div style={{position:"relative",height:64,background:"#e2e8f0",borderRadius:32,overflow:"hidden"}}>
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:32,backgroundImage:"repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.2) 12px,rgba(255,255,255,0.2) 14px)",transition:"width 0.3s"}}/>
+                <div style={{position:"absolute",top:0,left:percTempo.toFixed(4)+"%",height:"100%",width:4,background:"#1e293b",transform:"translateX(-50%)",zIndex:10}}/>
+                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}>
+                  <span style={{fontSize:22,fontWeight:900,color:"#ffffff",textShadow:"0 1px 3px rgba(0,0,0,0.6)"}}>{borse} / {ob8ore} pcs</span>
                 </div>
               </div>
-              {/* Tacche orarie */}
-              <div style={{position:"relative",height:20,marginTop:2}}>
+              {/* Solo inizio, fine turno e tacche orarie */}
+              <div style={{position:"relative",height:16,marginTop:4}}>
                 {Array.from({length:oreTotali+1},(_,h)=>h).map(h=>{
-                  const pct=h/8*100;
-                  const ora=6+h;
-                  const borseTarget=Math.round(ob60*h);
-                  const isOra=h>0&&h<8;
-                  return (
-                    <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-                      <div style={{width:1,height:4,background:"#94a3b8"}}/>
-                      <span style={{fontSize:12,color:"#7c3aed",fontWeight:700,whiteSpace:"nowrap"}}>{String(ora).padStart(2,"0")}:00</span>
-                      {isOra&&<span style={{fontSize:12,color:"#1a1a00",fontWeight:900,background:"#ffff00",borderRadius:4,padding:"1px 5px"}}>{borseTarget} pcs</span>}
-                    </div>
-                  );
+                  const pct=h/oreTotali*100;
+                  return <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",width:1,height:6,background:"#94a3b8",top:0}}/>;
                 })}
               </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+                <span style={{fontSize:12,color:"#7c3aed",fontWeight:700}}>06:00</span>
+                <span style={{fontSize:12,color:"#7c3aed",fontWeight:700}}>{String(6+oreTotali).padStart(2,"0")}:00</span>
+              </div>
             </div>
+            {/* Prossimo obiettivo */}
+            {prossimaOra <= 6+oreTotali && prossimaOra > 6 && (
+              <div style={{marginTop:12,background:"#ffff0022",border:"2px solid #ffff00",borderRadius:10,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <span style={{fontSize:13,fontWeight:700,color:"#475569"}}>🎯 Prossimo obiettivo alle <strong style={{color:"#7c3aed"}}>{prossimaOraLabel}</strong></span>
+                <span style={{fontSize:20,fontWeight:900,color:"#1a1a00",background:"#ffff00",borderRadius:8,padding:"4px 12px"}}>{borseAProssimaOra} pcs</span>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -705,7 +711,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const isAdminQ = !linea;
   const lineaEffettiva = isAdminQ ? lineaSelQ : linea?.id;
   const lObj = linea ? (linee.find(l=>l.id===linea.id)||linea) : {id:"Admin",colore:"#7c3aed"};
-  const skuFiltrati = skuList.filter(s=>
+  const skuFiltrati = skuConSpeciali(skuList).filter(s=>
     !cSku || s.sku.includes(cSku.toUpperCase()) || s.descrizione.toLowerCase().includes(cSku.toLowerCase())
   );
   const salva = async () => {
@@ -1373,9 +1379,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   ) : (
                     <div style={{position:"relative",marginBottom:10}}>
                       <input type="text" autoFocus placeholder="Cerca SKU..." style={{...S.inp,fontSize:13}} value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value,skuNuovo:""})}/>
-                      {modTrasf.cercaSku&&skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).length>0&&(
+                      {modTrasf.cercaSku&&skuConSpeciali(skuList).filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).length>0&&(
                         <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
-                          {skuList.filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).slice(0,8).map((s,i)=>(
+                          {skuConSpeciali(skuList).filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).slice(0,8).map((s,i)=>(
                             <div key={i} onClick={()=>setModTrasf({...modTrasf,skuNuovo:s.sku,cercaSku:s.sku})} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                               <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.sku}</span>
                               <span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}{s.collezione&&<span style={{color:"#e879f9",fontWeight:700,marginLeft:4}}>{s.collezione}</span>}</span>
