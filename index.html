@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxQKmCvmXmjojQyZd89gJamX-sKM0Dw7qFaMNcE9wbPexjiI5y1SYN81jw973_kgOX1g/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxO4zNYL_f1kFJZq-cN_4oCm2IhKYG4_QbGhF1v18joQmWv8TIlI0NkcPAwxlG8bls57A/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -326,7 +326,7 @@ const SKU_SPECIALI = [
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, coloreLinea }) {
+function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea }) {
   const [tick, setTick] = React.useState(0);
   const storKey = "straord_"+lineaId;
   const [oreExtra, setOreExtraRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(storKey); return v?parseFloat(v):0; }catch{return 0;} });
@@ -334,9 +334,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
-  // Massimo operatori del giorno (incluse sessioni chiuse)
-  const sessTutte = sessioni.filter(s=>s.lineaCorrente===lineaId||s.lineaInizio===lineaId);
-  const maxOpGiorno = sessTutte.length > sessAttive.length ? sessTutte.length : sessAttive.length;
+  // Massimo operatori del giorno dal Riepilogo Sheets
+  const maxOpGiorno = maxOpOggi || sessAttive.length;
   const nOp = sessAttive.length;
   const skuCount={};
   sessAttive.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk&&!isSkuSpeciale(sk))skuCount[sk]=(skuCount[sk]||0)+1;});
