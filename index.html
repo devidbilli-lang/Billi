@@ -333,6 +333,18 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const setOreExtra = v => { setOreExtraRaw(v); try{ localStorage.setItem(storKey, v); }catch{} };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
+  // Calcola orario inizio turno dal primo check-in
+  const _tutteInizio = sessioni
+    .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
+    .map(s=>{ try{ return new Date(s.inizio).getTime(); }catch{return Infinity;} })
+    .filter(t=>isFinite(t)&&t>0);
+  const _primoCheckin = _tutteInizio.length>0 ? Math.min(..._tutteInizio) : null;
+  const _oraInizioTurno = _primoCheckin ? new Date(_primoCheckin) : null;
+  const _secInizioTurno = _oraInizioTurno ? _oraInizioTurno.getHours()*3600+_oraInizioTurno.getMinutes()*60+_oraInizioTurno.getSeconds() : 6*3600;
+  const labelInizio = _oraInizioTurno ? String(_oraInizioTurno.getHours()).padStart(2,"0")+":"+String(_oraInizioTurno.getMinutes()).padStart(2,"0") : "06:00";
+  const _oreFineH = _oraInizioTurno ? _oraInizioTurno.getHours()+oreTotali : 6+oreTotali;
+  const _minFineM = _oraInizioTurno ? _oraInizioTurno.getMinutes() : 0;
+  const labelFine = String(Math.floor(_oreFineH)%24).padStart(2,"0")+":"+String(_minFineM).padStart(2,"0");
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   // Conta matricole uniche su tutta la giornata (incluse sessioni chiuse), escluse riparazioni
   const tutteSessioniLinea = sessioni.filter(s=>
@@ -420,7 +432,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                   // Ritmo reale: borse prodotte / ore trascorse
                   const now2=new Date();
                   const secTr2=(now2.getHours()*3600+now2.getMinutes()*60+now2.getSeconds());
-                  const oreCorr=secTr2<secInizioTurno?0:(secTr2-secInizioTurno)/3600;
+                  const oreCorr=secTr2<_secInizioTurno?0:(secTr2-_secInizioTurno)/3600;
                   const ritmoBorse=oreCorr>0?borse/oreCorr:0;
                   const colRT=ob60?ritmoBorse>=ob60?"#61ffa9":ritmoBorse>=ob60*0.8?"#fbbf24":"#ff6161":"#ffffff";
                   return <div style={{fontSize:48,fontWeight:900,color:colRT,lineHeight:1}}>{ob60Reale||"—"}</div>;
@@ -480,33 +492,20 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
         const now = new Date();
         const hh = now.getHours(); const mm = now.getMinutes(); const ss = now.getSeconds();
-        // Orario inizio turno = primo check-in della linea
-        const tutteInizio = sessioni
-          .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
-          .map(s=>{ try{ return new Date(s.inizio).getTime(); }catch{return Infinity;} })
-          .filter(t=>isFinite(t)&&t>0);
-        const primoCheckin = tutteInizio.length>0 ? Math.min(...tutteInizio) : null;
-        const oraInizioTurno = primoCheckin ? new Date(primoCheckin) : null;
-        const secInizioTurno = oraInizioTurno ? oraInizioTurno.getHours()*3600+oraInizioTurno.getMinutes()*60+oraInizioTurno.getSeconds() : 6*3600;
         const secOra = hh*3600+mm*60+ss;
         const secTotali = oreTotali * 3600;
-        const secDaInizio = secOra < secInizioTurno ? 0 : Math.min(secTotali, secOra - secInizioTurno);
+        const secDaInizio = secOra < _secInizioTurno ? 0 : Math.min(secTotali, secOra - _secInizioTurno);
         const minDaInizio = secDaInizio / 60;
         const percTempo = Math.min(100, secDaInizio/secTotali*100);
         const oreTrascorse = minDaInizio / 60;
         const obiettivoOraAttuale = ob60 * oreTrascorse;
-        // Orari inizio/fine turno per label
-        const labelInizio = oraInizioTurno ? String(oraInizioTurno.getHours()).padStart(2,"0")+":"+String(oraInizioTurno.getMinutes()).padStart(2,"0") : "06:00";
-        const oreFineH = oraInizioTurno ? oraInizioTurno.getHours()+(oreTotali) : 6+oreTotali;
-        const minFineM = oraInizioTurno ? oraInizioTurno.getMinutes() : 0;
-        const labelFine = String(Math.floor(oreFineH)%24).padStart(2,"0")+":"+String(minFineM).padStart(2,"0");
         const deltaB = borse - obiettivoOraAttuale;
         const ritardo = deltaB < 0;
         const pctRitardo = obiettivoOraAttuale > 0 ? Math.abs(deltaB) / ob60 * 100 : 0;
         const colore = !ritardo ? "#22c55e" : pctRitardo <= 10 ? "#84cc16" : pctRitardo <= 25 ? "#f59e0b" : pctRitardo <= 50 ? "#f97316" : "#ef4444";
         const delta = percTempo - percBorse;
         // Prossimo obiettivo orario
-        const oraInizioDecimale = secInizioTurno/3600;
+        const oraInizioDecimale = _secInizioTurno/3600;
         const oraAttualeDecimale = secOra/3600;
         const prossimaOraInt = Math.ceil(oraAttualeDecimale);
         const prossimaOraLabel = String(prossimaOraInt).padStart(2,"0")+":00";
