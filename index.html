@@ -359,20 +359,19 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
     <div style={{padding:"16px 12px",display:"flex",flexDirection:"column",flex:1}}>
       {/* Info linea - stessa larghezza delle 3 card principali */}
       <div style={{display:"flex",gap:12,marginBottom:20}}>
-        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
+        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>OPERATORI</div>
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{nOpProduzione}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>produzione{nRiparazione>0&&<span style={{background:"#fbbf24",color:"#1a1a00",borderRadius:4,padding:"0 4px",marginLeft:4,fontSize:10,fontWeight:700}}>+{nRiparazione} rit.</span>}</div>
+          {nRiparazione>0&&<div style={{marginTop:6,background:"#fbbf24",color:"#1a1a00",borderRadius:6,padding:"3px 6px",fontSize:11,fontWeight:800}}>+{nRiparazione} riparazioni</div>}
         </div>
-        <div style={{flex:2,background:`linear-gradient(135deg,${coloreLinea}dd,${coloreLinea}99)`,borderRadius:16,padding:"10px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
+        <div style={{flex:2,background:`linear-gradient(135deg,${coloreLinea}dd,${coloreLinea}99)`,borderRadius:16,padding:"10px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>SKU</div>
-          <div style={{fontSize:22,fontWeight:900,color:"#ffffff",lineHeight:1.2,wordBreak:"break-word"}}>{skuPiu||"—"}</div>
-          <div style={{fontSize:16,color:"rgba(255,255,255,0.95)",marginTop:4,fontWeight:700}}>{skuObj?.descrizione||""}</div>
+          <div style={{fontSize:"clamp(14px,2.5vw,28px)",fontWeight:900,color:"#ffffff",lineHeight:1.2,wordBreak:"break-all",width:"100%"}}>{skuPiu||"—"}</div>
+          <div style={{fontSize:"clamp(13px,1.8vw,22px)",color:"rgba(255,255,255,0.95)",marginTop:4,fontWeight:700,lineHeight:1.2}}>{skuObj?.descrizione||""}</div>
         </div>
-        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea}bb,${coloreLinea}88)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
-          <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>TAKT TIME</div>
+        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea}bb,${coloreLinea}88)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+          <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>TC (min)</div>
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc||"—"}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>min/borsa</div>
         </div>
       </div>
 
@@ -392,7 +391,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           {/* Obiettivo 1 ora */}
           <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#6767ff,#5050dd)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(103,103,255,0.3)"}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>TAKTTIME</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>TAKT TIME</div>
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60}</div>
           </div>
           {/* Borse prodotte oggi */}
