@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5hfc9tLf3us3YB9GP8BpPlzGufpKnPJWnOuiwzC2NTIHKZLZC5trisKvsGPj71lDK8w/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxQKmCvmXmjojQyZd89gJamX-sKM0Dw7qFaMNcE9wbPexjiI5y1SYN81jw973_kgOX1g/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -404,6 +404,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO</div>
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60*oreTotali}</div>
           </div>
+          {/* % Qualità */}
+          {pctQualita!==null&&(
+            <div style={{flex:1,minWidth:140,background:`linear-gradient(135deg,${colQualita},${colQualita}cc)`,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:`0 4px 16px ${colQualita}44`}}>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>% QUALITÀ</div>
+              <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{pctQualita}</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,0.8)",marginTop:4}}>KO:{ko} · Migl:{migl}</div>
+            </div>
+          )}
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
 
@@ -1279,7 +1287,14 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
 }
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   const [modOrario, setModOrario] = React.useState(null);
-  const [datiProd, setDatiProd] = React.useState(null); // {sess, campo:'inizio'|'fine', valore}
+  const [datiProd, setDatiProd] = React.useState(null);
+  React.useEffect(()=>{
+    if(tab!=="produzione") return;
+    const refreshProd = ()=>{ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data) setDatiProd(j.data.dati); }).catch(()=>{}); };
+    refreshProd();
+    const tp = setInterval(refreshProd, 60000);
+    return ()=>clearInterval(tp);
+  },[tab]);
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
   const [modalConferma, setModalConferma] = React.useState(null);
   const [fL,setFL]        = useState("ALL");
