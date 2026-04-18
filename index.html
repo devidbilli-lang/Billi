@@ -356,6 +356,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   // Calcoliamo dopo aver definito oreTotali, quindi usiamo una funzione lazy
   const obFinale = tc>0&&maxOpGiorno>0 ? Math.floor(maxOpGiorno*(60/tc))*oreTotali : null;
   const ob60 = obFinale!=null ? Math.round(obFinale/oreTotali) : null;
+  const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
   const borse=borseOggi||0;
   const ko=borseKO||0;
   const migl=borseMigl||0;
@@ -405,9 +406,27 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       {ob60!==null?(
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           {/* Obiettivo 1 ora */}
-          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#6767ff,#5050dd)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(103,103,255,0.3)"}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>TAKT TIME</div>
-            <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60}</div>
+          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#6767ff,#5050dd)",borderRadius:16,padding:"16px",textAlign:"center",boxShadow:"0 4px 16px rgba(103,103,255,0.3)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:8}}>TAKT TIME</div>
+            <div style={{display:"flex",justifyContent:"center",gap:16,alignItems:"flex-end"}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.6)",fontWeight:600,marginBottom:2}}>TEORICO</div>
+                <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60||"—"}</div>
+              </div>
+              <div style={{width:1,height:40,background:"rgba(255,255,255,0.2)"}}/>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.6)",fontWeight:600,marginBottom:2}}>REALE</div>
+                {(()=>{
+                  // Ritmo reale: borse prodotte / ore trascorse
+                  const now2=new Date();
+                  const secTr=(now2.getHours()*3600+now2.getMinutes()*60+now2.getSeconds());
+                  const oreCorr=secTr<21600?0:(secTr-21600)/3600;
+                  const ritmoBorse=oreCorr>0?borse/oreCorr:0;
+                  const colRT=ob60?ritmoBorse>=ob60?"#61ffa9":ritmoBorse>=ob60*0.8?"#fbbf24":"#ff6161":"#ffffff";
+                  return <div style={{fontSize:48,fontWeight:900,color:colRT,lineHeight:1}}>{ob60Reale||"—"}</div>;
+                })()}
+              </div>
+            </div>
           </div>
           {/* Borse prodotte oggi */}
           <div style={{flex:1,minWidth:140,background:"#61ffa9",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(97,255,169,0.3)"}}>
