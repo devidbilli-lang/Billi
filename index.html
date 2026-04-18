@@ -381,7 +381,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra===0?"0h":"+"+Math.floor(oreExtra)+"h"+(oreExtra%1>0?"30":"")}</span>
           <button onClick={()=>setOreExtra(oreExtra+0.5)} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>+</button>
         </div>
-        {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Fine turno: {String(6+Math.floor(oreTotali)).padStart(2,"0")}:{oreExtra%1===0?"00":"30"}</span>}
+        {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Fine turno: {labelFine}</span>}
       </div>
 
       {/* Info linea - stessa larghezza delle 3 card principali */}
@@ -419,8 +419,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 {(()=>{
                   // Ritmo reale: borse prodotte / ore trascorse
                   const now2=new Date();
-                  const secTr=(now2.getHours()*3600+now2.getMinutes()*60+now2.getSeconds());
-                  const oreCorr=secTr<21600?0:(secTr-21600)/3600;
+                  const secTr2=(now2.getHours()*3600+now2.getMinutes()*60+now2.getSeconds());
+                  const oreCorr=secTr2<secInizioTurno?0:(secTr2-secInizioTurno)/3600;
                   const ritmoBorse=oreCorr>0?borse/oreCorr:0;
                   const colRT=ob60?ritmoBorse>=ob60?"#61ffa9":ritmoBorse>=ob60*0.8?"#fbbf24":"#ff6161":"#ffffff";
                   return <div style={{fontSize:48,fontWeight:900,color:colRT,lineHeight:1}}>{ob60Reale||"—"}</div>;
@@ -480,30 +480,45 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
         const now = new Date();
         const hh = now.getHours(); const mm = now.getMinutes(); const ss = now.getSeconds();
+        // Orario inizio turno = primo check-in della linea
+        const tutteInizio = sessioni
+          .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
+          .map(s=>{ try{ return new Date(s.inizio).getTime(); }catch{return Infinity;} })
+          .filter(t=>isFinite(t)&&t>0);
+        const primoCheckin = tutteInizio.length>0 ? Math.min(...tutteInizio) : null;
+        const oraInizioTurno = primoCheckin ? new Date(primoCheckin) : null;
+        const secInizioTurno = oraInizioTurno ? oraInizioTurno.getHours()*3600+oraInizioTurno.getMinutes()*60+oraInizioTurno.getSeconds() : 6*3600;
+        const secOra = hh*3600+mm*60+ss;
         const secTotali = oreTotali * 3600;
-        const secDaInizio = (hh*3600+mm*60+ss) < 21600 ? 0 : Math.min(secTotali, (hh*3600+mm*60+ss) - 21600);
+        const secDaInizio = secOra < secInizioTurno ? 0 : Math.min(secTotali, secOra - secInizioTurno);
         const minDaInizio = secDaInizio / 60;
         const percTempo = Math.min(100, secDaInizio/secTotali*100);
         const oreTrascorse = minDaInizio / 60;
         const obiettivoOraAttuale = ob60 * oreTrascorse;
+        // Orari inizio/fine turno per label
+        const labelInizio = oraInizioTurno ? String(oraInizioTurno.getHours()).padStart(2,"0")+":"+String(oraInizioTurno.getMinutes()).padStart(2,"0") : "06:00";
+        const oreFineH = oraInizioTurno ? oraInizioTurno.getHours()+(oreTotali) : 6+oreTotali;
+        const minFineM = oraInizioTurno ? oraInizioTurno.getMinutes() : 0;
+        const labelFine = String(Math.floor(oreFineH)%24).padStart(2,"0")+":"+String(minFineM).padStart(2,"0");
         const deltaB = borse - obiettivoOraAttuale;
         const ritardo = deltaB < 0;
         const pctRitardo = obiettivoOraAttuale > 0 ? Math.abs(deltaB) / ob60 * 100 : 0;
         const colore = !ritardo ? "#22c55e" : pctRitardo <= 10 ? "#84cc16" : pctRitardo <= 25 ? "#f59e0b" : pctRitardo <= 50 ? "#f97316" : "#ef4444";
         const delta = percTempo - percBorse;
         // Prossimo obiettivo orario
-        const oraAttuale = hh + mm/60;
-        const prossimaOra = Math.ceil(oraAttuale);
-        const prossimaOraLabel = String(prossimaOra).padStart(2,"0")+":00";
-        const borseAProssimaOra = Math.round(ob60*(prossimaOra-6));
-        const oraTurnoFine = 6 + oreTotali;
+        const oraInizioDecimale = secInizioTurno/3600;
+        const oraAttualeDecimale = secOra/3600;
+        const prossimaOraInt = Math.ceil(oraAttualeDecimale);
+        const prossimaOraLabel = String(prossimaOraInt).padStart(2,"0")+":00";
+        const borseAProssimaOra = Math.round(ob60*(prossimaOraInt-oraInizioDecimale));
+        const oraTurnoFine = oraInizioDecimale + oreTotali;
 
         return (
           <div style={{marginTop:20,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
 
 
             {/* Prossimo obiettivo */}
-            {prossimaOra <= oraTurnoFine && prossimaOra > 6 && (
+            {prossimaOraInt <= oraTurnoFine && prossimaOraInt > oraInizioDecimale && (
               <div style={{marginTop:12,border:"2px solid #ffff00",borderRadius:14,overflow:"hidden"}}>
                 {/* Card 1: scritta prossimo obiettivo */}
                 <div style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",padding:"14px 20px",textAlign:"center"}}>
