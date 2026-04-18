@@ -320,6 +320,12 @@ function GaugeEfficienza({ valore, label, size=160 }) {
   );
 }
 
+const SKU_SPECIALI = [
+  {sku:"RIPARAZIONE",descrizione:"🔧 Riparazione",collezione:"",tc:0,speciale:true}
+];
+function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
+function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
+
 function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLinea }) {
   const [tick, setTick] = React.useState(0);
   const [oreExtra, setOreExtra] = React.useState(0); // straordinario in ore
