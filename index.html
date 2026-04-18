@@ -326,7 +326,7 @@ const SKU_SPECIALI = [
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLinea }) {
+function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, coloreLinea }) {
   const [tick, setTick] = React.useState(0);
   const storKey = "straord_"+lineaId;
   const [oreExtra, setOreExtraRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(storKey); return v?parseFloat(v):0; }catch{return 0;} });
