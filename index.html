@@ -334,6 +334,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
+  // Massimo operatori del giorno (incluse sessioni chiuse)
+  const sessTutte = sessioni.filter(s=>s.lineaCorrente===lineaId||s.lineaInizio===lineaId);
+  const maxOpGiorno = sessTutte.length > sessAttive.length ? sessTutte.length : sessAttive.length;
   const nOp = sessAttive.length;
   const skuCount={};
   sessAttive.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk&&!isSkuSpeciale(sk))skuCount[sk]=(skuCount[sk]||0)+1;});
@@ -406,16 +409,35 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           {/* Obiettivo giornaliero */}
           <div style={{flex:1,minWidth:140,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO</div>
-            <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60*oreTotali}</div>
+            <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc>0?Math.floor(maxOpGiorno*(60/tc))*oreTotali:0}</div>
           </div>
-          {/* % Qualità */}
-          {pctQualita!==null&&(
-            <div style={{flex:1,minWidth:140,background:`linear-gradient(135deg,${colQualita},${colQualita}cc)`,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:`0 4px 16px ${colQualita}44`}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>% QUALITÀ</div>
-              <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{pctQualita}</div>
-              <div style={{fontSize:13,color:"rgba(255,255,255,0.8)",marginTop:4}}>KO:{ko} · Migl:{migl}</div>
-            </div>
-          )}
+          {/* % Qualità - archetto gauge */}
+          {pctQualita!==null&&(()=>{
+            const size=160; const r=60; const cx=size/2; const cy=size/2+10;
+            // Archetto: semicerchio dal basso (angolo 200° a 340°, totale 280° apertura)
+            const startA = 130 * Math.PI/180;
+            const endA   = 410 * Math.PI/180;
+            const totalA = endA - startA;
+            const fillA  = startA + totalA*(pctQualita/100);
+            const x1bg=cx+r*Math.cos(startA); const y1bg=cy+r*Math.sin(startA);
+            const x2bg=cx+r*Math.cos(endA);   const y2bg=cy+r*Math.sin(endA);
+            const x1=cx+r*Math.cos(startA);   const y1=cy+r*Math.sin(startA);
+            const x2=cx+r*Math.cos(fillA);    const y2=cy+r*Math.sin(fillA);
+            const lgFill = totalA*(pctQualita/100) > Math.PI ? 1 : 0;
+            return (
+              <div style={{flex:1,minWidth:140,background:"#1e293b",borderRadius:16,padding:"16px 12px",textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",fontWeight:700,letterSpacing:1,marginBottom:4}}>% QUALITÀ</div>
+                <svg width={size} height={size*0.7} viewBox={`0 0 ${size} ${size*0.7}`}>
+                  {/* Sfondo archetto */}
+                  <path d={`M ${x1bg} ${y1bg} A ${r} ${r} 0 1 1 ${x2bg} ${y2bg}`} fill="none" stroke="#334155" strokeWidth={14} strokeLinecap="round"/>
+                  {/* Riempimento */}
+                  {pctQualita>0&&<path d={`M ${x1} ${y1} A ${r} ${r} 0 ${lgFill} 1 ${x2} ${y2}`} fill="none" stroke={colQualita} strokeWidth={14} strokeLinecap="round"/>}
+                  <text x={cx} y={cy-2} textAnchor="middle" fontSize={28} fontWeight={900} fill={colQualita} fontFamily="Montserrat,sans-serif">{pctQualita}%</text>
+                </svg>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.6)",marginTop:2}}>KO:{ko} · Migl:{migl}</div>
+              </div>
+            );
+          })()}
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
 
@@ -1294,7 +1316,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [datiProd, setDatiProd] = React.useState(null);
   React.useEffect(()=>{
     if(tab!=="produzione") return;
-    const refreshProd = ()=>{ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data) setDatiProd(j.data.dati); }).catch(()=>{}); };
+    const refreshProd = ()=>{ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); } }).catch(()=>{}); };
     refreshProd();
     const tp = setInterval(refreshProd, 60000);
     return ()=>clearInterval(tp);
@@ -1580,7 +1602,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       </div>
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
         {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"],["produzione","🎛 Entra in Produzione"]].map(([t,l])=>(
-          <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok) setDatiProd(j.data.dati); }).catch(()=>{}); } }} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#e2e8f0"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#475569"}}>{l}</button>
+          <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#e2e8f0"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#475569"}}>{l}</button>
         ))}
       </div>
       {tab==="sessioni"&&(
