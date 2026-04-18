@@ -379,10 +379,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
         <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>⏱ Straordinario</span>
         <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
           <button onClick={()=>setOreExtra(Math.max(0,oreExtra-0.5))} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>−</button>
-          <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra>0?"+"+oreExtra+"h":"0h"}</span>
+          <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra===0?"0h":"+"+Math.floor(oreExtra)+"h"+(oreExtra%1>0?"30":"")}</span>
           <button onClick={()=>setOreExtra(oreExtra+0.5)} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>+</button>
         </div>
-        {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Turno: {oreTotali}h</span>}
+        {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Fine turno: {String(6+Math.floor(oreTotali)).padStart(2,"0")}:{oreExtra%1===0?"00":"30"}</span>}
       </div>
 
       {/* Obiettivi grandi */}
@@ -402,8 +402,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
           </div>
           {/* Obiettivo giornaliero */}
           <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#1d4ed8,#1e40af)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(29,78,216,0.3)"}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO 8H</div>
-            <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60*8}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO {oreTotali}H</div>
+            <div style={{fontSize:56,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60*oreTotali}</div>
             <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",marginTop:4}}>pcs</div>
           </div>
         </div>
@@ -432,7 +432,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
         const prossimaOra = Math.ceil(oraAttuale);
         const prossimaOraLabel = String(prossimaOra).padStart(2,"0")+":00";
         const borseAProssimaOra = Math.round(ob60*(prossimaOra-6));
-        const minutiAlProssimo = (prossimaOra*60) - (hh*60+mm);
+        const oraTurnoFine = 6 + oreTotali;
 
         return (
           <div style={{marginTop:20,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
@@ -448,7 +448,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
               </div>
               {/* Barra */}
               <div style={{position:"relative",height:64,background:"#e2e8f0",borderRadius:32,overflow:"hidden"}}>
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:32,backgroundImage:"repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.2) 12px,rgba(255,255,255,0.2) 14px)",transition:"width 0.3s"}}/>
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percBorse+"%",background:colore,borderRadius:32,transition:"width 0.3s"}}/>
                 <div style={{position:"absolute",top:0,left:percTempo.toFixed(4)+"%",height:"100%",width:4,background:"#1e293b",transform:"translateX(-50%)",zIndex:10}}/>
                 <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}>
                   <span style={{fontSize:22,fontWeight:900,color:"#ffffff",textShadow:"0 1px 3px rgba(0,0,0,0.6)"}}>{borse} / {ob8ore} pcs</span>
@@ -463,11 +463,11 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
               </div>
               <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
                 <span style={{fontSize:12,color:"#7c3aed",fontWeight:700}}>06:00</span>
-                <span style={{fontSize:12,color:"#7c3aed",fontWeight:700}}>{String(6+oreTotali).padStart(2,"0")}:00</span>
+                <span style={{fontSize:12,color:"#7c3aed",fontWeight:700}}>{String(Math.floor(6+oreTotali)).padStart(2,"0")}:{oreTotali%1>0?"30":"00"}</span>
               </div>
             </div>
             {/* Prossimo obiettivo */}
-            {prossimaOra <= 6+oreTotali && prossimaOra > 6 && (
+            {prossimaOra <= oraTurnoFine && prossimaOra > 6 && (
               <div style={{marginTop:12,background:"#ffff0022",border:"2px solid #ffff00",borderRadius:10,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <span style={{fontSize:13,fontWeight:700,color:"#475569"}}>🎯 Prossimo obiettivo alle <strong style={{color:"#7c3aed"}}>{prossimaOraLabel}</strong></span>
                 <span style={{fontSize:20,fontWeight:900,color:"#1a1a00",background:"#ffff00",borderRadius:8,padding:"4px 12px"}}>{borseAProssimaOra} pcs</span>
