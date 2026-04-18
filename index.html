@@ -528,14 +528,19 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             )}
             {/* Barra tempo - sotto il prossimo obiettivo */}
             <div style={{marginTop:12}}>
-              <div style={{position:"relative",height:80,background:`linear-gradient(90deg,${coloreLinea}99,${coloreLinea}44)`,borderRadius:40,overflow:"hidden"}}>
-                {/* Barra borse prodotte su obiettivo totale */}
-                {ob8ore>0&&<div style={{position:"absolute",top:0,left:0,height:"100%",width:Math.min(100,borse/ob8ore*100).toFixed(3)+"%",background:"linear-gradient(90deg,rgba(97,255,169,0.15),rgba(97,255,169,0.55))",borderRadius:40,transition:"width 0.5s",backdropFilter:"blur(4px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.4),inset 0 -1px 0 rgba(97,255,169,0.3)",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:10}}>
-                  {borse/ob8ore>0.05&&<span style={{fontSize:13,fontWeight:900,color:"#ffffff",textShadow:"0 1px 3px rgba(0,0,0,0.5)"}}>{Math.round(borse/ob8ore*100)}%</span>}
+              {/* Freccia indicatore */}
+              <div style={{position:"relative",height:12,marginBottom:2}}>
+                <div style={{position:"absolute",left:percTempo.toFixed(3)+"%",transform:"translateX(-50%)",top:0}}>
+                  <div style={{width:0,height:0,borderLeft:"7px solid transparent",borderRight:"7px solid transparent",borderTop:"10px solid #1e293b"}}/>
+                </div>
+              </div>
+              <div style={{position:"relative",height:80,background:"#ffffff",borderRadius:40,overflow:"hidden",border:"2px solid #e2e8f0"}}>
+                {/* Barra produzione #61ffa9 */}
+                {ob8ore>0&&<div style={{position:"absolute",top:0,left:0,height:"100%",width:Math.min(100,borse/ob8ore*100).toFixed(3)+"%",background:"#61ffa9",borderRadius:40,transition:"width 0.5s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:12}}>
+                  {borse/ob8ore>0.05&&<span style={{fontSize:14,fontWeight:900,color:"#1a1a00"}}>{Math.round(borse/ob8ore*100)}%</span>}
                 </div>}
-                {/* Barra tempo */}
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(4)+"%",background:"rgba(255,255,255,0.12)",borderRadius:40,transition:"width 0.3s",borderRight:"3px solid rgba(255,255,255,0.5)"}}/>
-
+                {/* Linea verticale tempo */}
+                <div style={{position:"absolute",top:0,left:percTempo.toFixed(3)+"%",height:"100%",width:3,background:"#1e293b",transform:"translateX(-50%)",zIndex:5}}/>
               </div>
               {/* Orari sotto */}
               <div style={{position:"relative",height:24,marginTop:2}}>
