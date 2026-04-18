@@ -336,7 +336,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   // Calcola orario inizio turno dal primo check-in
   const _tutteInizio = sessioni
     .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
-    .map(s=>{ try{ return new Date(s.inizio).getTime(); }catch{return Infinity;} })
+    .map(s=>{ try{ const d=parseData(s.inizio); return d?d.getTime():Infinity; }catch{return Infinity;} })
     .filter(t=>isFinite(t)&&t>0);
   const _primoCheckin = _tutteInizio.length>0 ? Math.min(..._tutteInizio) : null;
   const _oraInizioTurno = _primoCheckin ? new Date(_primoCheckin) : null;
