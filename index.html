@@ -357,6 +357,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
 
   return (
     <div style={{padding:"16px 12px",display:"flex",flexDirection:"column",flex:1}}>
+      {/* Campo straordinario */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"10px 14px"}}>
+        <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>⏱ Straordinario</span>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+          <button onClick={()=>setOreExtra(Math.max(0,oreExtra-0.5))} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>−</button>
+          <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra===0?"0h":"+"+Math.floor(oreExtra)+"h"+(oreExtra%1>0?"30":"")}</span>
+          <button onClick={()=>setOreExtra(oreExtra+0.5)} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>+</button>
+        </div>
+        {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Fine turno: {String(6+Math.floor(oreTotali)).padStart(2,"0")}:{oreExtra%1===0?"00":"30"}</span>}
+      </div>
+
       {/* Info linea - stessa larghezza delle 3 card principali */}
       <div style={{display:"flex",gap:12,marginBottom:20}}>
         <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
@@ -373,17 +384,6 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>TC (min)</div>
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc||"—"}</div>
         </div>
-      </div>
-
-      {/* Campo straordinario */}
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"10px 14px"}}>
-        <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>⏱ Straordinario</span>
-        <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
-          <button onClick={()=>setOreExtra(Math.max(0,oreExtra-0.5))} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>−</button>
-          <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra===0?"0h":"+"+Math.floor(oreExtra)+"h"+(oreExtra%1>0?"30":"")}</span>
-          <button onClick={()=>setOreExtra(oreExtra+0.5)} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>+</button>
-        </div>
-        {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Fine turno: {String(6+Math.floor(oreTotali)).padStart(2,"0")}:{oreExtra%1===0?"00":"30"}</span>}
       </div>
 
       {/* Obiettivi grandi */}
@@ -434,10 +434,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
 
         return (
           <div style={{marginTop:20,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center"}}>
-              <span style={{fontSize:11,fontWeight:700,color:"#64748b"}}>Avanzamento turno</span>
-              <span style={{fontSize:12,fontWeight:800}}>{ritardo?<span style={{color:colore}}>⬇ {Math.abs(Math.round(deltaB))} pcs in ritardo</span>:<span style={{color:"#22c55e"}}>✓ In linea</span>}</span>
-            </div>
+
             {/* Contenitore barra */}
             <div style={{position:"relative",paddingTop:14}}>
               {/* Freccia indicatore - allineata con la linea verticale */}
