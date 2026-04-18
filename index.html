@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxO4zNYL_f1kFJZq-cN_4oCm2IhKYG4_QbGhF1v18joQmWv8TIlI0NkcPAwxlG8bls57A/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlfZfVDQm3KZGPO03W6i_D00FrujOE4sKcFVTR94Sufhe4sQwfQZ9_gnI38Zg_BDLZnw/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -411,20 +411,34 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc>0?Math.floor(maxOpGiorno*(60/tc))*oreTotali:0}</div>
           </div>
           {/* Card qualità KO e Migl */}
-          <div style={{flex:1,minWidth:140,background:"#1e293b",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",display:"flex",flexDirection:"column",justifyContent:"center",gap:16}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
-              <span style={{fontSize:32}}>😢</span>
+          <div style={{flex:1,minWidth:140,background:"#1e293b",borderRadius:16,padding:"20px 16px",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",display:"flex",flexDirection:"column",justifyContent:"center",gap:14}}>
+            {/* KO */}
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
+                <circle cx="13" cy="14" r="2" fill="#ef4444"/>
+                <circle cx="23" cy="14" r="2" fill="#ef4444"/>
+                <path d="M11 25 Q18 19 25 25" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" fill="none"/>
+                <line x1="11" y1="10" x2="15" y2="13" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="25" y1="10" x2="21" y2="13" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
               <div>
-                <div style={{fontSize:11,color:"#ef4444",fontWeight:700,letterSpacing:1}}>KO</div>
-                <div style={{fontSize:56,fontWeight:900,color:"#ef4444",lineHeight:1}}>{ko}</div>
+                <div style={{fontSize:10,color:"rgba(239,68,68,0.8)",fontWeight:700,letterSpacing:1}}>KO</div>
+                <div style={{fontSize:52,fontWeight:900,color:"#ef4444",lineHeight:1}}>{ko}</div>
               </div>
             </div>
-            <div style={{height:1,background:"rgba(255,255,255,0.1)"}}/>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
-              <span style={{fontSize:32}}>😐</span>
+            <div style={{height:1,background:"rgba(255,255,255,0.08)"}}/>
+            {/* Migliorabili */}
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <circle cx="18" cy="18" r="17" stroke="#f59e0b" strokeWidth="2"/>
+                <circle cx="13" cy="14" r="2" fill="#f59e0b"/>
+                <circle cx="23" cy="14" r="2" fill="#f59e0b"/>
+                <line x1="12" y1="24" x2="24" y2="24" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
               <div>
-                <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,letterSpacing:1}}>MIGLIORABILI</div>
-                <div style={{fontSize:56,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{migl}</div>
+                <div style={{fontSize:10,color:"rgba(245,158,11,0.8)",fontWeight:700,letterSpacing:1}}>MIGLIORABILI</div>
+                <div style={{fontSize:52,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{migl}</div>
               </div>
             </div>
           </div>
