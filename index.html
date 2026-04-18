@@ -395,7 +395,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{ob60}</div>
           </div>
           {/* Borse prodotte oggi */}
-          <div style={{flex:1,minWidth:140,background:"linear-gradient(135deg,#61ffa9,#22c55e)",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(97,255,169,0.3)"}}>
+          <div style={{flex:1,minWidth:140,background:"#61ffa9",borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:"0 4px 16px rgba(97,255,169,0.3)"}}>
             <div style={{fontSize:11,color:"rgba(0,0,0,0.6)",fontWeight:700,letterSpacing:1,marginBottom:4}}>BORSE PRODOTTE</div>
             <div style={{fontSize:72,fontWeight:900,color:"#000000",lineHeight:1}}>{borse}</div>
           </div>
@@ -453,12 +453,25 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
             )}
             {/* Barra tempo - sotto il prossimo obiettivo */}
             <div style={{marginTop:12}}>
-              <div style={{height:48,background:"#e2e8f0",borderRadius:24,overflow:"hidden"}}>
-                <div style={{height:"100%",width:percTempo.toFixed(4)+"%",background:"#61ffa9",borderRadius:24,transition:"width 0.3s"}}/>
+              <div style={{position:"relative",height:80,background:"#e2e8f0",borderRadius:40,overflow:"hidden"}}>
+                <div style={{height:"100%",width:percTempo.toFixed(4)+"%",background:"#61ffa9",borderRadius:40,transition:"width 0.3s"}}/>
+                {/* Tacche orarie interne */}
+                {Array.from({length:oreTotali-1},(_,h)=>h+1).map(h=>(
+                  <div key={h} style={{position:"absolute",top:0,left:(h/oreTotali*100)+"%",height:"100%",width:2,background:"rgba(0,0,0,0.15)",transform:"translateX(-50%)"}}/>
+                ))}
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-                <span style={{fontSize:11,color:"#7c3aed",fontWeight:700}}>06:00</span>
-                <span style={{fontSize:11,color:"#7c3aed",fontWeight:700}}>{String(Math.floor(6+oreTotali)).padStart(2,"0")}:{oreTotali%1>0?"30":"00"}</span>
+              {/* Orari sotto */}
+              <div style={{position:"relative",height:24,marginTop:2}}>
+                {Array.from({length:oreTotali+1},(_,h)=>h).map(h=>{
+                  const pct=h/oreTotali*100;
+                  const ora=6+h;
+                  return (
+                    <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center"}}>
+                      <div style={{width:2,height:5,background:"#475569"}}/>
+                      <span style={{fontSize:13,color:"#1e293b",fontWeight:800,whiteSpace:"nowrap"}}>{String(ora).padStart(2,"0")}:00</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
