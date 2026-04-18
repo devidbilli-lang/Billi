@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1lVPm6_ANz_rUFj4NtTPbTWoxCDMnRYPps6GizO7bgskWUVXDy332gJXcpWn3lRf2vg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5hfc9tLf3us3YB9GP8BpPlzGufpKnPJWnOuiwzC2NTIHKZLZC5trisKvsGPj71lDK8w/exec";
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
@@ -322,16 +322,21 @@ function GaugeEfficienza({ valore, label, size=160 }) {
 
 function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLinea }) {
   const [tick, setTick] = React.useState(0);
+  const [oreExtra, setOreExtra] = React.useState(0); // straordinario in ore
+  const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   const nOp = sessAttive.length;
   const skuCount={};
-  sessAttive.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk)skuCount[sk]=(skuCount[sk]||0)+1;});
+  sessAttive.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk&&!isSkuSpeciale(sk))skuCount[sk]=(skuCount[sk]||0)+1;});
   const skuPiu=Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
+  // Conta operatori in riparazione separatamente
+  const nRiparazione=sessAttive.filter(s=>isSkuSpeciale(s.skuCorrente||s.sku||"")).length;
+  const nOpProduzione=nOp-nRiparazione;
   const skuObj=skuList.find(s=>s.sku===skuPiu);
   const tc=skuObj?.tc||0;
   const ob15=tc>0?Math.floor(nOp*(15/tc)):null;
-  const ob60=tc>0?Math.floor(nOp*(60/tc)):null;
+  const ob60=tc>0?Math.floor(nOpProduzione*(60/tc)):null;
   const borse=borseOggi||0;
   const colBorse=ob60&&borse>=ob60?"#22c55e":ob60&&borse>=ob60*0.8?"#f59e0b":"#ef4444";
 
@@ -348,8 +353,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
       <div style={{display:"flex",gap:12,marginBottom:20}}>
         <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>OPERATORI</div>
-          <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{nOp}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>attivi</div>
+          <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{nOpProduzione}</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>produzione{nRiparazione>0&&<span style={{background:"#fbbf24",color:"#1a1a00",borderRadius:4,padding:"0 4px",marginLeft:4,fontSize:10,fontWeight:700}}>+{nRiparazione} rit.</span>}</div>
         </div>
         <div style={{flex:2,background:`linear-gradient(135deg,${coloreLinea}dd,${coloreLinea}99)`,borderRadius:16,padding:"10px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>SKU</div>
@@ -361,6 +366,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc||"—"}</div>
           <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>min/borsa</div>
         </div>
+      </div>
+
+      {/* Campo straordinario */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"10px 14px"}}>
+        <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>⏱ Straordinario</span>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+          <button onClick={()=>setOreExtra(Math.max(0,oreExtra-0.5))} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>−</button>
+          <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra>0?"+"+oreExtra+"h":"0h"}</span>
+          <button onClick={()=>setOreExtra(oreExtra+0.5)} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>+</button>
+        </div>
+        {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Turno: {oreTotali}h</span>}
       </div>
 
       {/* Obiettivi grandi */}
@@ -390,13 +406,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
       {/* Barra progresso 8 ore - usa tick per aggiornamento al secondo */}
       {ob60!==null&&(()=>{
         void tick; // forza re-render ogni secondo
-        const ob8ore = ob60 * 8;
+        const ob8ore = ob60 * oreTotali;
         const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
         const now = new Date();
         const hh = now.getHours(); const mm = now.getMinutes(); const ss = now.getSeconds();
-        const secDaInizio = (hh*3600+mm*60+ss) < 21600 ? 0 : Math.min(28800, (hh*3600+mm*60+ss) - 21600);
+        const secTotali = oreTotali * 3600;
+        const secDaInizio = (hh*3600+mm*60+ss) < 21600 ? 0 : Math.min(secTotali, (hh*3600+mm*60+ss) - 21600);
         const minDaInizio = secDaInizio / 60;
-        const percTempo = Math.min(100, secDaInizio/28800*100);
+        const percTempo = Math.min(100, secDaInizio/secTotali*100);
         const oreTrascorse = minDaInizio / 60;
         const obiettivoOraAttuale = ob60 * oreTrascorse;
         const deltaB = borse - obiettivoOraAttuale;
@@ -429,7 +446,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
               </div>
               {/* Tacche orarie */}
               <div style={{position:"relative",height:20,marginTop:2}}>
-                {[0,1,2,3,4,5,6,7,8].map(h=>{
+                {Array.from({length:oreTotali+1},(_,h)=>h).map(h=>{
                   const pct=h/8*100;
                   const ora=6+h;
                   const borseTarget=Math.round(ob60*h);
