@@ -350,8 +350,11 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const nOpProduzione=nOp-nRiparazione;
   const skuObj=skuList.find(s=>s.sku===skuPiu);
   const tc=skuObj?.tc||0;
-  const ob15=tc>0?Math.floor(nOp*(15/tc)):null;
-  const ob60=tc>0?Math.floor(nOpProduzione*(60/tc)):null;
+  // Obiettivo finale = maxOpGiorno × (60/tc) × oreTotali (calcolato dopo oreTotali)
+  // ob60 = obiettivo finale / oreTotali → coerente con finale
+  // Calcoliamo dopo aver definito oreTotali, quindi usiamo una funzione lazy
+  const obFinale = tc>0&&maxOpGiorno>0 ? Math.floor(maxOpGiorno*(60/tc))*oreTotali : null;
+  const ob60 = obFinale!=null ? Math.round(obFinale/oreTotali) : null;
   const borse=borseOggi||0;
   const ko=borseKO||0;
   const migl=borseMigl||0;
@@ -413,7 +416,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           {/* Obiettivo giornaliero */}
           <div style={{flex:1,minWidth:140,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO</div>
-            <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc>0?Math.floor(maxOpGiorno*(60/tc))*oreTotali:0}</div>
+            <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{obFinale||0}</div>
           </div>
           {/* Card qualità KO e Migl */}
           <div style={{flex:1,minWidth:140,background:"#1e293b",borderRadius:16,padding:"20px 16px",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",display:"flex",flexDirection:"column",justifyContent:"center",gap:14}}>
