@@ -392,17 +392,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
       {/* Info linea - stessa larghezza delle 3 card principali */}
       <div style={{display:"flex",gap:12,marginBottom:20}}>
-        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+        <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>OPERATORI</div>
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{nOpProduzione}</div>
           {nRiparazione>0&&<div style={{marginTop:6,background:"#fbbf24",color:"#1a1a00",borderRadius:6,padding:"3px 6px",fontSize:11,fontWeight:800}}>+{nRiparazione} riparazioni</div>}
         </div>
-        <div style={{flex:2,background:`linear-gradient(135deg,${coloreLinea}dd,${coloreLinea}99)`,borderRadius:16,padding:"10px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+        <div style={{flex:2,background:coloreLinea,borderRadius:16,padding:"10px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>SKU</div>
           <div style={{fontSize:"clamp(14px,2.5vw,28px)",fontWeight:900,color:"#ffffff",lineHeight:1.2,wordBreak:"break-all",width:"100%"}}>{skuPiu||"—"}</div>
           <div style={{fontSize:"clamp(13px,1.8vw,22px)",color:"rgba(255,255,255,0.95)",marginTop:4,fontWeight:700,lineHeight:1.2}}>{skuObj?.descrizione||""}</div>
         </div>
-        <div style={{flex:1,background:`linear-gradient(135deg,${coloreLinea}bb,${coloreLinea}88)`,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+        <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"10px 12px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:2}}>TC (min)</div>
           <div style={{fontSize:48,fontWeight:900,color:"#ffffff",lineHeight:1}}>{tc||"—"}</div>
         </div>
@@ -439,7 +439,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{borse}</div>
           </div>
           {/* Obiettivo giornaliero */}
-          <div style={{flex:1,minWidth:140,background:`linear-gradient(135deg,${coloreLinea},${coloreLinea}cc)`,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
+          <div style={{flex:1,minWidth:140,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center",boxShadow:`0 4px 16px ${coloreLinea}44`}}>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",fontWeight:700,letterSpacing:1,marginBottom:4}}>OBIETTIVO</div>
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{obFinale||0}</div>
           </div>
@@ -1864,7 +1864,10 @@ function App() { const [view,setView]             = useState("login");
       if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni);
         if(j.data.rampe) setRampeSheets(j.data.rampe);
         if(j.data.sessioni.length === 0) setSess([]);
-        setDashSync("ok"); setUltimoSync2(new Date()); } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
+        setDashSync("ok"); setUltimoSync2(new Date());
+        // Aggiorna anche dati produzione ad ogni sync
+        fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); } }).catch(()=>{});
+        } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
   useEffect(()=>{ caricaSessioni();
     const t = setInterval(caricaSessioni, 15000);
     return ()=>clearInterval(t); },[caricaSessioni]);
