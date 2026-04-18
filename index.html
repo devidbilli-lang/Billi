@@ -474,6 +474,16 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, coloreLine
                 </div>
               </div>
             )}
+            {/* Barra tempo - sotto il prossimo obiettivo */}
+            <div style={{marginTop:12}}>
+              <div style={{height:20,background:"#e2e8f0",borderRadius:10,overflow:"hidden"}}>
+                <div style={{height:"100%",width:percTempo.toFixed(4)+"%",background:"#61ffa9",borderRadius:10,transition:"width 0.3s"}}/>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                <span style={{fontSize:11,color:"#7c3aed",fontWeight:700}}>06:00</span>
+                <span style={{fontSize:11,color:"#7c3aed",fontWeight:700}}>{String(Math.floor(6+oreTotali)).padStart(2,"0")}:{oreTotali%1>0?"30":"00"}</span>
+              </div>
+            </div>
           </div>
         );
       })()}
