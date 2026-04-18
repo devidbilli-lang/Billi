@@ -564,7 +564,10 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList })
                   lineaId={l.id}
                   skuList={skuList||[]}
                   borseOggi={d.borseOggi||0}
-                coloreLinea={l.colore||"#7c3aed"}
+                  borseKO={d.borseKO||0}
+                  borseMigl={d.borseMigl||0}
+                  maxOpOggi={d.maxOpOggi||0}
+                  coloreLinea={l.colore||"#7c3aed"}
                 />
               </div>
             </div>
