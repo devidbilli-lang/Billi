@@ -42,34 +42,6 @@ const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlfZfVDQm3KZGPO03W6i_D00FrujOE4sKcFVTR94Sufhe4sQwfQZ9_gnI38Zg_BDLZnw/exec";
 
-// ===== MOCK DATA PER TEST =====
-const MOCK_SESSIONI = [
-  {id:"m1",matricola:"001",nome:"Mario",cognome:"Rossi",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:00:00",fine:null},
-  {id:"m2",matricola:"002",nome:"Laura",cognome:"Bianchi",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:05:00",fine:null},
-  {id:"m3",matricola:"003",nome:"Giorgio",cognome:"Verdi",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:00:00",fine:null},
-  {id:"m4",matricola:"004",nome:"Anna",cognome:"Neri",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:10:00",fine:null},
-  {id:"m5",matricola:"005",nome:"Luca",cognome:"Russo",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:00:00",fine:null},
-  {id:"m6",matricola:"006",nome:"Sara",cognome:"Esposito",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:15:00",fine:null},
-  {id:"m7",matricola:"007",nome:"Marco",cognome:"Romano",skuCorrente:"RIPARAZIONE",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:00:00",fine:null},
-  {id:"m8",matricola:"008",nome:"Elena",cognome:"Greco",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:00:00",fine:null},
-  {id:"m9",matricola:"009",nome:"Paolo",cognome:"Conti",skuCorrente:"TEST-SKU-01",lineaCorrente:"Francesca Odorico",lineaInizio:"Francesca Odorico",inizio:"19/04/2026, 07:00:00",fine:null},
-];
-const MOCK_SKULIST = [
-  {sku:"TEST-SKU-01",descrizione:"Borsa Primavera Collezione 2026",tc:30,collezione:"SS2026",attivo:true}
-];
-const MOCK_LINEE = [
-  {id:"Francesca Odorico",nome:"VT-ASS-KMON-09",colore:"#a64d79",icona:"",attiva:true}
-];
-const MOCK_DATI_PROD = {
-  perLinea: {
-    "Francesca Odorico": {
-      borseOggi:16, borseKO:5, borseMigl:7, maxOpOggi:9,
-      colore:"#a64d79", nome:"VT-ASS-KMON-09"
-    }
-  }
-};
-const IS_TEST_MODE = true;
-// ===== FINE MOCK DATA =====
 
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
@@ -1762,7 +1734,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
-      {tab==="produzione"&&<TabProduzione dati={typeof IS_TEST_MODE!=='undefined'&&IS_TEST_MODE?MOCK_DATI_PROD:datiProd} linee={typeof IS_TEST_MODE!=='undefined'&&IS_TEST_MODE?MOCK_LINEE:linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={typeof IS_TEST_MODE!=='undefined'&&IS_TEST_MODE?MOCK_SESSIONI:sessioni} skuList={typeof IS_TEST_MODE!=='undefined'&&IS_TEST_MODE?MOCK_SKULIST:skuList}/>}
+      {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList}/>}
       <div style={{height:40}}/>
     </div>
   );
