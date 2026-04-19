@@ -342,20 +342,22 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const labelInizio = "06:00";
   const labelFine = String(6+Math.floor(oreTotali)).padStart(2,"0")+":"+(oreTotali%1>0?"30":"00");
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
-  // Conta matricole uniche su tutta la giornata (incluse sessioni chiuse), escluse riparazioni
-  const tutteSessioniLinea = sessioni.filter(s=>
-    (s.lineaCorrente===lineaId||s.lineaInizio===lineaId) &&
-    !isSkuSpeciale(s.skuCorrente||s.sku||"")
-  );
-  const matricoleUniche = [...new Set(tutteSessioniLinea.map(s=>s.matricola||s.nome||s.id).filter(Boolean))];
-  // Priorità: 1) matricole uniche dall'app, 2) maxOpOggi da Sheets, 3) operatori attivi ora
-  const maxOpGiorno = matricoleUniche.length > 0 ? matricoleUniche.length : (maxOpOggi > 0 ? maxOpOggi : nOpProduzione);
-  const nOp = sessAttive.length;
+  // Deduplica per matricola: una matricola = un operatore (prendi sessione più recente)
+  const sessAttivePerMat = {};
+  sessAttive.forEach(s=>{
+    const mat = s.matricola||s.nome||s.id;
+    if(!mat) return;
+    const d = parseData(s.inizio);
+    if(!sessAttivePerMat[mat]||d>sessAttivePerMat[mat].d)
+      sessAttivePerMat[mat]={d,s};
+  });
+  const sessAttiveUniche = Object.values(sessAttivePerMat).map(x=>x.s);
+  const nOp = sessAttiveUniche.length;
   const skuCount={};
-  sessAttive.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk&&!isSkuSpeciale(sk))skuCount[sk]=(skuCount[sk]||0)+1;});
+  sessAttiveUniche.forEach(s=>{const sk=s.skuCorrente||s.sku||"";if(sk&&!isSkuSpeciale(sk))skuCount[sk]=(skuCount[sk]||0)+1;});
   const skuPiu=Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
   // Conta operatori in riparazione separatamente
-  const nRiparazione=sessAttive.filter(s=>isSkuSpeciale(s.skuCorrente||s.sku||"")).length;
+  const nRiparazione=sessAttiveUniche.filter(s=>isSkuSpeciale(s.skuCorrente||s.sku||"")).length;
   const nOpProduzione=nOp-nRiparazione;
   const skuObj=skuList.find(s=>s.sku===skuPiu);
   const tc=skuObj?.tc||0;
@@ -372,17 +374,24 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   // Obiettivo finale = Σ per ogni operatore: floor(ore_disponibili × 60/tc)
   // ore_disponibili = fine turno - check-in operatore
   const obFinale = tc>0 ? (()=>{
+    // Solo operatori ATTUALMENTE IN TURNO (sessione attiva) con SKU ≠ RIPARAZIONE
     const sessPerMatricola = {};
-    sessioni
-      .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&!isSkuSpeciale(s.skuCorrente||s.sku||"")&&s.inizio)
-      .forEach(s=>{
-        const mat = s.matricola||s.nome||s.id;
-        if(!mat) return;
-        const d = parseData(s.inizio);
-        if(!d) return;
-        const secIng = d.getHours()*3600+d.getMinutes()*60;
-        if(!sessPerMatricola[mat]||secIng<sessPerMatricola[mat]) sessPerMatricola[mat]=secIng;
-      });
+    const sessioniLinea = sessioni.filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio);
+    const sessioniAttivePerMat = {};
+    sessioniLinea.forEach(s=>{
+      const mat = s.matricola||s.nome||s.id;
+      if(!mat) return;
+      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+      if(!attiva) return;
+      const d = parseData(s.inizio);
+      if(!d) return;
+      if(!sessioniAttivePerMat[mat]||d>sessioniAttivePerMat[mat].d)
+        sessioniAttivePerMat[mat]={d, sku:s.skuCorrente||s.sku||"", secIng:d.getHours()*3600+d.getMinutes()*60};
+    });
+    Object.entries(sessioniAttivePerMat).forEach(([mat,{sku,secIng}])=>{
+      if(isSkuSpeciale(sku)) return;
+      sessPerMatricola[mat] = secIng;
+    });
     let tot=0;
     Object.values(sessPerMatricola).forEach(secIngresso=>{
       const oreDisp = Math.max(0,(secFineTurno-secIngresso)/3600);
