@@ -386,42 +386,38 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
   // Obiettivo finale = Σ per ogni operatore: floor(ore_disponibili × 60/tc)
   // ore_disponibili = fine turno - check-in operatore
-  // OBIETTIVO UNICO ibrido:
-  // - operatori ancora in turno → ore da check-in a fine turno (14:00 + straordinario)
-  // - operatori usciti → ore da check-in a checkout reale
-  // - esclude riparazioni, deduplica per matricola
+  // OBIETTIVO: minuti effettivi di produzione su questo SKU/linea
   const obFinale = tc>0 ? (()=>{
     const sessioniLinea = sessioni.filter(s=>
       (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
     );
-    const matMap = {};
+    const minPerMat = {};
     sessioniLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
-      const sku = s.skuCorrente||s.sku||"";
-      if(isSkuSpeciale(sku)) return;
       const dInizio = parseData(s.inizio);
       if(!dInizio) return;
       const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
       const dFine = attiva ? null : parseData(s.fine);
-      if(!matMap[mat]){
-        matMap[mat]={primoIngresso:dInizio, ultimoCheckout:dFine, attivo:attiva};
-      } else {
-        if(dInizio < matMap[mat].primoIngresso) matMap[mat].primoIngresso = dInizio;
-        if(attiva) matMap[mat].attivo = true;
-        if(!attiva&&dFine&&(!matMap[mat].ultimoCheckout||dFine>matMap[mat].ultimoCheckout))
-          matMap[mat].ultimoCheckout = dFine;
-      }
+      const sku = s.skuCorrente||s.sku||"";
+      const tipo = (s.tipo||"").toUpperCase();
+      // Escludi corso, riparazione, trasferimento verso altra linea
+      if(isSkuSpeciale(sku)) return;
+      if(tipo==="CORSO"||tipo==="SOSPENDI") return;
+      if(!attiva && s.lineaCorrente!==lineaId) return;
+      const secIng = dInizio.getHours()*3600+dInizio.getMinutes()*60;
+      let secFineS;
+      if(attiva){
+        secFineS = secFineTurno;
+      } else if(dFine){
+        secFineS = Math.min(dFine.getHours()*3600+dFine.getMinutes()*60, secFineTurno);
+      } else return;
+      const minS = Math.max(0,(secFineS-secIng)/60);
+      if(!minPerMat[mat]) minPerMat[mat]=0;
+      minPerMat[mat] += minS;
     });
     let tot=0;
-    Object.values(matMap).forEach(({primoIngresso, ultimoCheckout, attivo})=>{
-      const secIng = primoIngresso.getHours()*3600+primoIngresso.getMinutes()*60;
-      const secFine = (attivo||!ultimoCheckout)
-        ? secFineTurno
-        : Math.min(ultimoCheckout.getHours()*3600+ultimoCheckout.getMinutes()*60, secFineTurno);
-      const oreDisp = Math.max(0,(secFine-secIng)/3600);
-      tot += Math.floor(oreDisp*(60/tc));
-    });
+    Object.values(minPerMat).forEach(m=>{ tot+=Math.floor(m/tc); });
     return tot>0?tot:null;
   })() : null;
   const ob60 = obFinale!=null&&oreTotali>0 ? Math.round(obFinale/oreTotali) : null;
@@ -1421,6 +1417,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
 }
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   const [modOrario, setModOrario] = React.useState(null);
+  const [modPianifica, setModPianifica] = React.useState(null);
   const [datiProd, setDatiProd] = React.useState(null);
   React.useEffect(()=>{
     const caricaProd = async () => {
@@ -1787,6 +1784,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                         {att2&&(
                           <>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
+                            {(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&<button title="Pianifica fine turno" style={{padding:"8px 10px",background:s.finePianificata?"#fef3c7":"#ffffff",border:"1px solid "+(s.finePianificata?"#fcd34d":"#e2e8f0"),borderRadius:6,color:s.finePianificata?"#92400e":"#94a3b8",cursor:"pointer",fontSize:13,fontWeight:700}} onClick={()=>setModPianifica(s)}>⏰</button>}
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ setModalConferma({titolo:"Chiudi turno",messaggio:"Chiudere il turno di "+s.nome+" "+s.cognome+"?",colorBtn:"ef4444",testoBtn:"✕ Chiudi turno",onOk:()=>{ setModalConferma(null); if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); }}); }}>✕</button>
                           </>
