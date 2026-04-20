@@ -1746,7 +1746,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                           {sk&&sk.collezione&&sk.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:3,padding:"1px 5px"}}>{sk.collezione.trim()}</span>}
                         </div>
                       );})()}
-                      {s.rampaDal&&<div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {giorniLavorativiJS(s.rampaDal)}/15</div>}
+                      {(()=>{
+                          const skuS = s.skuCorrente||s.sku||"";
+                          const rampaS = skuS ? (rampeSheets||[]).find(r=>r.sku===skuS) : null;
+                          const rDal = rampaS?.rampaDal || s.rampaDal;
+                          if(!rDal) return null;
+                          const gg = giorniLavorativiJS(rDal);
+                          return <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {gg}/15</div>;
+                        })()}
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}>
