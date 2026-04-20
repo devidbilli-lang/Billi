@@ -581,19 +581,13 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           <div style={{marginTop:12,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
             {/* Barra tempo */}
             <div style={{marginTop:12}}>
-              {/* Freccia indicatore */}
-              <div style={{position:"relative",height:12,marginBottom:2}}>
-                <div style={{position:"absolute",left:percTempo.toFixed(3)+"%",transform:"translateX(-50%)",top:0}}>
-                  <div style={{width:0,height:0,borderLeft:"7px solid transparent",borderRight:"7px solid transparent",borderTop:"10px solid #1e293b"}}/>
-                </div>
-              </div>
+
               <div style={{position:"relative",height:80,background:"#ffffff",borderRadius:40,overflow:"hidden",border:"2px solid #e2e8f0"}}>
                 {/* Barra produzione #61ffa9 */}
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:"#61ffa9",borderRadius:40,transition:"width 0.3s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:12}}>
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:coloreLinea,borderRadius:40,transition:"width 0.3s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:12}}>
                   
                 </div>
-                {/* Linea verticale tempo */}
-                <div style={{position:"absolute",top:0,left:percTempo.toFixed(3)+"%",height:"100%",width:3,background:"#1e293b",transform:"translateX(-50%)",zIndex:5}}/>
+
               </div>
               {/* Orari sotto */}
               <div style={{position:"relative",height:24,marginTop:2}}>
