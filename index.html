@@ -50,6 +50,19 @@ const LINEE_DEFAULT = [
 const now     = () => new Date();
 const fmt     = d => d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 const fmtFull = d => d.toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+function giorniLavorativiJS(tsInizio) {
+  if(!tsInizio) return 1;
+  var cur = new Date(tsInizio); cur.setHours(0,0,0,0);
+  var oggi = new Date(); oggi.setHours(0,0,0,0);
+  var gg = 0;
+  while(cur.getTime() <= oggi.getTime()) {
+    var dow = cur.getDay();
+    if(dow !== 0 && dow !== 6) gg++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return Math.min(15, Math.max(1, gg));
+}
+
 const parseData = s => { if(!s) return null;
   if(typeof s === "number") return new Date(s);
   const str = s.toString().trim();
@@ -668,11 +681,11 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
 function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
   const rampaMap = {};
-  for(const r of (rampeSheets||[])){ if(r.sku && r.rampaDal){ const g = Math.min(15, Math.max(1, Math.floor((now()-r.rampaDal)/(1000*60*60*24))+1));
+  for(const r of (rampeSheets||[])){ if(r.sku && r.rampaDal){ const g = giorniLavorativiJS(r.rampaDal);
       if(!rampaMap[r.sku]) rampaMap[r.sku] = { dal:r.rampaDal, giorni:g, lineaId:r.lineaId }; } }
   for(const s of sessioni){ let rdal = s.rampaDal||null;
     if(!rdal && (s.skuA||"").includes("__RAMPA__")){ const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime(); }
-    if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=Math.min(15,Math.max(1,Math.floor((now()-rdal)/(1000*60*60*24))+1)); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } } }
+    if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=giorniLavorativiJS(rdal); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } } }
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
   // Mostra solo SKU con rampa che hanno ancora sessioni attive
@@ -1233,7 +1246,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           {(()=>{
             const skuNorm = sku.trim().toUpperCase();
             const rampaAttiva = skuNorm ? (rampeSheets||[]).find(r=>r.sku===skuNorm) : null;
-            const giorniRampa = rampaAttiva ? Math.min(15,Math.max(1,Math.floor((now()-rampaAttiva.rampaDal)/(1000*60*60*24))+1)) : null;
+            const giorniRampa = rampaAttiva ? giorniLavorativiJS(rampaAttiva.rampaDal) : null;
             return (
               <div style={{marginBottom:18,background:"#f8fafc",border:"1px solid "+(rampaAttiva?"#f59e0b44":"#1e3a5f"),borderRadius:8,padding:"12px 14px"}}>
                 {rampaAttiva ? (
@@ -1733,7 +1746,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                           {sk&&sk.collezione&&sk.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:3,padding:"1px 5px"}}>{sk.collezione.trim()}</span>}
                         </div>
                       );})()}
-                      {s.rampaDal&&<div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {Math.min(15,Math.max(1,Math.floor((now()-s.rampaDal)/(1000*60*60*24))+1))}/15</div>}
+                      {s.rampaDal&&<div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {giorniLavorativiJS(s.rampaDal)}/15</div>}
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}>
