@@ -386,28 +386,40 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
   // Obiettivo finale = Σ per ogni operatore: floor(ore_disponibili × 60/tc)
   // ore_disponibili = fine turno - check-in operatore
+  // OBIETTIVO UNICO ibrido:
+  // - operatori ancora in turno → ore da check-in a fine turno (14:00 + straordinario)
+  // - operatori usciti → ore da check-in a checkout reale
+  // - esclude riparazioni, deduplica per matricola
   const obFinale = tc>0 ? (()=>{
-    // Solo operatori ATTUALMENTE IN TURNO (sessione attiva) con SKU ≠ RIPARAZIONE
-    const sessPerMatricola = {};
-    const sessioniLinea = sessioni.filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio);
-    const sessioniAttivePerMat = {};
+    const sessioniLinea = sessioni.filter(s=>
+      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
+    );
+    const matMap = {};
     sessioniLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
-      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
-      if(!attiva) return;
-      const d = parseData(s.inizio);
-      if(!d) return;
-      if(!sessioniAttivePerMat[mat]||d>sessioniAttivePerMat[mat].d)
-        sessioniAttivePerMat[mat]={d, sku:s.skuCorrente||s.sku||"", secIng:d.getHours()*3600+d.getMinutes()*60};
-    });
-    Object.entries(sessioniAttivePerMat).forEach(([mat,{sku,secIng}])=>{
+      const sku = s.skuCorrente||s.sku||"";
       if(isSkuSpeciale(sku)) return;
-      sessPerMatricola[mat] = secIng;
+      const dInizio = parseData(s.inizio);
+      if(!dInizio) return;
+      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+      const dFine = attiva ? null : parseData(s.fine);
+      if(!matMap[mat]){
+        matMap[mat]={primoIngresso:dInizio, ultimoCheckout:dFine, attivo:attiva};
+      } else {
+        if(dInizio < matMap[mat].primoIngresso) matMap[mat].primoIngresso = dInizio;
+        if(attiva) matMap[mat].attivo = true;
+        if(!attiva&&dFine&&(!matMap[mat].ultimoCheckout||dFine>matMap[mat].ultimoCheckout))
+          matMap[mat].ultimoCheckout = dFine;
+      }
     });
     let tot=0;
-    Object.values(sessPerMatricola).forEach(secIngresso=>{
-      const oreDisp = Math.max(0,(secFineTurno-secIngresso)/3600);
+    Object.values(matMap).forEach(({primoIngresso, ultimoCheckout, attivo})=>{
+      const secIng = primoIngresso.getHours()*3600+primoIngresso.getMinutes()*60;
+      const secFine = (attivo||!ultimoCheckout)
+        ? secFineTurno
+        : Math.min(ultimoCheckout.getHours()*3600+ultimoCheckout.getMinutes()*60, secFineTurno);
+      const oreDisp = Math.max(0,(secFine-secIng)/3600);
       tot += Math.floor(oreDisp*(60/tc));
     });
     return tot>0?tot:null;
