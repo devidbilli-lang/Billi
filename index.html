@@ -386,46 +386,73 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
   // Obiettivo finale = Σ per ogni operatore: floor(ore_disponibili × 60/tc)
   // ore_disponibili = fine turno - check-in operatore
-  // OBIETTIVO: minuti effettivi di produzione su questo SKU/linea
+  // OBIETTIVO: turno 8h + straordinario per ogni operatore
+  // Si scala solo per: corso, riparazione, trasferimento ad altra linea
+  // NON scende per uscite anticipate o entrate tardive
   const obFinale = tc>0 ? (()=>{
     const sessioniLinea = sessioni.filter(s=>
       (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
     );
+    // Per ogni matricola: calcola minuti disponibili meno periodi improduttivi
     const minPerMat = {};
+
     sessioniLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
       const dInizio = parseData(s.inizio);
       if(!dInizio) return;
-      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
-      const dFine = attiva ? null : parseData(s.fine);
       const sku = s.skuCorrente||s.sku||"";
-      // Escludi riparazione e trasferimento verso altra linea
-      if(isSkuSpeciale(sku)) return;
-      if(!attiva && s.lineaCorrente!==lineaId) return;
+      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+
+      // Base: ore disponibili dal check-in a fine turno (non dipende da uscita reale)
       const secIng = dInizio.getHours()*3600+dInizio.getMinutes()*60;
-      let secFineS = (attiva||!dFine)
-        ? secFineTurno
-        : Math.min(dFine.getHours()*3600+dFine.getMinutes()*60, secFineTurno);
-      let minTotali = Math.max(0,(secFineS-secIng)/60);
-      // Sottrai minuti di corso (periodi in cui l'operatore era al corso)
+      const minBase = Math.max(0,(secFineTurno-secIng)/60);
+
+      if(!minPerMat[mat]) minPerMat[mat]={base:minBase, sottrai:0, contato:false};
+      else if(!minPerMat[mat].contato) {
+        // Prendi il primo ingresso più antico
+        if(minBase > minPerMat[mat].base) minPerMat[mat].base = minBase;
+      }
+      minPerMat[mat].contato = true;
+
+      // Scala per riparazione (sessione attiva con SKU riparazione)
+      if(isSkuSpeciale(sku)){
+        const secFineRip = attiva ? secFineTurno : (()=>{
+          const dF = parseData(s.fine);
+          return dF ? Math.min(dF.getHours()*3600+dF.getMinutes()*60, secFineTurno) : secFineTurno;
+        })();
+        minPerMat[mat].sottrai += Math.max(0,(secFineRip-secIng)/60);
+        return;
+      }
+
+      // Scala per trasferimento verso altra linea (sessione chiusa, lineaCorrente diversa)
+      if(!attiva && s.lineaCorrente!==lineaId){
+        const dF = parseData(s.fine);
+        const secFineLinea = dF ? Math.min(dF.getHours()*3600+dF.getMinutes()*60, secFineTurno) : secFineTurno;
+        // Sottrai il tempo dalla fine della sessione su questa linea fino a fine turno
+        minPerMat[mat].sottrai += Math.max(0,(secFineTurno-secFineLinea)/60);
+        return;
+      }
+
+      // Scala per corsi
       if(s.corsi&&s.corsi.length>0){
         s.corsi.forEach(c=>{
           const dCorsoIn = parseData(c.quando);
           if(!dCorsoIn) return;
           const secCorsoIn = dCorsoIn.getHours()*3600+dCorsoIn.getMinutes()*60;
           let secCorsoOut;
-          if(c.rientro){ const dR=parseData(c.rientro); secCorsoOut=dR?dR.getHours()*3600+dR.getMinutes()*60:secFineS; }
-          else { secCorsoOut = secFineS; } // ancora al corso
-          minTotali -= Math.max(0,(secCorsoOut-secCorsoIn)/60);
+          if(c.rientro){ const dR=parseData(c.rientro); secCorsoOut=dR?dR.getHours()*3600+dR.getMinutes()*60:secFineTurno; }
+          else { secCorsoOut = secFineTurno; }
+          minPerMat[mat].sottrai += Math.max(0,(secCorsoOut-secCorsoIn)/60);
         });
       }
-      minTotali = Math.max(0, minTotali);
-      if(!minPerMat[mat]) minPerMat[mat]=0;
-      minPerMat[mat] += minTotali;
     });
+
     let tot=0;
-    Object.values(minPerMat).forEach(m=>{ tot+=Math.floor(m/tc); });
+    Object.values(minPerMat).forEach(({base,sottrai})=>{
+      const minEff = Math.max(0, base-sottrai);
+      tot += Math.floor(minEff/tc);
+    });
     return tot>0?tot:null;
   })() : null;
   const ob60 = obFinale!=null&&oreTotali>0 ? Math.round(obFinale/oreTotali) : null;
