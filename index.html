@@ -448,11 +448,11 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       }
     });
 
-    let tot=0;
+    let minTotali=0;
     Object.values(minPerMat).forEach(({base,sottrai})=>{
-      const minEff = Math.max(0, base-sottrai);
-      tot += Math.floor(minEff/tc);
+      minTotali += Math.max(0, base-sottrai);
     });
+    const tot = minTotali>0 ? Math.ceil(minTotali/tc) : 0;
     return tot>0?tot:null;
   })() : null;
   const ob60 = obFinale!=null&&oreTotali>0 ? Math.round(obFinale/oreTotali) : null;
