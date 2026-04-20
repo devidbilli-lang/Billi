@@ -1730,7 +1730,33 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     titolo:"Fine tutti i turni",
                     messaggio:"Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?",
                     colorBtn:"ef4444", testoBtn:"✕ Chiudi tutti",
-                    onOk:()=>{ setModalConferma(null); (async()=>{ for(const s of attiveLinea){ await api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); } if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); })(); }
+                    onOk:()=>{ setModalConferma(null); (async()=>{
+  const checkoutOp = async (s) => {
+    const url = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(s.id)+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(s.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&skuA=";
+    // 3 tentativi con pausa crescente
+    for(let i=0; i<3; i++){
+      try { await fetchConRetry(url, 5, 1000); return {ok:true, s}; } catch(e) {
+        if(i<2) await new Promise(r=>setTimeout(r, 2000*(i+1)));
+      }
+    }
+    return {ok:false, s};
+  };
+  // Prima passata: tutti in parallelo
+  const results = await Promise.all(attiveLinea.map(s=>checkoutOp(s)));
+  const falliti = results.filter(r=>!r.ok).map(r=>r.s);
+  if(falliti.length>0){
+    // Seconda passata: riprova i falliti uno alla volta
+    const ancorFalliti = [];
+    for(const s of falliti){
+      const r = await checkoutOp(s);
+      if(!r.ok) ancorFalliti.push(s);
+    }
+    if(ancorFalliti.length>0){
+      alert("⚠️ Impossibile chiudere il turno di:\n"+ancorFalliti.map(s=>s.nome+" "+s.cognome).join("\n")+"\n\nRiprova manualmente per questi operatori.");
+    }
+  }
+  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,2000);
+})(); }
                   });
                 }} style={{width:"100%",fontSize:11,fontWeight:700,padding:"6px 4px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",marginTop:4}}>
                   ✕ Fine tutti
