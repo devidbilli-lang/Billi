@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9vEmwPesi9QAjQ-SfrUkQVlxDyYU55yBmrMAMMRV5sDTzqyGKrGc0T1e9Yp-Hl_pI/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwm8NsfcemUFwa2e2AyAA3rknCQ8Ui99pqn8wVArZObPBlvB315tbKUE1LjiL8Qw5xQJQ/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -348,7 +348,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const _secOra = _hh*3600+_mm*60+_ss;
   const storKey = "straord_"+lineaId;
   const [oreExtra, setOreExtraRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(storKey); return v?parseFloat(v):0; }catch{return 0;} });
-  const setOreExtra = v => { setOreExtraRaw(v); try{ localStorage.setItem(storKey, v); }catch{} };
+  // Carica straordinario da Sheets al montaggio
+  React.useEffect(()=>{
+    fetchConRetry(APPS_SCRIPT_URL+"?action=leggistraordinario&lineaId="+encodeURIComponent(lineaId), 3, 1000)
+      .then(r=>r.json()).then(j=>{ if(j.ok&&j.data.oreExtra!=null){ setOreExtraRaw(j.data.oreExtra); try{localStorage.setItem(storKey,j.data.oreExtra);}catch{} } }).catch(()=>{});
+  },[lineaId]);
+  const setOreExtra = v => {
+    setOreExtraRaw(v);
+    try{ localStorage.setItem(storKey, v); }catch{}
+    // Salva su Sheets colonna N del primo check-in della linea
+    fetchConRetry(APPS_SCRIPT_URL+"?action=salvastraordinario&lineaId="+encodeURIComponent(lineaId)+"&oreExtra="+encodeURIComponent(v), 3, 1000).catch(()=>{});
+  };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
 
