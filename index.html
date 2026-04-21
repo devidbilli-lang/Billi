@@ -351,9 +351,56 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const setOreExtra = v => { setOreExtraRaw(v); try{ localStorage.setItem(storKey, v); }catch{} };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
-  const _secInizioTurno = 6*3600;
-  const labelInizio = "06:00";
-  const labelFine = String(6+Math.floor(oreTotali)).padStart(2,"0")+":"+(oreTotali%1>0?"30":"00");
+
+    // Checkout automatico quando il turno finisce
+  const [turnoChiuso, setTurnoChiuso] = React.useState(false);
+  React.useEffect(()=>{
+    if(turnoChiuso) return;
+    if(!_primoCheckinTs) return;
+    const secOraAttuale = new Date().getHours()*3600+new Date().getMinutes()*60+new Date().getSeconds();
+    if(secOraAttuale < secFineTurnoAssoluto) return;
+    // Turno scaduto → chiudi tutti gli operatori attivi
+    const sessAttiveLinea = sessioni.filter(s=>
+      s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")
+    );
+    if(sessAttiveLinea.length===0) return;
+    setTurnoChiuso(true);
+    (async()=>{
+      const checkoutOp = async(s)=>{
+        const url = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(s.id||s.sessionId||"")+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(s.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&skuA=";
+        for(let i=0;i<3;i++){
+          try{ await fetchConRetry(url,5,1000); return {ok:true}; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,2000*(i+1))); }
+        }
+        return {ok:false,s};
+      };
+      const results = await Promise.all(sessAttiveLinea.map(s=>checkoutOp(s)));
+      const falliti = results.filter(r=>!r.ok);
+      if(falliti.length>0){
+        // Riprova i falliti
+        for(const {s} of falliti){ await checkoutOp(s); }
+      }
+    })();
+  },[tick, turnoChiuso, secFineTurnoAssoluto, _primoCheckinTs]);
+  // Calcola primo check-in reale della linea
+  const _primoCheckinTs = (()=>{
+    const ts = sessioni
+      .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
+      .map(s=>{ const d=parseData(s.inizio); return d?d.getTime():null; })
+      .filter(Boolean);
+    return ts.length>0 ? Math.min(...ts) : null;
+  })();
+  const _primoCheckinDate = _primoCheckinTs ? new Date(_primoCheckinTs) : null;
+  const _secInizioTurno = _primoCheckinDate
+    ? _primoCheckinDate.getHours()*3600+_primoCheckinDate.getMinutes()*60+_primoCheckinDate.getSeconds()
+    : 6*3600;
+  const labelInizio = _primoCheckinDate
+    ? String(_primoCheckinDate.getHours()).padStart(2,"0")+":"+String(_primoCheckinDate.getMinutes()).padStart(2,"0")
+    : "06:00";
+  const _oreFineDecimale = _secInizioTurno/3600 + oreTotali;
+  const _hFine = Math.floor(_oreFineDecimale)%24;
+  const _mFine = Math.round((_oreFineDecimale%1)*60);
+  const labelFine = String(_hFine).padStart(2,"0")+":"+String(_mFine).padStart(2,"0");
+  const secFineTurnoAssoluto = _secInizioTurno + oreTotali*3600;
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   // Deduplica per matricola: una matricola = un operatore (prendi sessione più recente)
   const sessAttivePerMat = {};
@@ -375,14 +422,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const skuObj=skuList.find(s=>s.sku===skuPiu);
   const tc=skuObj?.tc||0;
   // Fine turno = primo check-in della linea + (8h + straordinario)
-  const _primoCheckinSec2 = (()=>{
-    const ts = sessioni
-      .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
-      .map(s=>{ const d=parseData(s.inizio); return d?d.getHours()*3600+d.getMinutes()*60:null; })
-      .filter(Boolean);
-    return ts.length>0 ? Math.min(...ts) : _secInizioTurno;
-  })();
-  const secFineTurno = _primoCheckinSec2 + oreTotali*3600;
+  const secFineTurno = secFineTurnoAssoluto;
 
   // Obiettivo finale = Σ per ogni operatore: floor(ore_disponibili × 60/tc)
   // ore_disponibili = fine turno - check-in operatore
@@ -617,22 +657,41 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             {/* Barra tempo */}
             <div style={{marginTop:12}}>
 
-              <div style={{position:"relative",height:80,background:"#ffffff",borderRadius:40,overflow:"hidden",border:"2px solid #e2e8f0"}}>
-                {/* Barra produzione #61ffa9 */}
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:coloreLinea,borderRadius:40,transition:"width 0.3s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:12}}>
-                  
-                </div>
-
+              <div style={{position:"relative",height:80,background:"#ffffff",borderRadius:40,border:"2px solid #e2e8f0"}}>
+                {/* Barra colorata */}
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:coloreLinea,borderRadius:40,transition:"width 1s linear"}}/>
+                {/* Timer countdown al centro */}
+                {(()=>{
+                  const secOra2 = _now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
+                  const secRim = Math.max(0, secFineTurnoAssoluto - secOra2);
+                  const textColor = percTempo>50?"#ffffff":"#1e293b";
+                  if(secRim<=0) return (
+                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
+                      <span style={{fontSize:18,fontWeight:900,color:"#ef4444"}}>⏹ Turno terminato</span>
+                    </div>
+                  );
+                  const hR=Math.floor(secRim/3600), mR=Math.floor((secRim%3600)/60), sR=secRim%60;
+                  return (
+                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
+                      <span style={{fontSize:36,fontWeight:900,color:textColor,fontFamily:"monospace",letterSpacing:2}}>
+                        -{String(hR).padStart(2,"0")}:{String(mR).padStart(2,"0")}:{String(sR).padStart(2,"0")}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
-              {/* Orari sotto */}
+              {/* Orari sotto - basati sul primo check-in reale */}
               <div style={{position:"relative",height:24,marginTop:2}}>
-                {Array.from({length:oreTotali+1},(_,h)=>h).map(h=>{
+                {Array.from({length:Math.ceil(oreTotali)+1},(_,h)=>h).map(h=>{
                   const pct=h/oreTotali*100;
-                  const ora=6+h;
+                  const secLabel = _secInizioTurno + h*3600;
+                  const hh = Math.floor(secLabel/3600)%24;
+                  const mm = Math.floor((secLabel%3600)/60);
+                  const label = String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
                   return (
                     <div key={h} style={{position:"absolute",left:pct+"%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center"}}>
                       <div style={{width:2,height:5,background:"#475569"}}/>
-                      <span style={{fontSize:13,color:"#1e293b",fontWeight:800,whiteSpace:"nowrap"}}>{String(ora).padStart(2,"0")}:00</span>
+                      <span style={{fontSize:11,color:"#1e293b",fontWeight:800,whiteSpace:"nowrap"}}>{label}</span>
                     </div>
                   );
                 })}
