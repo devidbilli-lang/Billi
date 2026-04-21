@@ -1807,6 +1807,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     onChange={e=>setModTrasf({...modTrasf,pwd:e.target.value,errPwd:""})}
                     onKeyDown={e=>{if(e.key==="Enter"){
                       if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
+                        setModTrasf(null);
                         setModalConferma({titolo:"Conferma trasferimento",messaggio:(modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · SKU: "+modTrasf.skuNuovo:""),colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:eseguiTrasf});
                       } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
                     }}}/>
@@ -1814,7 +1815,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   <button style={{width:"100%",padding:11,background:coloreLinea,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
                     onClick={()=>{
                       if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
-                        setModalConferma({titolo:"Conferma trasferimento",messaggio:(modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · SKU: "+modTrasf.skuNuovo:""),colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:eseguiTrasf});
+                        const _eseguiTrasf = eseguiTrasf;
+                        const _msg = (modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · SKU: "+modTrasf.skuNuovo:"");
+                        setModTrasf(null);
+                        setModalConferma({titolo:"Conferma trasferimento",messaggio:_msg,colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:_eseguiTrasf});
                       } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
                     }}>↔ Conferma Trasferimento</button>
                   <button style={{width:"100%",padding:10,background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}
