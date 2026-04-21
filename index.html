@@ -451,7 +451,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       // Se l'operatore è arrivato per trasferimento, usa l'orario del trasferimento
       if(s.lineaInizio!==lineaId && s.trasferimenti&&s.trasferimenti.length>0){
         // Cerca il trasferimento verso questa linea
-        const trVers = s.trasferimenti.filter(t=>t.a===lineaId);
+        const trVers = s.trasferimenti.filter(t=>(t.a||"").trim().toLowerCase()===(lineaId||"").trim().toLowerCase());
         if(trVers.length>0){
           const dTr = parseData(trVers[trVers.length-1].quando);
           if(dTr) secIng = dTr.getHours()*3600+dTr.getMinutes()*60;
