@@ -444,14 +444,21 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       const sku = s.skuCorrente||s.sku||"";
       const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
 
-      // Base: ore disponibili dal check-in a fine turno (non dipende da uscita reale)
+      // Base: ore dal check-in a fine turno
+      // - se ancora in turno → fino a fine turno teorico
+      // - se uscito → fino al checkout reale (cala il dinamico)
       const secIng = dInizio.getHours()*3600+dInizio.getMinutes()*60;
-      const minBase = Math.max(0,(secFineTurno-secIng)/60);
+      const dFine = attiva ? null : parseData(s.fine);
+      const secFineEff = (attiva||!dFine)
+        ? secFineTurno
+        : Math.min(dFine.getHours()*3600+dFine.getMinutes()*60, secFineTurno);
+      const minBase = Math.max(0,(secFineEff-secIng)/60);
 
       if(!minPerMat[mat]) minPerMat[mat]={base:minBase, sottrai:0, contato:false};
-      else if(!minPerMat[mat].contato) {
-        // Prendi il primo ingresso più antico
-        if(minBase > minPerMat[mat].base) minPerMat[mat].base = minBase;
+      else {
+        // Se rientra (nuova sessione attiva) aggiorna con la base corretta
+        if(attiva) minPerMat[mat].base = Math.max(minPerMat[mat].base, minBase);
+        else if(!minPerMat[mat].contato) minPerMat[mat].base = minBase;
       }
       minPerMat[mat].contato = true;
 
