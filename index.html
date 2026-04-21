@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUjkalb_nivDokObd0D6PKnlIewKRX3cWB9kzNIrHz7GtSYISmoEe-5rJeWRC_tVly5Q/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxq6ufi5HECKLNSu_iixwTIGlrrIRTQlA_JNklcVfavcVp2KBYfnyq1BHyVDbvbUDWS0g/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -959,7 +959,81 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
     </div>
   );
 }
-function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci, obRealeQ=null, obTeoricoQ=null }) {
+function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
+  const [obRealeQ, setObRealeQ]   = React.useState(null);
+  const [obTeoricoQ, setObTeoricoQ] = React.useState(null);
+
+  // Carica automaticamente gli obiettivi dalla sezione produzione
+  React.useEffect(()=>{
+    const caricaObiettivi = async () => {
+      try {
+        // Prendi sessioni e calcola obiettivi
+        const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+        const j = await r.json();
+        if(!j.ok||!j.data) return;
+        const sessioni = j.data.sessioni||[];
+        const lineaId = linea?.id||"";
+        const skuConSpecialiList = [...SKU_SPECIALI,...(skuList||[])];
+
+        // Calcola primo check-in e fine turno
+        const ts = sessioni
+          .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
+          .map(s=>{ const d=parseData(s.inizio); return d?d.getHours()*3600+d.getMinutes()*60:null; })
+          .filter(Boolean);
+        if(ts.length===0) return;
+        const secInizio = Math.min(...ts);
+        const oreTotali = 8; // turno standard
+        const secFine = secInizio + oreTotali*3600;
+
+        // SKU più frequente
+        const skuCount={};
+        sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null)).forEach(s=>{
+          const sk=s.skuCorrente||s.sku||"";
+          if(sk&&!SKU_SPECIALI.some(x=>x.sku===sk)) skuCount[sk]=(skuCount[sk]||0)+1;
+        });
+        const skuPiu = Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
+        const skuObj = skuConSpecialiList.find(s=>s.sku===skuPiu);
+        const tc = skuObj?.tc||0;
+        if(tc<=0) return;
+
+        // Obiettivo Reale: minuti effettivi / TC
+        const sessioniLinea = sessioni.filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio);
+        const minPerMat = {};
+        sessioniLinea.forEach(s=>{
+          const mat = s.matricola||s.nome||s.id; if(!mat) return;
+          const sku = s.skuCorrente||s.sku||"";
+          if(SKU_SPECIALI.some(x=>x.sku===sku)) return;
+          const dI = parseData(s.inizio); if(!dI) return;
+          const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+          const dF = attiva?null:parseData(s.fine);
+          if(!minPerMat[mat]) minPerMat[mat]={base:Math.max(0,(secFine-(dI.getHours()*3600+dI.getMinutes()*60))/60),sottrai:0};
+          if(s.corsi) s.corsi.forEach(c=>{
+            const dC=parseData(c.quando); if(!dC) return;
+            const sC=dC.getHours()*3600+dC.getMinutes()*60;
+            const eC=c.rientro?(()=>{const dR=parseData(c.rientro);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFine;})():secFine;
+            minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60);
+          });
+        });
+        let minTotali=0;
+        Object.values(minPerMat).forEach(({base,sottrai})=>{ minTotali+=Math.max(0,base-sottrai); });
+        const obReale = minTotali>0?Math.ceil(minTotali/tc):null;
+
+        // Obiettivo Teorico: matricole uniche × ore turno / TC
+        const matricoleUniche = new Set();
+        sessioniLinea.forEach(s=>{
+          const mat=s.matricola||s.nome||s.id; if(!mat) return;
+          if(SKU_SPECIALI.some(x=>x.sku===(s.skuCorrente||s.sku||""))) return;
+          matricoleUniche.add(mat);
+        });
+        const obTeorico = matricoleUniche.size>0?Math.ceil(matricoleUniche.size*oreTotali*60/tc):null;
+
+        setObRealeQ(obReale);
+        setObTeoricoQ(obTeorico);
+      } catch(e){ console.warn("Errore calcolo obiettivi:", e); }
+    };
+    if(linea) caricaObiettivi();
+  },[linea?.id]);
+
   const [ok, setOk]         = useState("");
   const [ko, setKo]         = useState("");
   const [migl, setMigl]     = useState("");
@@ -1531,7 +1605,6 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
 }
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   const [modOrario, setModOrario] = React.useState(null);
-  const [modPianifica, setModPianifica] = React.useState(null);
   const [datiProd, setDatiProd] = React.useState(null);
   React.useEffect(()=>{
     const caricaProd = async () => {
@@ -1949,7 +2022,6 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                         {att2&&(
                           <>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
-                            {(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&<button title="Pianifica fine turno" style={{padding:"8px 10px",background:s.finePianificata?"#fef3c7":"#ffffff",border:"1px solid "+(s.finePianificata?"#fcd34d":"#e2e8f0"),borderRadius:6,color:s.finePianificata?"#92400e":"#94a3b8",cursor:"pointer",fontSize:13,fontWeight:700}} onClick={()=>setModPianifica(s)}>⏰</button>}
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ setModalConferma({titolo:"Chiudi turno",messaggio:"Chiudere il turno di "+s.nome+" "+s.cognome+"?",colorBtn:"ef4444",testoBtn:"✕ Chiudi turno",onOk:()=>{ setModalConferma(null); if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000); }}); }}>✕</button>
                           </>
