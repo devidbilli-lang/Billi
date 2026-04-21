@@ -1777,6 +1777,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 const lDestObj = linee.find(l=>l.id===modTrasf.lineaDest.id);
                 const coloreLinea = lDestObj?.colore||"#a855f7";
                 const eseguiTrasf = async () => {
+                  setModalConferma(null);
                   // Ricarica sessioni aggiornate da Sheets prima di eseguire
                   let sessAggiornate = sessioni;
                   try {
