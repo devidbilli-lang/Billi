@@ -497,6 +497,26 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   })() : null;
   const ob60 = obFinale!=null&&oreTotali>0 ? Math.round(obFinale/oreTotali) : null;
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
+
+  // OBIETTIVO FISSO: max persone uniche registrate oggi × ore turno / TC
+  const obiettivoFisso = tc>0 ? (()=>{
+    const sessioniLinea = sessioni.filter(s=>
+      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
+    );
+    // Matricole uniche che hanno lavorato su produzione (escluse riparazioni)
+    const matricoleUniche = new Set();
+    sessioniLinea.forEach(s=>{
+      const mat = s.matricola||s.nome||s.id;
+      if(!mat) return;
+      const sku = s.skuCorrente||s.sku||"";
+      if(isSkuSpeciale(sku)) return;
+      matricoleUniche.add(mat);
+    });
+    const nOpMax = matricoleUniche.size;
+    if(nOpMax===0) return null;
+    const minTotali = nOpMax * oreTotali * 60;
+    return Math.ceil(minTotali / tc);
+  })() : null;
   const borse=borseOggi||0;
   const ko=borseKO||0;
   const migl=borseMigl||0;
@@ -618,10 +638,16 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               </div>
             );
           })()}
-          {/* Obiettivo Finale */}
+          {/* Obiettivo Dinamico */}
           <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:18,color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>OBIETTIVO</div>
+            <div style={{fontSize:14,color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>OBIETTIVO</div>
             <div style={{fontSize:72,fontWeight:900,color:"#ffffff",lineHeight:1}}>{obFinale||0}</div>
+            {obiettivoFisso&&obiettivoFisso!==obFinale&&(
+              <div style={{marginTop:8,borderTop:"1px solid rgba(255,255,255,0.3)",paddingTop:6}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.75)",fontWeight:700,letterSpacing:1,marginBottom:2}}>MAX GIORNATA</div>
+                <div style={{fontSize:32,fontWeight:900,color:"rgba(255,255,255,0.85)",lineHeight:1}}>{obiettivoFisso}</div>
+              </div>
+            )}
           </div>
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
