@@ -40,7 +40,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxs5oIvE210ZXBXJjmWMYkNzpfJxQUr_Eu0RY026XtLyDHAf_4h8sylUDIkGwXQuV5oVA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVbiyLPSUkxpIvr0k-xZItX_r3Lzsvch-TlTDZl8LmV42XWcGZZ3-t9oT22pkdmhuzfw/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -959,7 +959,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
     </div>
   );
 }
-function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
+function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci, obRealeQ=null, obTeoricoQ=null }) {
   const [ok, setOk]         = useState("");
   const [ko, setKo]         = useState("");
   const [migl, setMigl]     = useState("");
@@ -1039,7 +1039,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     const nMiglStr = noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     try {
-      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(lineaEffettiva||"")+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(nKoStr)+"&noteMigl="+encodeURIComponent(nMiglStr), 5, 1000);
+      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(lineaEffettiva||"")+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(nKoStr)+"&noteMigl="+encodeURIComponent(nMiglStr)+"&obReale="+encodeURIComponent(obRealeQ||"")+"&obTeorico="+encodeURIComponent(obTeoricoQ||""), 5, 1000);
       setMsg("✓ Salvato!");
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
     } catch(e){ setErr("Errore salvataggio."); }
