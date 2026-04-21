@@ -444,10 +444,19 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       const sku = s.skuCorrente||s.sku||"";
       const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
 
-      // Base: ore dal check-in a fine turno
+      // Base: ore dal check-in (o dal trasferimento se arrivato da altra linea) a fine turno
       // - se ancora in turno → fino a fine turno teorico
       // - se uscito → fino al checkout reale (cala il dinamico)
-      const secIng = dInizio.getHours()*3600+dInizio.getMinutes()*60;
+      let secIng = dInizio.getHours()*3600+dInizio.getMinutes()*60;
+      // Se l'operatore è arrivato per trasferimento, usa l'orario del trasferimento
+      if(s.lineaInizio!==lineaId && s.trasferimenti&&s.trasferimenti.length>0){
+        // Cerca il trasferimento verso questa linea
+        const trVers = s.trasferimenti.filter(t=>t.a===lineaId);
+        if(trVers.length>0){
+          const dTr = parseData(trVers[trVers.length-1].quando);
+          if(dTr) secIng = dTr.getHours()*3600+dTr.getMinutes()*60;
+        }
+      }
       const dFine = attiva ? null : parseData(s.fine);
       const secFineEff = (attiva||!dFine)
         ? secFineTurno
