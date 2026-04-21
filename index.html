@@ -481,12 +481,19 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         return;
       }
 
-      // Scala per trasferimento verso altra linea (sessione chiusa, lineaCorrente diversa)
-      if(!attiva && s.lineaCorrente!==lineaId){
-        const dF = parseData(s.fine);
-        const secFineLinea = dF ? Math.min(dF.getHours()*3600+dF.getMinutes()*60, secFineTurno) : secFineTurno;
-        // Sottrai il tempo dalla fine della sessione su questa linea fino a fine turno
-        minPerMat[mat].sottrai += Math.max(0,(secFineTurno-secFineLinea)/60);
+      // Scala per trasferimento verso altra linea
+      // - sessione chiusa con lineaCorrente diversa → era qui, poi trasferito via
+      // - sessione attiva con lineaCorrente diversa → è già su altra linea, escludi completamente
+      if(s.lineaCorrente!==lineaId){
+        if(!attiva){
+          // Era qui, poi trasferito: conta solo fino al momento del trasferimento
+          const dF = parseData(s.fine);
+          const secFineLinea = dF ? Math.min(dF.getHours()*3600+dF.getMinutes()*60, secFineTurno) : secFineTurno;
+          minPerMat[mat].sottrai += Math.max(0,(secFineTurno-secFineLinea)/60);
+        } else {
+          // È attivo ma su altra linea (trasferito via) → non contribuisce più
+          if(minPerMat[mat]) delete minPerMat[mat];
+        }
         return;
       }
 
@@ -1770,14 +1777,21 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 const lDestObj = linee.find(l=>l.id===modTrasf.lineaDest.id);
                 const coloreLinea = lDestObj?.colore||"#a855f7";
                 const eseguiTrasf = async () => {
-                  const ops=(modTrasf.opSelezionati||[]).map(id=>sessioni.find(s=>s.id===id)).filter(Boolean);
+                  // Ricarica sessioni aggiornate da Sheets prima di eseguire
+                  let sessAggiornate = sessioni;
+                  try {
+                    const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+                    const j = await r.json();
+                    if(j.ok&&j.data.sessioni) sessAggiornate = j.data.sessioni;
+                  } catch(e){}
+                  const ops=(modTrasf.opSelezionati||[]).map(id=>sessAggiornate.find(s=>s.id===id)||sessioni.find(s=>s.id===id)).filter(Boolean);
                   for(const s of ops){
                     const skuDestinazione=modTrasf.skuNuovo||s.skuCorrente||s.sku||"";
                     await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuDestinazione,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:s.skuCorrente||s.sku||"",skuA:skuDestinazione});
                     if(onTr) onTr(s.id,modTrasf.lineaDest.id,skuDestinazione);
                   }
                   setModTrasf(null);
-                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,2000);
                 };
                 return (<>
                   <div style={{background:coloreLinea+"22",border:"1px solid "+coloreLinea+"66",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
