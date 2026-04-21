@@ -673,8 +673,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                   const hR=Math.floor(secRim/3600), mR=Math.floor((secRim%3600)/60), sR=secRim%60;
                   return (
                     <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
-                      <span style={{fontSize:36,fontWeight:900,color:textColor,fontFamily:"monospace",letterSpacing:2}}>
-                        -{String(hR).padStart(2,"0")}:{String(mR).padStart(2,"0")}:{String(sR).padStart(2,"0")}
+                      <span style={{fontSize:36,fontWeight:900,color:textColor,fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
+                        {String(hR).padStart(2,"0")}:{String(mR).padStart(2,"0")}:{String(sR).padStart(2,"0")}
                       </span>
                     </div>
                   );
