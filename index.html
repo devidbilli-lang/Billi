@@ -95,21 +95,54 @@ async function fetchConRetry(url, tentativi=5, delayMs=1000) {
   }
   throw new Error('Richiesta fallita dopo ' + tentativi + ' tentativi');
 }
+// ─── CODA LOCALE EVENTI ──────────────────────────────────────────────────────
+const CODA_KEY = "nexus_coda_eventi";
+function codaAggiungi(url) {
+  try {
+    const coda = JSON.parse(localStorage.getItem(CODA_KEY)||"[]");
+    if(!coda.find(e=>e.url===url)) { coda.push({url,ts:Date.now(),tentativi:0}); localStorage.setItem(CODA_KEY,JSON.stringify(coda)); }
+  } catch(e) {}
+}
+function codaRimuovi(url) {
+  try {
+    const coda = JSON.parse(localStorage.getItem(CODA_KEY)||"[]");
+    localStorage.setItem(CODA_KEY,JSON.stringify(coda.filter(e=>e.url!==url)));
+  } catch(e) {}
+}
+async function codaProcessa() {
+  try {
+    const coda = JSON.parse(localStorage.getItem(CODA_KEY)||"[]");
+    if(!coda.length) return;
+    console.log("[CODA] Riprovo "+coda.length+" eventi...");
+    const nuova = [];
+    for(const ev of coda){
+      try {
+        const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),15000);
+        const r=await fetch(ev.url,{signal:ctrl.signal}).finally(()=>clearTimeout(tid));
+        if(r.ok){ console.log("[CODA] OK:", ev.url.substring(0,60)); }
+        else { ev.tentativi++; if(ev.tentativi<20) nuova.push(ev); }
+      } catch(e){ ev.tentativi++; if(ev.tentativi<20) nuova.push(ev); }
+    }
+    localStorage.setItem(CODA_KEY,JSON.stringify(nuova));
+    if(nuova.length) console.warn("[CODA] "+nuova.length+" eventi ancora in sospeso");
+  } catch(e) {}
+}
+setInterval(codaProcessa, 30000);
+setTimeout(codaProcessa, 3000);
+
 const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } },
   async evento(p) {
     const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
     const url = APPS_SCRIPT_URL+"?"+q.toString();
+    // Aggiungi alla coda prima di inviare - garantisce che venga inviato anche se fallisce
+    codaAggiungi(url);
     try {
-      // Prima prova veloce (8s)
       await fetchVeloce(url, 3);
+      // Successo - rimuovi dalla coda
+      codaRimuovi(url);
     } catch(e) {
-      console.warn("fetchVeloce fallito, riprovo con fetchConRetry...");
-      try {
-        // Fallback affidabile (25s, 5 tentativi)
-        await fetchConRetry(url, 5, 1000);
-      } catch(e2) {
-        console.error("Evento non registrato:", p.tipo, p.nome, e2);
-      }
+      // Fallito - rimane in coda e verrà riprovato ogni 30s
+      console.warn("[CODA] Evento aggiunto alla coda:", p.tipo, p.nome);
     }
   },
   async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
