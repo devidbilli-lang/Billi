@@ -1741,11 +1741,13 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               if(!modOrario.valore){setSalvaOrarioErr("Inserisci una data valida.");return;}
               const nuovaData=new Date(modOrario.valore);
               if(isNaN(nuovaData)){setSalvaOrarioErr("Data non valida.");return;}
+              setLoading(true); setLoadingMsg("Salvataggio orario...");
               try{
                 await fetchConRetry(APPS_SCRIPT_URL+"?action=modificaorario&sessionId="+encodeURIComponent(modOrario.sess.id)+"&campo="+modOrario.campo+"&valore="+encodeURIComponent(nuovaData.toISOString()),5,1000);
                 setModOrario(null);setSalvaOrarioErr("");
                 if(onAggiornaSessioni) onAggiornaSessioni();
               }catch(e){setSalvaOrarioErr("Errore salvataggio.");}
+              finally{setLoading(false);}
             }}>Salva</button>
             <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>{setModOrario(null);setSalvaOrarioErr("");}}>← Annulla</button>
             <button style={{width:"100%",padding:10,background:"#ef444411",border:"1px solid #ef444466",borderRadius:8,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700,marginTop:8}} onClick={async()=>{
@@ -1754,7 +1756,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 titolo:"Elimina sessione",
                 messaggio:"Eliminare definitivamente la sessione di "+modOrario.sess.nome+" "+modOrario.sess.cognome+"?",
                 colorBtn:"ef4444", testoBtn:"🗑 Elimina",
-                onOk:async()=>{ setModalConferma(null); try{ await fetchConRetry(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),5,1000); setSalvaOrarioErr(""); if(onAggiornaSessioni) onAggiornaSessioni(); }catch(e){ setSalvaOrarioErr("Errore eliminazione."); } }
+                onOk:async()=>{ setModalConferma(null); setLoading(true); setLoadingMsg("Eliminazione sessione..."); try{ await fetchConRetry(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),5,1000); setSalvaOrarioErr(""); if(onAggiornaSessioni) onAggiornaSessioni(); }catch(e){ setSalvaOrarioErr("Errore eliminazione."); } finally{setLoading(false);} }
               });
             }}>🗑 Elimina sessione</button>
           </div>
