@@ -1723,6 +1723,12 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const chi=sessioni.filter(s=>!!s.fine).length;
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
+      {loading&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+          <div style={{width:56,height:56,border:"6px solid rgba(255,255,255,0.3)",borderTop:"6px solid #ffffff",borderRadius:"50%",animation:"spin 0.8s linear infinite",marginBottom:16}}/>
+          <div style={{color:"#ffffff",fontSize:16,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{loadingMsg||"Operazione in corso..."}</div>
+        </div>
+      )}
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{
         api.evento({sessionId:mod.id,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:mod.skuCorrente||mod.sku||"",tipo:"TRASFERIMENTO",lineaDa:mod.lineaCorrente,lineaA:d.id,skuDa:mod.skuCorrente||mod.sku||"",skuA:ns||mod.skuCorrente||mod.sku||""});
         if(onTr) onTr(mod.id,d,ns);
