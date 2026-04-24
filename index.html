@@ -584,9 +584,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"10px 14px"}}>
         <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>⏱ Straordinario</span>
         <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
-          <button onClick={()=>setOreExtra(Math.max(0,oreExtra-0.5))} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>−</button>
-          <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra===0?"0h":"+"+Math.floor(oreExtra)+"h"+(oreExtra%1>0?"30":"")}</span>
-          <button onClick={()=>setOreExtra(oreExtra+0.5)} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>+</button>
+          <button onClick={()=>setOreExtra(Math.max(0,oreExtra-1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>−</button>
+          <span style={{fontSize:18,fontWeight:900,color:"#92400e",minWidth:40,textAlign:"center"}}>{oreExtra===0?"0h":"+"+oreExtra+"h"}</span>
+          <button onClick={()=>setOreExtra(oreExtra+1)} style={{width:28,height:28,borderRadius:6,border:"1px solid #fcd34d",background:"#fef3c7",cursor:"pointer",fontWeight:900,fontSize:16,color:"#92400e"}}>+</button>
         </div>
         {oreExtra>0&&<span style={{fontSize:11,color:"#92400e",fontWeight:600}}>Fine turno: {labelFine}</span>}
       </div>
