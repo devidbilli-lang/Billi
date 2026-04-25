@@ -659,9 +659,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           )}
         </div>
         {/* SKU */}
-        <div style={{flex:2,background:coloreLinea,borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden"}}>
-          <div style={{fontSize:"clamp(14px,3.5vw,48px)",fontWeight:900,color:"#ffffff",lineHeight:1.1,wordBreak:"break-word",width:"100%"}}>{skuPiu||"—"}</div>
-          <div style={{fontSize:"clamp(12px,2.2vw,32px)",color:"rgba(255,255,255,0.95)",marginTop:4,fontWeight:700,lineHeight:1.2,wordBreak:"break-word",width:"100%"}}>{skuObj?.descrizione||""}</div>
+        <div style={{flex:2,background:coloreLinea,borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
+          <div style={{fontWeight:900,color:"#ffffff",lineHeight:1.1,wordBreak:"break-word",width:"100%",
+            fontSize:"clamp(14px,4vw,56px)",
+            transform:`scale(${Math.min(1, 12/Math.max(8,(skuPiu||"—").length))})`,
+            transformOrigin:"center center"
+          }}>{skuPiu||"—"}</div>
+          <div style={{color:"rgba(255,255,255,0.95)",marginTop:6,fontWeight:700,lineHeight:1.2,wordBreak:"break-word",width:"100%",
+            fontSize:"clamp(11px,2.5vw,36px)",
+            transform:`scale(${Math.min(1, 22/Math.max(10,(skuObj?.descrizione||"").length))})`,
+            transformOrigin:"center center"
+          }}>{skuObj?.descrizione||""}</div>
         </div>
         {/* KO + Migl */}
         <div style={{flex:1,background:"#1e293b",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
