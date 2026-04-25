@@ -653,18 +653,30 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           </div>
         </div>
         {/* SKU */}
-        <div style={{flex:2,background:coloreLinea,borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
-          <div style={{fontWeight:900,color:"#ffffff",lineHeight:1.1,wordBreak:"break-word",width:"100%",
-            fontSize:"clamp(14px,4vw,56px)",
-            transform:`scale(${Math.min(1, 12/Math.max(8,(skuPiu||"—").length))})`,
-            transformOrigin:"center center"
-          }}>{skuPiu||"—"}</div>
-          <div style={{color:"rgba(255,255,255,0.95)",marginTop:6,fontWeight:700,lineHeight:1.2,wordBreak:"break-word",width:"100%",
-            fontSize:"clamp(11px,2.5vw,36px)",
-            transform:`scale(${Math.min(1, 22/Math.max(10,(skuObj?.descrizione||"").length))})`,
-            transformOrigin:"center center"
-          }}>{skuObj?.descrizione||""}</div>
-        </div>
+        {(()=>{
+          const skuRef = React.useRef(null);
+          const [skuFs, setSkuFs] = React.useState(48);
+          const [descFs, setDescFs] = React.useState(32);
+          React.useEffect(()=>{
+            if(!skuRef.current) return;
+            const w = skuRef.current.offsetWidth - 16;
+            if(w <= 0) return;
+            // Calcola font-size ottimale per il codice SKU
+            const lenSku = (skuPiu||"—").length;
+            const fsSku = Math.min(72, Math.max(16, Math.floor(w / (lenSku * 0.6))));
+            setSkuFs(fsSku);
+            // Calcola font-size ottimale per la descrizione
+            const lenDesc = (skuObj?.descrizione||"").length;
+            const fsDesc = lenDesc > 0 ? Math.min(48, Math.max(12, Math.floor(w / (lenDesc * 0.55)))) : 32;
+            setDescFs(fsDesc);
+          },[skuPiu, skuObj?.descrizione]);
+          return (
+            <div ref={skuRef} style={{flex:2,background:coloreLinea,borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
+              <div style={{fontWeight:900,color:"#ffffff",lineHeight:1.1,width:"100%",fontSize:skuFs+"px"}}>{skuPiu||"—"}</div>
+              {skuObj?.descrizione&&<div style={{color:"rgba(255,255,255,0.95)",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
+            </div>
+          );
+        })()}
         {/* KO + Migl */}
         <div style={{flex:1,background:"#1e293b",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
