@@ -443,7 +443,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const _primoCheckinTs = (()=>{
     const ts = sessioni
       .filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio)
-      .map(s=>{ const d=parseData(s.inizio); return d?d.getTime():null; })
+      .map(s=>{
+        // Se trasferito su questa linea, usa l'orario del trasferimento non il check-in originale
+        if(s.lineaInizio!==lineaId&&s.trasferimenti&&s.trasferimenti.length>0){
+          const trVers=s.trasferimenti.filter(t=>(t.a||"").trim().toLowerCase()===(lineaId||"").trim().toLowerCase());
+          if(trVers.length>0){ const dTr=parseData(trVers[trVers.length-1].quando); if(dTr) return dTr.getTime(); }
+        }
+        const d=parseData(s.inizio); return d?d.getTime():null;
+      })
       .filter(Boolean);
     return ts.length>0 ? Math.min(...ts) : null;
   })();
