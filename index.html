@@ -2114,7 +2114,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                        <span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>{fmtSafe(s.inizio)}</span>
+                        <span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>{(()=>{
+                          // Se trasferito su questa linea, mostra orario trasferimento
+                          if(s.lineaInizio!==s.lineaCorrente&&s.trasferimenti&&s.trasferimenti.length>0){
+                            const trVers=s.trasferimenti.filter(t=>(t.a||"").trim().toLowerCase()===(s.lineaCorrente||"").trim().toLowerCase());
+                            if(trVers.length>0){ const dTr=parseData(trVers[trVers.length-1].quando); if(dTr) return fmtFull(dTr); }
+                          }
+                          return fmtSafe(s.inizio);
+                        })()}</span>
                         {editOrario&&<button onClick={()=>{ try{ const d=new Date(s.inizio); setModOrario({sess:s,campo:"inizio",valore:!isNaN(d)?d.toISOString().slice(0,16):""}); }catch(e){ setModOrario({sess:s,campo:"inizio",valore:""}); } }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
                       </div>
                     </td>
