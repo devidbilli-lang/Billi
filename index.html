@@ -2004,7 +2004,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
         </div>
       </header>
-      <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto"}}>
+      <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto",justifyContent:"center",flexWrap:"wrap"}}>
         <div style={{flex:"0 0 110px",width:110,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:12,padding:14,textAlign:"center"}}>
           <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{sessioni.length}</div>
           <div style={{fontSize:11,color:"#ffffff",marginTop:4,fontWeight:700}}>Totale</div>
