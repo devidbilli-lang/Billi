@@ -2290,6 +2290,10 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
 }
 function App() { const [view,setView]             = useState("login");
   const [viewQualita,setViewQualita] = useState(false);
+  const [autologinLinea, setAutologinLinea] = useState(null); // linea trovata da URL, aspetta password
+  const [autologinPwd, setAutologinPwd] = useState("");
+  const [autologinErr, setAutologinErr] = useState("");
+  const [autologinLoading, setAutologinLoading] = useState(false);
   const [lineaQualita,setLineaQualita] = useState(null);
   const [sess,setSess]             = useState(()=>store.get("pt_v4",[]) );
   const [sessSheets,setSessSheets] = useState([]);
@@ -2315,8 +2319,8 @@ function App() { const [view,setView]             = useState("login");
         // Prima cerca nelle linee già caricate
         const lineaDiretta = linee.find(l => l.id.toLowerCase() === nomeLinea.toLowerCase());
         if(lineaDiretta) {
-          setAccesso({ruolo:"linea", linea: lineaDiretta});
-          setView("checkin");
+          // Mostra richiesta password invece di entrare subito
+          setAutologinLinea(lineaDiretta);
           return;
         }
         // Altrimenti chiama lo script
@@ -2325,8 +2329,7 @@ function App() { const [view,setView]             = useState("login");
         if(j.ok && j.data && j.data.ok) {
           const l = j.data.linea;
           const lineaObj = linee.find(x=>x.id===l.id) || l;
-          setAccesso({ruolo:"linea", linea: lineaObj});
-          setView("checkin");
+          setAutologinLinea(lineaObj);
         }
       } catch(e){ console.warn("Auto-login fallito:", e); }
     })();
@@ -2405,6 +2408,40 @@ function App() { const [view,setView]             = useState("login");
     );
     // Admin sbloccato - continua con il render normale dell'app
   }
+
+  // Schermata password per autologin da link diretto
+  if(autologinLinea && !accesso) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+      <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",textAlign:"center"}}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,marginBottom:20}}>
+          <img src="logo_Nexus.png" style={{width:52,height:52,objectFit:"contain",borderRadius:8,background:"#7c3aed",padding:4}}/>
+          <span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+        </div>
+        <div style={{fontSize:16,fontWeight:700,marginBottom:6,color:autologinLinea.colore||"#7c3aed"}}>{autologinLinea.id}</div>
+        <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>Inserisci la password per accedere</div>
+        <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:autologinLinea.colore||"#7c3aed",borderWidth:2,background:"#f1f5f9",color:"#1e293b"}}
+          placeholder="••••••••" value={autologinPwd}
+          onChange={e=>{setAutologinPwd(e.target.value);setAutologinErr("");}}
+          onKeyDown={e=>{ if(e.key==="Enter"){
+            if(autologinPwd===autologinLinea.password||autologinPwd===ADMIN_PWD){
+              setAutologinLoading(true);
+              setTimeout(()=>{ setAccesso({ruolo:"linea",linea:autologinLinea}); setView("checkin"); setAutologinLinea(null); setAutologinPwd(""); setAutologinLoading(false); }, 800);
+            } else { setAutologinErr("Password non corretta."); setAutologinPwd(""); }
+          }}} autoFocus/>
+        {autologinErr&&<div style={{...S.err,marginBottom:12}}>{autologinErr}</div>}
+        <button style={{...S.bCI,background:"linear-gradient(135deg,"+(autologinLinea.colore||"#7c3aed")+","+(autologinLinea.colore||"#7c3aed")+"cc)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={()=>{
+          if(autologinPwd===autologinLinea.password||autologinPwd===ADMIN_PWD){
+            setAutologinLoading(true);
+            setTimeout(()=>{ setAccesso({ruolo:"linea",linea:autologinLinea}); setView("checkin"); setAutologinLinea(null); setAutologinPwd(""); setAutologinLoading(false); }, 800);
+          } else { setAutologinErr("Password non corretta."); setAutologinPwd(""); }
+        }}>
+          {autologinLoading
+            ? <><div style={{width:20,height:20,border:"3px solid rgba(255,255,255,0.4)",borderTop:"3px solid #fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Accesso...</>
+            : "Accedi"}
+        </button>
+      </div>
+    </div>
+  );
 
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
   if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
