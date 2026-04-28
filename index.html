@@ -696,7 +696,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           return (
             <div ref={skuRef} style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
               <div style={{fontWeight:900,color:"#111827",lineHeight:1.1,width:"100%",fontSize:skuFs+"px"}}>{skuPiu||"—"}</div>
-              {skuObj?.descrizione&&<div style={{color:"#374151",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
+              {skuObj?.descrizione&&<div style={{color:"#111827",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
             </div>
           );
         })()}
@@ -758,10 +758,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             const inTurno = prossimaOraDecimale2<=oraTurnoFine2&&prossimaOraDecimale2>oraInizioDecimale2;
             const prossimaOraInt2 = prossimaOraDecimale2; // compatibilità
             return (
-              <div style={{flex:1,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",borderRadius:16,padding:"20px 16px",textAlign:"center",border:"2px solid #ffff00"}}>
-                <div style={{fontSize:"clamp(16px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>ALLE <span style={{color:"#ffff00",fontSize:"clamp(20px,3vw,28px)"}}>{inTurno?prossimaOraLabel2:"—"}</span></div>
+              <div style={{flex:1,background:"linear-gradient(135deg,#c8d0dc,#dde3ec)",borderRadius:16,padding:"20px 16px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 16px 4px #c8d0dc88"}}>
+                <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#1e293b",fontWeight:800,letterSpacing:1,marginBottom:6}}>ALLE <span style={{color:"#7c3aed",fontSize:"clamp(20px,3vw,28px)"}}>{inTurno?prossimaOraLabel2:"—"}</span></div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-                  <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#ffff00",lineHeight:1}}>{inTurno?borseAProssima2:"—"}</div>
+                  <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{inTurno?borseAProssima2:"—"}</div>
                   {inTurno&&<div style={{width:36,height:36,borderRadius:"50%",background:borse>=borseAProssima2?"#61ffa9":"#ff6161",boxShadow:`0 0 16px 4px ${borse>=borseAProssima2?"#61ffa9":"#ff6161"}`,flexShrink:0}}/>}
                 </div>
 
