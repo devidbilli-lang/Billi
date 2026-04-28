@@ -736,7 +736,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       {ob60!==null?(
         <div style={{display:"flex",gap:12,marginBottom:16}}>
           {/* Borse Prodotte */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
             <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Efficienza</div>
             <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#111827",lineHeight:1,textAlign:"center",width:"100%"}}>{efficienzaPct!==null?efficienzaPct+"%":"0%"}</div>
           </div>
@@ -837,7 +837,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
               <div style={{position:"relative",height:"clamp(80px,12vw,120px)",background:"#ffffff",borderRadius:40,border:"2px solid #e2e8f0"}}>
                 {/* Barra colorata */}
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:"linear-gradient(90deg,#c0c8d8,#e8edf5,#b8c4d4)",borderRadius:40,transition:"width 1s linear",boxShadow:"0 0 12px 2px #c0c8d888"}}/>
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:"linear-gradient(90deg,#4c1d95,#7c3aed,#a78bfa)",borderRadius:40,transition:"width 1s linear",boxShadow:"0 0 14px 4px #7c3aed88"}}/>
                 {/* Timer countdown al centro */}
                 {(()=>{
                   const secOra2 = _now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
