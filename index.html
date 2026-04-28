@@ -758,8 +758,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             const inTurno = prossimaOraDecimale2<=oraTurnoFine2&&prossimaOraDecimale2>oraInizioDecimale2;
             const prossimaOraInt2 = prossimaOraDecimale2; // compatibilità
             return (
-              <div style={{flex:1,background:"linear-gradient(135deg,#c8d0dc,#dde3ec)",borderRadius:16,padding:"20px 16px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 16px 4px #c8d0dc88"}}>
-                <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#1e293b",fontWeight:800,letterSpacing:1,marginBottom:6}}>ALLE <span style={{color:"#7c3aed",fontSize:"clamp(20px,3vw,28px)"}}>{inTurno?prossimaOraLabel2:"—"}</span></div>
+              <div style={{flex:1,background:"linear-gradient(135deg,#c8d0dc,#dde3ec)",borderRadius:16,padding:"20px 16px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 20px 6px #ffff0066, 0 0 40px 10px #ffff0033"}}>
+                <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#1e293b",fontWeight:800,letterSpacing:1,marginBottom:6}}>ALLE <span style={{color:"#f59e0b",fontSize:"clamp(20px,3vw,28px)"}}>{inTurno?prossimaOraLabel2:"—"}</span></div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
                   <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{inTurno?borseAProssima2:"—"}</div>
                   {inTurno&&<div style={{width:36,height:36,borderRadius:"50%",background:borse>=borseAProssima2?"#61ffa9":"#ff6161",boxShadow:`0 0 16px 4px ${borse>=borseAProssima2?"#61ffa9":"#ff6161"}`,flexShrink:0}}/>}
