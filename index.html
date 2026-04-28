@@ -770,7 +770,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             const prossimaHH = Math.floor(prossimaOraDecimale2) % 24;
             const prossimaMM = Math.round((prossimaOraDecimale2 % 1) * 60);
             const prossimaOraLabel2 = String(prossimaHH).padStart(2,"0")+":"+String(prossimaMM).padStart(2,"0");
-            const borseAProssima2 = Math.max(0,Math.round(ob60*(prossimaOraDecimale2-oraInizioDecimale2)));
+            const borseAProssima2 = Math.max(0,Math.ceil(ob60*(prossimaOraDecimale2-oraInizioDecimale2)));
             const inTurno = prossimaOraDecimale2<=oraTurnoFine2&&prossimaOraDecimale2>oraInizioDecimale2;
             const prossimaOraInt2 = prossimaOraDecimale2; // compatibilità
             return (
