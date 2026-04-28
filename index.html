@@ -659,10 +659,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       {/* RIGA 1: Operatori | SKU | KO+Migl */}
       <div style={{display:"flex",gap:12,marginBottom:16}}>
         {/* Operatori */}
-        <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-          <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#1e293b",fontWeight:800,letterSpacing:1,marginBottom:6}}>OPERATORI</div>
+        <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+          <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>OPERATORI</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
-            <div style={{fontSize:"clamp(56px,8vw,100px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{nOpProduzione}</div>
+            <div style={{fontSize:"clamp(56px,8vw,100px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
             {(nRiparazione>0||nCorso>0)&&(
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {nRiparazione>0&&(
@@ -694,14 +694,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             setDescFs(fsDesc);
           },[skuPiu, skuObj?.descrizione]);
           return (
-            <div ref={skuRef} style={{flex:2,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
-              <div style={{fontWeight:900,color:"#1e293b",lineHeight:1.1,width:"100%",fontSize:skuFs+"px"}}>{skuPiu||"—"}</div>
-              {skuObj?.descrizione&&<div style={{color:"#475569",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
+            <div ref={skuRef} style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
+              <div style={{fontWeight:900,color:"#111827",lineHeight:1.1,width:"100%",fontSize:skuFs+"px"}}>{skuPiu||"—"}</div>
+              {skuObj?.descrizione&&<div style={{color:"#374151",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
             </div>
           );
         })()}
         {/* KO + Migl */}
-        <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
+        <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
               <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
@@ -736,7 +736,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       {ob60!==null?(
         <div style={{display:"flex",gap:12,marginBottom:16}}>
           {/* Borse Prodotte */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
             <div style={{fontSize:"clamp(16px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>EFFICIENZA</div>
             <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:efficienzaPct>=90?"#61ffa9":efficienzaPct>=70?"#fbbf24":"#ff6161",lineHeight:1,textAlign:"center",width:"100%"}}>{efficienzaPct!==null?efficienzaPct+"%":"0%"}</div>
           </div>
@@ -789,12 +789,12 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             );
           })()}
           {/* Borse Prodotte */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"#1e293b",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
-            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{borse}</div>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
+            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
+            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</div>
             <div style={{marginTop:8,borderTop:"1px solid rgba(255,255,255,0.3)",paddingTop:6}}>
-              <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"#64748b",fontWeight:700,letterSpacing:1,marginBottom:2}}>OBIETTIVO REALE</div>
-              <div style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{obFinale||0}</div>
+              <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"#111827",fontWeight:700,letterSpacing:1,marginBottom:2}}>OBIETTIVO REALE</div>
+              <div style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:"#111827",lineHeight:1}}>{obFinale||0}</div>
             </div>
           </div>
         </div>
@@ -837,7 +837,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
               <div style={{position:"relative",height:"clamp(80px,12vw,120px)",background:"#ffffff",borderRadius:40,border:"2px solid #e2e8f0"}}>
                 {/* Barra colorata */}
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:coloreLinea,borderRadius:40,transition:"width 1s linear"}}/>
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:"linear-gradient(90deg,#c0c8d8,#e8edf5,#b8c4d4)",borderRadius:40,transition:"width 1s linear",boxShadow:"0 0 12px 2px #c0c8d888"}}/>
                 {/* Timer countdown al centro */}
                 {(()=>{
                   const secOra2 = _now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
