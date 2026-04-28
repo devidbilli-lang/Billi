@@ -660,7 +660,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       <div style={{display:"flex",gap:12,marginBottom:16}}>
         {/* Operatori */}
         <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-          <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>OPERATORI</div>
+          <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Operatori</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
             <div style={{fontSize:"clamp(56px,8vw,100px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
             {(nRiparazione>0||nCorso>0)&&(
@@ -737,7 +737,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         <div style={{display:"flex",gap:12,marginBottom:16}}>
           {/* Borse Prodotte */}
           <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>EFFICIENZA</div>
+            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Efficienza</div>
             <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#111827",lineHeight:1,textAlign:"center",width:"100%"}}>{efficienzaPct!==null?efficienzaPct+"%":"0%"}</div>
           </div>
           {/* Prossimo Obiettivo - calcolato qui */}
@@ -790,10 +790,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           })()}
           {/* Borse Prodotte */}
           <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
+            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Borse Prodotte</div>
             <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</div>
             <div style={{marginTop:8,borderTop:"1px solid rgba(255,255,255,0.3)",paddingTop:6}}>
-              <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"#111827",fontWeight:700,letterSpacing:1,marginBottom:2}}>OBIETTIVO FINALE</div>
+              <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"#111827",fontWeight:700,letterSpacing:1,marginBottom:2}}>Obiettivo Finale</div>
               <div style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:"#111827",lineHeight:1}}>{obFinale||0}</div>
             </div>
           </div>
@@ -837,7 +837,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
               <div style={{position:"relative",height:"clamp(80px,12vw,120px)",background:"#ffffff",borderRadius:40,border:"2px solid #e2e8f0"}}>
                 {/* Barra colorata */}
-                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:"linear-gradient(90deg,#c0c8d8,#e8edf5,#b8c4d4)",borderRadius:40,transition:"width 1s linear",boxShadow:"0 0 12px 2px #c0c8d888"}}/>
+                <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:"linear-gradient(90deg,#374151,#6b7280,#374151)",borderRadius:40,transition:"width 1s linear",boxShadow:"0 0 12px 2px #37415188"}}/>
                 {/* Timer countdown al centro */}
                 {(()=>{
                   const secOra2 = _now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
