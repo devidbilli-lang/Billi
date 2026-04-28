@@ -738,7 +738,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           {/* Borse Prodotte */}
           <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
             <div style={{fontSize:"clamp(16px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>EFFICIENZA</div>
-            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:efficienzaPct>=90?"#61ffa9":efficienzaPct>=70?"#fbbf24":efficienzaPct!==null?"#ff6161":"#ffffff",lineHeight:1}}>{efficienzaPct!==null?efficienzaPct+"%":"—"}</div>
+            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:efficienzaPct>=90?"#61ffa9":efficienzaPct>=70?"#fbbf24":efficienzaPct!==null?"#ff6161":"#ffffff",lineHeight:1}}>{efficienzaPct!==null?efficienzaPct+"%":"0%"}</div>
           </div>
           {/* Prossimo Obiettivo - calcolato qui */}
           {(()=>{
@@ -792,6 +792,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
             <div style={{fontSize:"clamp(14px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
             <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#ffffff",lineHeight:1}}>{borse}</div>
+            <div style={{marginTop:8,borderTop:"1px solid rgba(255,255,255,0.3)",paddingTop:6}}>
+              <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"rgba(255,255,255,0.75)",fontWeight:700,letterSpacing:1,marginBottom:2}}>OBIETTIVO REALE</div>
+              <div style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:"rgba(255,255,255,0.9)",lineHeight:1}}>{obFinale||0}</div>
+            </div>
           </div>
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
