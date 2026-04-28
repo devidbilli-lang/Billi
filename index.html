@@ -746,15 +746,15 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const circ = Math.PI * r; // semicerchio = metà circonferenza
               const dash = (pct / 100) * circ;
               return (
-                <svg viewBox="0 0 120 46" style={{width:"90%",display:"block",margin:"0 auto"}}>
+                <svg viewBox="0 0 120 55" style={{width:"100%",display:"block",padding:"0 8px",boxSizing:"border-box"}}>
                   {/* Sfondo arco stretto */}
-                  <path d="M 8 48 A 52 38 0 0 1 112 48" fill="none" stroke="#e2e8f0" strokeWidth="12" strokeLinecap="round"/>
+                  <path d="M 14 52 A 46 34 0 0 1 106 52" fill="none" stroke="#e2e8f0" strokeWidth="12" strokeLinecap="round"/>
                   {/* Riempimento viola */}
-                  <path d="M 8 48 A 52 38 0 0 1 112 48" fill="none" stroke="#7c3aed" strokeWidth="12" strokeLinecap="round"
-                    strokeDasharray={`${(pct/100)*Math.PI*52} ${Math.PI*52}`}
+                  <path d="M 14 52 A 46 34 0 0 1 106 52" fill="none" stroke="#7c3aed" strokeWidth="12" strokeLinecap="round"
+                    strokeDasharray={`${(pct/100)*Math.PI*46} ${Math.PI*46}`}
                     style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>
                   {/* Valore */}
-                  <text x="60" y="40" textAnchor="middle" fontSize="20" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+                  <text x="60" y="44" textAnchor="middle" fontSize="20" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
                 </svg>
               );
             })()}
