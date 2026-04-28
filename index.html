@@ -659,10 +659,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       {/* RIGA 1: Operatori | SKU | KO+Migl */}
       <div style={{display:"flex",gap:12,marginBottom:16}}>
         {/* Operatori */}
-        <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-          <div style={{fontSize:"clamp(16px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>OPERATORI</div>
+        <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+          <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#1e293b",fontWeight:800,letterSpacing:1,marginBottom:6}}>OPERATORI</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
-            <div style={{fontSize:"clamp(56px,8vw,100px)",fontWeight:900,color:"#ffffff",lineHeight:1}}>{nOpProduzione}</div>
+            <div style={{fontSize:"clamp(56px,8vw,100px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{nOpProduzione}</div>
             {(nRiparazione>0||nCorso>0)&&(
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {nRiparazione>0&&(
@@ -694,14 +694,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             setDescFs(fsDesc);
           },[skuPiu, skuObj?.descrizione]);
           return (
-            <div ref={skuRef} style={{flex:2,background:coloreLinea,borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
-              <div style={{fontWeight:900,color:"#ffffff",lineHeight:1.1,width:"100%",fontSize:skuFs+"px"}}>{skuPiu||"—"}</div>
-              {skuObj?.descrizione&&<div style={{color:"rgba(255,255,255,0.95)",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
+            <div ref={skuRef} style={{flex:2,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
+              <div style={{fontWeight:900,color:"#1e293b",lineHeight:1.1,width:"100%",fontSize:skuFs+"px"}}>{skuPiu||"—"}</div>
+              {skuObj?.descrizione&&<div style={{color:"#475569",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
             </div>
           );
         })()}
         {/* KO + Migl */}
-        <div style={{flex:1,background:"#1e293b",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
+        <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
               <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
@@ -716,7 +716,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               <div style={{fontSize:"clamp(48px,7vw,90px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{ko}</div>
             </div>
           </div>
-          <div style={{height:1,background:"rgba(255,255,255,0.08)"}}/>
+          <div style={{height:1,background:"#e2e8f0"}}/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
               <circle cx="18" cy="18" r="17" stroke="#f59e0b" strokeWidth="2"/>
@@ -736,7 +736,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       {ob60!==null?(
         <div style={{display:"flex",gap:12,marginBottom:16}}>
           {/* Borse Prodotte */}
-          <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
             <div style={{fontSize:"clamp(16px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>EFFICIENZA</div>
             <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:efficienzaPct>=90?"#61ffa9":efficienzaPct>=70?"#fbbf24":"#ff6161",lineHeight:1,textAlign:"center",width:"100%"}}>{efficienzaPct!==null?efficienzaPct+"%":"0%"}</div>
           </div>
@@ -789,12 +789,12 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             );
           })()}
           {/* Borse Prodotte */}
-          <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
-            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#ffffff",lineHeight:1}}>{borse}</div>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #a78bfa",boxShadow:"0 0 12px #7c3aed44",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
+            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"#1e293b",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
+            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{borse}</div>
             <div style={{marginTop:8,borderTop:"1px solid rgba(255,255,255,0.3)",paddingTop:6}}>
-              <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"rgba(255,255,255,0.75)",fontWeight:700,letterSpacing:1,marginBottom:2}}>OBIETTIVO REALE</div>
-              <div style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:"rgba(255,255,255,0.9)",lineHeight:1}}>{obFinale||0}</div>
+              <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"#64748b",fontWeight:700,letterSpacing:1,marginBottom:2}}>OBIETTIVO REALE</div>
+              <div style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:"#1e293b",lineHeight:1}}>{obFinale||0}</div>
             </div>
           </div>
         </div>
