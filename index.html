@@ -740,18 +740,21 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Efficienza</div>
             {(()=>{
               const pct = efficienzaPct||0;
-              const r = 60; const cx = 80; const cy = 68;
-              const toRad = a => a*Math.PI/180;
-              const sx = cx - r; const sy = cy;
-              const endAngle = 180 + (pct/100)*180;
-              const ex = cx + r*Math.cos(toRad(endAngle));
-              const ey = cy + r*Math.sin(toRad(endAngle));
-              const largeArc = pct > 50 ? 1 : 0;
+              // Semicerchio: parte da sinistra (angolo 180°) e va a destra (0°)
+              // Usiamo stroke-dasharray/dashoffset per animazione semplice
+              const r = 45;
+              const circ = Math.PI * r; // semicerchio = metà circonferenza
+              const dash = (pct / 100) * circ;
               return (
-                <svg viewBox="0 0 160 80" style={{width:"100%",maxWidth:200,display:"block",margin:"0 auto"}}>
-                  <path d={`M ${sx} ${sy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
-                  {pct>0&&<path d={`M ${sx} ${sy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`} fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round" style={{filter:"drop-shadow(0 0 8px #7c3aed)"}}/>}
-                  <text x={cx} y={cy-4} textAnchor="middle" fontSize="28" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+                <svg viewBox="0 0 120 70" style={{width:"100%",maxWidth:180,display:"block",margin:"0 auto"}}>
+                  {/* Sfondo semicerchio */}
+                  <path d="M 15 60 A 45 45 0 0 1 105 60" fill="none" stroke="#e2e8f0" strokeWidth="14" strokeLinecap="round"/>
+                  {/* Riempimento viola */}
+                  <path d="M 15 60 A 45 45 0 0 1 105 60" fill="none" stroke="#7c3aed" strokeWidth="14" strokeLinecap="round"
+                    strokeDasharray={`${dash} ${circ}`}
+                    style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>
+                  {/* Valore */}
+                  <text x="60" y="52" textAnchor="middle" fontSize="22" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
                 </svg>
               );
             })()}
