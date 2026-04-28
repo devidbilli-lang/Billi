@@ -585,6 +585,29 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
     return tot>0?tot:null;
   })() : null;
   const ob60 = obFinale!=null&&oreTotali>0 ? Math.round(obFinale/oreTotali) : null;
+  // Efficienza = (borse prodotte * TC) / minuti lavorati * 100
+  const efficienzaPct = (()=>{
+    const borseTot = borseOggi||0;
+    if(borseTot===0||tc<=0) return null;
+    // Minuti lavorati = somma minuti effettivi di tutti gli operatori finora
+    const sessLinea = sessioni.filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio);
+    const now3 = new Date();
+    const secNow = now3.getHours()*3600+now3.getMinutes()*60+now3.getSeconds();
+    let minLavorati = 0;
+    const matVisti = new Set();
+    sessLinea.forEach(s=>{
+      const mat = s.matricola||s.nome||s.id; if(!mat||matVisti.has(mat)) return;
+      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
+      matVisti.add(mat);
+      const dI = parseData(s.inizio); if(!dI) return;
+      const secI = dI.getHours()*3600+dI.getMinutes()*60;
+      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+      const secF = attiva ? Math.min(secNow, secFineTurno) : (()=>{ const dF=parseData(s.fine); return dF?Math.min(dF.getHours()*3600+dF.getMinutes()*60,secFineTurno):secFineTurno; })();
+      minLavorati += Math.max(0,(secF-secI)/60);
+    });
+    if(minLavorati<=0) return null;
+    return Math.round((borseTot*tc)/minLavorati*100);
+  })();
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
 
   // OBIETTIVO FISSO: max persone uniche registrate oggi × ore turno / TC
@@ -714,8 +737,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         <div style={{display:"flex",gap:12,marginBottom:16}}>
           {/* Borse Prodotte */}
           <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
-            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#ffffff",lineHeight:1}}>{borse}</div>
+            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>EFFICIENZA</div>
+            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:efficienzaPct>=90?"#61ffa9":efficienzaPct>=70?"#fbbf24":efficienzaPct!==null?"#ff6161":"#ffffff",lineHeight:1}}>{efficienzaPct!==null?efficienzaPct+"%":"—"}</div>
           </div>
           {/* Prossimo Obiettivo - calcolato qui */}
           {(()=>{
@@ -765,16 +788,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               </div>
             );
           })()}
-          {/* Obiettivo Dinamico */}
+          {/* Borse Prodotte */}
           <div style={{flex:1,background:coloreLinea,borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>OBIETTIVO REALE</div>
-            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#ffffff",lineHeight:1}}>{obFinale||0}</div>
-            {obiettivoFisso&&(
-              <div style={{marginTop:8,borderTop:"1px solid rgba(255,255,255,0.3)",paddingTop:6}}>
-                <div style={{fontSize:"clamp(11px,1.5vw,16px)",color:"rgba(255,255,255,0.75)",fontWeight:700,letterSpacing:1,marginBottom:2}}>OBIETTIVO TEORICO</div>
-                <div style={{fontSize:"clamp(32px,5vw,56px)",fontWeight:900,color:"rgba(255,255,255,0.85)",lineHeight:1}}>{obiettivoFisso}</div>
-              </div>
-            )}
+            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"rgba(255,255,255,0.9)",fontWeight:800,letterSpacing:1,marginBottom:6}}>BORSE PRODOTTE</div>
+            <div style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#ffffff",lineHeight:1}}>{borse}</div>
           </div>
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
