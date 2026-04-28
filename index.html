@@ -736,21 +736,22 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
       {ob60!==null?(
         <div style={{display:"flex",gap:12,marginBottom:16}}>
           {/* Borse Prodotte */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:0}}>Efficienza</div>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Efficienza</div>
             {(()=>{
               const pct = efficienzaPct||0;
-              const r = 80; const cx = 100; const cy = 100;
+              const r = 60; const cx = 80; const cy = 68;
               const toRad = a => a*Math.PI/180;
-              const x1 = cx+r*Math.cos(toRad(180)); const y1 = cy+r*Math.sin(toRad(180));
-              const endAngle = 180+(pct/100)*180;
-              const x2 = cx+r*Math.cos(toRad(endAngle)); const y2 = cy+r*Math.sin(toRad(endAngle));
-              const largeArc = pct>50?1:0;
+              const sx = cx - r; const sy = cy;
+              const endAngle = 180 + (pct/100)*180;
+              const ex = cx + r*Math.cos(toRad(endAngle));
+              const ey = cy + r*Math.sin(toRad(endAngle));
+              const largeArc = pct > 50 ? 1 : 0;
               return (
-                <svg viewBox="0 0 200 110" style={{width:"100%",overflow:"visible"}}>
-                  <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth="18" strokeLinecap="round"/>
-                  {pct>0&&<path d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`} fill="none" stroke="#7c3aed" strokeWidth="18" strokeLinecap="round" style={{filter:"drop-shadow(0 0 8px #7c3aed)"}}/>}
-                  <text x={cx} y={cy-8} textAnchor="middle" fontSize="36" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+                <svg viewBox="0 0 160 80" style={{width:"100%",maxWidth:200,display:"block",margin:"0 auto"}}>
+                  <path d={`M ${sx} ${sy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
+                  {pct>0&&<path d={`M ${sx} ${sy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`} fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round" style={{filter:"drop-shadow(0 0 8px #7c3aed)"}}/>}
+                  <text x={cx} y={cy-4} textAnchor="middle" fontSize="28" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
                 </svg>
               );
             })()}
