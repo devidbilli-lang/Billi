@@ -746,7 +746,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const circ = Math.PI * r; // semicerchio = metà circonferenza
               const dash = (pct / 100) * circ;
               return (
-                <<svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
+                <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
                   <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
                   <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
                     strokeDasharray={`${(pct/100)*Math.PI*90} ${Math.PI*90}`}
