@@ -806,13 +806,11 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             );
           })()}
           {/* Obiettivo */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(14px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6,color:"#6d28d9"}}>Obiettivo</div>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:0}}>
-              <span style={{fontSize:"clamp(72px,10vw,120px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
-              <span style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
-              <span style={{fontSize:"clamp(40px,6vw,72px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinale||0}</span>
-            </div>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+            <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:8}}>Obiettivo</div>
+              <span style={{fontSize:"clamp(90px,14vw,160px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
+              <span style={{fontSize:"clamp(36px,5vw,60px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
+              <span style={{fontSize:"clamp(56px,9vw,110px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinale||0}</span>
           </div>
         </div>
       ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
