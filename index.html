@@ -678,7 +678,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         {/* SKU */}
         <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
           <div style={{fontWeight:900,color:"#111827",lineHeight:1.1,width:"100%",
-            fontSize:`clamp(12px,${Math.max(1.5, 5 - (skuPiu||"").length * 0.18)}vw,48px)`
+            fontSize:`clamp(14px,${Math.max(2, 6 - (skuPiu||"").length * 0.15)}vw,56px)`,width:"100%"
           }}>{skuPiu||"—"}</div>
           {skuObj?.descrizione&&<div style={{color:"#111827",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",
             fontSize:`clamp(10px,${Math.max(1, 3.5 - (skuObj.descrizione||"").length * 0.06)}vw,32px)`
@@ -721,7 +721,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         <div style={{display:"flex",gap:12,marginBottom:16}}>
           {/* Borse Prodotte */}
           <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Efficienza</div>
+            <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:8}}>Efficienza</div>
             {(()=>{
               const pct = efficienzaPct||0;
               // Semicerchio: parte da sinistra (angolo 180°) e va a destra (0°)
