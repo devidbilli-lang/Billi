@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0Y89u-Jidhxiwjdps7VVuvUO4KRKlzgl3Z1RmyaN4dHYsEDzjGvFQNdK7soRNc480Aw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznF26yLPUomB5bFrowy6uB7o6RHJPtfDBS68VO0DlD3N7ze7pFRLxgXbnWsv0rUKSdzw/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -676,30 +676,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           </div>
         </div>
         {/* SKU */}
-        {(()=>{
-          const skuRef = React.useRef(null);
-          const [skuFs, setSkuFs] = React.useState(48);
-          const [descFs, setDescFs] = React.useState(32);
-          React.useEffect(()=>{
-            if(!skuRef.current) return;
-            const w = skuRef.current.offsetWidth - 16;
-            if(w <= 0) return;
-            // Calcola font-size ottimale per il codice SKU
-            const lenSku = (skuPiu||"—").length;
-            const fsSku = Math.min(72, Math.max(16, Math.floor(w / (lenSku * 0.6))));
-            setSkuFs(fsSku);
-            // Calcola font-size ottimale per la descrizione
-            const lenDesc = (skuObj?.descrizione||"").length;
-            const fsDesc = lenDesc > 0 ? Math.min(48, Math.max(12, Math.floor(w / (lenDesc * 0.55)))) : 32;
-            setDescFs(fsDesc);
-          },[skuPiu, skuObj?.descrizione]);
-          return (
-            <div ref={skuRef} style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
-              <div style={{fontWeight:900,color:"#111827",lineHeight:1.1,width:"100%",fontSize:skuFs+"px"}}>{skuPiu||"—"}</div>
-              {skuObj?.descrizione&&<div style={{color:"#111827",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",fontSize:descFs+"px"}}>{skuObj.descrizione}</div>}
-            </div>
-          );
-        })()}
+        <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
+          <div style={{fontWeight:900,color:"#111827",lineHeight:1.1,width:"100%",
+            fontSize:`clamp(12px,${Math.max(1.5, 5 - (skuPiu||"").length * 0.18)}vw,48px)`
+          }}>{skuPiu||"—"}</div>
+          {skuObj?.descrizione&&<div style={{color:"#111827",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",
+            fontSize:`clamp(10px,${Math.max(1, 3.5 - (skuObj.descrizione||"").length * 0.06)}vw,32px)`
+          }}>{skuObj.descrizione}</div>}
+        </div>
         {/* KO + Migl */}
         <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
