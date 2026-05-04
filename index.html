@@ -677,15 +677,12 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         </div>
         {/* SKU */}
         <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"4px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
-          <div style={{fontWeight:900,color:"#111827",lineHeight:1.1,
-            fontSize:"clamp(32px,6vw,72px)",
-            width:"100%",
-            display:"block",
-            transform:`scaleX(${Math.min(1, Math.max(0.4, 8/Math.max(4,(skuPiu||"—").length)))})`,
-            transformOrigin:"center",
-            letterSpacing:-1,
-            whiteSpace:"nowrap"
-          }}>{skuPiu||"—"}</div>
+          <svg viewBox="0 0 300 60" style={{width:"100%",overflow:"visible",display:"block"}} preserveAspectRatio="none">
+            <text x="150" y="48" textAnchor="middle" textLength="290" lengthAdjust="spacingAndGlyphs"
+              fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif" fontSize="52">
+              {skuPiu||"—"}
+            </text>
+          </svg>
           {skuObj?.descrizione&&<div style={{color:"#111827",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",
             fontSize:`clamp(10px,${Math.max(1, 3.5 - (skuObj.descrizione||"").length * 0.06)}vw,32px)`
           }}>{skuObj.descrizione}</div>}
