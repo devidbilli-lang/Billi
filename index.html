@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwmehKfBIRWcRT567eJ_55OgB0BXwmmnF0cYUWFNGrLWHPvniaTJJ93f-HkvbYTjin3NA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBy2rAUmpvQm9vhV03roShzqWmWDmgfSp_pL7rGnbiTM3oA9hrhUtHMUuLA2YKsWMDcw/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -1591,16 +1591,27 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             )}
           </div>
           <div style={{marginBottom:18}}>
-            <label style={S.lbl}>SKU Articolo</label>
-            <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..." value={cSku} onChange={e=>{setCSku(e.target.value.toUpperCase());if(!e.target.value)setSku("");}}/>
-            <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
-            {(()=>{ const skuObj=skuList.find(x=>x.sku===sku); return sku?(
-              <div style={{marginTop:6,padding:"8px 12px",background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:6,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{sku}</span>
-                {skuObj&&skuObj.descrizione&&<span style={{fontSize:14,color:"#f59e0b",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</span>}
-                {skuObj&&skuObj.collezione&&skuObj.collezione.trim()!=""&&<span style={{fontSize:14,color:"#e879f9",background:"#ffffff",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.collezione.trim()}</span>}
+            <label style={S.lbl}>Articoli (seleziona uno o più)</label>
+            <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2,marginBottom:6}} placeholder="Filtra articoli..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+            <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #f59e0b",borderRadius:8,background:"#fffbeb"}}>
+              {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.codiceF&&s.codiceF.toUpperCase().includes(cSku))||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku)))).map(s=>(
+                <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
+                  <input type="checkbox" checked={skuMulti.includes(s.sku)}
+                    onChange={e=>{
+                      const sel=e.target.checked?[...skuMulti,s.sku]:skuMulti.filter(x=>x!==s.sku);
+                      setSkuMulti(sel); setSku(sel[0]||"");
+                    }}
+                    style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
+                  <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.codiceF||s.sku}</span>
+                  {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
+                </label>
+              ))}
+            </div>
+            {skuMulti.length>0&&(
+              <div style={{marginTop:6,padding:"6px 10px",background:"#f59e0b22",borderRadius:6,fontSize:12,color:"#92400e",fontWeight:700}}>
+                ✓ {skuMulti.length} articol{skuMulti.length===1?"o":"i"}: {skuMulti.map(s=>{const o=skuList.find(x=>x.sku===s);return o?o.codiceF||o.sku:s;}).join(", ")}
               </div>
-            ):null; })()}
+            )}
           </div>
           <div style={{marginBottom:18}}>
             <label style={S.lbl}>Linea di Produzione</label>
