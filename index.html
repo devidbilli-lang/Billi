@@ -1897,7 +1897,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                       </div>
                       <div style={{flex:1}}>
                         <div style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.nome} {s.cognome}</div>
-                        <div style={{fontSize:11,color:"#64748b"}}>{s.skuCorrente||s.sku} {lObj&&<span style={{color:lObj.colore,fontWeight:700}}>• {s.lineaCorrente}</span>}</div>
+                        <div style={{fontSize:11,color:"#64748b"}}>{lObj&&<span style={{color:lObj.colore,fontWeight:700}}>{s.lineaCorrente}</span>}</div>
                       </div>
                     </div>);
                   })}
@@ -2123,10 +2123,12 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         {(()=>{
           // Card SKU attivi con numero operatori per articolo
           const skuAttivi = {};
+          const visti = new Set();
           sessioni.filter(s=>!s.fine&&(s.skuCorrente||s.sku)&&!isSkuSpeciale(s.skuCorrente||s.sku||"")&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).forEach(s=>{
             const sk=s.skuCorrente||s.sku||"";
+            const key=s.matricola+"|"+sk;
             if(!skuAttivi[sk]) skuAttivi[sk]={count:0};
-            skuAttivi[sk].count++;
+            if(!visti.has(key)){ skuAttivi[sk].count++; visti.add(key); }
           });
           return Object.entries(skuAttivi).map(([sku,info])=>(
             <div key={sku} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:12,padding:14,textAlign:"center"}}>
