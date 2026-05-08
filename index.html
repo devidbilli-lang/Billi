@@ -221,14 +221,14 @@ function SugOp({ val, list, onSel }) { if(!val||val.length<2||!list.length) retu
 }
 function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.length) return null;
   const v=val.toUpperCase();
-  const m=list.filter(s=>s.sku.includes(v)||s.descrizione.toUpperCase().includes(v)||(s.collezione&&s.collezione.toUpperCase().includes(v))).slice(0,5);
+  const m=list.filter(s=>s.sku.includes(v)||(s.codiceF&&s.codiceF.toUpperCase().includes(v))||s.descrizione.toUpperCase().includes(v)||(s.collezione&&s.collezione.toUpperCase().includes(v))).slice(0,5);
   if(!m.length) return null;
   return (
     <div style={{background:"#ffffff",border:"1px solid #f59e0b44",borderRadius:8,marginTop:4,overflow:"hidden"}}>
       {m.map(s=>(
         <div key={s.sku+(s.collezione||"")} onClick={()=>onSel(s)} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}
           onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <code style={S.sku}>{s.sku}</code>
+          <code style={S.sku}>{s.codiceF||s.sku}</code>
           {s.collezione&&<span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{s.collezione}</span>}
           <span style={{fontSize:15,color:"#1e293b",flex:1}}>{s.descrizione}</span>
         </div>
@@ -1338,7 +1338,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,maxHeight:160,overflowY:"auto",marginTop:4}}>
                 {skuFiltrati.slice(0,8).map(s=>(
                   <div key={s.sku} onClick={()=>{setSku(s.sku);setCSku("");}} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                    <code style={S.sku}>{s.sku}</code>
+                    <code style={S.sku}>{s.codiceF||s.sku}</code>
                     <span style={{fontSize:12,color:"#1e293b"}}>{s.descrizione}</span>
                     {s.collezione&&<span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{s.collezione}</span>}
                   </div>
@@ -1347,7 +1347,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             )}
             {sku&&(()=>{ const skuObj=skuList.find(s=>s.sku===sku); return (
               <div style={{marginTop:6,padding:"8px 12px",background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:6,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{sku}</span>
+                <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{skuObj?.codiceF||sku}</span>
                 {skuObj&&skuObj.descrizione&&<span style={{fontSize:14,color:"#f59e0b",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</span>}
                 {skuObj&&skuObj.collezione&&skuObj.collezione.trim()!==""&&<span style={{fontSize:14,color:"#e879f9",background:"#ffffff",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.collezione.trim()}</span>}
               </div>
@@ -1596,7 +1596,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             <SugSku val={cSku} list={skuList} onSel={s=>{setSku(s.sku);setCSku("");}}/>
             {(()=>{ const skuObj=skuList.find(x=>x.sku===sku); return sku?(
               <div style={{marginTop:6,padding:"8px 12px",background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:6,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{sku}</span>
+                <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{skuObj?.codiceF||sku}</span>
                 {skuObj&&skuObj.descrizione&&<span style={{fontSize:14,color:"#f59e0b",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</span>}
                 {skuObj&&skuObj.collezione&&skuObj.collezione.trim()!=""&&<span style={{fontSize:14,color:"#e879f9",background:"#ffffff",border:"1px solid #e879f9",borderRadius:4,padding:"2px 8px",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.collezione.trim()}</span>}
               </div>
