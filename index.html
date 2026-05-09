@@ -1920,8 +1920,6 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         // Grigio = sessione chiusa o trasferita su altra linea
         // lin può essere ID linea o nome linea — normalizziamo il confronto
         const matchLinea = ss => ss.lineaCorrente===lin || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).id || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).nome;
-        const _debug = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat);
-        console.table(_debug.map(ss=>({SKU:ss.skuCorrente||ss.sku,lineaCorrente:ss.lineaCorrente,fine:ss.fine?"CHIUSA":"APERTA",matchLin:matchLinea(ss)})));
         const skuTutti = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat && matchLinea(ss));
         const skuMap = {};
         skuTutti.forEach(ss=>{ const k=ss.skuCorrente||ss.sku; if(!k) return;
@@ -2096,20 +2094,23 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   }).filter(Boolean);
                   const skuDestinazione = modTrasf.skuMultiDest||[];
                   for(const s of ops){
-                    // 1. Chiudi TUTTE le sessioni aperte dell'operatore sulla linea di partenza
+                    // 1. CHECKOUT di TUTTE le sessioni aperte sulla linea di partenza
                     const sessioniAperte = sessAggiornate.filter(ss=>
-                      ss.matricola===s.matricola &&
+                      (ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome) &&
                       ss.lineaCorrente===s.lineaCorrente &&
                       (!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null")
                     );
                     for(const sess of sessioniAperte){
-                      await api.evento({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku||"",tipo:"TRASFERIMENTO",lineaDa:sess.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:sess.skuCorrente||sess.sku||"",skuA:sess.skuCorrente||sess.sku||""});
+                      // Manda CHECKOUT per chiudere la sessione sulla linea di partenza
+                      const urlCO = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(sess.id)+"&matricola="+encodeURIComponent(sess.matricola||"")+"&nome="+encodeURIComponent(sess.nome||"")+"&cognome="+encodeURIComponent(sess.cognome||"")+"&sku="+encodeURIComponent(sess.skuCorrente||sess.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(sess.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(sess.skuCorrente||sess.sku||"")+"&skuA=";
+                      try { await fetchConRetry(urlCO, 3, 500); } catch(e) {}
                       if(onTr) onTr(sess.id,modTrasf.lineaDest.id,sess.skuCorrente||sess.sku||"");
                     }
-                    // 2. Apri nuove sessioni per ogni SKU sulla linea di destinazione
+                    // 2. CHECKIN per ogni SKU sulla linea di destinazione
                     for(const skuNew of skuDestinazione){
                       const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
-                      await api.evento({sessionId:newId,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuNew,tipo:"CHECKIN",lineaDa:modTrasf.lineaDest.id,lineaA:modTrasf.lineaDest.id,skuDa:skuNew,skuA:skuNew});
+                      const urlCI = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(newId)+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(skuNew)+"&tipo=CHECKIN&lineaDa="+encodeURIComponent(modTrasf.lineaDest.id)+"&lineaA="+encodeURIComponent(modTrasf.lineaDest.id)+"&skuDa="+encodeURIComponent(skuNew)+"&skuA="+encodeURIComponent(skuNew);
+                      try { await fetchConRetry(urlCI, 3, 500); } catch(e) {}
                     }
                   }
                   setModTrasf(null);
