@@ -1824,7 +1824,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
     const q=srch.toLowerCase();
     return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
-  const att=sessioni.filter(s=>!s.fine).length;
+  const att=new Set(sessioni.filter(s=>!s.fine).map(s=>s.matricola||s.nome)).size;
   const chi=sessioni.filter(s=>!!s.fine).length;
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
@@ -2121,7 +2121,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           </div>
         ))}
 
-        {linee.filter(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length; if(lineaFiltro) return l.id===lineaFiltro.id; if(isAdmin) return nAtt>0; return true; }).map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
+        {linee.filter(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length; if(lineaFiltro) return l.id===lineaFiltro.id; if(isAdmin) return nAtt>0; return true; }).map(l=>{ const nAtt=new Set(sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).map(s=>s.matricola||s.nome)).size;
           return (
             <div key={l.id} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"1px solid #e2e8f0",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative",display:"flex",flexDirection:"column"}}>
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
