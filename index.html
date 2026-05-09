@@ -734,7 +734,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
         </div>
 
-        {/* COLONNA DESTRA - un blocco per ogni articolo */}
+        {/* COLONNA DESTRA - 2 articoli per riga */}
         <div style={{flex:1,display:"flex",flexDirection:"column",gap:8}}>
           {(()=>{
             const skuAttiviLinea=[...new Set(
@@ -746,6 +746,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 Nessun articolo attivo
               </div>
             );
+            // Raggruppa in coppie per 2 colonne
+            const coppie = [];
+            for(let i=0;i<skuAttiviLinea.length;i+=2) coppie.push(skuAttiviLinea.slice(i,i+2));
             // Font dinamici in base al numero di articoli
             const nSku = skuAttiviLinea.length;
             const fBig   = nSku<=1?"clamp(40px,6vw,80px)":nSku<=2?"clamp(30px,5vw,60px)":nSku<=3?"clamp(24px,4vw,48px)":"clamp(18px,3vw,36px)";
@@ -757,7 +760,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             const hdrFs  = nSku<=2?"clamp(13px,2vw,18px)":"clamp(11px,1.5vw,14px)";
             const cardPad= nSku<=2?"6px 10px":"4px 6px";
 
-            return skuAttiviLinea.map(skuItem=>{
+            return coppie.map((coppia,ci)=>(
+              <div key={ci} style={{display:"flex",gap:8,flex:1}}>
+              {coppia.map(skuItem=>{
               const skuObjItem=skuList.find(x=>x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
               // Obiettivo finale
@@ -778,15 +783,25 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               return (
                 <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
                   {/* Header articolo - nome completo viola */}
-                  <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:hdrPad,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
-                      <span style={{fontSize:hdrFs,fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.2}}>{skuItem}</span>
-                      {skuObjItem?.descrizione&&<span style={{fontSize:hdrFs,fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
+                  {(()=>{
+                    const nOpSku = new Set(sessioni.filter(s=>s.lineaCorrente===lineaId&&(s.skuCorrente||s.sku)===skuItem&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size;
+                    return (
+                    <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:hdrPad,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
+                        <span style={{fontSize:hdrFs,fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.2}}>{skuItem}</span>
+                        {skuObjItem?.descrizione&&<span style={{fontSize:hdrFs,fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                        {skuObjItem?.collezione&&skuObjItem.collezione.trim()&&(
+                          <span style={{fontSize:11,color:"#fff",background:"#ffffff22",borderRadius:6,padding:"3px 8px",fontWeight:700}}>{skuObjItem.collezione}</span>
+                        )}
+                        <span style={{fontSize:11,color:"#fff",background:"#ffffff33",borderRadius:6,padding:"3px 8px",fontWeight:800,display:"flex",alignItems:"center",gap:4}}>
+                          <span>👤</span>{nOpSku}
+                        </span>
+                      </div>
                     </div>
-                    {skuObjItem?.collezione&&skuObjItem.collezione.trim()&&(
-                      <span style={{fontSize:11,color:"#fff",background:"#ffffff22",borderRadius:6,padding:"3px 8px",fontWeight:700,flexShrink:0}}>{skuObjItem.collezione}</span>
-                    )}
-                  </div>
+                    );
+                  })()}
                   {/* 3 card interne - font dinamici in base al numero di articoli */}
                   <div style={{display:"flex",gap:6,padding:cardPad,alignItems:"stretch"}}>
 
@@ -843,7 +858,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                   </div>
                 </div>
               );
-            });
+            })}
+              </div>
+            ));
           })()}
         </div>
 
