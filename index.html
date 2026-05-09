@@ -291,7 +291,7 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
             <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
           </div>
           {tipoUscita==="sospendi"&&(
-            <div style={{marginBottom:16}}>
+            <div style={{marginBottom:8}}>
               <label style={S.lbl}>Nome corso / formazione</label>
               <input style={{...S.inp,borderColor:"#06b6d4",borderWidth:2}} placeholder="es. Sicurezza sul lavoro..."
                 value={nomeCorso} onChange={e=>setNomeCorso(e.target.value)}/>
@@ -694,17 +694,23 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             )}
           </div>
         </div>
-        {/* SKU */}
-        <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"4px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",overflow:"hidden",minWidth:0}}>
-          <div style={{
-            fontWeight:900,color:"#111827",lineHeight:1.1,
-            width:"100%",wordBreak:"break-all",
-            padding:"0 4px",
-            fontSize:`clamp(12px,${Math.max(1.8, 6-(skuPiu||"").length*0.14)}vw,64px)`
-          }}>{skuPiu||"—"}</div>
-          {skuObj?.descrizione&&<div style={{color:"#111827",marginTop:4,fontWeight:700,lineHeight:1.2,width:"100%",
-            fontSize:`clamp(10px,${Math.max(1, 3.5 - (skuObj.descrizione||"").length * 0.06)}vw,32px)`
-          }}>{skuObj.descrizione}</div>}
+        {/* Efficienza */}
+        <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+          <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Efficienza</div>
+          {(()=>{
+            const pct = efficienzaPct||0;
+            return (
+              <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
+                <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
+                {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
+                  strokeDasharray={`${(pct/100)*Math.PI*90} ${Math.PI*90}`}
+                  style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
+                {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
+                  style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
+                <text x="100" y="88" textAnchor="middle" fontSize="32" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+              </svg>
+            );
+          })()}
         </div>
         {/* KO + Migl */}
         <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"column",justifyContent:"center",gap:10}}>
@@ -773,33 +779,33 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               </div>
               <div style={{display:"flex",gap:12,marginBottom:0}}>
                 {/* Prossimo Obiettivo */}
-                <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",borderRadius:16,padding:"20px 16px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 20px 6px #ffff0066, 0 0 40px 10px #ffff0033",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                  <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:8}}>ALLE <span style={{color:"#ffff00",fontSize:"clamp(22px,3.5vw,36px)"}}>{inTurnoItem?prossimaOraLabelItem:"—"}</span></div>
+                <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",borderRadius:16,padding:"8px 10px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 20px 6px #ffff0066, 0 0 40px 10px #ffff0033",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                  <div style={{fontSize:"clamp(10px,1.5vw,14px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:4}}>ALLE <span style={{color:"#ffff00",fontSize:"clamp(12px,2vw,18px)"}}>{inTurnoItem?prossimaOraLabelItem:"—"}</span></div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
-                    <div style={{fontSize:"clamp(80px,12vw,140px)",fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 20px #ffff00, -3px -3px 0 #7c3aed, 3px -3px 0 #7c3aed, -3px 3px 0 #7c3aed, 3px 3px 0 #7c3aed, 0 -3px 0 #7c3aed, 0 3px 0 #7c3aed, -3px 0 0 #7c3aed, 3px 0 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</div>
-                    {inTurnoItem&&<div style={{width:44,height:44,borderRadius:"50%",background:borse>=borseAProssimaItem?"#61ffa9":"#ff6161",boxShadow:`0 0 20px 6px ${borse>=borseAProssimaItem?"#61ffa9":"#ff6161"}`,flexShrink:0}}/>}
+                    <div style={{fontSize:"clamp(36px,6vw,72px)",fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 10px #ffff00, -2px -2px 0 #7c3aed, 2px 2px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</div>
+                    {inTurnoItem&&<div style={{width:24,height:24,borderRadius:"50%",background:borse>=borseAProssimaItem?"#61ffa9":"#ff6161",flexShrink:0}}/>}
                   </div>
                 </div>
                 {/* Obiettivo */}
-                <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
-                  <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:8}}>Obiettivo</div>
-                  <span style={{fontSize:"clamp(90px,14vw,160px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
-                  <span style={{fontSize:"clamp(36px,5vw,60px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
-                  <span style={{fontSize:"clamp(56px,9vw,110px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
+                <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"8px 10px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+                  <div style={{fontSize:"clamp(12px,1.5vw,18px)",color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:4}}>Obiettivo</div>
+                  <span style={{fontSize:"clamp(36px,6vw,72px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
+                  <span style={{fontSize:"clamp(18px,3vw,32px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
+                  <span style={{fontSize:"clamp(28px,5vw,56px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
                 </div>
                 {/* KO + Migl */}
-                <div style={{flex:1,background:"#ffffff",border:"2px solid #e2e8f0",borderRadius:16,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+                <div style={{flex:1,background:"#ffffff",border:"2px solid #e2e8f0",borderRadius:16,padding:"8px 10px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
                   <div style={{display:"flex",justifyContent:"space-around",alignItems:"center",width:"100%",height:"100%"}}>
                     <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:32}}>😞</div>
-                      <div style={{fontSize:"clamp(14px,2vw,20px)",color:"#ef4444",fontWeight:700,letterSpacing:1}}>KO</div>
-                      <div style={{fontSize:"clamp(48px,8vw,96px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
+                      <div style={{fontSize:20}}>😞</div>
+                      <div style={{fontSize:"clamp(10px,1.5vw,14px)",color:"#ef4444",fontWeight:700,letterSpacing:1}}>KO</div>
+                      <div style={{fontSize:"clamp(28px,5vw,56px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
                     </div>
                     <div style={{width:2,background:"#e2e8f0",height:"70%",borderRadius:2}}/>
                     <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:32}}>😐</div>
-                      <div style={{fontSize:"clamp(14px,2vw,20px)",color:"#f59e0b",fontWeight:700,letterSpacing:1}}>MIGL.</div>
-                      <div style={{fontSize:"clamp(48px,8vw,96px)",fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
+                      <div style={{fontSize:20}}>😐</div>
+                      <div style={{fontSize:"clamp(10px,1.5vw,14px)",color:"#f59e0b",fontWeight:700,letterSpacing:1}}>MIGL.</div>
+                      <div style={{fontSize:"clamp(28px,5vw,56px)",fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
                     </div>
                   </div>
                 </div>
