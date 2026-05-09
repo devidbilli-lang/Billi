@@ -1851,28 +1851,32 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [modNoteLinea,setModNoteLinea] = useState(null);
   const [popupSkuOp,setPopupSkuOp] = useState(null);
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
-  const filRaw = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
+    // Costruisce mappa: matricola -> Set di linee su cui ha sessione ATTIVA
+  const matricoleAttivePerLinea = {};
+  sessioni.forEach(s=>{
+    const mat = s.matricola||s.nome; if(!mat) return;
+    if(!s.fine||s.fine===""||s.fine===null||s.fine==="null"){
+      if(!matricoleAttivePerLinea[mat]) matricoleAttivePerLinea[mat]=new Set();
+      matricoleAttivePerLinea[mat].add(s.lineaCorrente);
+    }
+  });
+  // filRaw: per le sessioni chiuse, mostrala SOLO se l'operatore non ha sessioni
+  // attive su NESSUNA linea (cioè è uscito, non trasferito)
+  const filRaw = sessioni.filter(s=>{
+    const ml=fL==="ALL"||s.lineaCorrente===fL;
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
     const q=srch.toLowerCase();
-    return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
-  // Per ogni operatore: controlla se ha una sessione attiva su un'altra linea
-  // Se sì, non mostrarlo come attivo sulla linea di partenza
-  const matricoleConSessioneAttiva = {};
-  sessioni.forEach(s=>{
+    if(!ml||!ms) return false;
+    if(q&&!s.nome.toLowerCase().includes(q)&&!s.cognome.toLowerCase().includes(q)&&!(s.sku||"").toLowerCase().includes(q)) return false;
     const mat = s.matricola||s.nome;
-    if(!mat) return;
-    if(!s.fine||s.fine===""||s.fine===null||s.fine==="null"){
-      if(!matricoleConSessioneAttiva[mat]) matricoleConSessioneAttiva[mat]=new Set();
-      matricoleConSessioneAttiva[mat].add(s.lineaCorrente);
-    }
+    const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+    // Sessione chiusa: mostrala solo se l'operatore non è attivo su nessuna linea
+    if(!attiva && mat && matricoleAttivePerLinea[mat] && matricoleAttivePerLinea[mat].size>0) return false;
+    return true;
   });
   const filMap = {};
   filRaw.forEach(s=>{
     const key=(s.matricola||s.nome)+"|"+s.lineaCorrente;
-    const mat = s.matricola||s.nome;
-    const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
-    // Se è una sessione chiusa e l'operatore è ora attivo su un'altra linea → salta
-    if(!attiva && mat && matricoleConSessioneAttiva[mat] && !matricoleConSessioneAttiva[mat].has(s.lineaCorrente)) return;
     if(!filMap[key]||(!s.fine&&filMap[key].fine)||(!s.fine&&!filMap[key].fine&&(s.tsInizio||0)>(filMap[key].tsInizio||0)))
       filMap[key]=s;
   });
