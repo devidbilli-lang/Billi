@@ -1,3 +1,5 @@
+index nexus 08/05 21:17
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -41,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzM4IXIGFg5p7EMp6FRS7FX-qk6FzUP8H-Teq9a8o6nZz9Vz_Sw__LZef44IhnGHZaEOA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBy2rAUmpvQm9vhV03roShzqWmWDmgfSp_pL7rGnbiTM3oA9hrhUtHMUuLA2YKsWMDcw/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -221,7 +223,7 @@ function SugOp({ val, list, onSel }) { if(!val||val.length<2||!list.length) retu
 }
 function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.length) return null;
   const v=val.toUpperCase();
-  const m=list.filter(s=>s.sku.includes(v)||(s.codiceF&&s.codiceF.toUpperCase().includes(v))||s.descrizione.toUpperCase().includes(v)||(s.collezione&&s.collezione.toUpperCase().includes(v))).slice(0,5);
+  const m=list.filter(s=>s.sku.includes(v)||s.descrizione.toUpperCase().includes(v)||(s.collezione&&s.collezione.toUpperCase().includes(v))).slice(0,5);
   if(!m.length) return null;
   return (
     <div style={{background:"#ffffff",border:"1px solid #f59e0b44",borderRadius:8,marginTop:4,overflow:"hidden"}}>
@@ -1505,6 +1507,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                       style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:10,alignItems:"center"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <span style={{fontSize:13,color:"#94a3b8"}}>{s.nome} {s.cognome}</span>
+                      <code style={S.sku}>{s.skuCorrente||s.sku}</code>
                       <span style={{...S.tag,background:getLinea(s.lineaCorrente,linee).colore+"22",color:getLinea(s.lineaCorrente,linee).colore,borderColor:getLinea(s.lineaCorrente,linee).colore+"44",fontSize:11}}>{getLinea(s.lineaCorrente,linee).id}</span>
                     </div>
                   ))}
@@ -1515,7 +1518,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <div style={S.sc}>
                 <div style={{fontSize:10,letterSpacing:2,color:"#00d4aa",textTransform:"uppercase",marginBottom:6}}>Sessione attiva</div>
                 <div style={{fontWeight:700,fontSize:16,color:"#1e293b",marginBottom:8}}>{sf.nome} {sf.cognome}</div>
-                {(()=>{const o=skuList.find(x=>x.sku===(sf.skuCorrente||sf.sku)); return (<span style={{display:"inline-flex",alignItems:"center",gap:6,flexWrap:"wrap"}}><code style={S.sku}>{o?(o.codiceF||o.sku):sf.skuCorrente||sf.sku}</code>{o&&o.collezione&&o.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700}}>{o.collezione.trim()}</span>}</span>);})()}
+                <code style={S.sku}>{sf.skuCorrente||sf.sku}</code>
                 <span style={{...S.tag,background:la.colore+"22",color:la.colore,borderColor:la.colore+"44",marginLeft:8}}>{la.id}</span>
                 <div style={{fontSize:12,color:"#64748b",marginTop:8}}>{fmtFull(new Date(sf.inizio))}</div>
               </div>
@@ -1591,9 +1594,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           </div>
           <div style={{marginBottom:18}}>
             <label style={S.lbl}>Articoli (seleziona uno o più)</label>
-            <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2,marginBottom:6}} placeholder="Filtra per codice o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+            <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2,marginBottom:6}} placeholder="Filtra articoli..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
             <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #f59e0b",borderRadius:8,background:"#fffbeb"}}>
-              {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.codiceF&&s.codiceF.toUpperCase().includes(cSku))||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).filter((s,i,arr)=>arr.findIndex(x=>(x.codiceF||x.sku)===(s.codiceF||s.sku))===i).map(s=>(
+              {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.codiceF&&s.codiceF.toUpperCase().includes(cSku))||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku)))).map(s=>(
                 <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
                   <input type="checkbox" checked={skuMulti.includes(s.sku)}
                     onChange={e=>{
@@ -1603,13 +1606,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
                   <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.codiceF||s.sku}</span>
                   {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
-                  {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:2}}>{s.collezione}</span>}
                 </label>
               ))}
             </div>
             {skuMulti.length>0&&(
               <div style={{marginTop:6,padding:"6px 10px",background:"#f59e0b22",borderRadius:6,fontSize:12,color:"#92400e",fontWeight:700}}>
-                ✓ {skuMulti.length} articol{skuMulti.length===1?"o":"i"}: {skuMulti.map(sk=>{const o=skuList.find(x=>x.sku===sk);return o?(o.codiceF||o.sku):sk;}).join(", ")}
+                ✓ {skuMulti.length} articol{skuMulti.length===1?"o":"i"}: {skuMulti.map(s=>{const o=skuList.find(x=>x.sku===s);return o?o.codiceF||o.sku:s;}).join(", ")}
               </div>
             )}
           </div>
@@ -1897,24 +1899,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                       </div>
                       <div style={{flex:1}}>
                         <div style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.nome} {s.cognome}</div>
-                        <div style={{fontSize:11,color:"#64748b"}}>{lObj&&<span style={{color:lObj.colore,fontWeight:700}}>{s.lineaCorrente}</span>}</div>
+                        <div style={{fontSize:11,color:"#64748b"}}>{s.skuCorrente||s.sku} {lObj&&<span style={{color:lObj.colore,fontWeight:700}}>• {s.lineaCorrente}</span>}</div>
                       </div>
                     </div>);
                   })}
                 </div>
                 {(modTrasf.opSelezionati||[]).length>0&&(
                   <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
-                    onClick={()=>{
-                      // Preseleziona SKU attivi sulla linea di destinazione
-                      const skuAttiviDest = [...new Set(
-                        sessioni.filter(s=>
-                          s.lineaCorrente===modTrasf.lineaDest.id &&
-                          (!s.fine||s.fine===""||s.fine===null||s.fine==="null") &&
-                          s.skuCorrente && s.skuCorrente!=="RIPARAZIONE"
-                        ).map(s=>s.skuCorrente||s.sku)
-                      )];
-                      setModTrasf({...modTrasf,step:"sku",skuNuovo:"",cercaSku:"",skuMultiDest:skuAttiviDest});
-                    }}>
+                    onClick={()=>setModTrasf({...modTrasf,step:"sku",skuNuovo:"",cercaSku:""})}>
                     Avanti → ({(modTrasf.opSelezionati||[]).length} operatori)
                   </button>
                 )}
@@ -1922,33 +1914,32 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   onClick={()=>setModTrasf(null)}>← Annulla</button>
               </>)}
               {step==="sku"&&(<>
-                <div style={{fontSize:13,color:"#475569",marginBottom:8}}>Seleziona gli <strong>articoli</strong> su cui lavoreranno sulla linea <strong>{modTrasf.lineaDest.id}</strong></div>
-                <input style={{...S.inp,fontSize:13,marginBottom:6}} placeholder="Filtra articoli..." value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value.toUpperCase()})}/>
-                <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #a855f7",borderRadius:8,background:"#faf5ff",marginBottom:10}}>
-                  {skuList.filter(s=>!s.speciale&&(!modTrasf.cercaSku||s.sku.includes(modTrasf.cercaSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(modTrasf.cercaSku)))).filter((s,i,arr)=>arr.findIndex(x=>(x.codiceF||x.sku)===(s.codiceF||s.sku))===i).map(s=>{
-                    const sel=(modTrasf.skuMultiDest||[]).includes(s.sku);
-                    return (
-                      <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"#ede9fe":"transparent",borderBottom:"1px solid #e9d5ff"}}>
-                        <input type="checkbox" checked={sel}
-                          onChange={e=>{
-                            const cur=modTrasf.skuMultiDest||[];
-                            const nuovi=e.target.checked?[...cur,s.sku]:cur.filter(x=>x!==s.sku);
-                            setModTrasf({...modTrasf,skuMultiDest:nuovi,skuNuovo:nuovi[0]||""});
-                          }}
-                          style={{width:18,height:18,accentColor:"#a855f7",cursor:"pointer",flexShrink:0}}/>
-                        <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.codiceF||s.sku}</span>
-                        {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
-                        {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700}}>{s.collezione}</span>}
-                      </label>
-                    );
-                  })}
-                </div>
-                {(modTrasf.skuMultiDest||[]).length>0&&(
-                  <div style={{marginBottom:8,padding:"6px 10px",background:"#a855f711",borderRadius:6,fontSize:12,color:"#7c3aed",fontWeight:700}}>
-                    ✓ {(modTrasf.skuMultiDest||[]).length} articol{(modTrasf.skuMultiDest||[]).length===1?"o":"i"}: {(modTrasf.skuMultiDest||[]).map(sk=>{const o=skuList.find(x=>x.sku===sk);return o?(o.codiceF||o.sku):sk;}).join(", ")}
-                  </div>
-                )}
-                {(modTrasf.skuMultiDest||[]).length>0&&(
+                <div style={{fontSize:13,color:"#475569",marginBottom:12}}>Seleziona lo <strong>SKU</strong> su cui lavoreranno gli operatori trasferiti su <strong>{modTrasf.lineaDest.id}</strong></div>
+                {(()=>{
+                  const skuSelObj = modTrasf.skuNuovo ? skuList.find(s=>s.sku===modTrasf.skuNuovo) : null;
+                  return modTrasf.skuNuovo ? (
+                    <div style={{background:"#f59e0b11",border:"2px solid #f59e0b66",borderRadius:10,padding:"12px 14px",marginBottom:12,cursor:"pointer"}} onClick={()=>setModTrasf({...modTrasf,skuNuovo:"",cercaSku:""})}>
+                      <div style={{fontSize:13,fontWeight:800,color:"#f59e0b"}}>{modTrasf.skuNuovo}</div>
+                      {skuSelObj&&skuSelObj.descrizione&&<div style={{fontSize:12,color:"#f59e0b",marginTop:3}}>{skuSelObj.descrizione}{skuSelObj.collezione&&skuSelObj.collezione.trim()&&<span style={{marginLeft:8,background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",color:"#e879f9",fontWeight:700}}>{skuSelObj.collezione}</span>}</div>}
+                      <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>Tocca per cambiare</div>
+                    </div>
+                  ) : (
+                    <div style={{position:"relative",marginBottom:10}}>
+                      <input type="text" autoFocus placeholder="Cerca SKU..." style={{...S.inp,fontSize:13}} value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value,skuNuovo:""})}/>
+                      {modTrasf.cercaSku&&skuConSpeciali(skuList).filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).length>0&&(
+                        <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                          {skuConSpeciali(skuList).filter(s=>s.sku.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())||s.descrizione.toLowerCase().includes((modTrasf.cercaSku||"").toLowerCase())).slice(0,8).map((s,i)=>(
+                            <div key={i} onClick={()=>setModTrasf({...modTrasf,skuNuovo:s.sku,cercaSku:s.sku})} style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                              <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.sku}</span>
+                              <span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}{s.collezione&&<span style={{color:"#e879f9",fontWeight:700,marginLeft:4}}>{s.collezione}</span>}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+                {modTrasf.skuNuovo&&(
                   <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
                     onClick={()=>setModTrasf({...modTrasf,step:"pwd",pwd:"",errPwd:""})}>
                     Avanti → Conferma password
@@ -1971,37 +1962,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     if(j.ok&&j.data.sessioni) sessAggiornate = j.data.sessioni;
                   } catch(e){}
                   const ops=(modTrasf.opSelezionati||[]).map(id=>sessAggiornate.find(s=>s.id===id)||sessioni.find(s=>s.id===id)).filter(Boolean);
-                  
-                  // Trova SKU attivi sulla linea di destinazione
-                  const skuAttiviDest = [...new Set(
-                    sessAggiornate.filter(s=>
-                      s.lineaCorrente===modTrasf.lineaDest.id &&
-                      (!s.fine||s.fine===""||s.fine===null||s.fine==="null") &&
-                      s.skuCorrente && s.skuCorrente!=="RIPARAZIONE"
-                    ).map(s=>s.skuCorrente||s.sku)
-                  )];
-                  
-                  const skuDestinazione = modTrasf.skuMultiDest||[];
-                  
                   for(const s of ops){
-                    // 1. Trova tutte le sessioni aperte di questo operatore sulla linea di partenza
-                    const tutteSessioniOp = sessAggiornate.filter(ss=>
-                      ss.matricola===s.matricola &&
-                      ss.lineaCorrente===s.lineaCorrente &&
-                      (!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null")
-                    );
-                    
-                    // 2. Trasferisci (stopp) tutte le sessioni dalla linea di partenza
-                    for(const sess of tutteSessioniOp){
-                      await api.evento({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku||"",tipo:"TRASFERIMENTO",lineaDa:sess.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:sess.skuCorrente||sess.sku||"",skuA:sess.skuCorrente||sess.sku||""});
-                      if(onTr) onTr(sess.id,modTrasf.lineaDest.id,sess.skuCorrente||sess.sku||"");
-                    }
-                    
-                    // 3. Apri nuove sessioni per ogni SKU selezionato sulla linea di destinazione
-                    for(const skuNew of skuDestinazione){
-                      const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
-                      await api.evento({sessionId:newId,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuNew,tipo:"CHECKIN",lineaDa:modTrasf.lineaDest.id,lineaA:modTrasf.lineaDest.id,skuDa:skuNew,skuA:skuNew});
-                    }
+                    const skuDestinazione=modTrasf.skuNuovo||s.skuCorrente||s.sku||"";
+                    await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuDestinazione,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:s.skuCorrente||s.sku||"",skuA:skuDestinazione});
+                    if(onTr) onTr(s.id,modTrasf.lineaDest.id,skuDestinazione);
                   }
                   setModTrasf(null);
                   if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },2000);
@@ -2022,7 +1986,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     onKeyDown={e=>{if(e.key==="Enter"){
                       if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
                         setModTrasf(null);
-                        setModalConferma({titolo:"Conferma trasferimento",messaggio:(modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+((modTrasf.skuMultiDest||[]).length>0?" · "+modTrasf.skuMultiDest.join(", "):""),colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:eseguiTrasf});
+                        setModalConferma({titolo:"Conferma trasferimento",messaggio:(modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · SKU: "+modTrasf.skuNuovo:""),colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:eseguiTrasf});
                       } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
                     }}}/>
                   {modTrasf.errPwd&&<div style={{...S.err,marginBottom:8}}>{modTrasf.errPwd}</div>}
@@ -2030,7 +1994,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     onClick={()=>{
                       if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
                         const _eseguiTrasf = eseguiTrasf;
-                        const _msg = (modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+((modTrasf.skuMultiDest||[]).length>0?" · "+modTrasf.skuMultiDest.join(", "):"");
+                        const _msg = (modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · SKU: "+modTrasf.skuNuovo:"");
                         setModTrasf(null);
                         setModalConferma({titolo:"Conferma trasferimento",messaggio:_msg,colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:_eseguiTrasf});
                       } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
@@ -2120,22 +2084,6 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             <div style={{fontSize:13,color:"#ffffff",marginTop:4,fontWeight:600}}>{l}</div>
           </div>
         ))}
-        {(()=>{
-          // Card SKU attivi con numero operatori per articolo
-          const skuAttivi = {};
-          // Conta matricole uniche per SKU (non sessioni)
-          sessioni.filter(s=>!s.fine&&(s.skuCorrente||s.sku)&&!isSkuSpeciale(s.skuCorrente||s.sku||"")&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).forEach(s=>{
-            const sk=s.skuCorrente||s.sku||"";
-            if(!skuAttivi[sk]) skuAttivi[sk]={matricole:new Set()};
-            skuAttivi[sk].matricole.add(s.matricola||s.nome||s.id);
-          });
-          return Object.entries(skuAttivi).map(([sku,info])=>(
-            <div key={sku} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:12,padding:14,textAlign:"center"}}>
-              <div style={{fontSize:14,fontWeight:900,color:"#7c3aed",lineHeight:1.2,wordBreak:"break-all"}}>{sku}</div>
-              <div style={{fontSize:12,color:"#7c3aed",marginTop:4,fontWeight:700}}>{info.matricole.size} op.</div>
-            </div>
-          ));
-        })()}
         {linee.filter(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length; if(lineaFiltro) return l.id===lineaFiltro.id; if(isAdmin) return nAtt>0; return true; }).map(l=>{ const nAtt=sessioni.filter(s=>s.lineaCorrente===l.id&&!s.fine).length;
           return (
             <div key={l.id} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"1px solid #e2e8f0",borderTop:"3px solid "+l.colore,borderRadius:12,padding:14,textAlign:"center",position:"relative",display:"flex",flexDirection:"column"}}>
@@ -2298,21 +2246,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                           <>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
-                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ 
-  // Conta quante sessioni ha questo operatore sulla stessa linea
-  const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
-  const msg = sessioniOp.length>1 
-    ? "Chiudere il turno di "+s.nome+" "+s.cognome+"? ("+sessioniOp.length+" articoli)"
-    : "Chiudere il turno di "+s.nome+" "+s.cognome+"?";
-  setModalConferma({titolo:"Chiudi turno",messaggio:msg,colorBtn:"ef4444",testoBtn:"✕ Chiudi turno",onOk:async()=>{ 
-    setModalConferma(null); setLoading(true); setLoadingMsg("Chiusura turno "+s.nome+"...");
-    // Chiudi tutte le sessioni dell'operatore sulla stessa linea
-    const tutteSessioni = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
-    for(const sess of tutteSessioni){
-      if(onCOSheets) onCOSheets(sess); else onCO(sess.id);
-    }
-    if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000); else setLoading(false); 
-  }}); }}>✕</button>
+                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ setModalConferma({titolo:"Chiudi turno",messaggio:"Chiudere il turno di "+s.nome+" "+s.cognome+"?",colorBtn:"ef4444",testoBtn:"✕ Chiudi turno",onOk:async()=>{ setModalConferma(null); setLoading(true); setLoadingMsg("Chiusura turno "+s.nome+"..."); if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000); else setLoading(false); }}); }}>✕</button>
                           </>
                         )}
                       </div>
