@@ -1818,6 +1818,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [,setTk]          = useState(0);
   const [modCorso,setModCorso]       = useState(null);
   const [modCambioSku,setModCambioSku] = useState(null);
+  const [popupSkuOp,setPopupSkuOp] = useState(null); // matricola di cui mostrare gli SKU
   const [modNoteLinea,setModNoteLinea] = useState(null);
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
   const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
@@ -2240,12 +2241,29 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
                     <td style={S.td}>
-                      {(()=>{const sk=skuList.find(x=>x.sku===(s.skuCorrente||s.sku)); return (
-                        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"1px solid #f59e0b44",borderRadius:4,padding:"3px 8px",flexWrap:"wrap",justifyContent:"center"}}>
-                          <code style={{...S.sku,background:"transparent",border:"none",padding:0}}>{s.skuCorrente||s.sku||"-"}</code>
-                          {sk&&sk.collezione&&sk.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:3,padding:"1px 5px"}}>{sk.collezione.trim()}</span>}
-                        </div>
-                      );})()}
+                      {(()=>{
+                        const skuOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
+                        const skuLabels = skuOp.map(ss=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return o?(o.codiceF||o.sku):ss.skuCorrente||ss.sku;});
+                        return (
+                          <div style={{position:"relative"}}>
+                            <button onClick={()=>setPopupSkuOp(popupSkuOp===s.matricola+s.lineaCorrente?null:s.matricola+s.lineaCorrente)}
+                              style={{background:"#f8f5ff",border:"2px solid #7c3aed44",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>{skuOp.length} articol{skuOp.length===1?"o":"i"}</span>
+                              <span style={{fontSize:10,color:"#7c3aed"}}>▼</span>
+                            </button>
+                            {popupSkuOp===s.matricola+s.lineaCorrente&&(
+                              <div style={{position:"absolute",top:"100%",left:0,zIndex:200,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:10,padding:"8px",minWidth:180,boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>
+                                {skuOp.map((ss,si)=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return(
+                                  <div key={si} style={{padding:"6px 8px",borderBottom:si<skuOp.length-1?"1px solid #ede9fe":"none",display:"flex",alignItems:"center",gap:8}}>
+                                    <code style={{...S.sku,fontSize:12}}>{o?(o.codiceF||o.sku):ss.skuCorrente||ss.sku}</code>
+                                    {o&&o.collezione&&o.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",fontWeight:700}}>{o.collezione.trim()}</span>}
+                                  </div>
+                                );})}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {(()=>{
                           const skuS = s.skuCorrente||s.sku||"";
                           const rampaS = skuS ? (rampeSheets||[]).find(r=>r.sku===skuS) : null;
