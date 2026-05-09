@@ -2123,17 +2123,16 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         {(()=>{
           // Card SKU attivi con numero operatori per articolo
           const skuAttivi = {};
-          const visti = new Set();
+          // Conta matricole uniche per SKU (non sessioni)
           sessioni.filter(s=>!s.fine&&(s.skuCorrente||s.sku)&&!isSkuSpeciale(s.skuCorrente||s.sku||"")&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).forEach(s=>{
             const sk=s.skuCorrente||s.sku||"";
-            const key=s.matricola+"|"+sk;
-            if(!skuAttivi[sk]) skuAttivi[sk]={count:0};
-            if(!visti.has(key)){ skuAttivi[sk].count++; visti.add(key); }
+            if(!skuAttivi[sk]) skuAttivi[sk]={matricole:new Set()};
+            skuAttivi[sk].matricole.add(s.matricola||s.nome||s.id);
           });
           return Object.entries(skuAttivi).map(([sku,info])=>(
             <div key={sku} style={{flex:"0 0 140px",width:140,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:12,padding:14,textAlign:"center"}}>
-              <div style={{fontSize:22,fontWeight:900,color:"#7c3aed",lineHeight:1,wordBreak:"break-all"}}>{sku}</div>
-              <div style={{fontSize:12,color:"#7c3aed",marginTop:4,fontWeight:700}}>{info.count} operatori</div>
+              <div style={{fontSize:14,fontWeight:900,color:"#7c3aed",lineHeight:1.2,wordBreak:"break-all"}}>{sku}</div>
+              <div style={{fontSize:12,color:"#7c3aed",marginTop:4,fontWeight:700}}>{info.matricole.size} op.</div>
             </div>
           ));
         })()}
