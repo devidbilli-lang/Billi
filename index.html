@@ -738,166 +738,79 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         </div>
       </div>
 
-      {/* RIGA 2: Borse Prodotte | Prossimo Obiettivo | Obiettivo Finale */}
-      {ob60!==null?(
-        <div style={{display:"flex",gap:12,marginBottom:16}}>
-          {/* Borse Prodotte */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-            <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:8}}>Efficienza</div>
-            {(()=>{
-              const pct = efficienzaPct||0;
-              // Semicerchio: parte da sinistra (angolo 180°) e va a destra (0°)
-              // Usiamo stroke-dasharray/dashoffset per animazione semplice
-              const r = 45;
-              const circ = Math.PI * r; // semicerchio = metà circonferenza
-              const dash = (pct / 100) * circ;
-              return (
-                <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
-                  <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
-                  {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
-                    strokeDasharray={`${(pct/100)*Math.PI*90} ${Math.PI*90}`}
-                    style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
-                  {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
-                    style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
-                  <text x="100" y="88" textAnchor="middle" fontSize="32" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
-                </svg>
-              );
-            })()}
-          </div>
-          {/* Prossimo Obiettivo - calcolato qui */}
-          {(()=>{
-            // Calcola prossimo obiettivo basandosi sull'orario esatto del primo check-in
-            // es. check-in 05:54 → prossimi obiettivi a 06:54, 07:54, 08:54...
-            const oraInizioDecimale2 = _secInizioTurno/3600;
-            const oraAttualeDecimale2 = _secOra/3600;
-            const oraTurnoFine2 = oraInizioDecimale2+oreTotali;
-            // Calcola quante ore intere sono passate dal check-in
-            const orePassateDalCheckin = oraAttualeDecimale2 - oraInizioDecimale2;
-            const prossimaOraDecimale2 = oraInizioDecimale2 + Math.ceil(orePassateDalCheckin);
-            // Label: orario esatto (es. 06:54 se check-in alle 05:54)
-            const prossimaHH = Math.floor(prossimaOraDecimale2) % 24;
-            const prossimaMM = Math.round((prossimaOraDecimale2 % 1) * 60);
-            const prossimaOraLabel2 = String(prossimaHH).padStart(2,"0")+":"+String(prossimaMM).padStart(2,"0");
-            const _borseCalc = Math.max(0,Math.ceil(ob60*(prossimaOraDecimale2-oraInizioDecimale2)));
-            const borseAProssima2 = prossimaOraDecimale2>=oraTurnoFine2 ? (obFinale||_borseCalc) : _borseCalc;
-            const inTurno = prossimaOraDecimale2<=oraTurnoFine2&&prossimaOraDecimale2>oraInizioDecimale2;
-            const prossimaOraInt2 = prossimaOraDecimale2; // compatibilità
-            return (
-              <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",borderRadius:16,padding:"20px 16px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 20px 6px #ffff0066, 0 0 40px 10px #ffff0033",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:8}}>ALLE <span style={{color:"#ffff00",fontSize:"clamp(22px,3.5vw,36px)"}}>{inTurno?prossimaOraLabel2:"—"}</span></div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
-                  <div style={{fontSize:"clamp(80px,12vw,140px)",fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 20px #ffff00, -3px -3px 0 #7c3aed, 3px -3px 0 #7c3aed, -3px 3px 0 #7c3aed, 3px 3px 0 #7c3aed, 0 -3px 0 #7c3aed, 0 3px 0 #7c3aed, -3px 0 0 #7c3aed, 3px 0 0 #7c3aed"}}>{inTurno?borseAProssima2:"—"}</div>
-                  {inTurno&&<div style={{width:44,height:44,borderRadius:"50%",background:borse>=borseAProssima2?"#61ffa9":"#ff6161",boxShadow:`0 0 20px 6px ${borse>=borseAProssima2?"#61ffa9":"#ff6161"}`,flexShrink:0}}/>}
-                </div>
-
-                {/* Delta freccia */}
-                {inTurno&&borse!==borseAProssima2&&(
-                  <div style={{marginTop:8,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                    {borse<borseAProssima2?(
-                      <>
-                        <svg width="28" height="28" viewBox="0 0 16 16" fill="none">
-                          <path d="M8 3L8 13M8 13L3 8M8 13L13 8" stroke="#ff6161" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <span style={{fontSize:"clamp(32px,5vw,56px)",fontWeight:900,color:"#ff6161"}}>{borseAProssima2-borse}</span>
-                      </>
-                    ):(
-                      <>
-                        <svg width="28" height="28" viewBox="0 0 16 16" fill="none">
-                          <path d="M8 13L8 3M8 3L3 8M8 3L13 8" stroke="#61ffa9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <span style={{fontSize:"clamp(32px,5vw,56px)",fontWeight:900,color:"#61ffa9"}}>{borse-borseAProssima2}</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-          {/* Obiettivo */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:8}}>Obiettivo</div>
-              <span style={{fontSize:"clamp(90px,14vw,160px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
-              <span style={{fontSize:"clamp(36px,5vw,60px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
-              <span style={{fontSize:"clamp(56px,9vw,110px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinale||0}</span>
-          </div>
-        </div>
-      ):<div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:16}}>TC non definito per lo SKU in lavorazione</div>}
-
-      {/* SEZIONE MULTI-SKU: per linee con più articoli */}
+      {/* ARTICOLI IN LAVORAZIONE - per ogni SKU attivo sulla linea */}
       {(()=>{
-        const skuAttivi = [...new Set(
+        const skuAttiviLinea = [...new Set(
           sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
           .map(s=>s.skuCorrente||s.sku)
         )];
-        if(skuAttivi.length<=1) return null; // solo 1 SKU -> layout standard sopra
-        return (
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:11,color:"#7c3aed",fontWeight:700,letterSpacing:2,textAlign:"center",marginBottom:10}}>ARTICOLI IN LAVORAZIONE</div>
-            {skuAttivi.map(skuItem=>{
-              const skuObjItem = skuList.find(x=>x.sku===skuItem);
-              const tcItem = skuObjItem?.tc||0;
-              // Obiettivo reale per questo SKU
-              // Calcola minuti totali per questo SKU (stessa logica di obFinale)
-              const minTotaliItem = tcItem>0&&secFineTurnoAssoluto>_secInizioTurno
-                ? Math.max(0,(secFineTurnoAssoluto - _secInizioTurno)/60) * nOpProduzione
-                : 0;
-              const obFinaleItem = tcItem>0&&minTotaliItem>0 ? Math.ceil(minTotaliItem/tcItem) : null;
-              // Obiettivo orario
-              const secOra2 = _now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
-              const orePassateItem = Math.max(0,(secOra2-_secInizioTurno)/3600);
-              const prossimaOraItem = _secInizioTurno/3600 + Math.ceil(orePassateItem);
-              const oraTurnoFineItem = _secInizioTurno/3600 + oreTotali;
-              const ob60Item = obFinaleItem!=null&&oreTotali>0 ? Math.round(obFinaleItem/oreTotali) : null;
-              const _borseCalcItem = ob60Item!=null ? Math.max(0,Math.ceil(ob60Item*(prossimaOraItem-_secInizioTurno/3600))) : null;
-              const borseAProssimaItem = prossimaOraItem>=oraTurnoFineItem ? (obFinaleItem||_borseCalcItem) : _borseCalcItem;
-              // Borse prodotte e qualità per questo SKU (da borseOggi se disponibile)
-              const borseItem = 0; // placeholder - verrà letto dai dati qualità
-              return (
-                <div key={skuItem} style={{background:"#0f0f1a",border:"2px solid #7c3aed44",borderRadius:14,padding:12,marginBottom:8}}>
-                  <div style={{marginBottom:8}}>
-                    <div style={{fontSize:13,fontWeight:900,color:"#a78bfa",letterSpacing:1}}>{skuObjItem?.codiceF||skuItem}</div>
-                    {skuObjItem?.collezione&&<span style={{fontSize:10,color:"#6b5e99"}}>{skuObjItem.collezione}{tcItem>0?" • TC: "+tcItem+" min":""}</span>}
+        if(skuAttiviLinea.length===0) return null;
+        return skuAttiviLinea.map(skuItem=>{
+          const skuObjItem = skuList.find(x=>x.sku===skuItem);
+          const tcItem = skuObjItem?.tc||0;
+          // Obiettivo finale per questo SKU
+          const minTotaliItem = tcItem>0&&secFineTurnoAssoluto>_secInizioTurno
+            ? Math.max(0,(secFineTurnoAssoluto-_secInizioTurno)/60)*nOpProduzione : 0;
+          const obFinaleItem = tcItem>0&&minTotaliItem>0 ? Math.ceil(minTotaliItem/tcItem) : null;
+          // Obiettivo orario
+          const secOra2 = _now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
+          const orePassateItem = Math.max(0,(secOra2-_secInizioTurno)/3600);
+          const oraTurnoFineItem = _secInizioTurno/3600+oreTotali;
+          const ob60Item = obFinaleItem!=null&&oreTotali>0 ? Math.round(obFinaleItem/oreTotali) : null;
+          const _borseCalcItem = ob60Item!=null ? Math.max(0,Math.ceil(ob60Item*((_secInizioTurno/3600+Math.ceil(orePassateItem))-_secInizioTurno/3600))) : null;
+          const borseAProssimaItem = (_secInizioTurno/3600+Math.ceil(orePassateItem))>=oraTurnoFineItem ? (obFinaleItem||_borseCalcItem) : _borseCalcItem;
+          // Ora prossima
+          const pHH2 = Math.floor((_secInizioTurno/3600+Math.ceil(orePassateItem)))%24;
+          const pMM2 = 0;
+          const prossimaOraLabelItem = String(pHH2).padStart(2,"0")+":00";
+          const inTurnoItem = (_secInizioTurno/3600+Math.ceil(orePassateItem))<=oraTurnoFineItem;
+          return (
+            <div key={skuItem} style={{marginBottom:16}}>
+              {/* Header articolo */}
+              <div style={{fontSize:12,color:"#7c3aed",fontWeight:800,letterSpacing:2,marginBottom:8,textAlign:"center"}}>
+                {skuObjItem?.codiceF||skuItem}{skuObjItem?.collezione?" · "+skuObjItem.collezione:""}
+                {tcItem>0&&<span style={{color:"#94a3b8",fontWeight:400}}> · TC {tcItem} min</span>}
+              </div>
+              <div style={{display:"flex",gap:12,marginBottom:0}}>
+                {/* Prossimo Obiettivo */}
+                <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",borderRadius:16,padding:"20px 16px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 20px 6px #ffff0066, 0 0 40px 10px #ffff0033",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                  <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:8}}>ALLE <span style={{color:"#ffff00",fontSize:"clamp(22px,3.5vw,36px)"}}>{inTurnoItem?prossimaOraLabelItem:"—"}</span></div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
+                    <div style={{fontSize:"clamp(80px,12vw,140px)",fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 20px #ffff00, -3px -3px 0 #7c3aed, 3px -3px 0 #7c3aed, -3px 3px 0 #7c3aed, 3px 3px 0 #7c3aed, 0 -3px 0 #7c3aed, 0 3px 0 #7c3aed, -3px 0 0 #7c3aed, 3px 0 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</div>
+                    {inTurnoItem&&<div style={{width:44,height:44,borderRadius:"50%",background:borse>=borseAProssimaItem?"#61ffa9":"#ff6161",boxShadow:`0 0 20px 6px ${borse>=borseAProssimaItem?"#61ffa9":"#ff6161"}`,flexShrink:0}}/>}
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                    {/* Obiettivo */}
-                    <div style={{background:"#1a1a2e",border:"2px solid #7c3aed66",borderRadius:10,padding:10,textAlign:"center"}}>
-                      <div style={{fontSize:8,color:"#7c6aab",fontWeight:700,letterSpacing:1,marginBottom:6}}>OBIETTIVO</div>
-                      <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-                        <span style={{fontSize:28,fontWeight:900,color:"#ffffff",lineHeight:1}}>{borseItem}</span>
-                        <span style={{fontSize:12,color:"#7c6aab"}}>/</span>
-                        <span style={{fontSize:20,fontWeight:900,color:"#a78bfa",lineHeight:1}}>{obFinaleItem||"—"}</span>
-                      </div>
+                </div>
+                {/* Obiettivo */}
+                <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+                  <div style={{fontSize:"clamp(18px,2.5vw,28px)",color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:8}}>Obiettivo</div>
+                  <span style={{fontSize:"clamp(90px,14vw,160px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
+                  <span style={{fontSize:"clamp(36px,5vw,60px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
+                  <span style={{fontSize:"clamp(56px,9vw,110px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
+                </div>
+                {/* KO + Migl */}
+                <div style={{flex:1,background:"#ffffff",border:"2px solid #e2e8f0",borderRadius:16,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+                  <div style={{display:"flex",justifyContent:"space-around",alignItems:"center",width:"100%",height:"100%"}}>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontSize:32}}>😞</div>
+                      <div style={{fontSize:"clamp(14px,2vw,20px)",color:"#ef4444",fontWeight:700,letterSpacing:1}}>KO</div>
+                      <div style={{fontSize:"clamp(48px,8vw,96px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
                     </div>
-                    {/* Obj Orario */}
-                    <div style={{background:"#222230",border:"2px solid #ffff0044",borderRadius:10,padding:10,textAlign:"center"}}>
-                      <div style={{fontSize:8,color:"#b8b04a",fontWeight:700,letterSpacing:1,marginBottom:6}}>OBJ ORA</div>
-                      <div style={{fontSize:36,fontWeight:900,color:"#ffff00",lineHeight:1,marginTop:2}}>{borseAProssimaItem||"—"}</div>
-                    </div>
-                    {/* KO + Migl */}
-                    <div style={{background:"#1a1220",border:"1px solid #44244488",borderRadius:10,padding:10}}>
-                      <div style={{display:"flex",justifyContent:"space-around",alignItems:"center",height:"100%"}}>
-                        <div style={{textAlign:"center"}}>
-                          <div style={{fontSize:18}}>😞</div>
-                          <div style={{fontSize:8,color:"#ef4444",fontWeight:700,letterSpacing:1}}>KO</div>
-                          <div style={{fontSize:26,fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
-                        </div>
-                        <div style={{width:1,background:"#44244488",height:50}}/>
-                        <div style={{textAlign:"center"}}>
-                          <div style={{fontSize:18}}>😐</div>
-                          <div style={{fontSize:8,color:"#f59e0b",fontWeight:700,letterSpacing:1}}>MIGL.</div>
-                          <div style={{fontSize:26,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
-                        </div>
-                      </div>
+                    <div style={{width:2,background:"#e2e8f0",height:"70%",borderRadius:2}}/>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontSize:32}}>😐</div>
+                      <div style={{fontSize:"clamp(14px,2vw,20px)",color:"#f59e0b",fontWeight:700,letterSpacing:1}}>MIGL.</div>
+                      <div style={{fontSize:"clamp(48px,8vw,96px)",fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        );
+              </div>
+            </div>
+          );
+        });
       })()}
 
-      {/* Barra progresso 8 ore - usa tick per aggiornamento al secondo */}
+
+            {/* Barra progresso 8 ore - usa tick per aggiornamento al secondo */}
       {ob60!==null&&(()=>{
         void tick; // forza re-render ogni secondo
         const ob8ore = ob60 * oreTotali;
