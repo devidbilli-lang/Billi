@@ -1916,18 +1916,16 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       {popupSkuOp&&(()=>{
         const parts = popupSkuOp.split("|");
         const mat = parts[0]; const lin = parts.slice(1).join("|");
-        // DEBUG: stampa tutte le sessioni di questa persona
-        console.log("[POPUP] mat:", mat, "lin:", lin);
-        const _tuttePersona = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat);
-        console.log("[POPUP] tutte sessioni:", _tuttePersona.map(ss=>({sku:ss.skuCorrente||ss.sku,linea:ss.lineaCorrente,fine:ss.fine})));
         // Verde = sessione aperta (!fine) E ancora su questa linea (lineaCorrente===lin)
         // Grigio = sessione chiusa o trasferita su altra linea
-        const skuTutti = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat&&ss.lineaCorrente===lin);
+        // lin può essere ID linea o nome linea — normalizziamo il confronto
+        const matchLinea = ss => ss.lineaCorrente===lin || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).id || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).nome;
+        const skuTutti = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat && matchLinea(ss));
         const skuMap = {};
         skuTutti.forEach(ss=>{ const k=ss.skuCorrente||ss.sku; if(!k) return;
           const aperta=!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null";
           // Verde SOLO se aperta E sulla stessa linea
-          const attiva = aperta && ss.lineaCorrente===lin;
+          const attiva = aperta && matchLinea(ss);
           if(!skuMap[k]) { skuMap[k]={...ss,_attiva:attiva}; }
           else if(attiva && !skuMap[k]._attiva) { skuMap[k]={...ss,_attiva:true}; }
         });
