@@ -1825,10 +1825,17 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [popupSkuOp,setPopupSkuOp] = useState(null); // matricola di cui mostrare gli SKU
   const [modNoteLinea,setModNoteLinea] = useState(null);
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
-  const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
+  // Deduplicazione: una riga per matricola+linea (prende la sessione più recente attiva, altrimenti l'ultima)
+  const filRaw = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
     const q=srch.toLowerCase();
     return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
+  // Raggruppa per matricola+linea: mostra solo la sessione rappresentativa
+  const filMap = {};
+  filRaw.forEach(s=>{ const key=(s.matricola||s.nome)+"|"+s.lineaCorrente;
+    if(!filMap[key]||(!s.fine&&filMap[key].fine)||(!s.fine&&!filMap[key].fine&&(s.tsInizio||0)>(filMap[key].tsInizio||0)))
+      filMap[key]=s; });
+  const fil = Object.values(filMap).sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
   const att=new Set(sessioni.filter(s=>!s.fine).map(s=>s.matricola||s.nome)).size;
   const chi=sessioni.filter(s=>!!s.fine).length;
   return (
@@ -2244,28 +2251,33 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
-                    <td style={S.td}>
+                    <td style={{...S.td,textAlign:"center"}}>
                       {(()=>{
                         const skuOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
-                        const skuLabels = skuOp.map(ss=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return o?(o.codiceF||o.sku):ss.skuCorrente||ss.sku;});
+                        const key = s.matricola+s.lineaCorrente;
                         return (
-                          <div style={{position:"relative"}}>
-                            <button onClick={()=>setPopupSkuOp(popupSkuOp===s.matricola+s.lineaCorrente?null:s.matricola+s.lineaCorrente)}
-                              style={{background:"#f8f5ff",border:"2px solid #7c3aed44",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}>
+                          <>
+                            <button onClick={()=>setPopupSkuOp(popupSkuOp===key?null:key)}
+                              style={{background:"#f8f5ff",border:"2px solid #7c3aed",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:6,margin:"0 auto"}}>
                               <span style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>{skuOp.length} articol{skuOp.length===1?"o":"i"}</span>
                               <span style={{fontSize:10,color:"#7c3aed"}}>▼</span>
                             </button>
-                            {popupSkuOp===s.matricola+s.lineaCorrente&&(
-                              <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",zIndex:9999,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:10,padding:"12px",minWidth:220,boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
-                                {skuOp.map((ss,si)=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return(
-                                  <div key={si} style={{padding:"6px 8px",borderBottom:si<skuOp.length-1?"1px solid #ede9fe":"none",display:"flex",alignItems:"center",gap:8}}>
-                                    <code style={{...S.sku,fontSize:12}}>{o?(o.codiceF||o.sku):ss.skuCorrente||ss.sku}</code>
-                                    {o&&o.collezione&&o.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",fontWeight:700}}>{o.collezione.trim()}</span>}
-                                  </div>
-                                );})}
-                              </div>
+                            {popupSkuOp===key&&(
+                              <>
+                                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9998}} onClick={()=>setPopupSkuOp(null)}/>
+                                <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",zIndex:9999,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:16,padding:"24px 20px",minWidth:280,maxWidth:400,boxShadow:"0 0 0 4px #a78bfa44,0 8px 40px rgba(0,0,0,0.3)"}}>
+                                  <div style={{fontSize:14,fontWeight:800,color:"#7c3aed",letterSpacing:1,marginBottom:12,textAlign:"center"}}>{s.nome} {s.cognome} — Articoli</div>
+                                  {skuOp.map((ss,si)=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return(
+                                    <div key={si} style={{padding:"10px 12px",borderBottom:si<skuOp.length-1?"1px solid #ede9fe":"none",display:"flex",alignItems:"center",gap:10}}>
+                                      <code style={{...S.sku,fontSize:13}}>{o?(o.codiceF||o.sku):ss.skuCorrente||ss.sku}</code>
+                                      {o&&o.collezione&&o.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px"}}>{o.collezione.trim()}</span>}
+                                    </div>
+                                  );})}
+                                  <button onClick={()=>setPopupSkuOp(null)} style={{width:"100%",marginTop:16,padding:"10px",background:"#7c3aed",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}>Chiudi</button>
+                                </div>
+                              </>
                             )}
-                          </div>
+                          </>
                         );
                       })()}
                       {(()=>{
