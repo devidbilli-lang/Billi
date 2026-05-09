@@ -2114,9 +2114,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     // 1. CHECKOUT di TUTTE le sessioni aperte sulla linea di partenza
                     const sessioniAperte = sessAggiornate.filter(ss=>
                       (ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome) &&
-                      ss.lineaCorrente===s.lineaCorrente &&
                       (!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null")
                     );
+                    console.log("[TRASF] ops trovate per", s.nome, s.cognome, ":", sessioniAperte.length, sessioniAperte.map(ss=>({id:ss.id,sku:ss.skuCorrente,linea:ss.lineaCorrente})));
                     for(const sess of sessioniAperte){
                       // Manda CHECKOUT per chiudere la sessione sulla linea di partenza
                       const urlCO = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(sess.id)+"&matricola="+encodeURIComponent(sess.matricola||"")+"&nome="+encodeURIComponent(sess.nome||"")+"&cognome="+encodeURIComponent(sess.cognome||"")+"&sku="+encodeURIComponent(sess.skuCorrente||sess.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(sess.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(sess.skuCorrente||sess.sku||"")+"&skuA=";
