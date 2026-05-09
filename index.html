@@ -1820,11 +1820,17 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [modCorso,setModCorso]       = useState(null);
   const [modCambioSku,setModCambioSku] = useState(null);
   const [modNoteLinea,setModNoteLinea] = useState(null);
+  const [popupSkuOp,setPopupSkuOp] = useState(null);
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
-  const fil = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
+  const filRaw = sessioni.filter(s=>{ const ml=fL==="ALL"||s.lineaCorrente===fL;
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
     const q=srch.toLowerCase();
     return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
+  const filMap = {};
+  filRaw.forEach(s=>{ const key=(s.matricola||s.nome)+"|"+s.lineaCorrente;
+    if(!filMap[key]||(!s.fine&&filMap[key].fine)||(!s.fine&&!filMap[key].fine&&(s.tsInizio||0)>(filMap[key].tsInizio||0)))
+      filMap[key]=s; });
+  const fil = Object.values(filMap).sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
   const att=sessioni.filter(s=>!s.fine).length;
   const chi=sessioni.filter(s=>!!s.fine).length;
   return (
@@ -1841,6 +1847,34 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         setMod(null);
         if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
       }} onClose={()=>setMod(null)}/>}
+      {popupSkuOp&&(()=>{
+        const parts = popupSkuOp.split("|");
+        const mat = parts[0]; const lin = parts.slice(1).join("|");
+        const skuOp = sessioni.filter(ss=>ss.matricola===mat&&ss.lineaCorrente===lin&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
+        const op = sessioni.find(ss=>ss.matricola===mat&&ss.lineaCorrente===lin);
+        return (
+          <div style={MS.ov} onClick={()=>setPopupSkuOp(null)}>
+            <div style={{...MS.md,maxWidth:400}} onClick={e=>e.stopPropagation()}>
+              <div style={MS.mh}>
+                <span style={{...MS.mt,color:"#7c3aed"}}>📦 Articoli in lavorazione</span>
+                <button style={MS.mx} onClick={()=>setPopupSkuOp(null)}>✕</button>
+              </div>
+              <div style={{padding:"12px 20px 6px",fontSize:13,color:"#64748b",fontWeight:600}}>{op?op.nome+" "+op.cognome:""} — {lin}</div>
+              <div style={{padding:"0 12px 16px"}}>
+                {skuOp.map((ss,si)=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return(
+                  <div key={si} style={{padding:"12px 14px",borderBottom:si<skuOp.length-1?"1px solid #ede9fe":"none",display:"flex",alignItems:"center",gap:12}}>
+                    <code style={{...S.sku,fontSize:14}}>{o?(o.codiceF||o.sku):ss.skuCorrente||ss.sku}</code>
+                    {o&&o.collezione&&o.collezione.trim()&&<span style={{fontSize:12,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"2px 8px"}}>{o.collezione.trim()}</span>}
+                  </div>
+                );})}
+              </div>
+              <div style={{padding:"0 16px 16px"}}>
+                <button onClick={()=>setPopupSkuOp(null)} style={{...MS.cf,width:"100%",padding:12,fontSize:15}}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {modalConferma&&<ModalConferma titolo={modalConferma.titolo} messaggio={modalConferma.messaggio} colorBtn={modalConferma.colorBtn||"ef4444"} testoBtn={modalConferma.testoBtn||"Conferma"} onConferma={modalConferma.onOk} onAnnulla={()=>setModalConferma(null)}/>}
       {modOrario&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
@@ -2201,21 +2235,26 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
-                    <td style={S.td}>
-                      {(()=>{const sk=skuList.find(x=>x.sku===(s.skuCorrente||s.sku)); return (
-                        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"1px solid #f59e0b44",borderRadius:4,padding:"3px 8px",flexWrap:"wrap",justifyContent:"center"}}>
-                          <code style={{...S.sku,background:"transparent",border:"none",padding:0}}>{s.skuCorrente||s.sku||"-"}</code>
-                          {sk&&sk.collezione&&sk.collezione.trim()&&<span style={{fontSize:11,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:3,padding:"1px 5px"}}>{sk.collezione.trim()}</span>}
-                        </div>
-                      );})()}
+                    <td style={{...S.td,textAlign:"center"}}>
                       {(()=>{
-                          const skuS = s.skuCorrente||s.sku||"";
-                          const rampaS = skuS ? (rampeSheets||[]).find(r=>r.sku===skuS) : null;
-                          const rDal = rampaS?.rampaDal || s.rampaDal;
-                          if(!rDal) return null;
-                          const gg = giorniLavorativiJS(rDal);
-                          return <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {gg}/15</div>;
-                        })()}
+                        const skuOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
+                        const key = s.matricola+"|"+s.lineaCorrente;
+                        return (
+                          <button onClick={()=>setPopupSkuOp(popupSkuOp===key?null:key)}
+                            style={{background:"#f8f5ff",border:"2px solid #7c3aed",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:6,margin:"0 auto"}}>
+                            <span style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>{skuOp.length} articol{skuOp.length===1?"o":"i"}</span>
+                            <span style={{fontSize:10,color:"#7c3aed"}}>▼</span>
+                          </button>
+                        );
+                      })()}
+                      {(()=>{
+                        const skuS = s.skuCorrente||s.sku||"";
+                        const rampaS = skuS ? (rampeSheets||[]).find(r=>r.sku===skuS) : null;
+                        const rDal = rampaS?.rampaDal || s.rampaDal;
+                        if(!rDal) return null;
+                        const gg = giorniLavorativiJS(rDal);
+                        return <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {gg}/15</div>;
+                      })()}
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}>
