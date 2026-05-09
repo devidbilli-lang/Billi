@@ -1593,7 +1593,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             <label style={S.lbl}>Articoli (seleziona uno o più)</label>
             <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2,marginBottom:6}} placeholder="Filtra per codice o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
             <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #f59e0b",borderRadius:8,background:"#fffbeb"}}>
-              {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.codiceF&&s.codiceF.toUpperCase().includes(cSku))||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku)))).map(s=>(
+              {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.codiceF&&s.codiceF.toUpperCase().includes(cSku))||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).map(s=>(
                 <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
                   <input type="checkbox" checked={skuMulti.includes(s.sku)}
                     onChange={e=>{
@@ -1601,7 +1601,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                       setSkuMulti(sel); setSku(sel[0]||"");
                     }}
                     style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
-                  <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.codiceF||s.sku}</span>
                   {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
                   {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:2}}>{s.collezione}</span>}
                 </label>
@@ -1609,7 +1609,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
             {skuMulti.length>0&&(
               <div style={{marginTop:6,padding:"6px 10px",background:"#f59e0b22",borderRadius:6,fontSize:12,color:"#92400e",fontWeight:700}}>
-                ✓ {skuMulti.length} articol{skuMulti.length===1?"o":"i"}: {skuMulti.join(", ")}
+                ✓ {skuMulti.length} articol{skuMulti.length===1?"o":"i"}: {skuMulti.map(sk=>{const o=skuList.find(x=>x.sku===sk);return o?(o.codiceF||o.sku):sk;}).join(", ")}
               </div>
             )}
           </div>
@@ -1936,7 +1936,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                             setModTrasf({...modTrasf,skuMultiDest:nuovi,skuNuovo:nuovi[0]||""});
                           }}
                           style={{width:18,height:18,accentColor:"#a855f7",cursor:"pointer",flexShrink:0}}/>
-                        <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.sku}</span>
+                        <span style={{fontSize:13,fontWeight:700,color:"#1e293b"}}>{s.codiceF||s.sku}</span>
                         {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
                         {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700}}>{s.collezione}</span>}
                       </label>
@@ -1945,7 +1945,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 </div>
                 {(modTrasf.skuMultiDest||[]).length>0&&(
                   <div style={{marginBottom:8,padding:"6px 10px",background:"#a855f711",borderRadius:6,fontSize:12,color:"#7c3aed",fontWeight:700}}>
-                    ✓ {(modTrasf.skuMultiDest||[]).length} articol{(modTrasf.skuMultiDest||[]).length===1?"o":"i"}: {(modTrasf.skuMultiDest||[]).join(", ")}
+                    ✓ {(modTrasf.skuMultiDest||[]).length} articol{(modTrasf.skuMultiDest||[]).length===1?"o":"i"}: {(modTrasf.skuMultiDest||[]).map(sk=>{const o=skuList.find(x=>x.sku===sk);return o?(o.codiceF||o.sku):sk;}).join(", ")}
                   </div>
                 )}
                 {(modTrasf.skuMultiDest||[]).length>0&&(
