@@ -1458,7 +1458,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     if(sessSheets&&sessSheets.length>0){ const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s)); if(sh) return sh; }
     return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null; };
   const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
-  const reset = () => { setNome("");setCogn("");setSku("");setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setMode("menu"); };
+  const reset = () => { setNome("");setCogn("");setSku("");setSkuMulti([]);setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setMode("menu"); };
   if(modQualita) return null;
   if(mode==="result"&&ris){ const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
@@ -1649,7 +1649,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <button style={S.bCI} onClick={()=>{ setErr("");
             var listaOp = opSelezionati.length > 0 ? opSelezionati : (nome.trim()&&cogn.trim() ? [{nome:nome.trim(),cognome:cogn.trim(),matricola:nome.trim().toUpperCase()+"-"+cogn.trim().toUpperCase()}] : []);
             if(listaOp.length===0){setErr("Seleziona almeno un operatore.");return;}
-            if(!sku.trim()){setErr("Inserisci lo SKU.");return;}
+            if(skuMulti.length===0){setErr("Seleziona almeno un articolo.");return;}
             if(!linea){setErr("Seleziona una linea.");return;}
             var errori=[]; var registrati=[];
             listaOp.forEach(op=>{ const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -1659,8 +1659,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 const d = parseData(s.fine); return d===null||isNaN(d); });
               if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
               const rampaDalTs = rampa ? now().getTime() : null;
-              const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:sku.trim().toUpperCase(),skuCorrente:sku.trim().toUpperCase(),lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
-              registrati.push(s); });
+              skuMulti.forEach(skuItem=>{
+                const sid = crypto.randomUUID();
+                const s={id:sid,nome:op.nome,cognome:op.cognome,matricola:k,sku:skuItem,skuCorrente:skuItem,lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:rampa,rampaDal:rampaDalTs};
+                registrati.push(s);
+              });
+            });
             if(errori.length>0&&registrati.length===0){setErr(errori.join(", "));return;}
             if(registrati.length>0){
               try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); localStorage.setItem(kSel, JSON.stringify(listaOp)); }catch(e){}
