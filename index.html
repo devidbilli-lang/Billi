@@ -735,7 +735,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         </div>
 
         {/* COLONNA DESTRA - 2 articoli per riga */}
-        <div style={{flex:1,display:"flex",flexDirection:"column",gap:8}}>
+        <div style={{flex:1,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
           {(()=>{
             const skuAttiviLinea=[...new Set(
               sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
@@ -749,19 +749,21 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             // Raggruppa in coppie per 2 colonne
             const coppie = [];
             for(let i=0;i<skuAttiviLinea.length;i+=2) coppie.push(skuAttiviLinea.slice(i,i+2));
-            // Font dinamici in base al numero di articoli
+            // Font e padding dinamici in base al numero di RIGHE (coppie)
             const nSku = skuAttiviLinea.length;
-            const fBig   = nSku<=1?"clamp(40px,6vw,80px)":nSku<=2?"clamp(30px,5vw,60px)":nSku<=3?"clamp(24px,4vw,48px)":"clamp(18px,3vw,36px)";
-            const fMid   = nSku<=1?"clamp(28px,4.5vw,56px)":nSku<=2?"clamp(22px,3.5vw,44px)":nSku<=3?"clamp(18px,3vw,36px)":"clamp(14px,2.5vw,28px)";
-            const fSep   = nSku<=1?"clamp(16px,2.5vw,28px)":nSku<=2?"clamp(13px,2vw,22px)":"clamp(10px,1.5vw,16px)";
-            const fSvg   = nSku<=1?22:nSku<=2?18:nSku<=3?16:14;
-            const fKo    = nSku<=1?"clamp(28px,4.5vw,52px)":nSku<=2?"clamp(22px,3.5vw,40px)":nSku<=3?"clamp(18px,3vw,32px)":"clamp(14px,2.5vw,26px)";
-            const hdrPad = nSku<=2?"8px 14px":"5px 10px";
-            const hdrFs  = nSku<=2?"clamp(13px,2vw,18px)":"clamp(11px,1.5vw,14px)";
-            const cardPad= nSku<=2?"6px 10px":"4px 6px";
+            const nRighe = Math.ceil(nSku/2); // 2 articoli per riga
+            // nRighe=1 → grandi, nRighe=2 → medi, nRighe=3+ → compatti
+            const fBig   = nRighe<=1?"clamp(44px,7vw,88px)":nRighe<=2?"clamp(28px,4.5vw,56px)":"clamp(18px,3vw,36px)";
+            const fMid   = nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)";
+            const fSep   = nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)";
+            const fSvg   = nRighe<=1?24:nRighe<=2?18:14;
+            const fKo    = nRighe<=1?"clamp(32px,5vw,60px)":nRighe<=2?"clamp(20px,3.5vw,40px)":"clamp(14px,2.5vw,26px)";
+            const hdrPad = nRighe<=1?"10px 16px":nRighe<=2?"7px 12px":"4px 8px";
+            const hdrFs  = nRighe<=1?"clamp(14px,2.2vw,20px)":nRighe<=2?"clamp(12px,1.8vw,16px)":"clamp(10px,1.4vw,13px)";
+            const cardPad= nRighe<=1?"8px 12px":nRighe<=2?"5px 8px":"3px 5px";
 
             return coppie.map((coppia,ci)=>(
-              <div key={ci} style={{display:"flex",gap:8,flex:1}}>
+              <div key={ci} style={{display:"flex",gap:8,flex:1,minHeight:0}}>
               {coppia.map(skuItem=>{
               const skuObjItem=skuList.find(x=>x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
@@ -781,7 +783,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const prossimaOraLabelItem=String(pHH2).padStart(2,"0")+":00";
               const inTurnoItem=prossimaOraItem<=oraTurnoFineItem&&prossimaOraItem>_secInizioTurno/3600;
               return (
-                <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
                   {/* Header articolo - nome completo viola */}
                   {(()=>{
                     const nOpSku = new Set(sessioni.filter(s=>s.lineaCorrente===lineaId&&(s.skuCorrente||s.sku)===skuItem&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size;
@@ -803,7 +805,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                     );
                   })()}
                   {/* 3 card interne - font dinamici in base al numero di articoli */}
-                  <div style={{display:"flex",gap:6,padding:cardPad,alignItems:"stretch"}}>
+                  <div style={{display:"flex",gap:6,padding:cardPad,alignItems:"stretch",flex:1}}>
 
                     {/* Obiettivo: borse / finale affiancati */}
                     <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed44",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
@@ -2116,18 +2118,37 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                       (ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome) &&
                       (!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null")
                     );
-                    console.log("[TRASF] ops trovate per", s.nome, s.cognome, ":", sessioniAperte.length, sessioniAperte.map(ss=>({id:ss.id,sku:ss.skuCorrente,linea:ss.lineaCorrente})));
                     for(const sess of sessioniAperte){
-                      // Manda CHECKOUT per chiudere la sessione sulla linea di partenza
-                      const urlCO = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(sess.id)+"&matricola="+encodeURIComponent(sess.matricola||"")+"&nome="+encodeURIComponent(sess.nome||"")+"&cognome="+encodeURIComponent(sess.cognome||"")+"&sku="+encodeURIComponent(sess.skuCorrente||sess.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(sess.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(sess.skuCorrente||sess.sku||"")+"&skuA=";
-                      try { await fetchConRetry(urlCO, 3, 500); } catch(e) {}
-                      if(onTr) onTr(sess.id,modTrasf.lineaDest.id,sess.skuCorrente||sess.sku||"");
+                      // CHECKOUT per chiudere ogni sessione sulla linea di partenza
+                      await api.evento({
+                        sessionId: sess.id,
+                        matricola: sess.matricola||"",
+                        nome: sess.nome||"",
+                        cognome: sess.cognome||"",
+                        sku: sess.skuCorrente||sess.sku||"",
+                        tipo: "CHECKOUT",
+                        lineaDa: sess.lineaCorrente||"",
+                        lineaA: "",
+                        skuDa: sess.skuCorrente||sess.sku||"",
+                        skuA: ""
+                      });
+                      if(onTr) onTr(sess.id, modTrasf.lineaDest.id, sess.skuCorrente||sess.sku||"");
                     }
                     // 2. CHECKIN per ogni SKU sulla linea di destinazione
                     for(const skuNew of skuDestinazione){
                       const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
-                      const urlCI = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(newId)+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(skuNew)+"&tipo=CHECKIN&lineaDa="+encodeURIComponent(modTrasf.lineaDest.id)+"&lineaA="+encodeURIComponent(modTrasf.lineaDest.id)+"&skuDa="+encodeURIComponent(skuNew)+"&skuA="+encodeURIComponent(skuNew);
-                      try { await fetchConRetry(urlCI, 3, 500); } catch(e) {}
+                      await api.evento({
+                        sessionId: newId,
+                        matricola: s.matricola||"",
+                        nome: s.nome||"",
+                        cognome: s.cognome||"",
+                        sku: skuNew,
+                        tipo: "CHECKIN",
+                        lineaDa: modTrasf.lineaDest.id,
+                        lineaA: modTrasf.lineaDest.id,
+                        skuDa: skuNew,
+                        skuA: skuNew
+                      });
                     }
                   }
                   setModTrasf(null);
