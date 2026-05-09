@@ -767,10 +767,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               return (
                 <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
                   {/* Header articolo - nome completo viola */}
-                  <div style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-                    <div>
-                      <div style={{fontSize:"clamp(15px,2.2vw,22px)",fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.1}}>{skuItem}</div>
-                      {skuObjItem?.descrizione&&<div style={{fontSize:10,color:"#c4b5fd",marginTop:2}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</div>}
+                  <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:"6px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
+                      <span style={{fontSize:"clamp(13px,2vw,18px)",fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.2}}>{skuItem}</span>
+                      {skuObjItem?.descrizione&&<span style={{fontSize:"clamp(13px,2vw,18px)",fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
                     </div>
                     {skuObjItem?.collezione&&skuObjItem.collezione.trim()&&(
                       <span style={{fontSize:11,color:"#fff",background:"#ffffff22",borderRadius:6,padding:"3px 10px",fontWeight:700,flexShrink:0}}>{skuObjItem.collezione}</span>
