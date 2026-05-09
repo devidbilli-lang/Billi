@@ -1855,10 +1855,27 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
     const q=srch.toLowerCase();
     return ml&&ms&&(!q||s.nome.toLowerCase().includes(q)||s.cognome.toLowerCase().includes(q)||(s.sku||"").toLowerCase().includes(q)); });
+  // Per ogni operatore: controlla se ha una sessione attiva su un'altra linea
+  // Se sì, non mostrarlo come attivo sulla linea di partenza
+  const matricoleConSessioneAttiva = {};
+  sessioni.forEach(s=>{
+    const mat = s.matricola||s.nome;
+    if(!mat) return;
+    if(!s.fine||s.fine===""||s.fine===null||s.fine==="null"){
+      if(!matricoleConSessioneAttiva[mat]) matricoleConSessioneAttiva[mat]=new Set();
+      matricoleConSessioneAttiva[mat].add(s.lineaCorrente);
+    }
+  });
   const filMap = {};
-  filRaw.forEach(s=>{ const key=(s.matricola||s.nome)+"|"+s.lineaCorrente;
+  filRaw.forEach(s=>{
+    const key=(s.matricola||s.nome)+"|"+s.lineaCorrente;
+    const mat = s.matricola||s.nome;
+    const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+    // Se è una sessione chiusa e l'operatore è ora attivo su un'altra linea → salta
+    if(!attiva && mat && matricoleConSessioneAttiva[mat] && !matricoleConSessioneAttiva[mat].has(s.lineaCorrente)) return;
     if(!filMap[key]||(!s.fine&&filMap[key].fine)||(!s.fine&&!filMap[key].fine&&(s.tsInizio||0)>(filMap[key].tsInizio||0)))
-      filMap[key]=s; });
+      filMap[key]=s;
+  });
   const fil = Object.values(filMap).sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
   const att=new Set(sessioni.filter(s=>!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).map(s=>s.matricola||s.nome)).size;
   const chi=sessioni.filter(s=>!!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).length;
@@ -2260,7 +2277,16 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               ))}</tr></thead>
               <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
                 const att2=!s.fine;
-                const dur=(()=>{ const ini=parseData(s.inizio); const f=s.fine?parseData(s.fine):now(); return (ini&&f)?(f-ini):0; })();
+                const dur=(()=>{
+  // Se l'operatore è arrivato per trasferimento, il timer parte dal momento del trasferimento
+  let ini = parseData(s.inizio);
+  if(s.trasferimenti&&s.trasferimenti.length>0){
+    const trVers = s.trasferimenti.filter(t=>(t.a||"").trim().toLowerCase()===(s.lineaCorrente||"").trim().toLowerCase());
+    if(trVers.length>0){ const dTr=parseData(trVers[trVers.length-1].quando); if(dTr) ini=dTr; }
+  }
+  const f=s.fine?parseData(s.fine):now();
+  return (ini&&f)?(f-ini):0;
+})();
                 const corsi = s.corsi||[];
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
