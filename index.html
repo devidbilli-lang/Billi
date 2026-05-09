@@ -1860,8 +1860,6 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       matricoleAttivePerLinea[mat].add(s.lineaCorrente);
     }
   });
-  // filRaw: per le sessioni chiuse, mostrala SOLO se l'operatore non ha sessioni
-  // attive su NESSUNA linea (cioè è uscito, non trasferito)
   const filRaw = sessioni.filter(s=>{
     const ml=fL==="ALL"||s.lineaCorrente===fL;
     const ms=fS==="ALL"||(fS==="attive"?!s.fine:!!s.fine);
@@ -1870,17 +1868,35 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     if(q&&!s.nome.toLowerCase().includes(q)&&!s.cognome.toLowerCase().includes(q)&&!(s.sku||"").toLowerCase().includes(q)) return false;
     const mat = s.matricola||s.nome;
     const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
-    // Sessione chiusa: mostrala solo se l'operatore non è attivo su nessuna linea
+    // Sessione chiusa: nascondila se l'operatore è attivo su qualsiasi linea (trasferito)
     if(!attiva && mat && matricoleAttivePerLinea[mat] && matricoleAttivePerLinea[mat].size>0) return false;
     return true;
   });
+  // Deduplicazione per matricola+linea: preferisce sempre la sessione attiva
   const filMap = {};
   filRaw.forEach(s=>{
     const key=(s.matricola||s.nome)+"|"+s.lineaCorrente;
-    if(!filMap[key]||(!s.fine&&filMap[key].fine)||(!s.fine&&!filMap[key].fine&&(s.tsInizio||0)>(filMap[key].tsInizio||0)))
-      filMap[key]=s;
+    const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+    const existing = filMap[key];
+    if(!existing) { filMap[key]=s; return; }
+    const existingAttiva = !existing.fine||existing.fine===""||existing.fine===null||existing.fine==="null";
+    // Preferisce sempre la sessione attiva; tra due attive prende la più recente
+    if(!existingAttiva && attiva) { filMap[key]=s; return; }
+    if(attiva && existingAttiva && (s.tsInizio||0)>(existing.tsInizio||0)) { filMap[key]=s; return; }
   });
-  const fil = Object.values(filMap).sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
+  // Ulteriore filtro: per ogni matricola, mostra solo le linee su cui è ATTUALMENTE attivo
+  // Se ha sessioni attive su alcune linee, nascondi le righe chiuse delle altre linee
+  const filArr = Object.values(filMap);
+  const matConAttive = new Set(filArr.filter(s=>!s.fine||s.fine===""||s.fine===null||s.fine==="null").map(s=>s.matricola||s.nome));
+  const fil = filArr
+    .filter(s=>{
+      const mat=s.matricola||s.nome;
+      const attiva=!s.fine||s.fine===""||s.fine===null||s.fine==="null";
+      // Se l'operatore ha almeno una sessione attiva, mostra solo quelle attive
+      if(matConAttive.has(mat) && !attiva) return false;
+      return true;
+    })
+    .sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
   const att=new Set(sessioni.filter(s=>!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).map(s=>s.matricola||s.nome)).size;
   const chi=sessioni.filter(s=>!!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).length;
   return (
