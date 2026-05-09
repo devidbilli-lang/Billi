@@ -675,125 +675,118 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         {oreExtra>0&&<span style={{fontSize:11,color:"#a78bfa",fontWeight:600}}>Fine turno: {labelFine}</span>}
       </div>
 
-            {/* RIGA 1: Operatori | Efficienza | KO+Migl */}
-      <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"stretch"}}>
-        {/* Operatori */}
-        <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66",borderRadius:12,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-          <div style={{fontSize:11,color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:2}}>Operatori</div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,flexWrap:"wrap"}}>
-            <div style={{fontSize:"clamp(36px,6vw,64px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
-            {(nRiparazione>0||nCorso>0)&&(
-              <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:900,whiteSpace:"nowrap"}}>+{nRiparazione} Rip.</div>}
-                {nCorso>0&&<div style={{background:"#06b6d4",color:"#fff",borderRadius:6,padding:"3px 7px",fontSize:10,fontWeight:900,whiteSpace:"nowrap"}}>+{nCorso} Corso</div>}
+                  {/* LAYOUT: sinistra card compatte | destra card riepilogo articolo+obiettivo */}
+      <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}}>
+        {/* COLONNA SINISTRA - card compatte */}
+        <div style={{flex:"0 0 auto",display:"flex",flexDirection:"column",gap:6,width:"55%"}}>
+          {/* Operatori + Efficienza + KO/Migl */}
+          <div style={{display:"flex",gap:6}}>
+            {/* Operatori */}
+            <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed55",borderRadius:12,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+              <div style={{fontSize:10,color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:2}}>Operatori</div>
+              <div style={{fontSize:"clamp(32px,5vw,56px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
+              {(nRiparazione>0||nCorso>0)&&(
+                <div style={{display:"flex",flexDirection:"column",gap:2,marginTop:2}}>
+                  {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:5,padding:"2px 6px",fontSize:9,fontWeight:900}}>+{nRiparazione} Rip.</div>}
+                  {nCorso>0&&<div style={{background:"#06b6d4",color:"#fff",borderRadius:5,padding:"2px 6px",fontSize:9,fontWeight:900}}>+{nCorso} Corso</div>}
+                </div>
+              )}
+            </div>
+            {/* Efficienza */}
+            <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed55",borderRadius:12,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+              <div style={{fontSize:10,color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:2}}>Efficienza</div>
+              {(()=>{const pct=efficienzaPct||0;return(
+                <svg viewBox="0 0 200 110" style={{width:"100%",maxHeight:60,display:"block"}}>
+                  <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
+                  {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round" strokeDasharray={`${(pct/100)*Math.PI*90} ${Math.PI*90}`} style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
+                  {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round" style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
+                  <text x="100" y="88" textAnchor="middle" fontSize="32" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+                </svg>
+              );})()}
+            </div>
+            {/* KO + Migl */}
+            <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed55",borderRadius:12,padding:"8px",display:"flex",flexDirection:"column",justifyContent:"center",gap:4}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                <svg width="22" height="22" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/><circle cx="13" cy="14" r="2" fill="#ef4444"/><circle cx="23" cy="14" r="2" fill="#ef4444"/><path d="M11 25 Q18 19 25 25" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                <div><div style={{fontSize:8,color:"#ef4444",fontWeight:700}}>KO</div><div style={{fontSize:"clamp(24px,4vw,44px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{ko}</div></div>
               </div>
-            )}
+              <div style={{height:1,background:"#e2e8f0"}}/>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                <svg width="22" height="22" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="17" stroke="#f59e0b" strokeWidth="2"/><circle cx="13" cy="14" r="2" fill="#f59e0b"/><circle cx="23" cy="14" r="2" fill="#f59e0b"/><line x1="12" y1="24" x2="24" y2="24" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/></svg>
+                <div><div style={{fontSize:8,color:"#f59e0b",fontWeight:700}}>MIGL.</div><div style={{fontSize:"clamp(24px,4vw,44px)",fontWeight:900,color:"#f59e0b",lineHeight:1}}>{migl}</div></div>
+              </div>
+            </div>
           </div>
-        </div>
-        {/* Efficienza */}
-        <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66",borderRadius:12,padding:"8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-          <div style={{fontSize:11,color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:2}}>Efficienza</div>
+          {/* Righe per ogni articolo */}
           {(()=>{
-            const pct = efficienzaPct||0;
-            return (
-              <svg viewBox="0 0 200 110" style={{width:"100%",maxHeight:70,display:"block"}}>
-                <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
-                {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
-                  strokeDasharray={`${(pct/100)*Math.PI*90} ${Math.PI*90}`}
-                  style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
-                {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
-                  style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
-                <text x="100" y="88" textAnchor="middle" fontSize="32" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
-              </svg>
-            );
-          })()}
-        </div>
-        {/* KO + Migl */}
-        <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66",borderRadius:12,padding:"8px",display:"flex",flexDirection:"column",justifyContent:"center",gap:6}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
-              <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
-              <circle cx="13" cy="14" r="2" fill="#ef4444"/>
-              <circle cx="23" cy="14" r="2" fill="#ef4444"/>
-              <path d="M11 25 Q18 19 25 25" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" fill="none"/>
-            </svg>
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:9,color:"rgba(239,68,68,0.8)",fontWeight:700,letterSpacing:1}}>KO</div>
-              <div style={{fontSize:"clamp(28px,5vw,56px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{ko}</div>
-            </div>
-          </div>
-          <div style={{height:1,background:"#e2e8f0"}}/>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
-              <circle cx="18" cy="18" r="17" stroke="#f59e0b" strokeWidth="2"/>
-              <circle cx="13" cy="14" r="2" fill="#f59e0b"/>
-              <circle cx="23" cy="14" r="2" fill="#f59e0b"/>
-              <line x1="12" y1="24" x2="24" y2="24" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:9,color:"rgba(245,158,11,0.8)",fontWeight:700,letterSpacing:1}}>MIGL.</div>
-              <div style={{fontSize:"clamp(28px,5vw,56px)",fontWeight:900,color:"#f59e0b",lineHeight:1}}>{migl}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ARTICOLI IN LAVORAZIONE */}
-      {(()=>{
-        const skuAttiviLinea = [...new Set(
-          sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
-          .map(s=>s.skuCorrente||s.sku)
-        )];
-        if(skuAttiviLinea.length===0) return null;
-        return skuAttiviLinea.map(skuItem=>{
-          const skuObjItem = skuList.find(x=>x.sku===skuItem);
-          const tcItem = skuObjItem?.tc||0;
-          const minTotaliItem = tcItem>0&&secFineTurnoAssoluto>_secInizioTurno
-            ? Math.max(0,(secFineTurnoAssoluto-_secInizioTurno)/60)*nOpProduzione : 0;
-          const obFinaleItem = tcItem>0&&minTotaliItem>0 ? Math.ceil(minTotaliItem/tcItem) : null;
-          const secOra2 = _now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
-          const orePassateItem = Math.max(0,(secOra2-_secInizioTurno)/3600);
-          const oraTurnoFineItem = _secInizioTurno/3600+oreTotali;
-          const ob60Item = obFinaleItem!=null&&oreTotali>0 ? Math.round(obFinaleItem/oreTotali) : null;
-          const prossimaOraItem = _secInizioTurno/3600+Math.ceil(orePassateItem);
-          const _borseCalcItem = ob60Item!=null ? Math.max(0,Math.ceil(ob60Item*(prossimaOraItem-_secInizioTurno/3600))) : null;
-          const borseAProssimaItem = prossimaOraItem>=oraTurnoFineItem ? (obFinaleItem||_borseCalcItem) : _borseCalcItem;
-          const pHH2 = Math.floor(prossimaOraItem)%24;
-          const prossimaOraLabelItem = String(pHH2).padStart(2,"0")+":00";
-          const inTurnoItem = prossimaOraItem<=oraTurnoFineItem;
-          return (
-            <div key={skuItem} style={{marginBottom:6}}>
-              {/* Nome articolo - colonna A grande e visivo */}
-              <div style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",borderRadius:"10px 10px 0 0",padding:"6px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div>
-                  <div style={{fontSize:"clamp(14px,2.5vw,22px)",fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.1}}>{skuItem}</div>
-                  {skuObjItem?.descrizione&&<div style={{fontSize:10,color:"#c4b5fd",marginTop:1}}>{skuObjItem.descrizione}</div>}
-                </div>
-                {skuObjItem?.collezione&&<span style={{fontSize:10,color:"#fff",background:"#ffffff22",borderRadius:6,padding:"2px 8px",fontWeight:700}}>{skuObjItem.collezione}</span>}
-                {tcItem>0&&<span style={{fontSize:10,color:"#c4b5fd",fontWeight:600}}>TC {tcItem}min</span>}
-              </div>
-              {/* Card Obiettivo | Obj Orario */}
-              <div style={{display:"flex",gap:6,background:"#f8f5ff",borderRadius:"0 0 10px 10px",padding:6,border:"2px solid #7c3aed22",borderTop:"none"}}>
-                {/* Obiettivo */}
-                <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed55",borderRadius:10,padding:"6px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                  <div style={{fontSize:10,color:"#6d28d9",fontWeight:800,letterSpacing:1,marginBottom:2}}>Obiettivo</div>
-                  <span style={{fontSize:"clamp(32px,6vw,64px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
-                  <span style={{fontSize:"clamp(14px,2vw,22px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
-                  <span style={{fontSize:"clamp(22px,4vw,44px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
-                </div>
-                {/* Prossimo Obiettivo */}
-                <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",borderRadius:10,padding:"6px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 12px 4px #ffff0055",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                  <div style={{fontSize:10,color:"#111827",fontWeight:800,marginBottom:2}}>ALLE <span style={{color:"#ffff00"}}>{inTurnoItem?prossimaOraLabelItem:"—"}</span></div>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <div style={{fontSize:"clamp(32px,6vw,64px)",fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 10px #ffff00,-2px -2px 0 #7c3aed,2px 2px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</div>
-                    {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:borse>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0}}/>}
+            const skuAttiviLinea=[...new Set(sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||"")).map(s=>s.skuCorrente||s.sku))];
+            return skuAttiviLinea.map(skuItem=>{
+              const skuObjItem=skuList.find(x=>x.sku===skuItem);
+              const tcItem=skuObjItem?.tc||0;
+              const minTotaliItem=tcItem>0&&secFineTurnoAssoluto>_secInizioTurno?Math.max(0,(secFineTurnoAssoluto-_secInizioTurno)/60)*nOpProduzione:0;
+              const obFinaleItem=tcItem>0&&minTotaliItem>0?Math.ceil(minTotaliItem/tcItem):null;
+              const secOra2=_now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
+              const orePassateItem=Math.max(0,(secOra2-_secInizioTurno)/3600);
+              const oraTurnoFineItem=_secInizioTurno/3600+oreTotali;
+              const ob60Item=obFinaleItem!=null&&oreTotali>0?Math.round(obFinaleItem/oreTotali):null;
+              const prossimaOraItem=_secInizioTurno/3600+Math.ceil(orePassateItem);
+              const _borseCalcItem=ob60Item!=null?Math.max(0,Math.ceil(ob60Item*(prossimaOraItem-_secInizioTurno/3600))):null;
+              const borseAProssimaItem=prossimaOraItem>=oraTurnoFineItem?(obFinaleItem||_borseCalcItem):_borseCalcItem;
+              const pHH2=Math.floor(prossimaOraItem)%24;
+              const prossimaOraLabelItem=String(pHH2).padStart(2,"0")+":00";
+              const inTurnoItem=prossimaOraItem<=oraTurnoFineItem;
+              return (
+                <div key={skuItem} style={{display:"flex",gap:6,marginTop:6}}>
+                  {/* Prossimo Obiettivo */}
+                  <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",borderRadius:10,padding:"6px 8px",textAlign:"center",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                    <div style={{fontSize:9,color:"#111827",fontWeight:800,marginBottom:2}}>ALLE <span style={{color:"#ffff00"}}>{inTurnoItem?prossimaOraLabelItem:"—"}</span></div>
+                    <div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <div style={{fontSize:"clamp(28px,5vw,52px)",fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-2px -2px 0 #7c3aed,2px 2px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</div>
+                      {inTurnoItem&&<div style={{width:14,height:14,borderRadius:"50%",background:borse>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0}}/>}
+                    </div>
+                  </div>
+                  {/* KO + Migl articolo */}
+                  <div style={{flex:1,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:10,padding:"6px",display:"flex",justifyContent:"space-around",alignItems:"center"}}>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontSize:8,color:"#ef4444",fontWeight:700}}>KO</div>
+                      <div style={{fontSize:"clamp(22px,4vw,40px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
+                    </div>
+                    <div style={{width:1,background:"#e2e8f0",height:30}}/>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontSize:8,color:"#f59e0b",fontWeight:700}}>MIGL.</div>
+                      <div style={{fontSize:"clamp(22px,4vw,40px)",fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          );
-        });
-      })()}
+              );
+            });
+          })()}
+        </div>
+
+        {/* COLONNA DESTRA - articolo + obiettivo */}
+        <div style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+          {(()=>{
+            const skuAttiviLinea=[...new Set(sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||"")).map(s=>s.skuCorrente||s.sku))];
+            return skuAttiviLinea.map(skuItem=>{
+              const skuObjItem=skuList.find(x=>x.sku===skuItem);
+              const tcItem=skuObjItem?.tc||0;
+              const minTotaliItem=tcItem>0&&secFineTurnoAssoluto>_secInizioTurno?Math.max(0,(secFineTurnoAssoluto-_secInizioTurno)/60)*nOpProduzione:0;
+              const obFinaleItem=tcItem>0&&minTotaliItem>0?Math.ceil(minTotaliItem/tcItem):null;
+              return (
+                <div key={skuItem} style={{background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed55",borderRadius:12,padding:"10px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+                  <div style={{fontSize:"clamp(11px,1.8vw,16px)",fontWeight:900,color:"#7c3aed",letterSpacing:1,lineHeight:1.2,wordBreak:"break-all",marginBottom:4}}>{skuItem}</div>
+                  {skuObjItem?.descrizione&&<div style={{fontSize:9,color:"#94a3b8",marginBottom:4,lineHeight:1.2}}>{skuObjItem.descrizione}</div>}
+                  {skuObjItem?.collezione&&<div style={{fontSize:9,color:"#e879f9",fontWeight:700,marginBottom:6}}>{skuObjItem.collezione}</div>}
+                  <div style={{fontSize:9,color:"#6d28d9",fontWeight:700,marginBottom:4}}>Obiettivo</div>
+                  <span style={{fontSize:"clamp(36px,6vw,72px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
+                  <span style={{fontSize:"clamp(16px,2.5vw,28px)",fontWeight:300,color:"#111827",lineHeight:1}}>/</span>
+                  <span style={{fontSize:"clamp(26px,4.5vw,52px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
+                </div>
+              );
+            });
+          })()}
+        </div>
+      </div>
 
 {/* Barra progresso 8 ore - usa tick per aggiornamento al secondo */}
       {ob60!==null&&(()=>{
