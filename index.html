@@ -1920,6 +1920,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         // Grigio = sessione chiusa o trasferita su altra linea
         // lin può essere ID linea o nome linea — normalizziamo il confronto
         const matchLinea = ss => ss.lineaCorrente===lin || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).id || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).nome;
+        const _debug = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat);
+        console.table(_debug.map(ss=>({SKU:ss.skuCorrente||ss.sku,lineaCorrente:ss.lineaCorrente,fine:ss.fine?"CHIUSA":"APERTA",matchLin:matchLinea(ss)})));
         const skuTutti = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat && matchLinea(ss));
         const skuMap = {};
         skuTutti.forEach(ss=>{ const k=ss.skuCorrente||ss.sku; if(!k) return;
