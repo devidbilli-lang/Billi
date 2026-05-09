@@ -1916,6 +1916,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       {popupSkuOp&&(()=>{
         const parts = popupSkuOp.split("|");
         const mat = parts[0]; const lin = parts.slice(1).join("|");
+        // DEBUG: stampa tutte le sessioni di questa persona
+        console.log("[POPUP] mat:", mat, "lin:", lin);
+        const _tuttePersona = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat);
+        console.log("[POPUP] tutte sessioni:", _tuttePersona.map(ss=>({sku:ss.skuCorrente||ss.sku,linea:ss.lineaCorrente,fine:ss.fine})));
         // Verde = sessione aperta (!fine) E ancora su questa linea (lineaCorrente===lin)
         // Grigio = sessione chiusa o trasferita su altra linea
         const skuTutti = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat&&ss.lineaCorrente===lin);
