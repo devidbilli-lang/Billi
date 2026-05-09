@@ -1593,7 +1593,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             <label style={S.lbl}>Articoli (seleziona uno o più)</label>
             <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2,marginBottom:6}} placeholder="Filtra per codice o descrizione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
             <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #f59e0b",borderRadius:8,background:"#fffbeb"}}>
-              {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.codiceF&&s.codiceF.toUpperCase().includes(cSku))||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).map(s=>(
+              {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.codiceF&&s.codiceF.toUpperCase().includes(cSku))||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).filter((s,i,arr)=>arr.findIndex(x=>(x.codiceF||x.sku)===(s.codiceF||s.sku))===i).map(s=>(
                 <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
                   <input type="checkbox" checked={skuMulti.includes(s.sku)}
                     onChange={e=>{
@@ -1925,7 +1925,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 <div style={{fontSize:13,color:"#475569",marginBottom:8}}>Seleziona gli <strong>articoli</strong> su cui lavoreranno sulla linea <strong>{modTrasf.lineaDest.id}</strong></div>
                 <input style={{...S.inp,fontSize:13,marginBottom:6}} placeholder="Filtra articoli..." value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value.toUpperCase()})}/>
                 <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #a855f7",borderRadius:8,background:"#faf5ff",marginBottom:10}}>
-                  {skuList.filter(s=>!s.speciale&&(!modTrasf.cercaSku||s.sku.includes(modTrasf.cercaSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(modTrasf.cercaSku)))).map(s=>{
+                  {skuList.filter(s=>!s.speciale&&(!modTrasf.cercaSku||s.sku.includes(modTrasf.cercaSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(modTrasf.cercaSku)))).filter((s,i,arr)=>arr.findIndex(x=>(x.codiceF||x.sku)===(s.codiceF||s.sku))===i).map(s=>{
                     const sel=(modTrasf.skuMultiDest||[]).includes(s.sku);
                     return (
                       <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"#ede9fe":"transparent",borderBottom:"1px solid #e9d5ff"}}>
