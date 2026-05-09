@@ -2074,7 +2074,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                       if(onTr) onTr(sess.id,modTrasf.lineaDest.id,sess.skuCorrente||sess.sku||"");
                     }
                     // 2. Apri nuove sessioni per ogni SKU sulla linea di destinazione
-                    for(const skuNew of (skuDestinazione.length>0?skuDestinazione:[s.skuCorrente||s.sku||""])){
+                    for(const skuNew of skuDestinazione){
                       const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
                       await api.evento({sessionId:newId,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuNew,tipo:"CHECKIN",lineaDa:modTrasf.lineaDest.id,lineaA:modTrasf.lineaDest.id,skuDa:skuNew,skuA:skuNew});
                     }
