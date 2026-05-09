@@ -1916,12 +1916,16 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       {popupSkuOp&&(()=>{
         const parts = popupSkuOp.split("|");
         const mat = parts[0]; const lin = parts.slice(1).join("|");
-        // Mostra tutti gli SKU: attivi con pallino verde, chiusi con pallino grigio
-        const skuTutti = sessioni.filter(ss=>ss.matricola===mat&&ss.lineaCorrente===lin);
-        // Deduplicazione per SKU: preferisce sessione attiva
+        // SKU attivi: sessioni aperte su qualsiasi linea per questa matricola
+        const skuAttiviMat = new Set(
+          sessioni.filter(ss=>(ss.matricola||ss.nome)===mat&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"))
+          .map(ss=>ss.skuCorrente||ss.sku).filter(Boolean)
+        );
+        // Tutti gli SKU che ha fatto su questa linea (attivi + storici)
+        const skuTutti = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat&&ss.lineaCorrente===lin);
         const skuMap = {};
         skuTutti.forEach(ss=>{ const k=ss.skuCorrente||ss.sku; if(!k) return;
-          const attiva=!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null";
+          const attiva=skuAttiviMat.has(k);
           if(!skuMap[k]||attiva) skuMap[k]={...ss,_attiva:attiva}; });
         const skuOp = Object.values(skuMap).sort((a,b)=>(b._attiva?1:0)-(a._attiva?1:0));
         const op = sessioni.find(ss=>ss.matricola===mat&&ss.lineaCorrente===lin);
@@ -2360,8 +2364,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                         return (
                           <button onClick={()=>setPopupSkuOp(popupSkuOp===key?null:key)}
                             style={{background:"#f8f5ff",border:"2px solid #7c3aed",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:6,margin:"0 auto"}}>
-                            <div style={{width:8,height:8,borderRadius:"50%",background:"#22c55e",boxShadow:"0 0 4px #22c55e"}}/>
-                            <span style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>{nAttivi}{nTotali>nAttivi?"+"+(nTotali-nAttivi):""} articol{nAttivi===1?"o":"i"}</span>
+                            {nAttivi>0&&<div style={{width:8,height:8,borderRadius:"50%",background:"#22c55e",boxShadow:"0 0 4px #22c55e"}}/>}
+                            <span style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>{nAttivi>0?nAttivi:nTotali} articol{(nAttivi>0?nAttivi:nTotali)===1?"o":"i"}</span>
                             <span style={{fontSize:10,color:"#7c3aed"}}>▼</span>
                           </button>
                         );
