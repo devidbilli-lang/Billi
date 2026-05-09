@@ -2045,13 +2045,27 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     if(j.ok&&j.data.sessioni) sessAggiornate = j.data.sessioni;
                   } catch(e){}
                   const ops=(modTrasf.opSelezionati||[]).map(id=>sessAggiornate.find(s=>s.id===id)||sessioni.find(s=>s.id===id)).filter(Boolean);
+                  const skuDestinazione = modTrasf.skuMultiDest||[];
                   for(const s of ops){
-                    const skuDestinazione=modTrasf.skuNuovo||s.skuCorrente||s.sku||"";
-                    await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuDestinazione,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:s.skuCorrente||s.sku||"",skuA:skuDestinazione});
-                    if(onTr) onTr(s.id,modTrasf.lineaDest.id,skuDestinazione);
+                    // 1. Chiudi TUTTE le sessioni aperte dell'operatore sulla linea di partenza
+                    const sessioniAperte = sessAggiornate.filter(ss=>
+                      ss.matricola===s.matricola &&
+                      ss.lineaCorrente===s.lineaCorrente &&
+                      (!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null")
+                    );
+                    for(const sess of sessioniAperte){
+                      await api.evento({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku||"",tipo:"TRASFERIMENTO",lineaDa:sess.lineaCorrente,lineaA:modTrasf.lineaDest.id,skuDa:sess.skuCorrente||sess.sku||"",skuA:sess.skuCorrente||sess.sku||""});
+                      if(onTr) onTr(sess.id,modTrasf.lineaDest.id,sess.skuCorrente||sess.sku||"");
+                    }
+                    // 2. Apri nuove sessioni per ogni SKU sulla linea di destinazione
+                    for(const skuNew of (skuDestinazione.length>0?skuDestinazione:[s.skuCorrente||s.sku||""])){
+                      const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
+                      await api.evento({sessionId:newId,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:skuNew,tipo:"CHECKIN",lineaDa:modTrasf.lineaDest.id,lineaA:modTrasf.lineaDest.id,skuDa:skuNew,skuA:skuNew});
+                    }
                   }
                   setModTrasf(null);
-                  if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },2000);
+                  // Ricarica subito + di nuovo dopo 3 secondi per avere i nuovi CHECKIN
+                  if(onAggiornaSessioni){ onAggiornaSessioni(); setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000); }
                   else setLoading(false);
                 };
                 return (<>
