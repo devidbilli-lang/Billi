@@ -746,6 +746,17 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 Nessun articolo attivo
               </div>
             );
+            // Font dinamici in base al numero di articoli
+            const nSku = skuAttiviLinea.length;
+            const fBig   = nSku<=1?"clamp(40px,6vw,80px)":nSku<=2?"clamp(30px,5vw,60px)":nSku<=3?"clamp(24px,4vw,48px)":"clamp(18px,3vw,36px)";
+            const fMid   = nSku<=1?"clamp(28px,4.5vw,56px)":nSku<=2?"clamp(22px,3.5vw,44px)":nSku<=3?"clamp(18px,3vw,36px)":"clamp(14px,2.5vw,28px)";
+            const fSep   = nSku<=1?"clamp(16px,2.5vw,28px)":nSku<=2?"clamp(13px,2vw,22px)":"clamp(10px,1.5vw,16px)";
+            const fSvg   = nSku<=1?22:nSku<=2?18:nSku<=3?16:14;
+            const fKo    = nSku<=1?"clamp(28px,4.5vw,52px)":nSku<=2?"clamp(22px,3.5vw,40px)":nSku<=3?"clamp(18px,3vw,32px)":"clamp(14px,2.5vw,26px)";
+            const hdrPad = nSku<=2?"8px 14px":"5px 10px";
+            const hdrFs  = nSku<=2?"clamp(13px,2vw,18px)":"clamp(11px,1.5vw,14px)";
+            const cardPad= nSku<=2?"6px 10px":"4px 6px";
+
             return skuAttiviLinea.map(skuItem=>{
               const skuObjItem=skuList.find(x=>x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
@@ -767,41 +778,41 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               return (
                 <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
                   {/* Header articolo - nome completo viola */}
-                  <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:"6px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
+                  <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:hdrPad,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
-                      <span style={{fontSize:"clamp(13px,2vw,18px)",fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.2}}>{skuItem}</span>
-                      {skuObjItem?.descrizione&&<span style={{fontSize:"clamp(13px,2vw,18px)",fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
+                      <span style={{fontSize:hdrFs,fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.2}}>{skuItem}</span>
+                      {skuObjItem?.descrizione&&<span style={{fontSize:hdrFs,fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
                     </div>
                     {skuObjItem?.collezione&&skuObjItem.collezione.trim()&&(
-                      <span style={{fontSize:11,color:"#fff",background:"#ffffff22",borderRadius:6,padding:"3px 10px",fontWeight:700,flexShrink:0}}>{skuObjItem.collezione}</span>
+                      <span style={{fontSize:11,color:"#fff",background:"#ffffff22",borderRadius:6,padding:"3px 8px",fontWeight:700,flexShrink:0}}>{skuObjItem.collezione}</span>
                     )}
                   </div>
-                  {/* 3 card interne - layout orizzontale compatto */}
-                  <div style={{display:"flex",gap:6,padding:"6px 8px",alignItems:"stretch"}}>
+                  {/* 3 card interne - font dinamici in base al numero di articoli */}
+                  <div style={{display:"flex",gap:6,padding:cardPad,alignItems:"stretch"}}>
 
                     {/* Obiettivo: borse / finale affiancati */}
-                    <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed44",borderRadius:10,padding:"6px 10px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
+                    <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed44",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OBIETTIVO</div>
                       <div style={{display:"flex",alignItems:"baseline",gap:6}}>
-                        <span style={{fontSize:"clamp(22px,3.5vw,44px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
-                        <span style={{fontSize:"clamp(12px,1.5vw,18px)",fontWeight:300,color:"#94a3b8"}}>/</span>
-                        <span style={{fontSize:"clamp(18px,2.8vw,34px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
+                        <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
+                        <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
+                        <span style={{fontSize:fMid,fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
                       </div>
                     </div>
 
                     {/* Obj Orario - grigio lunare */}
-                    <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:"6px 10px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
+                    <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       <div style={{fontSize:9,color:"#ffff00",fontWeight:800}}>{inTurnoItem?"ALLE "+prossimaOraLabelItem:"—"}</div>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <span style={{fontSize:"clamp(22px,3.5vw,44px)",fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</span>
-                        {inTurnoItem&&<div style={{width:12,height:12,borderRadius:"50%",background:borse>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0}}/>}
+                        <span style={{fontSize:fBig,fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</span>
+                        {inTurnoItem&&<div style={{width:10,height:10,borderRadius:"50%",background:borse>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0}}/>}
                       </div>
                     </div>
 
                     {/* KO + Migl affiancati con faccette */}
-                    <div style={{flex:1,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:10,padding:"6px 8px",display:"flex",alignItems:"center",justifyContent:"space-around",gap:4}}>
+                    <div style={{flex:1,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:10,padding:cardPad,display:"flex",alignItems:"center",justifyContent:"space-around",gap:4}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <svg width="18" height="18" viewBox="0 0 36 36" fill="none">
+                        <svg width={fSvg} height={fSvg} viewBox="0 0 36 36" fill="none">
                           <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
                           <circle cx="13" cy="14" r="2" fill="#ef4444"/>
                           <circle cx="23" cy="14" r="2" fill="#ef4444"/>
@@ -811,12 +822,12 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                         </svg>
                         <div style={{textAlign:"center"}}>
                           <div style={{fontSize:7,color:"rgba(239,68,68,0.8)",fontWeight:700,letterSpacing:1}}>KO</div>
-                          <div style={{fontSize:"clamp(18px,3vw,36px)",fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
+                          <div style={{fontSize:fKo,fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
                         </div>
                       </div>
                       <div style={{width:1,background:"#e2e8f0",height:"60%"}}/>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <svg width="18" height="18" viewBox="0 0 36 36" fill="none">
+                        <svg width={fSvg} height={fSvg} viewBox="0 0 36 36" fill="none">
                           <circle cx="18" cy="18" r="17" stroke="#f59e0b" strokeWidth="2"/>
                           <circle cx="13" cy="14" r="2" fill="#f59e0b"/>
                           <circle cx="23" cy="14" r="2" fill="#f59e0b"/>
@@ -824,7 +835,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                         </svg>
                         <div style={{textAlign:"center"}}>
                           <div style={{fontSize:7,color:"rgba(245,158,11,0.8)",fontWeight:700,letterSpacing:1}}>MIGL.</div>
-                          <div style={{fontSize:"clamp(18px,3vw,36px)",fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
+                          <div style={{fontSize:fKo,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
                         </div>
                       </div>
                     </div>
@@ -1827,7 +1838,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   },[]);
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
   const [modalConferma, setModalConferma] = React.useState(null);
-  const [fL,setFL]        = useState("ALL");
+  const [fL,setFL]        = useState(lineaFiltro?lineaFiltro.id:"ALL");
   const [fS,setFS]        = useState("ALL");
   const [srch,setSrch]    = useState("");
   const [mod,setMod]      = useState(null);
@@ -1849,8 +1860,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     if(!filMap[key]||(!s.fine&&filMap[key].fine)||(!s.fine&&!filMap[key].fine&&(s.tsInizio||0)>(filMap[key].tsInizio||0)))
       filMap[key]=s; });
   const fil = Object.values(filMap).sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
-  const att=sessioni.filter(s=>!s.fine).length;
-  const chi=sessioni.filter(s=>!!s.fine).length;
+  const att=new Set(sessioni.filter(s=>!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).map(s=>s.matricola||s.nome)).size;
+  const chi=sessioni.filter(s=>!!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).length;
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
       {loading&&(
@@ -2620,7 +2631,7 @@ function App() { const [view,setView]             = useState("login");
       )}
       {view==="dashboard"&&accesso&&(
         <Dashboard
-          sessioni={accesso.ruolo==="linea" ? sessSheets.filter(s=>s.lineaCorrente===accesso.linea.id) : sessSheets}
+          sessioni={sessSheets}
           linee={linee} skuList={skuList} operatori={operatori}
           isAdmin={accesso.ruolo==="admin"}
           lineaFiltro={accesso.ruolo==="linea"?accesso.linea:null}
