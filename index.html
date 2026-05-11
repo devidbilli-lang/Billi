@@ -434,16 +434,36 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
     (async()=>{
       const checkoutOp = async(s)=>{
         const url = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(s.id||s.sessionId||"")+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(s.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&skuA=";
-        for(let i=0;i<3;i++){
-          try{ await fetchConRetry(url,5,1000); return {ok:true}; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,2000*(i+1))); }
+        for(let i=0;i<5;i++){
+          try{ await fetchConRetry(url,5,1000); return {ok:true}; }catch(e){ if(i<4) await new Promise(r=>setTimeout(r,2000*(i+1))); }
         }
         return {ok:false,s};
       };
-      const results = await Promise.all(sessAttiveLinea.map(s=>checkoutOp(s)));
-      const falliti = results.filter(r=>!r.ok);
+      // Ricarica sessioni fresche da Sheets per non perdere nessuno
+      let sessAggiornate = sessAttiveLinea;
+      try {
+        const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+        const j = await r.json();
+        if(j.ok&&j.data.sessioni){
+          sessAggiornate = j.data.sessioni.filter(s=>
+            s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")
+          );
+        }
+      } catch(e){ console.warn("[CO AUTO] Fallito reload sessioni, uso cache"); }
+      console.log("[CO AUTO] Chiudo "+sessAggiornate.length+" sessioni su "+lineaId);
+      // Passata 1: tutti in parallelo
+      let results = await Promise.all(sessAggiornate.map(s=>checkoutOp(s)));
+      let falliti = results.filter(r=>!r.ok).map(r=>r.s);
+      // Passata 2: riprova falliti
       if(falliti.length>0){
-        // Riprova i falliti
-        for(const {s} of falliti){ await checkoutOp(s); }
+        await new Promise(r=>setTimeout(r,3000));
+        results = await Promise.all(falliti.map(s=>checkoutOp(s)));
+        falliti = results.filter(r=>!r.ok).map(r=>r.s);
+      }
+      // Passata 3: uno alla volta
+      if(falliti.length>0){
+        await new Promise(r=>setTimeout(r,5000));
+        for(const s of falliti){ await checkoutOp(s); }
       }
     })();
   },[tick, turnoChiuso, secFineTurnoAssoluto, _primoCheckinTs]);
