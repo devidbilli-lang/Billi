@@ -2687,16 +2687,13 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
       <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
         <Logo/>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <button onClick={()=>setSchermata("linea")} onMouseEnter={e=>e.currentTarget.style.background="#c4b5fd"} onMouseLeave={e=>e.currentTarget.style.background="#f8fafc"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
-            <span style={{fontSize:28}}>🔒</span>
+          <button onClick={()=>setSchermata("linea")} onMouseEnter={e=>e.currentTarget.style.border="2px solid #7c3aed"} onMouseLeave={e=>e.currentTarget.style.border="1.5px solid #a78bfa"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
             <div><div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>Linea</div><div style={{fontSize:13,color:"#64748b",marginTop:4}}>Accesso operatore di linea</div></div>
           </button>
-          <button onClick={()=>onQualita&&onQualita()} onMouseEnter={e=>e.currentTarget.style.background="#c4b5fd"} onMouseLeave={e=>e.currentTarget.style.background="#f8fafc"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
-            <span style={{fontSize:28}}>📊</span>
+          <button onClick={()=>onQualita&&onQualita()} onMouseEnter={e=>e.currentTarget.style.border="2px solid #7c3aed"} onMouseLeave={e=>e.currentTarget.style.border="1.5px solid #a78bfa"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
             <div><div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>Qualità</div><div style={{fontSize:13,color:"#64748b",marginTop:4}}>Inserimento dati qualità</div></div>
           </button>
-          <button onClick={()=>setSchermata("admin")} onMouseEnter={e=>e.currentTarget.style.background="#c4b5fd"} onMouseLeave={e=>e.currentTarget.style.background="#f8fafc"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
-            <span style={{fontSize:28}}>👑</span>
+          <button onClick={()=>setSchermata("admin")} onMouseEnter={e=>e.currentTarget.style.border="2px solid #7c3aed"} onMouseLeave={e=>e.currentTarget.style.border="1.5px solid #a78bfa"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
             <div><div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>Admin</div><div style={{fontSize:13,color:"#64748b",marginTop:4}}>Accesso amministratore</div></div>
           </button>
         </div>
