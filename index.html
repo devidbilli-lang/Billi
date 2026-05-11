@@ -389,7 +389,7 @@ const SKU_SPECIALI = [
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea }) {
+function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={} }) {
   const [tick, setTick] = React.useState(0);
   const _now = new Date(); // si ricalcola ad ogni tick
   const _hh = _now.getHours(); const _mm = _now.getMinutes(); const _ss = _now.getSeconds();
@@ -837,37 +837,45 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                   <div style={{display:"flex",gap:6,padding:cardPad,alignItems:"stretch",flex:1}}>
 
                     {/* Obiettivo: borse / finale affiancati */}
+                    {(()=>{
+                      const qKey = lineaId+"_"+skuItem;
+                      const borseItem = (qualitaPerSku[qKey]||{}).ok||0;
+                      const koItem = (qualitaPerSku[qKey]||{}).ko||0;
+                      const miglItem = (qualitaPerSku[qKey]||{}).migl||0;
+                      return (
                     <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed44",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OBIETTIVO</div>
                       <div style={{display:"flex",alignItems:"baseline",gap:6}}>
-                        <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borse}</span>
+                        <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
                         <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
                         <span style={{fontSize:fMid,fontWeight:900,color:"#6d28d9",lineHeight:1}}>{obFinaleItem||0}</span>
                       </div>
                     </div>
+                      );
+                    })()}
 
                     {/* Obj Orario - grigio lunare */}
                     <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800}}>{inTurnoItem?"ALLE "+prossimaOraLabelItem:"—"}</div>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         <span style={{fontSize:fBig,fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</span>
-                        {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:borse>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${borse>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
+                        {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:(qualitaPerSku[lineaId+"_"+skuItem]||{}).ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${(qualitaPerSku[lineaId+"_"+skuItem]||{}).ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
                       </div>
-                      {inTurnoItem&&borse!==(borseAProssimaItem||0)&&(
+                      {inTurnoItem&&(qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok!==(borseAProssimaItem||0)&&(
                         <div style={{display:"flex",alignItems:"center",gap:3,marginTop:2}}>
-                          {borse<(borseAProssimaItem||0)?(
+                          {(qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok<(borseAProssimaItem||0)?(
                             <>
                               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                                 <path d="M8 3L8 13M8 13L3 8M8 13L13 8" stroke="#ff6161" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                              <span style={{fontSize:fSep,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-borse}</span>
+                              <span style={{fontSize:fSep,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-((qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok||0)}</span>
                             </>
                           ):(
                             <>
                               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                                 <path d="M8 13L8 3M8 3L3 8M8 3L13 8" stroke="#61ffa9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                              <span style={{fontSize:fSep,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{borse-(borseAProssimaItem||0)}</span>
+                              <span style={{fontSize:fSep,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{((qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok||0)-(borseAProssimaItem||0)}</span>
                             </>
                           )}
                         </div>
@@ -887,7 +895,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                         </svg>
                         <div style={{textAlign:"center"}}>
                           <div style={{fontSize:7,color:"rgba(239,68,68,0.8)",fontWeight:700,letterSpacing:1}}>KO</div>
-                          <div style={{fontSize:fKo,fontWeight:900,color:"#ef4444",lineHeight:1}}>{borseKO||0}</div>
+                          <div style={{fontSize:fKo,fontWeight:900,color:"#ef4444",lineHeight:1}}>{(qualitaPerSku[lineaId+"_"+skuItem]||{}).ko||0}</div>
                         </div>
                       </div>
                       <div style={{width:1,background:"#e2e8f0",height:"60%"}}/>
@@ -900,7 +908,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                         </svg>
                         <div style={{textAlign:"center"}}>
                           <div style={{fontSize:7,color:"rgba(245,158,11,0.8)",fontWeight:700,letterSpacing:1}}>MIGL.</div>
-                          <div style={{fontSize:fKo,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{borseMigl||0}</div>
+                          <div style={{fontSize:fKo,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{(qualitaPerSku[lineaId+"_"+skuItem]||{}).migl||0}</div>
                         </div>
                       </div>
                     </div>
@@ -1046,6 +1054,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList })
                   borseMigl={d.borseMigl||0}
                   maxOpOggi={d.maxOpOggi||0}
                   coloreLinea={l.colore||"#7c3aed"}
+                  qualitaPerSku={qualitaPerSku||{}}
                 />
               </div>
             </div>
@@ -1932,12 +1941,30 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [loading, setLoading] = React.useState(false);
   const [loadingMsg, setLoadingMsg] = React.useState("");
   const [datiProd, setDatiProd] = React.useState(null);
+  const [qualitaPerSku, setQualitaPerSku] = React.useState({});
   React.useEffect(()=>{
     const caricaProd = async () => {
       try {
         const r = await fetch(APPS_SCRIPT_URL+"?action=produzione");
         const j = await r.json();
         if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }
+      } catch(e){}
+      // Carica anche qualità per avere borse per SKU
+      try {
+        const r2 = await fetch(APPS_SCRIPT_URL+"?action=leggiqualita");
+        const j2 = await r2.json();
+        if(j2.ok&&j2.data.qualita){
+          const oggi = new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
+          const map = {};
+          j2.data.qualita.filter(q=>q.data===oggi).forEach(q=>{
+            const k = (q.linea||"")+"_"+(q.sku||"");
+            if(!map[k]) map[k]={ok:0,ko:0,migl:0};
+            map[k].ok += Number(q.ok)||0;
+            map[k].ko += Number(q.ko)||0;
+            map[k].migl += Number(q.migliorabili)||0;
+          });
+          setQualitaPerSku(map);
+        }
       } catch(e){}
     };
     caricaProd();
