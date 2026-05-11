@@ -389,7 +389,7 @@ const SKU_SPECIALI = [
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={} }) {
+function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[] }) {
   const [tick, setTick] = React.useState(0);
   const _now = new Date(); // si ricalcola ad ogni tick
   const _hh = _now.getHours(); const _mm = _now.getMinutes(); const _ss = _now.getSeconds();
@@ -750,7 +750,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             for(let i=0;i<skuAttiviLinea.length;i+=2) coppie.push(skuAttiviLinea.slice(i,i+2));
             // Font e padding dinamici in base al numero di RIGHE (coppie)
             const nSku = skuAttiviLinea.length;
-            const nRighe = Math.ceil(nSku/2); // 2 articoli per riga
+            const nRighe = Math.ceil(nSku/2);
+            console.log("[QUALITA] lineaId:", lineaId, "skuAttivi:", skuAttiviLinea, "qualitaPerSku keys:", Object.keys(qualitaPerSku).filter(k=>k.startsWith(lineaId))); // 2 articoli per riga
             // nRighe=1 → grandi, nRighe=2 → medi, nRighe=3+ → compatti
             const fBig   = nRighe<=1?"clamp(44px,7vw,88px)":nRighe<=2?"clamp(28px,4.5vw,56px)":"clamp(18px,3vw,36px)";
             const fMid   = nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)";
@@ -838,10 +839,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
                     {/* Obiettivo: borse / finale affiancati */}
                     {(()=>{
+                      // Cerca per lineaId o per nome linea
                       const qKey = lineaId+"_"+skuItem;
-                      const borseItem = (qualitaPerSku[qKey]||{}).ok||0;
-                      const koItem = (qualitaPerSku[qKey]||{}).ko||0;
-                      const miglItem = (qualitaPerSku[qKey]||{}).migl||0;
+                      const lObj2 = linee ? linee.find(l=>l.id===lineaId) : null;
+                      const qKeyNome = (lObj2?lObj2.nome:lineaId)+"_"+skuItem;
+                      const qData = qualitaPerSku[qKey]||qualitaPerSku[qKeyNome]||{};
+                      const borseItem = qData.ok||0;
+                      const koItem = qData.ko||0;
+                      const miglItem = qData.migl||0;
                       return (
                     <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed44",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OBIETTIVO</div>
@@ -859,23 +864,23 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                       <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800}}>{inTurnoItem?"ALLE "+prossimaOraLabelItem:"—"}</div>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         <span style={{fontSize:fBig,fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:"—"}</span>
-                        {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:(qualitaPerSku[lineaId+"_"+skuItem]||{}).ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${(qualitaPerSku[lineaId+"_"+skuItem]||{}).ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
+                        {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
                       </div>
-                      {inTurnoItem&&(qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok!==(borseAProssimaItem||0)&&(
+                      {inTurnoItem&&(qData.ok||0)!==(borseAProssimaItem||0)&&(
                         <div style={{display:"flex",alignItems:"center",gap:3,marginTop:2}}>
-                          {(qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok<(borseAProssimaItem||0)?(
+                          {(qData.ok||0)<(borseAProssimaItem||0)?(
                             <>
                               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                                 <path d="M8 3L8 13M8 13L3 8M8 13L13 8" stroke="#ff6161" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                              <span style={{fontSize:fSep,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-((qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok||0)}</span>
+                              <span style={{fontSize:fSep,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-(qData.ok||0)}</span>
                             </>
                           ):(
                             <>
                               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                                 <path d="M8 13L8 3M8 3L3 8M8 3L13 8" stroke="#61ffa9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                              <span style={{fontSize:fSep,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{((qualitaPerSku[lineaId+"_"+skuItem]||{ok:0}).ok||0)-(borseAProssimaItem||0)}</span>
+                              <span style={{fontSize:fSep,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{(qData.ok||0)-(borseAProssimaItem||0)}</span>
                             </>
                           )}
                         </div>
@@ -895,7 +900,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                         </svg>
                         <div style={{textAlign:"center"}}>
                           <div style={{fontSize:7,color:"rgba(239,68,68,0.8)",fontWeight:700,letterSpacing:1}}>KO</div>
-                          <div style={{fontSize:fKo,fontWeight:900,color:"#ef4444",lineHeight:1}}>{(qualitaPerSku[lineaId+"_"+skuItem]||{}).ko||0}</div>
+                          <div style={{fontSize:fKo,fontWeight:900,color:"#ef4444",lineHeight:1}}>{qData.ko||0}</div>
                         </div>
                       </div>
                       <div style={{width:1,background:"#e2e8f0",height:"60%"}}/>
@@ -908,7 +913,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                         </svg>
                         <div style={{textAlign:"center"}}>
                           <div style={{fontSize:7,color:"rgba(245,158,11,0.8)",fontWeight:700,letterSpacing:1}}>MIGL.</div>
-                          <div style={{fontSize:fKo,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{(qualitaPerSku[lineaId+"_"+skuItem]||{}).migl||0}</div>
+                          <div style={{fontSize:fKo,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{qData.migl||0}</div>
                         </div>
                       </div>
                     </div>
@@ -1055,6 +1060,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   maxOpOggi={d.maxOpOggi||0}
                   coloreLinea={l.colore||"#7c3aed"}
                   qualitaPerSku={qualitaPerSku||{}}
+                  linee={linee||[]}
                 />
               </div>
             </div>
@@ -1956,12 +1962,17 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         if(j2.ok&&j2.data.qualita){
           const oggi = new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
           const map = {};
-          j2.data.qualita.filter(q=>q.data===oggi).forEach(q=>{
-            const k = (q.linea||"")+"_"+(q.sku||"");
-            if(!map[k]) map[k]={ok:0,ko:0,migl:0};
-            map[k].ok += Number(q.ok)||0;
-            map[k].ko += Number(q.ko)||0;
-            map[k].migl += Number(q.migliorabili)||0;
+          j2.data.qualita.filter(q=>(q.data||"").includes(oggi.slice(0,5))||q.data===oggi).forEach(q=>{
+            const skuQ = q.sku||"";
+            const lineaQ = q.linea||"";
+            // Salva con chiave sia per nome linea che per ID linea
+            [lineaQ].forEach(lk=>{
+              const k = lk+"_"+skuQ;
+              if(!map[k]) map[k]={ok:0,ko:0,migl:0};
+              map[k].ok += Number(q.ok)||0;
+              map[k].ko += Number(q.ko)||0;
+              map[k].migl += Number(q.migliorabili)||0;
+            });
           });
           setQualitaPerSku(map);
         }
