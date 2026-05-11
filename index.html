@@ -2422,37 +2422,33 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                     messaggio:"Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?",
                     colorBtn:"ef4444", testoBtn:"✕ Chiudi tutti",
                     onOk:()=>{ setModalConferma(null); setLoading(true); setLoadingMsg("Chiusura turni in corso..."); (async()=>{
-  const checkoutUrl = s => APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(s.id)+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(s.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&skuA=";
+  // Ricarica sessioni fresche da Sheets per non perdere nessuno
+  let sessAggiornate = attiveLinea;
+  try {
+    const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+    const j = await r.json();
+    if(j.ok&&j.data.sessioni){
+      sessAggiornate = j.data.sessioni.filter(s=>
+        s.lineaCorrente===(lineaFiltro?lineaFiltro.id:"__TUTTI__")||!lineaFiltro
+      ).filter(s=>!s.fine||s.fine===""||s.fine===null||s.fine==="null");
+    }
+  } catch(e){}
 
   const checkoutOp = async (s) => {
-    for(let i=0; i<5; i++){
-      try { await fetchConRetry(checkoutUrl(s), 5, 1000); return {ok:true, s}; } catch(e) {
-        if(i<4) await new Promise(r=>setTimeout(r, 1500*(i+1)));
-      }
-    }
-    return {ok:false, s};
+    try {
+      await api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
+      return {ok:true, s};
+    } catch(e) { return {ok:false, s}; }
   };
 
   // Passata 1: tutti in parallelo
-  let risultati = await Promise.all(attiveLinea.map(s=>checkoutOp(s)));
+  let risultati = await Promise.all(sessAggiornate.map(s=>checkoutOp(s)));
   let falliti = risultati.filter(r=>!r.ok).map(r=>r.s);
 
-  // Passata 2: riprova falliti in parallelo
+  // Passata 2: riprova falliti uno alla volta
   if(falliti.length>0){
     await new Promise(r=>setTimeout(r,2000));
-    risultati = await Promise.all(falliti.map(s=>checkoutOp(s)));
-    falliti = risultati.filter(r=>!r.ok).map(r=>r.s);
-  }
-
-  // Passata 3: riprova uno alla volta con pausa lunga
-  if(falliti.length>0){
-    await new Promise(r=>setTimeout(r,3000));
-    const ancorFalliti = [];
-    for(const s of falliti){
-      const r = await checkoutOp(s);
-      if(!r.ok) ancorFalliti.push(s);
-    }
-    falliti = ancorFalliti;
+    for(const s of falliti){ await checkoutOp(s); }
   }
 
   // Aggiorna e verifica da Sheets
