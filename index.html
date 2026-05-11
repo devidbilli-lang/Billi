@@ -125,8 +125,8 @@ async function codaProcessa() {
         const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),15000);
         const r=await fetch(ev.url,{signal:ctrl.signal}).finally(()=>clearTimeout(tid));
         if(r.ok){ console.log("[CODA] OK:", ev.url.substring(0,60)); }
-        else { ev.tentativi++; if(ev.tentativi<5) nuova.push(ev); }
-      } catch(e){ ev.tentativi++; if(ev.tentativi<5) nuova.push(ev); }
+        else { ev.tentativi++; if(ev.tentativi<20) nuova.push(ev); }
+      } catch(e){ ev.tentativi++; if(ev.tentativi<20) nuova.push(ev); }
     }
     localStorage.setItem(CODA_KEY,JSON.stringify(nuova));
     if(nuova.length) console.warn("[CODA] "+nuova.length+" eventi ancora in sospeso");
