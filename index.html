@@ -408,14 +408,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   // Carica straordinario da Sheets al montaggio
   React.useEffect(()=>{
     fetchConRetry(APPS_SCRIPT_URL+"?action=leggistraordinario&lineaId="+encodeURIComponent(lineaId), 3, 1000)
-      .then(r=>r.json()).then(j=>{ if(j.ok&&j.data.oreExtra!=null){ setOreExtraRaw(j.data.oreExtra); try{localStorage.setItem(storKey,j.data.oreExtra);}catch{} } }).catch(()=>{});
+      .then(r=>r.json()).then(j=>{ if(j.ok&&j.data.oreExtra!=null){ setOreExtraRaw(j.data.oreExtra); } }).catch(()=>{});
   },[lineaId]);
   const setOreExtra = v => {
     setOreExtraRaw(v);
     // Salva solo su Sheets, non su localStorage
     fetchConRetry(APPS_SCRIPT_URL+"?action=salvastraordinario&lineaId="+encodeURIComponent(lineaId)+"&oreExtra="+encodeURIComponent(v), 3, 1000).catch(()=>{});
   };
-  const oreTotali = 9 + (oreExtra||0);
+  const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
 
     // Checkout automatico quando il turno finisce
