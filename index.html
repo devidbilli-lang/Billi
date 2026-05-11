@@ -1989,7 +1989,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 {skuOp.map((ss,si)=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return(
                   <div key={si} style={{padding:"10px 14px",borderBottom:si<skuOp.length-1?"1px solid #ede9fe":"none",display:"flex",alignItems:"center",gap:10,opacity:ss._attiva?1:0.5}}>
                     <div style={{width:10,height:10,borderRadius:"50%",background:ss._attiva?"#22c55e":"#cbd5e1",flexShrink:0,boxShadow:ss._attiva?"0 0 6px #22c55e":"none"}}/>
-                    <code style={{...S.sku,fontSize:14}}>{o?(o.codiceF||o.sku):ss.skuCorrente||ss.sku}</code>
+                    <code style={{...S.sku,fontSize:14}}>{o?o.sku:(ss.skuCorrente||ss.sku)}</code>
                     {o&&o.collezione&&o.collezione.trim()&&<span style={{fontSize:12,color:"#e879f9",fontWeight:700,background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"2px 8px"}}>{o.collezione.trim()}</span>}
                     {!ss._attiva&&<span style={{fontSize:10,color:"#94a3b8",marginLeft:"auto"}}>trasferito</span>}
                   </div>
