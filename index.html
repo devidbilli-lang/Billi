@@ -839,14 +839,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
                     {/* Obiettivo: borse / finale affiancati */}
                     {(()=>{
-                      // Cerca per lineaId o per nome linea
-                      const qKey = lineaId+"_"+skuItem;
-                      const lObj2 = linee ? linee.find(l=>l.id===lineaId) : null;
-                      const qKeyNome = (lObj2?lObj2.nome:lineaId)+"_"+skuItem;
-                      const qData = qualitaPerSku[qKey]||qualitaPerSku[qKeyNome]||{};
                       const borseItem = qData.ok||0;
-                      const koItem = qData.ko||0;
-                      const miglItem = qData.migl||0;
                       return (
                     <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px 3px #7c3aed44",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OBIETTIVO</div>
