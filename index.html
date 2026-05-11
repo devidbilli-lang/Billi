@@ -754,7 +754,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             // Font e padding dinamici in base al numero di RIGHE (coppie)
             const nSku = skuAttiviLinea.length;
             const nRighe = Math.ceil(nSku/2);
-            console.log("[QUALITA] lineaId:", lineaId, "skuAttivi:", skuAttiviLinea, "qualitaPerSku keys:", Object.keys(qualitaPerSku).filter(k=>k.startsWith(lineaId))); // 2 articoli per riga
+            // 2 articoli per riga
             // nRighe=1 → grandi, nRighe=2 → medi, nRighe=3+ → compatti
             const fBig   = nRighe<=1?"clamp(44px,7vw,88px)":nRighe<=2?"clamp(28px,4.5vw,56px)":"clamp(18px,3vw,36px)";
             const fMid   = nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)";
