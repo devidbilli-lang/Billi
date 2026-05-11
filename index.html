@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzM4IXIGFg5p7EMp6FRS7FX-qk6FzUP8H-Teq9a8o6nZz9Vz_Sw__LZef44IhnGHZaEOA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxvg2eQuRkUzzx4X0Ce2yEDblalGYtkm0iNPoRmcIizFCjXhniRlJeB_XK9-Q3ubrpuw/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -101,7 +101,11 @@ const CODA_KEY = "nexus_coda_eventi";
 function codaAggiungi(url) {
   try {
     const coda = JSON.parse(localStorage.getItem(CODA_KEY)||"[]");
-    if(!coda.find(e=>e.url===url)) { coda.push({url,ts:Date.now(),tentativi:0}); localStorage.setItem(CODA_KEY,JSON.stringify(coda)); }
+    // Non aggiungere se già presente (evita duplicati da retry)
+    if(!coda.find(e=>e.url===url)) {
+      coda.push({url,ts:Date.now(),tentativi:0});
+      localStorage.setItem(CODA_KEY,JSON.stringify(coda));
+    }
   } catch(e) {}
 }
 function codaRimuovi(url) {
@@ -121,8 +125,8 @@ async function codaProcessa() {
         const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),15000);
         const r=await fetch(ev.url,{signal:ctrl.signal}).finally(()=>clearTimeout(tid));
         if(r.ok){ console.log("[CODA] OK:", ev.url.substring(0,60)); }
-        else { ev.tentativi++; if(ev.tentativi<20) nuova.push(ev); }
-      } catch(e){ ev.tentativi++; if(ev.tentativi<20) nuova.push(ev); }
+        else { ev.tentativi++; if(ev.tentativi<5) nuova.push(ev); }
+      } catch(e){ ev.tentativi++; if(ev.tentativi<5) nuova.push(ev); }
     }
     localStorage.setItem(CODA_KEY,JSON.stringify(nuova));
     if(nuova.length) console.warn("[CODA] "+nuova.length+" eventi ancora in sospeso");
@@ -142,8 +146,8 @@ const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+
       // Successo - rimuovi dalla coda
       codaRimuovi(url);
     } catch(e) {
-      // Fallito - rimane in coda e verrà riprovato ogni 30s
-      console.warn("[CODA] Evento aggiunto alla coda:", p.tipo, p.nome);
+      // Fallito - rimane in coda e verrà riprovato ogni 30s (max 5 volte)
+      console.warn("[CODA] Evento in coda per retry:", p.tipo, p.nome);
     }
   },
   async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
@@ -434,36 +438,15 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
     (async()=>{
       const checkoutOp = async(s)=>{
         const url = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(s.id||s.sessionId||"")+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(s.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&skuA=";
-        for(let i=0;i<5;i++){
-          try{ await fetchConRetry(url,5,1000); return {ok:true}; }catch(e){ if(i<4) await new Promise(r=>setTimeout(r,2000*(i+1))); }
+        for(let i=0;i<3;i++){
+          try{ await fetchConRetry(url,5,1000); return {ok:true}; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,2000*(i+1))); }
         }
         return {ok:false,s};
       };
-      // Ricarica sessioni fresche da Sheets per non perdere nessuno
-      let sessAggiornate = sessAttiveLinea;
-      try {
-        const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
-        const j = await r.json();
-        if(j.ok&&j.data.sessioni){
-          sessAggiornate = j.data.sessioni.filter(s=>
-            s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")
-          );
-        }
-      } catch(e){ console.warn("[CO AUTO] Fallito reload sessioni, uso cache"); }
-      console.log("[CO AUTO] Chiudo "+sessAggiornate.length+" sessioni su "+lineaId);
-      // Passata 1: tutti in parallelo
-      let results = await Promise.all(sessAggiornate.map(s=>checkoutOp(s)));
-      let falliti = results.filter(r=>!r.ok).map(r=>r.s);
-      // Passata 2: riprova falliti
+      const results = await Promise.all(sessAttiveLinea.map(s=>checkoutOp(s)));
+      const falliti = results.filter(r=>!r.ok);
       if(falliti.length>0){
-        await new Promise(r=>setTimeout(r,3000));
-        results = await Promise.all(falliti.map(s=>checkoutOp(s)));
-        falliti = results.filter(r=>!r.ok).map(r=>r.s);
-      }
-      // Passata 3: uno alla volta
-      if(falliti.length>0){
-        await new Promise(r=>setTimeout(r,5000));
-        for(const s of falliti){ await checkoutOp(s); }
+        for(const {s} of falliti){ await checkoutOp(s); }
       }
     })();
   },[tick, turnoChiuso, secFineTurnoAssoluto, _primoCheckinTs]);
