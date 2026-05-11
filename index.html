@@ -817,7 +817,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const inTurnoItem=prossimaOraItem<=oraTurnoFineItem&&prossimaOraItem>_secInizioTurno/3600;
               // Dati qualità per questo SKU specifico
               const _lNome = linee ? (linee.find(l=>l.id===lineaId)||{}).nome||lineaId : lineaId;
-              const qData = qualitaPerSku[lineaId+"_"+skuItem]||qualitaPerSku[_lNome+"_"+skuItem]||{};
+              const _k1 = lineaId+"_"+skuItem;
+              const _k2 = _lNome+"_"+skuItem;
+              const qData = qualitaPerSku[_k1]||qualitaPerSku[_k2]||{};
+              if(Object.keys(qualitaPerSku).length>0) console.log("[QDATA] cerca:", _k1, "trovato:", !!qualitaPerSku[_k1], "chiavi disp:", Object.keys(qualitaPerSku).slice(0,3));
               return (
                 <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
                   {/* Header articolo - nome completo viola */}
@@ -1019,6 +1022,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   );
   const { perLinea } = dati;
   const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee);
+
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",padding:"16px 4px"}}>
@@ -1401,43 +1405,32 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         setErr("");
     const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     const nMiglStr = noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
-    // Spinner durante il salvataggio
-    const btnSalva = document.querySelector("button[data-salva-qualita]");
-    if(btnSalva) btnSalva.disabled = true;
     setMsg("⏳ Salvataggio in corso...");
     try {
       await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(lineaEffettiva||"")+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(nKoStr)+"&noteMigl="+encodeURIComponent(nMiglStr)+"&obReale="+encodeURIComponent(obRealeQ||"")+"&obTeorico="+encodeURIComponent(obTeoricoQ||""), 5, 1000);
-      // Verifica che Sheets abbia salvato interrogando leggiqualita
-      let salvato = false;
-      for(let i=0;i<10;i++){
-        await new Promise(r=>setTimeout(r,2000));
-        try {
-          const r2 = await fetch(APPS_SCRIPT_URL+"?action=leggiqualita");
-          const j2 = await r2.json();
-          if(j2.ok&&j2.data.qualita){
-            const oggi = new Date().toISOString().slice(0,10);
-            const trovato = j2.data.qualita.some(q=>q.sku===sku&&q.linea===lineaEffettiva&&(q.data||"").includes(oggi.split("-").reverse().join("/")));
-            if(trovato){ salvato=true; break; }
-          }
-        } catch(e){}
-      }
-      setMsg(salvato?"✓ Salvato e confermato!":"✓ Inviato (verifica su Sheets)");
+      setMsg("✓ Salvato!");
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
     } catch(e){ setErr("Errore salvataggio. Riprova."); setMsg(null); }
-    if(btnSalva) btnSalva.disabled = false;
-        setTimeout(()=>setMsg(null), 3000);
+    setTimeout(()=>setMsg(null), 3000);
       }
     });
     return;
   };
+
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
-      {modalConfermaQ&&<ModalConferma
-        titolo={modalConfermaQ.titolo}
-        messaggio={<div style={{whiteSpace:"pre-line"}}>{modalConfermaQ.messaggio}</div>}
-        colorBtn="22c55e" testoBtn="✓ Salva"
-        onConferma={modalConfermaQ.onOk}
-        onAnnulla={()=>setModalConfermaQ(null)}/>}
+      {modalConfermaQ&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa,0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#1e293b",marginBottom:12}}>{modalConfermaQ.titolo}</div>
+            <div style={{fontSize:14,color:"#475569",marginBottom:24,lineHeight:1.6,whiteSpace:"pre-line"}}>{modalConfermaQ.messaggio}</div>
+            <div style={{display:"flex",gap:10}}>
+              <button style={{flex:1,padding:"11px 0",background:"#22c55e",border:"none",borderRadius:8,color:"#fff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700}} onClick={modalConfermaQ.onOk}>✓ Salva</button>
+              <button style={{flex:1,padding:"11px 0",background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700}} onClick={()=>setModalConfermaQ(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
       <header style={{...S.hdr,borderBottom:"2px solid #3b82f644"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div>
@@ -1554,7 +1547,14 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             <button onClick={()=>setNoteMigl([...noteMigl,{p:"",q:""}])} style={{fontSize:12,color:"#f59e0b",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>+ Aggiungi riga Migliorabili</button>
           </div>
           {err&&<div style={S.err}>{err}</div>}
-          {msg&&<div style={{background:"#22c55e22",border:"1px solid #22c55e",borderRadius:8,padding:"10px 14px",color:"#22c55e",fontSize:14,marginBottom:12,textAlign:"center",fontWeight:700}}>{msg}</div>}
+          {msg&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+          <div style={{background:"#fff",borderRadius:20,padding:"32px 40px",textAlign:"center",boxShadow:"0 0 0 4px "+(msg.startsWith("✓")?"#22c55e":"#f59e0b")+",0 0 40px 12px "+(msg.startsWith("✓")?"#22c55e44":"#f59e0b44"),fontFamily:"'Montserrat',sans-serif",minWidth:280}}>
+            <div style={{fontSize:48,marginBottom:12}}>{msg.startsWith("✓")?"✅":"⏳"}</div>
+            <div style={{fontSize:18,fontWeight:800,color:msg.startsWith("✓")?"#15803d":"#92400e"}}>{msg}</div>
+          </div>
+        </div>
+      )}
           <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",width:"100%"}} onClick={salva}>Salva</button>
         </div>
       </div>
@@ -1856,9 +1856,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 </div>
                 <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#3b82f6",borderWidth:2,background:"#f1f5f9",color:"#1e293b"}}
                   placeholder="••••••••" value={pwdQualita} onChange={e=>{setPwdQualita(e.target.value);setErrPwdQualita("");}}
-                  onKeyDown={e=>{ if(e.key==="Enter"){ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&lObj.pwdQualita&&pwdQualita===lObj.pwdQualita){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}} autoFocus/>
+                  onKeyDown={e=>{ if(e.key==="Enter"){ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&((lObj.pwdQualita&&pwdQualita===lObj.pwdQualita)||(lObj.password&&pwdQualita===lObj.password))){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}} autoFocus/>
                 {errPwdQualita&&<div style={{...S.err,marginBottom:12}}>{errPwdQualita}</div>}
-                <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",marginBottom:10}} onClick={()=>{ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&lObj.pwdQualita&&pwdQualita===lObj.pwdQualita){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}>Accedi</button>
+                <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",marginBottom:10}} onClick={()=>{ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&((lObj.pwdQualita&&pwdQualita===lObj.pwdQualita)||(lObj.password&&pwdQualita===lObj.password))){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}>Accedi</button>
                 <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>setModPwdQualita(false)}>← Annulla</button>
               </div>
             </div>
@@ -1963,19 +1963,25 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         const j2 = await r2.json();
         if(j2.ok&&j2.data.qualita){
           const oggi = new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
+          console.log("[QUALITA MAP] oggi:", oggi, "righe totali:", j2.data.qualita.length);
+          console.log("[QUALITA MAP] prime 3 righe:", j2.data.qualita.slice(0,3).map(q=>({data:q.data,linea:q.linea,sku:q.sku,ok:q.ok})));
           const map = {};
-          j2.data.qualita.filter(q=>(q.data||"").includes(oggi.slice(0,5))||q.data===oggi).forEach(q=>{
+          // Accetta qualsiasi riga di oggi indipendentemente dal formato data
+          j2.data.qualita.forEach(q=>{
+            const dataQ = (q.data||"").toString().trim();
+            // Normalizza: accetta dd/MM/yyyy, d/M/yyyy, yyyy-MM-dd
+            const isOggi = dataQ===oggi || dataQ.slice(0,5)===oggi.slice(0,5) ||
+              (()=>{ try{ const d=new Date(dataQ); return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"})===oggi; }catch{return false;} })();
+            if(!isOggi) return;
             const skuQ = q.sku||"";
             const lineaQ = q.linea||"";
-            // Salva con chiave sia per nome linea che per ID linea
-            [lineaQ].forEach(lk=>{
-              const k = lk+"_"+skuQ;
-              if(!map[k]) map[k]={ok:0,ko:0,migl:0};
-              map[k].ok += Number(q.ok)||0;
-              map[k].ko += Number(q.ko)||0;
-              map[k].migl += Number(q.migliorabili)||0;
-            });
+            const k = lineaQ+"_"+skuQ;
+            if(!map[k]) map[k]={ok:0,ko:0,migl:0};
+            map[k].ok += Number(q.ok)||0;
+            map[k].ko += Number(q.ko)||0;
+            map[k].migl += Number(q.migliorabili)||0;
           });
+          console.log("[QUALITA MAP] chiavi map:", Object.keys(map));
           setQualitaPerSku(map);
         }
       } catch(e){}
@@ -2047,6 +2053,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     .sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
   const att=new Set(sessioni.filter(s=>!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).map(s=>s.matricola||s.nome)).size;
   const chi=sessioni.filter(s=>!!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).length;
+
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
       {loading&&(
@@ -2869,12 +2876,14 @@ function App() { const [view,setView]             = useState("login");
     </div>
   );
 
-  if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
-  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
+  // Qualità come overlay modale invece di pagina intera
 
   if(!accesso && view !== "login") {
     return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>;
   }
+  // Qualità come overlay
+  if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
+  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",color:"#1e293b"}}>
       <div style={{background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
