@@ -2052,7 +2052,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     })
     .sort((a,b)=>(b.tsInizio||0)-(a.tsInizio||0));
   const att=new Set(sessioni.filter(s=>!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).map(s=>s.matricola||s.nome)).size;
-  const chi=sessioni.filter(s=>!!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).length;
+  const chi=new Set(sessioni.filter(s=>!!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)&&!sessioni.some(s2=>!s2.fine&&(s2.matricola||s2.nome)===(s.matricola||s.nome))).map(s=>s.matricola||s.nome)).size;
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
@@ -2405,7 +2405,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       </header>
       <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto",justifyContent:"center",flexWrap:"wrap"}}>
         <div style={{flex:"0 0 110px",width:110,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:12,padding:14,textAlign:"center"}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{att+chi}</div>
+          <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{new Set(sessioni.filter(s=>(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).map(s=>s.matricola||s.nome)).size}</div>
           <div style={{fontSize:11,color:"#ffffff",marginTop:4,fontWeight:700}}>Totale</div>
         </div>
         {[["Attive",att,"#61ffa9"],["Chiuse",chi,"#ff6161"]].map(([l,n,c])=>(
