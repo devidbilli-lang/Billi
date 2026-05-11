@@ -395,7 +395,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const _hh = _now.getHours(); const _mm = _now.getMinutes(); const _ss = _now.getSeconds();
   const _secOra = _hh*3600+_mm*60+_ss;
   const storKey = "straord_"+lineaId;
-  const [oreExtra, setOreExtraRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(storKey); return v?parseFloat(v):0; }catch{return 0;} });
+  const [oreExtra, setOreExtraRaw] = React.useState(0); // parte sempre da 0, poi Sheets sovrascrive
   const pausaKey = "pausa_fl_"+lineaId;
   const [inPausa, setInPausaRaw] = React.useState(()=>{ try{ return localStorage.getItem(pausaKey)==="1"; }catch{return false;} });
   const [pausaInizio, setPausaInizioRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(pausaKey+"_ts"); return v?Number(v):null; }catch{return null;} });
@@ -412,8 +412,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   },[lineaId]);
   const setOreExtra = v => {
     setOreExtraRaw(v);
-    try{ localStorage.setItem(storKey, v); }catch{}
-    // Salva su Sheets colonna N del primo check-in della linea
+    // Salva solo su Sheets, non su localStorage
     fetchConRetry(APPS_SCRIPT_URL+"?action=salvastraordinario&lineaId="+encodeURIComponent(lineaId)+"&oreExtra="+encodeURIComponent(v), 3, 1000).catch(()=>{});
   };
   const oreTotali = 9 + (oreExtra||0);
@@ -797,7 +796,6 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 });
                 let minTot=0;
                 Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
-                console.log("[OBJ] SKU:", skuItem, "matricole:", Object.keys(minPerMat).length, "minTot:", Math.round(minTot), "TC:", tcItem, "→", minTot>0?Math.ceil(minTot/tcItem):null, "| inizioTurno:", Math.floor(_secInizioTurno/3600)+":"+(Math.floor((_secInizioTurno%3600)/60)).toString().padStart(2,"0"), "fineTurno:", Math.floor(secFineTurnoAssoluto/3600)%24+":"+(Math.floor((secFineTurnoAssoluto%3600)/60)).toString().padStart(2,"0"), "oreTotali:", oreTotali);
                 return minTot>0?Math.ceil(minTot/tcItem):null;
               })():null;
               // Obiettivo orario
