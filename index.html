@@ -1385,12 +1385,31 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         setErr("");
     const nKoStr = noteKo.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     const nMiglStr = noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
+    // Spinner durante il salvataggio
+    const btnSalva = document.querySelector("button[data-salva-qualita]");
+    if(btnSalva) btnSalva.disabled = true;
+    setMsg("⏳ Salvataggio in corso...");
     try {
       await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(lineaEffettiva||"")+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(nKoStr)+"&noteMigl="+encodeURIComponent(nMiglStr)+"&obReale="+encodeURIComponent(obRealeQ||"")+"&obTeorico="+encodeURIComponent(obTeoricoQ||""), 5, 1000);
-      setMsg("✓ Salvato!");
+      // Verifica che Sheets abbia salvato interrogando leggiqualita
+      let salvato = false;
+      for(let i=0;i<10;i++){
+        await new Promise(r=>setTimeout(r,2000));
+        try {
+          const r2 = await fetch(APPS_SCRIPT_URL+"?action=leggiqualita");
+          const j2 = await r2.json();
+          if(j2.ok&&j2.data.qualita){
+            const oggi = new Date().toISOString().slice(0,10);
+            const trovato = j2.data.qualita.some(q=>q.sku===sku&&q.linea===lineaEffettiva&&(q.data||"").includes(oggi.split("-").reverse().join("/")));
+            if(trovato){ salvato=true; break; }
+          }
+        } catch(e){}
+      }
+      setMsg(salvato?"✓ Salvato e confermato!":"✓ Inviato (verifica su Sheets)");
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
-    } catch(e){ setErr("Errore salvataggio."); }
-        setTimeout(()=>setMsg(null), 2500);
+    } catch(e){ setErr("Errore salvataggio. Riprova."); setMsg(null); }
+    if(btnSalva) btnSalva.disabled = false;
+        setTimeout(()=>setMsg(null), 3000);
       }
     });
     return;
@@ -1893,6 +1912,20 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   );
 }
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
+  // Ricarica sessioni finché la condizione attesa è vera (max 15 tentativi ogni 2s)
+  const aspettaConfermaSheets = async (verificaFn, onDone) => {
+    for(let i=0; i<15; i++){
+      await new Promise(r=>setTimeout(r,2000));
+      try {
+        const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+        const j = await r.json();
+        if(j.ok && j.data.sessioni){
+          if(verificaFn(j.data.sessioni)){ onDone(j.data.sessioni); return; }
+        }
+      } catch(e){}
+    }
+    onDone(null); // timeout
+  };
   const [modOrario, setModOrario] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [loadingMsg, setLoadingMsg] = React.useState("");
@@ -2207,8 +2240,11 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   }
                   setModTrasf(null);
                   // Ricarica subito + di nuovo dopo 3 secondi per avere i nuovi CHECKIN
-                  if(onAggiornaSessioni){ onAggiornaSessioni(); setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000); }
-                  else setLoading(false);
+                  const nuoveMatricole = ops.map(o=>o.matricola||o.nome);
+                  aspettaConfermaSheets(
+                    sess => nuoveMatricole.every(mat=>sess.some(ss=>(ss.matricola||ss.nome)===mat&&ss.lineaCorrente===modTrasf.lineaDest.id&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"))),
+                    ()=>{ if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
+                  );
                 };
                 return (<>
                   <div style={{background:coloreLinea+"22",border:"1px solid "+coloreLinea+"66",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
@@ -2300,8 +2336,11 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         onOk={async(tipo,nomeCorso)=>{ setLoading(true); setLoadingMsg(tipo==="rientro"?"Rientro in produzione...":"Registrazione corso...");
           if(tipo==="rientro"){ await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); }
           else { await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
-          if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000);
-          else setLoading(false);
+          const _idCorso = modCorso.id;
+          aspettaConfermaSheets(
+            sess => sess.some(ss=>ss.id===_idCorso),
+            ()=>{ if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
+          );
           setModCorso(null); }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #e2e8f0"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
@@ -2378,7 +2417,6 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   }
 
   // Aggiorna e verifica da Sheets
-  if(onAggiornaSessioni) await new Promise(r=>setTimeout(r,3000));
   if(onAggiornaSessioni) onAggiornaSessioni();
 
   // Verifica finale: riprova chi risulta ancora aperto dopo il reload
@@ -2511,7 +2549,11 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     for(const sess of sessioniOp){
       if(onCOSheets) onCOSheets(sess); else onCO(sess.id);
     }
-    if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000); else setLoading(false);
+    const idsChiudere = sessioniOp.map(ss=>ss.id);
+    aspettaConfermaSheets(
+      sess => idsChiudere.every(id=>{ const ss=sess.find(x=>x.id===id); return ss&&ss.fine&&ss.fine!==""; }),
+      (nuoveSessioni)=>{ if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
+    );
   }});
 })(); }}>✕</button>
                           </>
