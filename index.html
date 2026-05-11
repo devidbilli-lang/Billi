@@ -1368,10 +1368,18 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         if(qty && !val){ setErr("❌ Note Migliorabili riga "+(mi2+1)+": seleziona il difetto dall'elenco."); return; }
       }
     }
+    // Validazioni finali sui numeri
+    const _okVal = Number(ok)||0;
+    const _koVal2 = Number(ko)||0;
+    const _miVal2 = Number(migl)||0;
+    if(_okVal < 0){ setErr("❌ Borse Prodotte non può essere negativo."); return; }
+    if(_koVal2 < 0){ setErr("❌ Borse KO non può essere negativo."); return; }
+    if(_miVal2 < 0){ setErr("❌ Migliorabili non può essere negativo."); return; }
+    if(_koVal2 > _okVal && _okVal > 0){ setErr("❌ Le Borse KO ("+_koVal2+") non possono superare le Borse Prodotte ("+_okVal+")."); return; }
     // Mostra modal di conferma
     setModalConfermaQ({
       titolo: "Conferma salvataggio",
-      messaggio: "SKU: "+sku+"\nOK: "+(ok||0)+" | KO: "+(ko||0)+" | Migliorabili: "+(migl||0),
+      messaggio: "SKU: "+sku+"\nBorse Prodotte: "+_okVal+" | KO: "+_koVal2+" | Migliorabili: "+_miVal2,
       onOk: async () => {
         setModalConfermaQ(null);
         setErr("");
@@ -2494,7 +2502,18 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                           <>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
-                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ setModalConferma({titolo:"Chiudi turno",messaggio:"Chiudere il turno di "+s.nome+" "+s.cognome+"?",colorBtn:"ef4444",testoBtn:"✕ Chiudi turno",onOk:async()=>{ setModalConferma(null); setLoading(true); setLoadingMsg("Chiusura turno "+s.nome+"..."); if(onCOSheets) onCOSheets(s); else onCO(s.id); if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000); else setLoading(false); }}); }}>✕</button>
+                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ (()=>{
+  const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
+  const msg = sessioniOp.length>1?"Chiudere il turno di "+s.nome+" "+s.cognome+"? ("+sessioniOp.length+" articoli)":"Chiudere il turno di "+s.nome+" "+s.cognome+"?";
+  setModalConferma({titolo:"Chiudi turno",messaggio:msg,colorBtn:"ef4444",testoBtn:"✕ Chiudi turno",onOk:async()=>{
+    setModalConferma(null); setLoading(true); setLoadingMsg("Chiusura turno "+s.nome+"...");
+    // Chiudi TUTTE le sessioni dell'operatore su questa linea
+    for(const sess of sessioniOp){
+      if(onCOSheets) onCOSheets(sess); else onCO(sess.id);
+    }
+    if(onAggiornaSessioni) setTimeout(()=>{ onAggiornaSessioni(); setLoading(false); },3000); else setLoading(false);
+  }});
+})(); }}>✕</button>
                           </>
                         )}
                       </div>
