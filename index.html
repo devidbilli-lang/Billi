@@ -767,7 +767,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const skuObjItem=skuList.find(x=>x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
               // Obiettivo finale
-              // Calcolo obiettivo reale: somma minuti effettivi per ogni matricola
+              // Calcolo obiettivo: minuti effettivi divisi equamente per numero di articoli attivi
               const obFinaleItem = tcItem>0 ? (()=>{
                 const sessioniLinea = sessioni.filter(s=>
                   (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
@@ -786,7 +786,6 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                   const minBase=Math.max(0,(secFineEff-secIng)/60);
                   if(!minPerMat[mat]) minPerMat[mat]={base:minBase,sottrai:0};
                   else if(minBase>minPerMat[mat].base) minPerMat[mat].base=minBase;
-                  // Sottrai periodi in riparazione o corso
                   if(s.corsi) s.corsi.forEach(c=>{
                     const dC=parseData(c.quando); if(!dC) return;
                     const sC=dC.getHours()*3600+dC.getMinutes()*60;
@@ -796,7 +795,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 });
                 let minTot=0;
                 Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
-                return minTot>0?Math.ceil(minTot/tcItem):null;
+                // Dividi i minuti equamente per il numero di articoli attivi sulla linea
+                const nSkuAttivi = skuAttiviLinea.length||1;
+                const minTotPerSku = minTot / nSkuAttivi;
+                return minTotPerSku>0?Math.ceil(minTotPerSku/tcItem):null;
               })():null;
               // Obiettivo orario
               const secOra2=_now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
