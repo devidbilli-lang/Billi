@@ -812,6 +812,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const pHH2=Math.floor(prossimaOraItem)%24;
               const prossimaOraLabelItem=String(pHH2).padStart(2,"0")+":00";
               const inTurnoItem=prossimaOraItem<=oraTurnoFineItem&&prossimaOraItem>_secInizioTurno/3600;
+              // Dati qualità per questo SKU specifico
+              const _lNome = linee ? (linee.find(l=>l.id===lineaId)||{}).nome||lineaId : lineaId;
+              const qData = qualitaPerSku[lineaId+"_"+skuItem]||qualitaPerSku[_lNome+"_"+skuItem]||{};
               return (
                 <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
                   {/* Header articolo - nome completo viola */}
