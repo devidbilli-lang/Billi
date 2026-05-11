@@ -1930,16 +1930,19 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
 function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   // Ricarica sessioni finché la condizione attesa è vera (max 15 tentativi ogni 2s)
   const aspettaConfermaSheets = async (verificaFn, onDone) => {
-    for(let i=0; i<15; i++){
+    // Timeout garantito: dopo 20s chiude lo spinner comunque
+    const timeoutId = setTimeout(()=>{ onDone(null); }, 20000);
+    for(let i=0; i<8; i++){
       await new Promise(r=>setTimeout(r,2000));
       try {
         const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
         const j = await r.json();
         if(j.ok && j.data.sessioni){
-          if(verificaFn(j.data.sessioni)){ onDone(j.data.sessioni); return; }
+          if(verificaFn(j.data.sessioni)){ clearTimeout(timeoutId); onDone(j.data.sessioni); return; }
         }
       } catch(e){}
     }
+    clearTimeout(timeoutId);
     onDone(null); // timeout
   };
   const [modOrario, setModOrario] = React.useState(null);
@@ -2280,9 +2283,11 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   setModTrasf(null);
                   // Ricarica subito + di nuovo dopo 3 secondi per avere i nuovi CHECKIN
                   const nuoveMatricole = ops.map(o=>o.matricola||o.nome);
+                  // Timeout di sicurezza: chiude spinner dopo 25s comunque
+                  const _tTimeout = setTimeout(()=>{ setLoading(false); if(onAggiornaSessioni) onAggiornaSessioni(); }, 25000);
                   aspettaConfermaSheets(
                     sess => nuoveMatricole.every(mat=>sess.some(ss=>(ss.matricola||ss.nome)===mat&&ss.lineaCorrente===modTrasf.lineaDest.id&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"))),
-                    ()=>{ if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
+                    ()=>{ clearTimeout(_tTimeout); if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
                   );
                 };
                 return (<>
@@ -2376,9 +2381,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           if(tipo==="rientro"){ await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); }
           else { await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
           const _idCorso = modCorso.id;
+          const _tCorso = setTimeout(()=>{ setLoading(false); if(onAggiornaSessioni) onAggiornaSessioni(); }, 25000);
           aspettaConfermaSheets(
             sess => sess.some(ss=>ss.id===_idCorso),
-            ()=>{ if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
+            ()=>{ clearTimeout(_tCorso); if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
           );
           setModCorso(null); }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #e2e8f0"}}>
@@ -2451,8 +2457,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     for(const s of falliti){ await checkoutOp(s); }
   }
 
-  // Aggiorna e verifica da Sheets
+  // Aggiorna e chiudi spinner
   if(onAggiornaSessioni) onAggiornaSessioni();
+  setLoading(false);
 
   // Verifica finale: riprova chi risulta ancora aperto dopo il reload
   await new Promise(r=>setTimeout(r,4000));
@@ -2585,9 +2592,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       if(onCOSheets) onCOSheets(sess); else onCO(sess.id);
     }
     const idsChiudere = sessioniOp.map(ss=>ss.id);
+    const _tCo = setTimeout(()=>{ setLoading(false); if(onAggiornaSessioni) onAggiornaSessioni(); }, 25000);
     aspettaConfermaSheets(
       sess => idsChiudere.every(id=>{ const ss=sess.find(x=>x.id===id); return ss&&ss.fine&&ss.fine!==""; }),
-      (nuoveSessioni)=>{ if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
+      (nuoveSessioni)=>{ clearTimeout(_tCo); if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
     );
   }});
 })(); }}>✕</button>
