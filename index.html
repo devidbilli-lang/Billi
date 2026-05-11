@@ -768,9 +768,37 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const skuObjItem=skuList.find(x=>x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
               // Obiettivo finale
-              const minTotaliItem=tcItem>0&&secFineTurnoAssoluto>_secInizioTurno
-                ?Math.max(0,(secFineTurnoAssoluto-_secInizioTurno)/60)*nOpProduzione:0;
-              const obFinaleItem=tcItem>0&&minTotaliItem>0?Math.ceil(minTotaliItem/tcItem):null;
+              // Calcolo obiettivo reale: somma minuti effettivi per ogni matricola
+              const obFinaleItem = tcItem>0 ? (()=>{
+                const sessioniLinea = sessioni.filter(s=>
+                  (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
+                );
+                const minPerMat = {};
+                sessioniLinea.forEach(s=>{
+                  const mat=s.matricola||s.nome; if(!mat) return;
+                  const sku=s.skuCorrente||s.sku||"";
+                  if(isSkuSpeciale(sku)) return;
+                  if(s.lineaCorrente!==lineaId&&(!s.trasferimenti||!s.trasferimenti.some(t=>(t.a||"").trim()===lineaId))) return;
+                  const dInizio=parseData(s.inizio); if(!dInizio) return;
+                  const attiva=!s.fine||s.fine===""||s.fine===null||s.fine==="null";
+                  const dFine=attiva?null:parseData(s.fine);
+                  const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
+                  const secFineEff=attiva?secFineTurnoAssoluto:(dFine?Math.min(dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds(),secFineTurnoAssoluto):secFineTurnoAssoluto);
+                  const minBase=Math.max(0,(secFineEff-secIng)/60);
+                  if(!minPerMat[mat]) minPerMat[mat]={base:minBase,sottrai:0};
+                  else if(minBase>minPerMat[mat].base) minPerMat[mat].base=minBase;
+                  // Sottrai periodi in riparazione o corso
+                  if(s.corsi) s.corsi.forEach(c=>{
+                    const dC=parseData(c.quando); if(!dC) return;
+                    const sC=dC.getHours()*3600+dC.getMinutes()*60;
+                    const eC=c.rientro?(()=>{const dR=parseData(c.rientro);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineTurnoAssoluto;})():secFineTurnoAssoluto;
+                    minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60);
+                  });
+                });
+                let minTot=0;
+                Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
+                return minTot>0?Math.ceil(minTot/tcItem):null;
+              })():null;
               // Obiettivo orario
               const secOra2=_now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
               const orePassateItem=Math.max(0,(secOra2-_secInizioTurno)/3600);
