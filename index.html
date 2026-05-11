@@ -797,6 +797,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 });
                 let minTot=0;
                 Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
+                console.log("[OBJ] SKU:", skuItem, "matricole:", Object.keys(minPerMat).length, "minTot:", Math.round(minTot), "TC:", tcItem, "→", minTot>0?Math.ceil(minTot/tcItem):null);
                 return minTot>0?Math.ceil(minTot/tcItem):null;
               })():null;
               // Obiettivo orario
