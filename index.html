@@ -799,9 +799,18 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 });
                 let minTot=0;
                 Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
-                // Dividi i minuti equamente per il numero di articoli attivi sulla linea
-                const nSkuAttivi = skuAttiviLinea.length||1;
-                const minTotPerSku = minTot / nSkuAttivi;
+                // Conta operatori attivi su questo SKU specifico
+                const opSuQuestoSku = new Set(sessioni.filter(s=>
+                  s.lineaCorrente===lineaId &&
+                  (s.skuCorrente||s.sku)===skuItem &&
+                  (!s.fine||s.fine===""||s.fine===null||s.fine==="null") &&
+                  !isSkuSpeciale(s.skuCorrente||s.sku||"")
+                ).map(s=>s.matricola||s.nome));
+                const nOpSuSku = opSuQuestoSku.size || 1;
+                const nOpTotLinea = Object.keys(minPerMat).length || 1;
+                // Se tutti gli op sono su un solo SKU: usa minuti totali
+                // Se distribuiti su più SKU: usa proporzione
+                const minTotPerSku = minTot * (nOpSuSku / nOpTotLinea);
                 return minTotPerSku>0?Math.ceil(minTotPerSku/tcItem):null;
               })():null;
               // Obiettivo orario
