@@ -825,7 +825,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                 <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
                   {/* Header articolo - nome completo viola */}
                   {(()=>{
-                    const nOpSku = new Set(sessioni.filter(s=>s.lineaCorrente===lineaId&&(s.skuCorrente||s.sku)===skuItem&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size;
+                    // Divisione equa: per ogni operatore dividi per il numero di SKU su cui lavora
+                    const _opLinea = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!isSkuSpeciale(s.skuCorrente||s.sku||""));
+                    const _skuPerOp = {};
+                    _opLinea.forEach(s=>{ const m=s.matricola||s.nome; if(!m) return; if(!_skuPerOp[m]) _skuPerOp[m]=new Set(); _skuPerOp[m].add(s.skuCorrente||s.sku); });
+                    // Conta quota virtuale per questo SKU
+                    let nOpSku = 0;
+                    Object.entries(_skuPerOp).forEach(([mat, skus])=>{ if(skus.has(skuItem)) nOpSku += 1/skus.size; });
+                    nOpSku = Math.round(nOpSku * 10) / 10; // arrotonda a 1 decimale
                     return (
                     <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:hdrPad,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
