@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRkXf-wWH-WHp8TacM1SqNoEXjaxsOMu9QnoWGdKFRHhwLQm8UptQLh5jc0Dnk8KI8Gw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxY7Uk7dGsDLRswQTxsKgXT7V-PfnTPd8HN8WPA2WXAP16RbUc_qdPxq1s-ZWjCv7esnw/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -773,45 +773,41 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               // Obiettivo finale
               // Calcolo obiettivo: minuti effettivi divisi equamente per numero di articoli attivi
               const obFinaleItem = tcItem>0 ? (()=>{
-                const sessioniLinea = sessioni.filter(s=>
-                  (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
+                // Filtra solo sessioni attive su questo SKU specifico
+                const sessioniSku = sessioni.filter(s=>
+                  s.lineaCorrente===lineaId &&
+                  (s.skuCorrente||s.sku)===skuItem &&
+                  (!s.fine||s.fine===""||s.fine===null||s.fine==="null") &&
+                  !isSkuSpeciale(s.skuCorrente||s.sku||"") &&
+                  s.inizio
                 );
-                const minPerMat = {};
-                sessioniLinea.forEach(s=>{
+                // Conta SKU simultanei per ogni matricola (per divisione equa)
+                const nSimPerMatItem = {};
+                sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!isSkuSpeciale(s.skuCorrente||s.sku||"")).forEach(s=>{
                   const mat=s.matricola||s.nome; if(!mat) return;
-                  const sku=s.skuCorrente||s.sku||"";
-                  if(isSkuSpeciale(sku)) return;
-                  if(s.lineaCorrente!==lineaId&&(!s.trasferimenti||!s.trasferimenti.some(t=>(t.a||"").trim()===lineaId))) return;
+                  const ts=parseData(s.inizio); if(!ts) return;
+                  if(!nSimPerMatItem[mat]) nSimPerMatItem[mat]={skus:new Set(),tsMin:ts.getTime()};
+                  nSimPerMatItem[mat].skus.add(s.skuCorrente||s.sku);
+                  if(ts.getTime()<nSimPerMatItem[mat].tsMin) nSimPerMatItem[mat].tsMin=ts.getTime();
+                });
+                const minPerMat = {};
+                sessioniSku.forEach(s=>{
+                  const mat=s.matricola||s.nome; if(!mat) return;
                   const dInizio=parseData(s.inizio); if(!dInizio) return;
-                  const attiva=!s.fine||s.fine===""||s.fine===null||s.fine==="null";
-                  const dFine=attiva?null:parseData(s.fine);
                   const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
-                  const secFineEff=attiva?secFineTurnoAssoluto:(dFine?Math.min(dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds(),secFineTurnoAssoluto):secFineTurnoAssoluto);
-                  const minBase=Math.max(0,(secFineEff-secIng)/60);
-                  if(!minPerMat[mat]) minPerMat[mat]={base:minBase,sottrai:0};
-                  else if(minBase>minPerMat[mat].base) minPerMat[mat].base=minBase;
+                  const minBase=Math.max(0,(secFineTurnoAssoluto-secIng)/60);
+                  const nSim=nSimPerMatItem[mat]?nSimPerMatItem[mat].skus.size:1;
+                  if(!minPerMat[mat]) minPerMat[mat]={base:minBase/nSim,sottrai:0};
                   if(s.corsi) s.corsi.forEach(c=>{
                     const dC=parseData(c.quando); if(!dC) return;
                     const sC=dC.getHours()*3600+dC.getMinutes()*60;
                     const eC=c.rientro?(()=>{const dR=parseData(c.rientro);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineTurnoAssoluto;})():secFineTurnoAssoluto;
-                    minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60);
+                    minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60)/nSim;
                   });
                 });
                 let minTot=0;
                 Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
-                // Conta operatori attivi su questo SKU specifico
-                const opSuQuestoSku = new Set(sessioni.filter(s=>
-                  s.lineaCorrente===lineaId &&
-                  (s.skuCorrente||s.sku)===skuItem &&
-                  (!s.fine||s.fine===""||s.fine===null||s.fine==="null") &&
-                  !isSkuSpeciale(s.skuCorrente||s.sku||"")
-                ).map(s=>s.matricola||s.nome));
-                const nOpSuSku = opSuQuestoSku.size || 1;
-                const nOpTotLinea = Object.keys(minPerMat).length || 1;
-                // Se tutti gli op sono su un solo SKU: usa minuti totali
-                // Se distribuiti su più SKU: usa proporzione
-                const minTotPerSku = minTot * (nOpSuSku / nOpTotLinea);
-                return minTotPerSku>0?Math.ceil(minTotPerSku/tcItem):null;
+                return minTot>0?Math.ceil(minTot/tcItem):null;
               })():null;
               // Obiettivo orario
               const secOra2=_now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
