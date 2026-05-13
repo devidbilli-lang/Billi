@@ -81,7 +81,7 @@ const fetchTimeout = (url, ms=20000) => { const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 };
-async function fetchConRetry(url, tentativi=5, delayMs=1000) {
+async function fetchConRetry(url, tentativi=8, delayMs=800) {
   for (let i = 0; i < tentativi; i++) {
     try {
       const ctrl = new AbortController();
@@ -132,8 +132,8 @@ async function codaProcessa() {
     if(nuova.length) console.warn("[CODA] "+nuova.length+" eventi ancora in sospeso");
   } catch(e) {}
 }
-setInterval(codaProcessa, 30000);
-setTimeout(codaProcessa, 3000);
+setInterval(codaProcessa, 10000); // ogni 10 secondi
+setTimeout(codaProcessa, 2000); // prima esecuzione dopo 2s
 
 const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } },
   async evento(p) {
