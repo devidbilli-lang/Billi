@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBsfpBUGNV9qveSLBK_IWUGkb-qbAeOOt5PBD0vFvKwk2sOMhCM_cVZLn8xVQEYCeR8Q/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUvWvIfHYg1xX-SwdhDZ9gPbtOUdfIIKH-WQPBUYaLR3SBEhy3B-AqUtZn5WqPE70RSg/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -2773,7 +2773,18 @@ function App() { const [view,setView]             = useState("login");
         // Prima cerca nelle linee già caricate
         const lineaDiretta = linee.find(l => l.id.toLowerCase() === nomeLinea.toLowerCase());
         if(lineaDiretta) {
-          // Mostra richiesta password invece di entrare subito
+          // Se c'è un token nell'URL, verifica e logga direttamente
+          const autoToken = getUrlParam("token");
+          if(autoToken) {
+            const tokenOk = lineaDiretta.tokenLinea && 
+                            autoToken.toUpperCase() === lineaDiretta.tokenLinea.toUpperCase();
+            if(tokenOk) {
+              setAccesso({ruolo:"linea", linea:lineaDiretta});
+              setView("checkin");
+              return;
+            }
+          }
+          // Altrimenti mostra richiesta password
           setAutologinLinea(lineaDiretta);
           return;
         }
