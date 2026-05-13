@@ -2217,7 +2217,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 <div style={{fontSize:13,color:"#475569",marginBottom:8}}>Seleziona gli <strong>articoli</strong> su cui lavoreranno sulla linea <strong>{modTrasf.lineaDest.id}</strong></div>
                 <input style={{...S.inp,fontSize:13,marginBottom:6}} placeholder="Filtra articoli..." value={modTrasf.cercaSku||""} onChange={e=>setModTrasf({...modTrasf,cercaSku:e.target.value.toUpperCase()})}/>
                 <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #a855f7",borderRadius:8,background:"#faf5ff",marginBottom:10}}>
-                  {(()=>{ const _skuD=new Set(sessioni.filter(s=>s.lineaCorrente===modTrasf.lineaDest.id&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente)).map(s=>s.skuCorrente||s.sku)); return skuList.filter(s=>!s.speciale&&(_skuD.size===0||_skuD.has(s.sku))&&(!modTrasf.cercaSku||s.sku.includes(modTrasf.cercaSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(modTrasf.cercaSku))||(s.collezione&&s.collezione.toUpperCase().includes(modTrasf.cercaSku)))).map(s=>{
+                  {skuList.filter(s=>!s.speciale&&(!modTrasf.cercaSku||s.sku.includes(modTrasf.cercaSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(modTrasf.cercaSku))||(s.collezione&&s.collezione.toUpperCase().includes(modTrasf.cercaSku)))).map(s=>{
                     const sel=(modTrasf.skuMultiDest||[]).includes(s.sku);
                     return (
                       <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"#ede9fe":"transparent",borderBottom:"1px solid #e9d5ff"}}>
@@ -2233,7 +2233,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                         {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:"auto"}}>{s.collezione}</span>}
                       </label>
                     );
-                  }); })()}
+                  })}
                 </div>
                 {(modTrasf.skuMultiDest||[]).length>0&&(
                   <div style={{marginBottom:8,padding:"6px 10px",background:"#a855f711",borderRadius:6,fontSize:12,color:"#7c3aed",fontWeight:700}}>
