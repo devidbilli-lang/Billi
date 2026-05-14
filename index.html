@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby93igOs8Xu7YFiexpV7_lCqWiy5aDGWPrJwWGrcrJ5ejv8uQspJC2Jr6trh7ViWhv6dg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVGArd1f4ZNKGuegvDhtH7iUZwKi2SSbZn5mCEv-HlKsEloO0i_ulUXsVRZJghZldHVg/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -479,11 +479,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const labelInizio = _primoCheckinDate
     ? String(_primoCheckinDate.getHours()).padStart(2,"0")+":"+String(_primoCheckinDate.getMinutes()).padStart(2,"0")
     : "06:00";
-  // Se check-in prima delle 06:00 -> fine alle 14:00 esatte; dopo -> inizio + 8h
   const _oreInizio = _secInizioTurno / 3600;
-  const secFineTurnoAssoluto = _oreInizio < 6
-    ? (14 + (oreExtra||0)) * 3600  // 14:00 + straordinario
-    : _secInizioTurno + oreTotali*3600;
+  const secFineTurnoAssoluto = _secInizioTurno + oreTotali*3600;
   const _hFine = Math.floor(secFineTurnoAssoluto/3600)%24;
   const _mFine = Math.round((secFineTurnoAssoluto%3600)/60);
   const labelFine = String(_hFine).padStart(2,"0")+":"+String(_mFine).padStart(2,"0");
@@ -1015,9 +1012,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               <div style={{position:"relative",height:24,marginTop:2}}>
                 {Array.from({length:Math.ceil(oreTotali)+1},(_,h)=>h).map(h=>{
                   const pct=h/oreTotali*100;
-                  // Se check-in prima delle 06:00, la barra parte dalle 06:00
-                  const _secBarraInizio = _oreInizio < 6 ? 6*3600 : _secInizioTurno;
-                  const secLabel = _secBarraInizio + h*3600;
+                  const secLabel = _secInizioTurno + h*3600;
                   const hh = Math.floor(secLabel/3600)%24;
                   const mm = Math.floor((secLabel%3600)/60);
                   const label = String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
