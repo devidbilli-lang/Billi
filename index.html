@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUvWvIfHYg1xX-SwdhDZ9gPbtOUdfIIKH-WQPBUYaLR3SBEhy3B-AqUtZn5WqPE70RSg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPkKGpDdYznDTdrUzWUhd---EF0f0RcynwVJaIG13zcfJM_0RTffbl7a4QTBAySDZlWQ/exec";
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -124,9 +124,13 @@ async function codaProcessa() {
       try {
         const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),15000);
         const r=await fetch(ev.url,{signal:ctrl.signal}).finally(()=>clearTimeout(tid));
-        if(r.ok){ console.log("[CODA] OK:", ev.url.substring(0,60)); }
-        else { ev.tentativi++; nuova.push(ev); } // nessun limite di retry - riprova finché non riesce
-      } catch(e){ ev.tentativi++; nuova.push(ev); } // nessun limite di retry - riprova finché non riesce
+        if(r.ok){ 
+          console.log("[CODA] OK:", ev.url.substring(0,60));
+          // Pausa 500ms tra richieste per non sovraccaricare Apps Script
+          await new Promise(r=>setTimeout(r,500));
+        }
+        else { ev.tentativi++; nuova.push(ev); }
+      } catch(e){ ev.tentativi++; nuova.push(ev); }
     }
     localStorage.setItem(CODA_KEY,JSON.stringify(nuova));
     if(nuova.length) console.warn("[CODA] "+nuova.length+" eventi ancora in sospeso");
@@ -139,16 +143,19 @@ const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+
   async evento(p) {
     const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
     const url = APPS_SCRIPT_URL+"?"+q.toString();
-    // Aggiungi alla coda prima di inviare - garantisce che venga inviato anche se fallisce
+    // Aggiungi sempre alla coda PRIMA di inviare - nessun dato perso
     codaAggiungi(url);
-    try {
-      await fetchVeloce(url, 3);
-      // Successo - rimuovi dalla coda
-      codaRimuovi(url);
-    } catch(e) {
-      // Fallito - rimane in coda e verrà riprovato ogni 30s (max 5 volte)
-      console.warn("[CODA] Evento in coda per retry:", p.tipo, p.nome);
-    }
+    // Prova subito in background senza bloccare l'UI
+    (async()=>{
+      try {
+        const ctrl=new AbortController();
+        const tid=setTimeout(()=>ctrl.abort(),12000);
+        const r=await fetch(url,{mode:"cors",signal:ctrl.signal}).finally(()=>clearTimeout(tid));
+        if(r&&r.ok) codaRimuovi(url);
+      } catch(e){
+        console.warn("[CODA] Evento in coda per retry:", p.tipo, p.nome);
+      }
+    })();
   },
   async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
 };
