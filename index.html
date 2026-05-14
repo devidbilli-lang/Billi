@@ -1015,7 +1015,9 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               <div style={{position:"relative",height:24,marginTop:2}}>
                 {Array.from({length:Math.ceil(oreTotali)+1},(_,h)=>h).map(h=>{
                   const pct=h/oreTotali*100;
-                  const secLabel = _secInizioTurno + h*3600;
+                  // Se check-in prima delle 06:00, la barra parte dalle 06:00
+                  const _secBarraInizio = _oreInizio < 6 ? 6*3600 : _secInizioTurno;
+                  const secLabel = _secBarraInizio + h*3600;
                   const hh = Math.floor(secLabel/3600)%24;
                   const mm = Math.floor((secLabel%3600)/60);
                   const label = String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
