@@ -479,11 +479,14 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const labelInizio = _primoCheckinDate
     ? String(_primoCheckinDate.getHours()).padStart(2,"0")+":"+String(_primoCheckinDate.getMinutes()).padStart(2,"0")
     : "06:00";
-  const _oreFineDecimale = _secInizioTurno/3600 + oreTotali;
-  const _hFine = Math.floor(_oreFineDecimale)%24;
-  const _mFine = Math.round((_oreFineDecimale%1)*60);
+  // Se check-in prima delle 06:00 -> fine alle 14:00 esatte; dopo -> inizio + 8h
+  const _oreInizio = _secInizioTurno / 3600;
+  const secFineTurnoAssoluto = _oreInizio < 6
+    ? (14 + (oreExtra||0)) * 3600  // 14:00 + straordinario
+    : _secInizioTurno + oreTotali*3600;
+  const _hFine = Math.floor(secFineTurnoAssoluto/3600)%24;
+  const _mFine = Math.round((secFineTurnoAssoluto%3600)/60);
   const labelFine = String(_hFine).padStart(2,"0")+":"+String(_mFine).padStart(2,"0");
-  const secFineTurnoAssoluto = _secInizioTurno + oreTotali*3600;
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
   // Deduplica per matricola: una matricola = un operatore (prendi sessione più recente)
   const sessAttivePerMat = {};
