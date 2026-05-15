@@ -1194,14 +1194,8 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               );
             })()}
             {g!==null&&(
-              <div style={{marginBottom:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <span style={{fontSize:14,fontWeight:700,color:colRampa}}>📈 Giorno {g} / 15{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
-                  <span style={{fontSize:12,color:colRampa,fontWeight:700}}>{Math.round(g/15*100)}%</span>
-                </div>
-                <div style={{height:18,background:"#e2e8f0",borderRadius:9,overflow:"hidden",position:"relative"}}>
-                  <div style={{height:"100%",width:(g/15*100)+"%",background:completata?"linear-gradient(90deg,#22c55e,#16a34a)":"linear-gradient(90deg,#f59e0b,#d97706)",borderRadius:9,transition:"width 0.8s ease"}}/>
-                </div>
+              <div style={{marginBottom:6}}>
+                <span style={{fontSize:13,fontWeight:700,color:colRampa}}>📈 Giorno {g} / 15{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
               </div>
             )}
             {rampa&&rampa.dal&&(()=>{
@@ -2543,12 +2537,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         onOk={async(tipo,nomeCorso)=>{ setLoading(true); setLoadingMsg(tipo==="rientro"?"Rientro in produzione...":"Registrazione corso...");
           if(tipo==="rientro"){ await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); }
           else { await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
-          const _idCorso = modCorso.id;
-          const _tCorso = setTimeout(()=>{ setLoading(false); if(onAggiornaSessioni) onAggiornaSessioni(); }, 25000);
-          aspettaConfermaSheets(
-            sess => sess.some(ss=>ss.id===_idCorso),
-            ()=>{ clearTimeout(_tCorso); if(onAggiornaSessioni) onAggiornaSessioni(); setLoading(false); }
-          );
+          // D1 è già aggiornato (api.evento ha await per RIENTRO/CORSO)
+          // Aggiorna sessioni e chiudi
+          if(onAggiornaSessioni) onAggiornaSessioni();
+          setLoading(false);
           setModCorso(null); }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #e2e8f0"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
