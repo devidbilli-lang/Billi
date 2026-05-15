@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby7ii5_k4jiRPwQ
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
