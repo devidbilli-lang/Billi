@@ -1176,7 +1176,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
       setLoading(false);
     };
     carica();
-    const t = setInterval(carica, 30000);
+    const t = setInterval(carica, 60000);
     return () => clearInterval(t);
   }, []);
   const dati = lineaFiltro ? qualita.filter(q => q.linea === lineaFiltro.id) : qualita;
@@ -1897,7 +1897,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   );
 }
 function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
-  useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),30000); return()=>clearInterval(t); },[]);
+  useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),60000); return()=>clearInterval(t); },[]);
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -2015,7 +2015,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       } catch(e){}
     };
     caricaProd();
-    const tp = setInterval(caricaProd, 30000);
+    const tp = setInterval(caricaProd, 60000);
     return ()=>clearInterval(tp);
   },[]);
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
@@ -2032,7 +2032,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   const [modCambioSku,setModCambioSku] = useState(null);
   const [modNoteLinea,setModNoteLinea] = useState(null);
   const [popupSkuOp,setPopupSkuOp] = useState(null);
-  useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),30000);return()=>clearInterval(t);},[]);
+  useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
     // Costruisce mappa: matricola -> Set di linee su cui ha sessione ATTIVA
   const matricoleAttivePerLinea = {};
   sessioni.forEach(s=>{
@@ -2837,7 +2837,7 @@ function App() { const [view,setView]             = useState("login");
         setDashSync("ok"); setUltimoSync2(new Date());
         } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
   useEffect(()=>{ caricaSessioni();
-    const t = setInterval(caricaSessioni, 15000);
+    const t = setInterval(caricaSessioni, 30000);
     return ()=>clearInterval(t); },[caricaSessioni]);
   const add = s => { setSess(p=>[s,...p]);
     api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")}); };
