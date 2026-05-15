@@ -2195,7 +2195,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 titolo:"Elimina sessione",
                 messaggio:"Eliminare definitivamente la sessione di "+modOrario.sess.nome+" "+modOrario.sess.cognome+"?",
                 colorBtn:"ef4444", testoBtn:"🗑 Elimina",
-                onOk:async()=>{ setModalConferma(null); setLoading(true); setLoadingMsg("Eliminazione sessione..."); try{ await fetchConRetry(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),5,1000); setSalvaOrarioErr(""); if(onAggiornaSessioni) onAggiornaSessioni(); }catch(e){ setSalvaOrarioErr("Errore eliminazione."); } finally{setLoading(false);} }
+                onOk:async()=>{ setModalConferma(null); setLoading(true); setLoadingMsg("Eliminazione sessione..."); try{ await fetchConRetry(nexusUrl("eliminasessione",{sessionId:modOrario.sess.id}),5,1000); setSalvaOrarioErr(""); if(onAggiornaSessioni) onAggiornaSessioni(); }catch(e){ setSalvaOrarioErr("Errore eliminazione."); } finally{setLoading(false);} }
               });
             }}>🗑 Elimina sessione</button>
           </div>
@@ -2422,7 +2422,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                       if(!modNoteLinea.sku){ alert("Seleziona un articolo."); return; }
                       if(!(modNoteLinea.nota||"").trim()){ alert("Inserisci una nota."); return; }
                       try {
-                        await fetchConRetry(APPS_SCRIPT_URL+"?action=notariepilogo&linea="+encodeURIComponent(modNoteLinea.linea.id)+"&sku="+encodeURIComponent(modNoteLinea.sku)+"&nota="+encodeURIComponent(modNoteLinea.nota), 5, 1000);
+                        await fetchConRetry(nexusUrl("notariepilogo",{linea:modNoteLinea.linea.id,sku:modNoteLinea.sku,nota:modNoteLinea.nota}), 5, 1000);
                         alert("✓ Nota salvata nel Riepilogo!");
                         setModNoteLinea(null);
                       } catch(e){ alert("Errore salvataggio."); }
