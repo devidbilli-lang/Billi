@@ -181,13 +181,18 @@ const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+
     const url = nexusUrl("evento",{sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
     // Salva in coda PRIMA — nessun dato perso anche se il browser si chiude
     codaAggiungi(url);
-    // Prova subito in background
+    // Prova subito in background su D1
     (async()=>{
       try {
         const ctrl=new AbortController();
         const tid=setTimeout(()=>ctrl.abort(),12000);
         const r=await fetch(url,{mode:"cors",signal:ctrl.signal}).finally(()=>clearTimeout(tid));
-        if(r&&r.ok){ codaRimuovi(url); }
+        if(r&&r.ok){
+          codaRimuovi(url);
+          // Scrivi anche su Sheets in background (dal browser, non dal Worker)
+          const asUrl = APPS_SCRIPT_URL+"?"+new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""}).toString();
+          fetch(asUrl,{mode:"cors"}).catch(()=>{});
+        }
       } catch(e){
         console.warn("[CODA] In attesa di retry:", p.tipo, p.matricola, p.sku);
       }
