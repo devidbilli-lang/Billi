@@ -2195,16 +2195,17 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 titolo:"Elimina sessione",
                 messaggio:"Eliminare definitivamente la sessione di "+modOrario.sess.nome+" "+modOrario.sess.cognome+"?",
                 colorBtn:"ef4444", testoBtn:"🗑 Elimina",
-                onOk:async()=>{ 
+                onOk:async()=>{
   setModalConferma(null); setLoading(true); setLoadingMsg("Eliminazione sessione...");
-  // Chiudi il pannello subito
-  setModOrario(null); setSalvaOrarioErr(""); setLoading(false);
-  // Elimina da D1 in background
-  fetch(nexusUrl("eliminasessione",{sessionId:modOrario.sess.id}),{mode:"cors"}).catch(()=>{});
-  // Scrivi eliminazione anche su Sheets in background
-  fetch(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),{mode:"cors"}).catch(()=>{});
-  // Aggiorna sessioni dopo 1 secondo
-  setTimeout(()=>{ if(onAggiornaSessioni) onAggiornaSessioni(); }, 1000);
+  try{
+    // Aspetta D1 (veloce < 100ms)
+    await fetch(nexusUrl("eliminasessione",{sessionId:modOrario.sess.id}),{mode:"cors"});
+    // Sheets in background
+    fetch(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(modOrario.sess.id),{mode:"cors"}).catch(()=>{});
+    setModOrario(null); setSalvaOrarioErr("");
+    if(onAggiornaSessioni) onAggiornaSessioni();
+  }catch(e){ setSalvaOrarioErr("Errore eliminazione."); }
+  finally{ setLoading(false); }
 }
               });
             }}>🗑 Elimina sessione</button>
