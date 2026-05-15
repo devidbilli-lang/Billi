@@ -1816,9 +1816,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
             {mode==="rientro"&&sf&&(()=>{ const corsi = sf.corsi||[]; const haSospeso = corsi.some(c=>c.tipo==="sospendi");
               if(!haSospeso) return <div style={{...S.err}}>Questo operatore non ha corsi sospesi.</div>;
-              return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={()=>{
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
-                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
+              return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={async()=>{
+                await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
+                if(aggiornaSessioni) aggiornaSessioni();
                 setRis({tipo:"rientro",sess:sf});setMode("result"); }}>▶ Conferma Rientro in Produzione</button>; })()}
             {mode==="corso"&&sf&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
               if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
@@ -2537,11 +2537,9 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         onOk={async(tipo,nomeCorso)=>{ setLoading(true); setLoadingMsg(tipo==="rientro"?"Rientro in produzione...":"Registrazione corso...");
           if(tipo==="rientro"){ await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); }
           else { await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
-          // D1 è già aggiornato (api.evento ha await per RIENTRO/CORSO)
-          // Aggiorna sessioni e chiudi
-          if(onAggiornaSessioni) onAggiornaSessioni();
+          setModCorso(null);
           setLoading(false);
-          setModCorso(null); }}/>}
+          if(onAggiornaSessioni) onAggiornaSessioni(); }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #e2e8f0"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><LogoSpinner size={48}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
