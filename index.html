@@ -41,7 +41,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby7ii5_k4jiRPwQfHyHNCcWNqR3anEuE2rmx_A8rM1yANrkgTvE5NJjCzsV-z_eqcRaKg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_g2ndkYi3IBKqO6-xgH96wO2AdKw_VO5rrKLHmNcZJ7RYLdhzH-VWBWHmcWNjj9oFrw/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -182,10 +182,19 @@ const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+
   async evento(p) {
     // Salva in coda prima — nessun dato perso
     codaAggiungi(p);
-    // Prova subito in background
-    inviaEvento(p).then(ok=>{
-      if(ok) codaRimuovi(codaChiave(p));
-    }).catch(()=>{});
+    // Aspetta D1 per azioni critiche (RIENTRO, CORSO, CHECKOUT, TRASFERIMENTO)
+    const critiche = ["RIENTRO","CORSO","CHECKOUT","TRASFERIMENTO","CAMBIOSKU"];
+    if(critiche.includes((p.tipo||"").toUpperCase())) {
+      try {
+        const ok = await inviaEvento(p);
+        if(ok) codaRimuovi(codaChiave(p));
+      } catch(e) {}
+    } else {
+      // Per CHECKIN: fire and forget
+      inviaEvento(p).then(ok=>{
+        if(ok) codaRimuovi(codaChiave(p));
+      }).catch(()=>{});
+    }
   },
   async reset(){ try{ await fetchTimeout(nexusUrl("reset",{})); }catch{} }
 };
@@ -1135,6 +1144,13 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
 }
 
 function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
+  const [riepilogo, setRiepilogo] = useState([]);
+  useEffect(()=>{
+    // Carica riepilogo da Apps Script per dati storici borse prodotte
+    fetch(APPS_SCRIPT_URL+"?action=leggiRiepilogo").then(r=>r.json()).then(j=>{
+      if(j.ok&&j.data&&j.data.righe) setRiepilogo(j.data.righe);
+    }).catch(()=>{});
+  },[]);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
   const rampaMap = {};
   for(const r of (rampeSheets||[])){ if(r.sku && r.rampaDal){ const g = giorniLavorativiJS(r.rampaDal);
@@ -1144,9 +1160,9 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
     if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=giorniLavorativiJS(rdal); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } } }
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
-  // Mostra solo SKU con rampa che hanno ancora sessioni attive
+  // Mostra solo SKU con rampa attiva (non completata)
   const tuttiSku = [...new Set([...Object.keys(rampaMap),...Object.keys(totMap)])]
-    .filter(sku => totMap[sku] || (rampaMap[sku] && sessioni.some(s=>(s.skuCorrente||s.sku)===sku)))
+    .filter(sku => rampaMap[sku] && (rampaMap[sku].giorni||0) < 15)
     .sort();
   if(!tuttiSku.length) return (
     <div style={{textAlign:"center",padding:60,color:"#64748b"}}>
@@ -1188,6 +1204,88 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                 </div>
               </div>
             )}
+            {rampa&&rampa.dal&&(()=>{
+              // Grafico rampa di crescita
+              const PERC = [0,20,35,45,55,64,73,76,82,85,88,92,95,98,100];
+              const tc = (skuList.find(s=>s.sku===sku)||{}).tc_minuti || (skuList.find(s=>s.sku===sku)||{}).tcMinuti || 0;
+              // Conta operatori attivi su questo SKU
+              const nOp = new Set(sessioni.filter(s=>(s.skuCorrente||s.sku)===sku&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size || 1;
+              const minTurno = nOp * 8 * 60; // minuti totali turno
+              // Obiettivo teorico a pieno regime (giorno 15)
+              const obMax = tc > 0 ? Math.floor(minTurno / tc) : 0;
+              // Curva teorica per ogni giorno
+              const curvaOb = PERC.map(p => obMax > 0 ? Math.round(obMax * p / 100) : 0);
+              if(obMax === 0) return null;
+              // Dimensioni SVG
+              const W = 340, H = 140, PL = 40, PR = 10, PT = 10, PB = 30;
+              const iW = W-PL-PR, iH = H-PT-PB;
+              const xStep = iW / 14;
+              const yMax = obMax * 1.05;
+              const px = i => PL + i * xStep;
+              const py = v => PT + iH - (v / yMax * iH);
+              // Linea teorica
+              const pts = curvaOb.map((v,i) => px(i)+","+py(v)).join(" ");
+              // Giorno corrente
+              const gOggi = Math.min((g||0), 15);
+              return (
+                <div style={{marginTop:12,background:"#f8fafc",borderRadius:8,padding:"10px 8px 4px 8px"}}>
+                  <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>Curva Obiettivo Teorica — {nOp} op × TC {tc ? tc.toFixed(1) : "?"} min</div>
+                  <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{overflow:"visible"}}>
+                    {/* Griglia Y */}
+                    {[0,25,50,75,100].map(p=>{
+                      const y = py(obMax*p/100);
+                      return <g key={p}>
+                        <line x1={PL} y1={y} x2={W-PR} y2={y} stroke="#e2e8f0" strokeWidth="0.5"/>
+                        <text x={PL-4} y={y+3} fontSize="7" textAnchor="end" fill="#94a3b8">{Math.round(obMax*p/100)}</text>
+                      </g>;
+                    })}
+                    {/* Asse X - giorni */}
+                    {[1,5,10,15].map(d=>{
+                      const x = px(d-1);
+                      return <g key={d}>
+                        <line x1={x} y1={PT} x2={x} y2={PT+iH} stroke="#e2e8f0" strokeWidth="0.5"/>
+                        <text x={x} y={H-2} fontSize="7" textAnchor="middle" fill="#94a3b8">g{d}</text>
+                      </g>;
+                    })}
+                    {/* Curva borse prodotte (blu) */}
+                    {(()=>{
+                      // Borse prodotte per giorno dalla rampa
+                      const borsePerGiorno = [];
+                      if(rampa&&rampa.dal&&riepilogo.length>0){
+                        for(let d=1;d<=15;d++){
+                          const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
+                          const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
+                          const riga = riepilogo.find(r=>r.sku===sku&&(r.data||"").slice(0,10)===fmtG);
+                          borsePerGiorno.push(riga?Number(riga.borseProdotte||0):null);
+                        }
+                      }
+                      const ptsBlu = borsePerGiorno.map((v,i)=>v!==null?px(i)+","+py(v):null).filter(Boolean).join(" ");
+                      if(!ptsBlu) return null;
+                      return <>
+                        <polyline points={ptsBlu} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round"/>
+                        {borsePerGiorno.map((v,i)=>v!==null?<circle key={i} cx={px(i)} cy={py(v)} r="2.5" fill="#3b82f6"/>:null)}
+                      </>;
+                    })()}
+                    {/* Curva teorica */}
+                    <polyline points={pts} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round"/>
+                    {/* Punti curva */}
+                    {curvaOb.map((v,i)=>(
+                      <circle key={i} cx={px(i)} cy={py(v)} r="2.5" fill="#f59e0b"/>
+                    ))}
+
+                    {/* Asse X */}
+                    <line x1={PL} y1={PT+iH} x2={W-PR} y2={PT+iH} stroke="#cbd5e1" strokeWidth="1"/>
+                    {/* Asse Y */}
+                    <line x1={PL} y1={PT} x2={PL} y2={PT+iH} stroke="#cbd5e1" strokeWidth="1"/>
+                  </svg>
+                  <div style={{display:"flex",gap:16,marginTop:2}}>
+                    <div style={{fontSize:9,color:"#f59e0b",display:"flex",alignItems:"center",gap:4}}><span style={{width:16,height:2,background:"#f59e0b",display:"inline-block",borderRadius:1}}></span>Obiettivo teorico</div>
+                    <div style={{fontSize:9,color:"#3b82f6",display:"flex",alignItems:"center",gap:4}}><span style={{width:16,height:2,background:"#3b82f6",display:"inline-block",borderRadius:1}}></span>Borse prodotte</div>
+
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         ); })}
     </div>
