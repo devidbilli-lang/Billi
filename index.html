@@ -42,6 +42,14 @@ function getUrlParam(name) {
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgw5LZZRCfx8y_UiYs44nXMZBK57PXTcMipNkpy_qPms2Azy1as5vTxRap7Dj4ko9tlQ/exec";
+const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
+// Azioni veloci su D1, tutto il resto su Apps Script
+function nexusUrl(action, params) {
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario"];
+  const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
+  const q = new URLSearchParams({action, ...params});
+  return base + "?" + q.toString();
+}
 
 
 const ADMIN_PWD = "Nexus2026!";
@@ -170,8 +178,7 @@ setTimeout(codaProcessa, 3000); // prima esecuzione dopo 3s
 
 const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } },
   async evento(p) {
-    const q=new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
-    const url = APPS_SCRIPT_URL+"?"+q.toString();
+    const url = nexusUrl("evento",{sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
     // Salva in coda PRIMA — nessun dato perso anche se il browser si chiude
     codaAggiungi(url);
     // Prova subito in background
@@ -186,7 +193,7 @@ const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+
       }
     })();
   },
-  async reset(){ try{ await fetchTimeout(APPS_SCRIPT_URL+"?action=reset"); }catch{} }
+  async reset(){ try{ await fetchTimeout(nexusUrl("reset",{})); }catch{} }
 };
 function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
   const [operatori,setOperatori] = useState([]);
@@ -447,13 +454,13 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   };
   // Carica straordinario da Sheets al montaggio
   React.useEffect(()=>{
-    fetchConRetry(APPS_SCRIPT_URL+"?action=leggistraordinario&lineaId="+encodeURIComponent(lineaId), 3, 1000)
+    fetchConRetry(nexusUrl("leggistraordinario",{lineaId}), 3, 1000)
       .then(r=>r.json()).then(j=>{ if(j.ok&&j.data.oreExtra!=null){ setOreExtraRaw(j.data.oreExtra); } }).catch(()=>{});
   },[lineaId]);
   const setOreExtra = v => {
     setOreExtraRaw(v);
     // Salva solo su Sheets, non su localStorage
-    fetchConRetry(APPS_SCRIPT_URL+"?action=salvastraordinario&lineaId="+encodeURIComponent(lineaId)+"&oreExtra="+encodeURIComponent(v), 3, 1000).catch(()=>{});
+    fetchConRetry(nexusUrl("salvastraordinario",{lineaId,oreExtra:v}), 3, 1000).catch(()=>{});
   };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
@@ -473,7 +480,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
     setTurnoChiuso(true);
     (async()=>{
       const checkoutOp = async(s)=>{
-        const url = APPS_SCRIPT_URL+"?action=evento&sessionId="+encodeURIComponent(s.id||s.sessionId||"")+"&matricola="+encodeURIComponent(s.matricola||"")+"&nome="+encodeURIComponent(s.nome||"")+"&cognome="+encodeURIComponent(s.cognome||"")+"&sku="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&tipo=CHECKOUT&lineaDa="+encodeURIComponent(s.lineaCorrente||"")+"&lineaA=&skuDa="+encodeURIComponent(s.skuCorrente||s.sku||"")+"&skuA=";
+        const url = nexusUrl("evento",{sessionId:s.id||s.sessionId||"",matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
         for(let i=0;i<3;i++){
           try{ await fetchConRetry(url,5,1000); return {ok:true}; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,2000*(i+1))); }
         }
@@ -1198,7 +1205,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   React.useEffect(() => {
     const carica = async () => {
       try {
-        const r = await fetch(APPS_SCRIPT_URL + "?action=leggiqualita");
+        const r = await fetch(nexusUrl("leggiqualita",{}));
         const j = await r.json();
         if (j.ok && j.data.qualita) setQualita(j.data.qualita);
       } catch(e) {}
@@ -1302,7 +1309,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     const caricaObiettivi = async () => {
       try {
         // Prendi sessioni e calcola obiettivi
-        const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+        const r = await fetch(nexusUrl("sessioni",{}));
         const j = await r.json();
         if(!j.ok||!j.data) return;
         const sessioni = j.data.sessioni||[];
@@ -1464,7 +1471,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     const nMiglStr = noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     setMsg("⏳ Salvataggio in corso...");
     try {
-      await fetchConRetry(APPS_SCRIPT_URL+"?action=qualita&linea="+encodeURIComponent(lineaEffettiva||"")+"&sku="+encodeURIComponent(sku)+"&ok="+encodeURIComponent(ok||0)+"&ko="+encodeURIComponent(ko||0)+"&migliorabili="+encodeURIComponent(migl||0)+"&noteKo="+encodeURIComponent(nKoStr)+"&noteMigl="+encodeURIComponent(nMiglStr)+"&obReale="+encodeURIComponent(obRealeQ||"")+"&obTeorico="+encodeURIComponent(obTeoricoQ||""), 5, 1000);
+      await fetchConRetry(nexusUrl("qualita",{linea:lineaEffettiva||"",sku,ok:ok||0,ko:ko||0,migliorabili:migl||0,noteKo:nKoStr,noteMigl:nMiglStr,obReale:obRealeQ||"",obTeorico:obTeoricoQ||""}), 5, 1000);
       setMsg("✓ Salvato!");
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
     } catch(e){ setErr("Errore salvataggio. Riprova."); setMsg(null); }
@@ -1980,7 +1987,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     for(let i=0; i<8; i++){
       await new Promise(r=>setTimeout(r,2000));
       try {
-        const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+        const r = await fetch(nexusUrl("sessioni",{}));
         const j = await r.json();
         if(j.ok && j.data.sessioni){
           if(verificaFn(j.data.sessioni)){ clearTimeout(timeoutId); onDone(j.data.sessioni); return; }
@@ -2004,7 +2011,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
       } catch(e){}
       // Carica anche qualità per avere borse per SKU
       try {
-        const r2 = await fetch(APPS_SCRIPT_URL+"?action=leggiqualita");
+        const r2 = await fetch(nexusUrl("leggiqualita",{}));
         const j2 = await r2.json();
         if(j2.ok&&j2.data.qualita){
           const oggi = new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
@@ -2170,7 +2177,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
               if(isNaN(nuovaData)){setSalvaOrarioErr("Data non valida.");return;}
               setLoading(true); setLoadingMsg("Salvataggio orario...");
               try{
-                await fetchConRetry(APPS_SCRIPT_URL+"?action=modificaorario&sessionId="+encodeURIComponent(modOrario.sess.id)+"&campo="+modOrario.campo+"&valore="+encodeURIComponent(nuovaData.toISOString()),5,1000);
+                await fetchConRetry(nexusUrl("modificaorario",{sessionId:modOrario.sess.id,campo:modOrario.campo,valore:nuovaData.toISOString()}),5,1000);
                 setModOrario(null);setSalvaOrarioErr("");
                 if(onAggiornaSessioni) onAggiornaSessioni();
               }catch(e){setSalvaOrarioErr("Errore salvataggio.");}
@@ -2282,7 +2289,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                   // Ricarica sessioni aggiornate da Sheets prima di eseguire
                   let sessAggiornate = sessioni;
                   try {
-                    const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+                    const r = await fetch(nexusUrl("sessioni",{}));
                     const j = await r.json();
                     if(j.ok&&j.data.sessioni) sessAggiornate = j.data.sessioni;
                   } catch(e){}
@@ -2483,7 +2490,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
   // Ricarica sessioni fresche da Sheets per non perdere nessuno
   let sessAggiornate = attiveLinea;
   try {
-    const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni");
+    const r = await fetch(nexusUrl("sessioni",{}));
     const j = await r.json();
     if(j.ok&&j.data.sessioni){
       sessAggiornate = j.data.sessioni.filter(s=>
@@ -2846,7 +2853,7 @@ function App() { const [view,setView]             = useState("login");
   const caricaSessioni = useCallback(async()=>{ setDashSync("caricamento");
     try { const ctrl2 = new AbortController();
       const tid2 = setTimeout(()=>ctrl2.abort(), 25000);
-      const r = await fetch(APPS_SCRIPT_URL+"?action=sessioni", {signal:ctrl2.signal}).finally(()=>clearTimeout(tid2));
+      const r = await fetch(nexusUrl("sessioni",{}), {signal:ctrl2.signal}).finally(()=>clearTimeout(tid2));
       const j = await r.json();
       if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni); window._sessSheets=j.data.sessioni;
         if(j.data.rampe) setRampeSheets(j.data.rampe);
