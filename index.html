@@ -1820,7 +1820,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               // Leggi direttamente da D1 per avere i corsi aggiornati
               const sfAggiornato = sessioni.find(s=>s.id===sf.id) || sf;
               const corsi = sfAggiornato.corsi||[];
-              const haSospeso = corsi.some(c=>c.tipo==="sospendi"&&(!c.rientro||c.rientro===""||c.rientro===null));
+              const haSospeso = corsi.some(c=>c.tipo==="sospendi");
               return <div>
                 {!haSospeso&&<div style={{...S.err,marginBottom:8}}>
                   <div>Non risulta al corso. Attendi aggiornamento o riprova.</div>
@@ -2765,7 +2765,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
 })();
                 const corsi = s.corsi||[];
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
-                const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi" && (!ultimoCorso.rientro||ultimoCorso.rientro==="");
+                const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
                     {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
