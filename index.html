@@ -2086,6 +2086,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
     onDone(null); // timeout
   };
   const [modOrario, setModOrario] = React.useState(null);
+  const [selezionati, setSelezionati] = React.useState(new Set()); // matricole selezionate
+  const [modMultipla, setModMultipla] = React.useState(null); // {campo, valore}
   const [loading, setLoading] = React.useState(false);
   const [loadingMsg, setLoadingMsg] = React.useState("");
   const [datiProd, setDatiProd] = React.useState(null);
@@ -2663,7 +2665,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         <div style={{margin:"0 24px",background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
           {fil.length===0?(<div style={{textAlign:"center",padding:60,color:"#64748b"}}>Nessuna sessione</div>):(
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{[["#","#475569"],["Operatore","#475569"],["SKU","#475569"],["Linea","#475569"],["Inizio","#22c55e"],["Fine","#ef4444"],["Durata","#475569"],["Azioni","#475569"]].map(([h,hc])=>(
+              <thead><tr>
+                {editOrario&&<th style={{padding:"8px",borderBottom:"1px solid #e2e8f0",background:"#f8fafc"}}>
+                  <input type="checkbox" onChange={e=>{
+                    if(e.target.checked) setSelezionati(new Set(fil.map(s=>s.matricola||s.nome)));
+                    else setSelezionati(new Set());
+                  }} style={{accentColor:"#7c3aed"}}/>
+                </th>}
+                {[["#","#475569"],["Operatore","#475569"],["SKU","#475569"],["Linea","#475569"],["Inizio","#22c55e"],["Fine","#ef4444"],["Durata","#475569"],["Azioni","#475569"]].map(([h,hc])=>(
                 <th key={h} style={{padding:"12px 14px",fontSize:13,letterSpacing:2,textTransform:"uppercase",color:hc,textAlign:"center",borderBottom:"1px solid #e2e8f0",background:"#f8fafc",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
               ))}</tr></thead>
               <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
@@ -2683,7 +2692,14 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
-                    <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
+                    <td style={S.td}><div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                      {editOrario&&<input type="checkbox" checked={selezionati.has(s.matricola||s.nome)} onChange={e=>{
+                        const ns=new Set(selezionati);
+                        if(e.target.checked) ns.add(s.matricola||s.nome); else ns.delete(s.matricola||s.nome);
+                        setSelezionati(ns);
+                      }} onClick={e=>e.stopPropagation()} style={{accentColor:"#7c3aed",width:14,height:14}}/>}
+                      <span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span>
+                    </div></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
                     <td style={{...S.td,textAlign:"center"}}>
                       {(()=>{
