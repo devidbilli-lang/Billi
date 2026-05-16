@@ -2263,7 +2263,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
             <button onClick={async()=>{
               if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
               setLoading(true); setLoadingMsg("Eliminazione...");
-              const toDelete = fil.filter(s=>selezionati.has(s.matricola||s.nome));
+              // Elimina TUTTE le sessioni delle matricole selezionate (anche multi-SKU)
+              const toDelete = sessioni.filter(s=>selezionati.has(s.matricola||s.nome));
               for(const s of toDelete){
                 try{
                   await fetch(nexusUrl("eliminasessione",{sessionId:s.id}),{mode:"cors"});
