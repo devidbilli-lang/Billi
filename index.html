@@ -1816,14 +1816,22 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn});
                 if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,ld,ns);
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
-            {mode==="rientro"&&sf&&(()=>{ const corsi = sf.corsi||[]; const haSospeso = corsi.some(c=>c.tipo==="sospendi");
-              if(!haSospeso) return <div style={{...S.err}}>Questo operatore non ha corsi sospesi.</div>;
+            {mode==="rientro"&&sf&&(()=>{
+              // Rileggi la sessione aggiornata da sessioni (potrebbe avere il CORSO appena scritto)
+              const sfAggiornato = sessioni.find(s=>s.id===sf.id) || sf;
+              const corsi = sfAggiornato.corsi||[];
+              const haSospeso = corsi.some(c=>c.tipo==="sospendi"&&!c.rientro);
+              if(!haSospeso) return <div style={{...S.err}}>
+                <div>Questo operatore non risulta al corso.</div>
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>Se lo hai appena spostato, attendi qualche secondo e riprova.</div>
+              </div>;
               return <button style={{...S.bCI,background:"linear-gradient(135deg,#10b981,#059669)"}} onClick={async()=>{
-                await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
+                await api.evento({sessionId:sfAggiornato.id,matricola:sfAggiornato.matricola,nome:sfAggiornato.nome,cognome:sfAggiornato.cognome,sku:sfAggiornato.skuCorrente||sfAggiornato.sku||"",tipo:"RIENTRO",lineaDa:sfAggiornato.lineaCorrente,lineaA:sfAggiornato.lineaCorrente,skuDa:sfAggiornato.skuCorrente||sfAggiornato.sku||"",skuA:sfAggiornato.skuCorrente||sfAggiornato.sku||""});
                 if(aggiornaSessioni) aggiornaSessioni();
-                setRis({tipo:"rientro",sess:sf});setMode("result"); }}>▶ Conferma Rientro in Produzione</button>; })()}
-            {mode==="corso"&&sf&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
-              if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000);
+                setRis({tipo:"rientro",sess:sfAggiornato});setMode("result"); }}>▶ Conferma Rientro in Produzione</button>;
+            })()}
+            {mode==="corso"&&sf&&<ModalCorso sess={sf} linee={linee} onOk={(tipo,nomeCorso)=>{ if(tipo==="rientro"){ api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
+              if(aggiornaSessioni) aggiornaSessioni();
               setRis({tipo:"corso",sess:sf});setMode("result"); }} onClose={reset}/>}
             {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
