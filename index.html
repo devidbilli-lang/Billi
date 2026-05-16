@@ -2613,12 +2613,24 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           setModCambioSku(null);
         }}/>}
       {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
-        onOk={async(tipo,nomeCorso)=>{ setLoading(true); setLoadingMsg(tipo==="rientro"?"Rientro in produzione...":"Registrazione corso...");
-          if(tipo==="rientro"){ await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"RIENTRO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:modCorso.skuCorrente||modCorso.sku||""}); }
-          else { await api.evento({sessionId:modCorso.id,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:"CORSO",lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:nomeCorso||"CORSO"}); }
+        onOk={async(tipo,nomeCorso)=>{
+          setLoading(true); setLoadingMsg(tipo==="rientro"?"Rientro in produzione...":"Registrazione corso...");
+          const tipoEvento = tipo==="rientro" ? "RIENTRO" : "CORSO";
+          const _sessId = modCorso.id;
+          const _skuA = tipo==="rientro" ? (modCorso.skuCorrente||modCorso.sku||"") : (nomeCorso||"CORSO");
+          await api.evento({sessionId:_sessId,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:tipoEvento,lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:_skuA});
+          // Aggiorna sessioni localmente SUBITO senza aspettare D1
+          if(setSessSheets) setSessSheets(prev=>(prev||[]).map(s=>{
+            if(s.id!==_sessId) return s;
+            const corsiAgg = [...(s.corsi||[])];
+            if(tipoEvento==="CORSO") corsiAgg.push({tipo:"sospendi",quando:new Date().toLocaleString("it-IT"),ts:Date.now()});
+            else if(corsiAgg.length>0){ corsiAgg[corsiAgg.length-1]={...corsiAgg[corsiAgg.length-1],tipo:"rientrato",rientro:new Date().toLocaleString("it-IT")}; }
+            return {...s, corsi:corsiAgg};
+          }));
           setModCorso(null);
           setLoading(false);
-          if(onAggiornaSessioni) onAggiornaSessioni(); }}/>}
+          if(onAggiornaSessioni) onAggiornaSessioni();
+        }}/>}
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",background:"#ffffff",borderBottom:"1px solid #e2e8f0"}}>
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><LogoSpinner size={48}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
