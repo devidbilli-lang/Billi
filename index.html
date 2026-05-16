@@ -2254,6 +2254,52 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
         );
       })()}
       {modalConferma&&<ModalConferma titolo={modalConferma.titolo} messaggio={modalConferma.messaggio} colorBtn={modalConferma.colorBtn||"ef4444"} testoBtn={modalConferma.testoBtn||"Conferma"} onConferma={modalConferma.onOk} onAnnulla={()=>setModalConferma(null)}/>}
+      {editOrario&&selezionati.size>0&&(
+        <div style={{position:"sticky",bottom:12,background:"#7c3aed",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,justifyContent:"space-between",margin:"0 16px 8px",boxShadow:"0 4px 20px #7c3aed66",zIndex:10}}>
+          <span style={{color:"#fff",fontWeight:700,fontSize:13}}>{selezionati.size} selezionat{selezionati.size===1?"o":"i"}</span>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button onClick={()=>setModMultipla({campo:"inizio",valore:""})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✏️ Inizio</button>
+            <button onClick={()=>setModMultipla({campo:"fine",valore:""})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✏️ Fine</button>
+            <button onClick={async()=>{
+              if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
+              setLoading(true); setLoadingMsg("Eliminazione...");
+              const toDelete = fil.filter(s=>selezionati.has(s.matricola||s.nome));
+              for(const s of toDelete){
+                try{
+                  await fetch(nexusUrl("eliminasessione",{sessionId:s.id}),{mode:"cors"});
+                  fetch(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(s.id),{mode:"cors"}).catch(()=>{});
+                }catch(e){}
+              }
+              setLoading(false); setSelezionati(new Set());
+              if(onAggiornaSessioni) onAggiornaSessioni();
+            }} style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>🗑 Elimina</button>
+            <button onClick={()=>setSelezionati(new Set())} style={{background:"transparent",color:"#fff",border:"1px solid #fff6",borderRadius:8,padding:"6px 10px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✕</button>
+          </div>
+        </div>
+      )}
+      {editOrario&&modMultipla&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa"}}>
+            <div style={{fontSize:16,fontWeight:800,color:"#7c3aed",marginBottom:8}}>✏️ Modifica {modMultipla.campo==="inizio"?"inizio":"fine"} — {selezionati.size} operatori</div>
+            <input type="datetime-local" style={{...S.inp,marginBottom:12}} value={modMultipla.valore} onChange={e=>setModMultipla({...modMultipla,valore:e.target.value})}/>
+            <div style={{display:"flex",gap:8}}>
+              <button style={{flex:1,padding:10,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer"}} onClick={async()=>{
+                if(!modMultipla.valore) return;
+                const nd = new Date(modMultipla.valore);
+                if(isNaN(nd)) return;
+                setLoading(true); setLoadingMsg("Aggiornamento "+selezionati.size+" operatori...");
+                const toUpdate = fil.filter(s=>selezionati.has(s.matricola||s.nome));
+                for(const s of toUpdate){
+                  try{ await fetch(nexusUrl("modificaorario",{sessionId:s.id,campo:modMultipla.campo,valore:nd.toISOString()}),{mode:"cors"}); }catch(e){}
+                }
+                setLoading(false); setModMultipla(null); setSelezionati(new Set());
+                if(onAggiornaSessioni) onAggiornaSessioni();
+              }}>✓ Salva</button>
+              <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer"}} onClick={()=>setModMultipla(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
       {modOrario&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
