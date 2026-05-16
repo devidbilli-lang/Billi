@@ -2095,7 +2095,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
     </div>
   );
 }
-function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
+function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
   // Ricarica sessioni finché la condizione attesa è vera (max 15 tentativi ogni 2s)
   const aspettaConfermaSheets = async (verificaFn, onDone) => {
     // Timeout garantito: dopo 20s chiude lo spinner comunque
@@ -2619,8 +2619,8 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
           const _sessId = modCorso.id;
           const _skuA = tipo==="rientro" ? (modCorso.skuCorrente||modCorso.sku||"") : (nomeCorso||"CORSO");
           await api.evento({sessionId:_sessId,matricola:modCorso.matricola,nome:modCorso.nome,cognome:modCorso.cognome,sku:modCorso.skuCorrente||modCorso.sku||"",tipo:tipoEvento,lineaDa:modCorso.lineaCorrente,lineaA:modCorso.lineaCorrente,skuDa:modCorso.skuCorrente||modCorso.sku||"",skuA:_skuA});
-          // Aggiorna sessioni localmente SUBITO senza aspettare D1
-          if(setSessSheets) setSessSheets(prev=>(prev||[]).map(s=>{
+          // Aggiorna localmente subito
+          if(setSessioni) setSessioni(prev=>(prev||[]).map(s=>{
             if(s.id!==_sessId) return s;
             const corsiAgg = [...(s.corsi||[])];
             if(tipoEvento==="CORSO") corsiAgg.push({tipo:"sospendi",quando:new Date().toLocaleString("it-IT"),ts:Date.now()});
@@ -3092,7 +3092,7 @@ function App() { const [view,setView]             = useState("login");
           <span style={{marginLeft:8,fontSize:12,background:"#f59e0b22",color:"#f59e0b",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 10px",fontWeight:700}}>👁 Sola lettura</span>
           <span style={{marginLeft:"auto",fontSize:11,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
         </div>
-        <Dashboard sessioni={sessSheets} linee={linee} skuList={skuList} operatori={operatori} rampeSheets={rampeSheets} isAdmin={true} lineaFiltro={null} onReset={null} onCO={null} onCOSheets={null} onTr={null} onAggiornaSessioni={caricaSessioni} readOnly={true} editOrario={URL_VIEW==="admin"}/>
+        <Dashboard sessioni={sessSheets} setSessioni={setSessSheets} linee={linee} skuList={skuList} operatori={operatori} rampeSheets={rampeSheets} isAdmin={true} lineaFiltro={null} onReset={null} onCO={null} onCOSheets={null} onTr={null} onAggiornaSessioni={caricaSessioni} readOnly={true} editOrario={URL_VIEW==="admin"}/>
       </div>
     );
   }
