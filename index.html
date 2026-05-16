@@ -2692,14 +2692,10 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
-                    <td style={S.td}><div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
-                      {editOrario&&<input type="checkbox" checked={selezionati.has(s.matricola||s.nome)} onChange={e=>{
-                        const ns=new Set(selezionati);
-                        if(e.target.checked) ns.add(s.matricola||s.nome); else ns.delete(s.matricola||s.nome);
-                        setSelezionati(ns);
-                      }} onClick={e=>e.stopPropagation()} style={{accentColor:"#7c3aed",width:14,height:14}}/>}
-                      <span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span>
-                    </div></td>
+                    {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
+                      <input type="checkbox" checked={selezionati.has(s.matricola||s.nome)} onChange={e=>{const ns=new Set(selezionati);if(e.target.checked)ns.add(s.matricola||s.nome);else ns.delete(s.matricola||s.nome);setSelezionati(ns);}} style={{accentColor:"#7c3aed",width:14,height:14}}/>
+                    </td>}
+                    <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
                     <td style={S.td}>{s.nome} {s.cognome}</td>
                     <td style={{...S.td,textAlign:"center"}}>
                       {(()=>{
