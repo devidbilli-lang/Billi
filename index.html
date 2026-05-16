@@ -1834,9 +1834,19 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 }}>▶ Conferma Rientro in Produzione</button>}
               </div>;
             })()}
-            {mode==="corso"&&sf&&<ModalCorso sess={sf} linee={linee} onOk={async(tipo,nomeCorso)=>{ if(tipo==="rientro"){ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""}); } else { await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"}); }
-              if(aggiornaSessioni) aggiornaSessioni();
-              setRis({tipo:"corso",sess:sf});setMode("result"); }} onClose={reset}/>}
+            {mode==="corso"&&sf&&<ModalCorso sess={sf} linee={linee} onOk={async(tipo,nomeCorso)=>{
+              if(tipo==="rientro"){
+                await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
+                // Aspetta 1.5s che D1 aggiorni poi ricarica sessioni
+                await new Promise(r=>setTimeout(r,1500));
+                if(aggiornaSessioni) aggiornaSessioni();
+              } else {
+                await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"});
+                await new Promise(r=>setTimeout(r,1500));
+                if(aggiornaSessioni) aggiornaSessioni();
+              }
+              setRis({tipo:"corso",sess:sf});setMode("result");
+            }} onClose={reset}/>}
             {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
                 api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns});
@@ -2748,7 +2758,7 @@ function Dashboard({ sessioni, linee, skuList, operatori, rampeSheets, isAdmin, 
 })();
                 const corsi = s.corsi||[];
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
-                const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
+                const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi" && (!ultimoCorso.rientro||ultimoCorso.rientro==="");
                 return (
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
                     {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
