@@ -1835,15 +1835,22 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               </div>;
             })()}
             {mode==="corso"&&sf&&<ModalCorso sess={sf} linee={linee} onOk={async(tipo,nomeCorso)=>{
-              if(tipo==="rientro"){
-                await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"RIENTRO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:sf.skuCorrente||sf.sku||""});
-                // Aspetta 1.5s che D1 aggiorni poi ricarica sessioni
-                await new Promise(r=>setTimeout(r,1500));
+              const tipoEvento = tipo==="rientro" ? "RIENTRO" : "CORSO";
+              await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:tipoEvento,lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:tipo==="rientro"?(sf.skuCorrente||sf.sku||""):(nomeCorso||"CORSO")});
+              // Ricarica sessioni con polling finché vediamo il cambiamento
+              for(let i=0;i<8;i++){
+                await new Promise(r=>setTimeout(r,500));
                 if(aggiornaSessioni) aggiornaSessioni();
-              } else {
-                await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sf.skuCorrente||sf.sku||"",tipo:"CORSO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sf.skuCorrente||sf.sku||"",skuA:nomeCorso||"CORSO"});
-                await new Promise(r=>setTimeout(r,1500));
-                if(aggiornaSessioni) aggiornaSessioni();
+                await new Promise(r=>setTimeout(r,500));
+                // Verifica dalla lista sessioni aggiornata
+                const sessAggiornata = sessioni.find(s=>s.id===sf.id);
+                if(sessAggiornata){
+                  const corsiAgg = sessAggiornata.corsi||[];
+                  const ultimoAgg = corsiAgg.length>0?corsiAgg[corsiAgg.length-1]:null;
+                  if(tipoEvento==="CORSO" && ultimoAgg && !ultimoAgg.rientro) break;
+                  if(tipoEvento==="RIENTRO" && ultimoAgg && ultimoAgg.rientro) break;
+                  if(tipoEvento==="RIENTRO" && !ultimoAgg) break;
+                }
               }
               setRis({tipo:"corso",sess:sf});setMode("result");
             }} onClose={reset}/>}
