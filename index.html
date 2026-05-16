@@ -110,7 +110,10 @@ let _codaAttiva = false;
 
 function codaChiave(p) {
   const giorno = new Date().toISOString().slice(0,10);
-  return (p.matricola||"")+"|"+(p.sku||"")+"|"+(p.tipo||"")+"|"+(p.lineaDa||"")+"|"+giorno;
+  // CORSO e RIENTRO possono avvenire più volte — aggiungi timestamp per renderli unici
+  const tipiMultipli = ["CORSO","RIENTRO"];
+  const extra = tipiMultipli.includes((p.tipo||"").toUpperCase()) ? "|"+Date.now() : "";
+  return (p.matricola||"")+"|"+(p.sku||"")+"|"+(p.tipo||"")+"|"+(p.lineaDa||"")+"|"+giorno+extra;
 }
 
 function codaAggiungi(evento) {
