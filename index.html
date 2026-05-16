@@ -1847,9 +1847,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 if(sessAggiornata){
                   const corsiAgg = sessAggiornata.corsi||[];
                   const ultimoAgg = corsiAgg.length>0?corsiAgg[corsiAgg.length-1]:null;
-                  if(tipoEvento==="CORSO" && ultimoAgg && !ultimoAgg.rientro) break;
-                  if(tipoEvento==="RIENTRO" && ultimoAgg && ultimoAgg.rientro) break;
-                  if(tipoEvento==="RIENTRO" && !ultimoAgg) break;
+                  if(tipoEvento==="CORSO" && ultimoAgg && ultimoAgg.tipo==="sospendi") break;
+                  if(tipoEvento==="RIENTRO" && (!ultimoAgg || ultimoAgg.tipo==="rientrato")) break;
                 }
               }
               setRis({tipo:"corso",sess:sf});setMode("result");
