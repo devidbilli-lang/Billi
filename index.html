@@ -1318,8 +1318,10 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   const dati = lineaFiltro ? qualita.filter(q => q.linea === lineaFiltro.id) : qualita;
   const aggMap = {};
   for (const q of dati) {
-    const k = q.data + "|" + q.linea + "|" + q.sku;
-    if (!aggMap[k]) aggMap[k] = { data: q.data, linea: q.linea, sku: q.sku, ok: 0, ko: 0, migl: 0, noteKo: "", noteMigl: "" };
+    // Usa solo la data (senza ora) come chiave
+    const dataGiorno = (q.data||"").split(" ")[0].split(",")[0].trim();
+    const k = dataGiorno + "|" + q.linea + "|" + q.sku;
+    if (!aggMap[k]) aggMap[k] = { data: dataGiorno, linea: q.linea, sku: q.sku, ok: 0, ko: 0, migl: 0, noteKo: "", noteMigl: "" };
     aggMap[k].ok   += Number(q.ok)||0;
     aggMap[k].ko   += Number(q.ko)||0;
     aggMap[k].migl += Number(q.migliorabili)||0;
@@ -1597,13 +1599,13 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
       )}
       <header style={{...S.hdr,borderBottom:"2px solid #3b82f644"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div>
+          <div onClick={onEsci} style={{cursor:"pointer"}}>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><LogoSpinner size={48}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:18,fontWeight:800,color:lObj.colore,fontFamily:"'Montserrat',sans-serif"}}>🔒 {linea.id}</span>
-          <button onClick={onEsci} style={{background:"#dc2626",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"2px solid #ff6363",boxShadow:"0 4px 16px rgba(220,38,38,0.4)",color:"#ffffff",borderRadius:8,cursor:"pointer",fontSize:16,fontWeight:800,padding:"8px 20px",fontFamily:"'Montserrat',sans-serif"}}>Esci</button>
+
         </div>
       </header>
       <div style={{display:"flex",justifyContent:"center",padding:"40px 16px"}}>
@@ -3265,7 +3267,7 @@ function App() { const [view,setView]             = useState("login");
   }
   // Qualità come overlay
   if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
-  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); }}/>;
+  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); setView("checkin"); }}/>;
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",color:"#1e293b"}}>
       <div style={{background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
