@@ -1937,12 +1937,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     // Controlla se questo SKU è già in rampa attiva
                     const _rampe = rampeSheets||window._rampeSheets||[];
                     const giaInRampa = _rampe.some(r=>r.sku===s.sku&&(r.giorni_completati||r.giorni||0)<15);
-                    return <label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",cursor:giaInRampa?"not-allowed":"pointer",padding:"4px 8px",background:giaInRampa?"#fef3c7":"#fef3c711",border:"1px solid "+(giaInRampa?"#f59e0b":"#f59e0b44"),borderRadius:6}}>
+                    return <label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",cursor:giaInRampa?"not-allowed":"pointer",padding:"4px 8px",background:giaInRampa?"#eff6ff":"#eff6ff88",border:"1px solid "+(giaInRampa?"#3b82f6":"#3b82f688"),borderRadius:6}}>
                       <input type="checkbox" checked={giaInRampa||!!rampaPerSku[s.sku]}
                         disabled={giaInRampa}
                         onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
-                        style={{accentColor:"#f59e0b",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
-                      <span style={{fontSize:11,color:"#f59e0b",fontWeight:700}}>{giaInRampa?"📈 in rampa":"📈 rampa"}</span>
+                        style={{accentColor:"#3b82f6",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
+                      <span style={{fontSize:11,color:"#3b82f6",fontWeight:700}}>{giaInRampa?"📈 in rampa":"📈 rampa"}</span>
                     </label>;
                   })()}
                 </label>
