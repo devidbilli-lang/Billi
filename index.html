@@ -3275,17 +3275,6 @@ function App() { const [view,setView]             = useState("login");
       </div>
       {view!=="checkin"&&(
         <div style={{display:"flex",gap:8,padding:"12px 20px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",alignItems:"center"}}>
-          {[["dashboard","Dashboard"],["checkin","Check-in"]].map(([v,l])=>(
-            <button key={v} onClick={()=>{ if(v==="dashboard"&&!accesso){setAccesso(null);} setView(v); }} style={{padding:"10px 24px",background:view===v?"#00d4aa22":"#f1f5f9",border:"2px solid "+(view===v?"#00d4aa":"#e2e8f0"),borderRadius:8,color:view===v?"#00d4aa":"#1e293b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}}>{l}</button>
-          ))}
-          {view==="dashboard"&&accesso&&(
-            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:20,fontWeight:800,fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
-                {accesso.ruolo==="admin"?"👑 Admin":<span style={{color:accesso.linea.colore,fontWeight:800,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{"🔒 "+(linee.find(l=>l.id===accesso.linea.id)?.id||accesso.linea.id)}</span>}
-              </span>
-              <button onClick={()=>{setAccesso(null);setView("login");}} style={{background:"#dc2626",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"2px solid #ff6363",boxShadow:"0 4px 16px rgba(220,38,38,0.4)",color:"#ffffff",borderRadius:8,cursor:"pointer",fontSize:20,fontWeight:800,padding:"10px 24px",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>Esci</button>
-            </div>
-          )}
           {view==="dashboard"&&(
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:11,color:dashCfg.c,fontWeight:700}}>{dashCfg.t}</span>
