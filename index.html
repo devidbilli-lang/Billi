@@ -180,6 +180,15 @@ async function codaProcessa() {
 
 setInterval(codaProcessa, 10000);
 setTimeout(codaProcessa, 2000);
+// Invia orari fine turno al Worker all'avvio
+setTimeout(()=>{
+  try {
+    const orari = JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}');
+    if(Object.keys(orari).length>0){
+      fetch(nexusUrl('salvaOrariFineTurno',{orari:encodeURIComponent(JSON.stringify(orari))}),{mode:'cors'}).catch(()=>{});
+    }
+  } catch(e){}
+}, 5000);
 
 const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } },
   async evento(p) {
@@ -2063,7 +2072,16 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
     setOrariTurno(nuovi);
     localStorage.setItem('nexus_orari_turno', JSON.stringify(nuovi));
   };
-  const [editOrarioOp, setEditOrarioOp] = useState(null); // matricola in modifica
+  const [orariFineTurno, setOrariFineTurno] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; }
+  });
+  const salvaOrarioFine = (matricola, orario) => {
+    const nuovi = {...orariFineTurno, [matricola]: orario};
+    setOrariFineTurno(nuovi);
+    localStorage.setItem('nexus_orari_fine_turno', JSON.stringify(nuovi));
+  };
+  const [editOrarioOp, setEditOrarioOp] = useState(null); // matricola in modifica inizio
+  const [editOrarioFineOp, setEditOrarioFineOp] = useState(null); // matricola in modifica fine
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -2115,24 +2133,44 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   </div>
                 </div>
               )}
-              {/* Orario inizio turno */}
-              <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:11,color:"#64748b"}}>⏰ Inizio turno:</span>
-                {editOrarioOp===op.matricola ? (
-                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                    <input type="time" defaultValue={orariTurno[op.matricola]||"06:00"} id={"ot_"+op.matricola}
-                      style={{fontSize:12,padding:"2px 6px",border:"1px solid #a78bfa",borderRadius:6,fontFamily:"inherit"}}/>
-                    <button onClick={()=>{ const v=document.getElementById("ot_"+op.matricola)?.value||"06:00"; salvaOrario(op.matricola,v); setEditOrarioOp(null); }}
-                      style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
-                    <button onClick={()=>setEditOrarioOp(null)}
-                      style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"2px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
-                  </div>
-                ) : (
-                  <span style={{fontSize:12,fontWeight:700,color:(orariTurno[op.matricola]&&orariTurno[op.matricola]!=="06:00")?"#7c3aed":"#94a3b8",cursor:"pointer"}}
-                    onClick={()=>setEditOrarioOp(op.matricola)}>
-                    {orariTurno[op.matricola]||"06:00"} ✏️
-                  </span>
-                )}
+              {/* Orario inizio e fine turno */}
+              <div style={{marginTop:8,display:"flex",gap:16,flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:11,color:"#64748b"}}>⏰ Inizio:</span>
+                  {editOrarioOp===op.matricola ? (
+                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                      <input type="time" defaultValue={orariTurno[op.matricola]||"06:00"} id={"ot_"+op.matricola}
+                        style={{fontSize:11,padding:"2px 4px",border:"1px solid #a78bfa",borderRadius:4,fontFamily:"inherit"}}/>
+                      <button onClick={()=>{ const v=document.getElementById("ot_"+op.matricola)?.value||"06:00"; salvaOrario(op.matricola,v); setEditOrarioOp(null); }}
+                        style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer"}}>✓</button>
+                      <button onClick={()=>setEditOrarioOp(null)}
+                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer"}}>✕</button>
+                    </div>
+                  ) : (
+                    <span style={{fontSize:11,fontWeight:700,color:(orariTurno[op.matricola]&&orariTurno[op.matricola]!=="06:00")?"#7c3aed":"#94a3b8",cursor:"pointer"}}
+                      onClick={()=>setEditOrarioOp(op.matricola)}>
+                      {orariTurno[op.matricola]||"06:00"} ✏️
+                    </span>
+                  )}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:11,color:"#64748b"}}>🏁 Fine:</span>
+                  {editOrarioFineOp===op.matricola ? (
+                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                      <input type="time" defaultValue={orariFineTurno[op.matricola]||"14:00"} id={"otf_"+op.matricola}
+                        style={{fontSize:11,padding:"2px 4px",border:"1px solid #ef444488",borderRadius:4,fontFamily:"inherit"}}/>
+                      <button onClick={()=>{ const v=document.getElementById("otf_"+op.matricola)?.value||"14:00"; salvaOrarioFine(op.matricola,v); setEditOrarioFineOp(null); }}
+                        style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer"}}>✓</button>
+                      <button onClick={()=>setEditOrarioFineOp(null)}
+                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer"}}>✕</button>
+                    </div>
+                  ) : (
+                    <span style={{fontSize:11,fontWeight:700,color:(orariFineTurno[op.matricola]&&orariFineTurno[op.matricola]!=="14:00")?"#ef4444":"#94a3b8",cursor:"pointer"}}
+                      onClick={()=>setEditOrarioFineOp(op.matricola)}>
+                      {orariFineTurno[op.matricola]||"14:00"} ✏️
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ); })}
