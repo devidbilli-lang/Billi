@@ -1320,9 +1320,9 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   for (const q of dati) {
     const k = q.data + "|" + q.linea + "|" + q.sku;
     if (!aggMap[k]) aggMap[k] = { data: q.data, linea: q.linea, sku: q.sku, ok: 0, ko: 0, migl: 0, noteKo: "", noteMigl: "" };
-    aggMap[k].ok   += q.ok;
-    aggMap[k].ko   += q.ko;
-    aggMap[k].migl += q.migliorabili;
+    aggMap[k].ok   += Number(q.ok)||0;
+    aggMap[k].ko   += Number(q.ko)||0;
+    aggMap[k].migl += Number(q.migliorabili)||0;
     if (q.noteKo)   aggMap[k].noteKo   = q.noteKo;
     if (q.noteMigl) aggMap[k].noteMigl = q.noteMigl;
   }
