@@ -1974,9 +1974,23 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             if(registrati.length>0){
               try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); localStorage.setItem(kSel, JSON.stringify(listaOp)); }catch(e){}
               (async () => {
+                // Leggi orari turno da localStorage
+                const _orariTurno = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; } })();
+                const oraAttuale = new Date();
                 for (const s of registrati) {
-                  await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
-                  onSuccess(s);
+                  // Controlla orario inizio turno per questa matricola
+                  const orarioOp = _orariTurno[s.matricola] || "06:00";
+                  const [hTurno, mTurno] = orarioOp.split(":").map(Number);
+                  const oraOp = new Date(); oraOp.setHours(hTurno, mTurno, 0, 0);
+                  if(oraOp > oraAttuale) {
+                    // Orario futuro — pianifica il check-in
+                    await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
+                    // Non chiamare onSuccess — verrà registrato in automatico
+                  } else {
+                    // Orario passato o attuale — registra subito
+                    await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
+                    onSuccess(s);
+                  }
                 }
               })();
               setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
@@ -2041,6 +2055,15 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 }
 function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
   useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),60000); return()=>clearInterval(t); },[]);
+  const [orariTurno, setOrariTurno] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; }
+  });
+  const salvaOrario = (matricola, orario) => {
+    const nuovi = {...orariTurno, [matricola]: orario};
+    setOrariTurno(nuovi);
+    localStorage.setItem('nexus_orari_turno', JSON.stringify(nuovi));
+  };
+  const [editOrarioOp, setEditOrarioOp] = useState(null); // matricola in modifica
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -2092,6 +2115,25 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   </div>
                 </div>
               )}
+              {/* Orario inizio turno */}
+              <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:11,color:"#64748b"}}>⏰ Inizio turno:</span>
+                {editOrarioOp===op.matricola ? (
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <input type="time" defaultValue={orariTurno[op.matricola]||"06:00"} id={"ot_"+op.matricola}
+                      style={{fontSize:12,padding:"2px 6px",border:"1px solid #a78bfa",borderRadius:6,fontFamily:"inherit"}}/>
+                    <button onClick={()=>{ const v=document.getElementById("ot_"+op.matricola)?.value||"06:00"; salvaOrario(op.matricola,v); setEditOrarioOp(null); }}
+                      style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
+                    <button onClick={()=>setEditOrarioOp(null)}
+                      style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"2px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
+                  </div>
+                ) : (
+                  <span style={{fontSize:12,fontWeight:700,color:(orariTurno[op.matricola]&&orariTurno[op.matricola]!=="06:00")?"#7c3aed":"#94a3b8",cursor:"pointer"}}
+                    onClick={()=>setEditOrarioOp(op.matricola)}>
+                    {orariTurno[op.matricola]||"06:00"} ✏️
+                  </span>
+                )}
+              </div>
             </div>
           ); })}
       </div>
