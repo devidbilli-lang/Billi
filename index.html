@@ -1933,10 +1933,18 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
                   {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
                   {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:"auto"}}>{s.collezione}</span>}
-                  {skuMulti.includes(s.sku)&&<label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto",cursor:"pointer",padding:"2px 6px",background:"#fef3c711",borderRadius:4}}>
-                    <input type="checkbox" checked={!!rampaPerSku[s.sku]} onChange={e=>{e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}} style={{accentColor:"#f59e0b",width:13,height:13}}/>
-                    <span style={{fontSize:10,color:"#f59e0b",fontWeight:600}}>📈 rampa</span>
-                  </label>}
+                  {skuMulti.includes(s.sku)&&(()=>{
+                    // Controlla se questo SKU è già in rampa attiva
+                    const _rampe = rampeSheets||window._rampeSheets||[];
+                    const giaInRampa = _rampe.some(r=>r.sku===s.sku&&(r.giorni_completati||r.giorni||0)<15);
+                    return <label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",cursor:giaInRampa?"not-allowed":"pointer",padding:"4px 8px",background:giaInRampa?"#fef3c7":"#fef3c711",border:"1px solid "+(giaInRampa?"#f59e0b":"#f59e0b44"),borderRadius:6}}>
+                      <input type="checkbox" checked={giaInRampa||!!rampaPerSku[s.sku]}
+                        disabled={giaInRampa}
+                        onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
+                        style={{accentColor:"#f59e0b",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
+                      <span style={{fontSize:11,color:"#f59e0b",fontWeight:700}}>{giaInRampa?"📈 in rampa":"📈 rampa"}</span>
+                    </label>;
+                  })()}
                 </label>
               ))}
             </div>
@@ -3134,7 +3142,7 @@ function App() { const [view,setView]             = useState("login");
       const r = await fetch(nexusUrl("sessioni",{}), {signal:ctrl2.signal}).finally(()=>clearTimeout(tid2));
       const j = await r.json();
       if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni); window._sessSheets=j.data.sessioni;
-        if(j.data.rampe) setRampeSheets(j.data.rampe);
+        if(j.data.rampe){ setRampeSheets(j.data.rampe); window._rampeSheets=j.data.rampe; }
         if(j.data.sessioni.length === 0) setSess([]);
         setDashSync("ok"); setUltimoSync2(new Date());
         } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
