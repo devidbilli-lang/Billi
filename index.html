@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1v0GJ6GQoid1C
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -185,7 +185,7 @@ setTimeout(()=>{
   try {
     const orari = JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}');
     if(Object.keys(orari).length>0){
-      fetch(nexusUrl('salvaOrariFineTurno',{orari:encodeURIComponent(JSON.stringify(orari))}),{mode:'cors'}).catch(()=>{});
+      fetch(nexusUrl('salvaOrariFineTurno',{orari:JSON.stringify(orari)}),{mode:'cors'}).catch(()=>{});
     }
   } catch(e){}
 }, 5000);
