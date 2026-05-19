@@ -1514,7 +1514,11 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   // Carica dati qualità di oggi per mostrare totali per SKU
   React.useEffect(()=>{
     fetch(nexusUrl("leggiqualita",{})).then(r=>r.json()).then(j=>{
-      if(j.ok&&j.data) setQualitaOggi(j.data);
+      if(j.ok&&j.data){
+        // leggiqualita può restituire array o oggetto con proprietà
+        const arr = Array.isArray(j.data) ? j.data : (Array.isArray(j.data.qualita) ? j.data.qualita : []);
+        setQualitaOggi(arr);
+      }
     }).catch(()=>{});
   },[]);
   const isAdminQ = !linea;
