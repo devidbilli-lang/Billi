@@ -2131,6 +2131,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 // Leggi orari turno da localStorage
                 // Leggi orari da localStorage (già sincronizzati con D1 all'avvio)
                 const _orariTurno = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; } })();
+                const _orariFineLoc2 = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; } })();
                 const oraAttuale = new Date();
                 for (const s of registrati) {
                   // Controlla orario inizio turno per questa matricola
