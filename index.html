@@ -384,6 +384,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
   const [chSku,setChSku] = useState(false);
   const [nSku,setNSku]   = useState("");
   const [cSku,setCSku]   = useState("");
+  const [cLinea,setCLinea] = useState("");
   const conferma = () => { onOk(dest, chSku&&nSku?nSku:null); };
   return (
     <div style={MS.ov}>
@@ -396,8 +397,9 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
             <span style={{...S.tag,background:getLinea(sess.lineaCorrente,linee).colore+"22",color:getLinea(sess.lineaCorrente,linee).colore,borderColor:getLinea(sess.lineaCorrente,linee).colore+"44",marginLeft:8}}>{getLinea(sess.lineaCorrente,linee).id}</span>
           </div>
           <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Linea destinazione</div>
+          <input style={{...S.inp,marginBottom:8,borderColor:"#3b82f6"}} placeholder="Cerca linea..." value={cLinea} onChange={e=>setCLinea(e.target.value)}/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-            {linee.filter(l=>l.id!==sess.lineaCorrente).map(l=>(
+            {linee.filter(l=>l.id!==sess.lineaCorrente&&(!cLinea||l.id.toUpperCase().includes(cLinea.toUpperCase()))).map(l=>(
               <button key={l.id} onClick={()=>setDest(l.id)}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",border:"1px solid "+(dest===l.id?l.colore:"#1e3a5f"),borderRadius:10,cursor:"pointer",background:dest===l.id?(l.colore+"22"):"rgba(255,255,255,0.03)",fontFamily:"'Montserrat',sans-serif",transition:"all 0.2s"}}>
                 <span style={{fontSize:13,fontWeight:700,color:dest===l.id?l.colore:"#94a3b8"}}>{l.id}</span>
@@ -1886,6 +1888,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [opSelezionati,setOpSelezionati] = useState([]);
   const [rampa,setRampa]                 = useState(false);
   const [rampaPerSku,setRampaPerSku]     = useState({}); // {sku: true/false}
+  const [lineaCheckinSel,setLineaCheckinSel] = useState(null); // linea selezionata nel form check-in
+  const [cLinea,setCLinea]               = useState(""); // ricerca linea
   const [pwdLinea,setPwdLinea]           = useState("");
   const [pwdOk,setPwdOk]                 = useState(false);
   const [errPwd,setErrPwd]               = useState("");
@@ -2058,6 +2062,25 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             )}
           </div>
           <div style={{marginBottom:18}}>
+            <label style={S.lbl}>Linea di produzione</label>
+            <input style={{...S.inp,borderColor:"#3b82f6",borderWidth:2,marginBottom:6}}
+              placeholder="Cerca linea..."
+              value={cLinea}
+              onChange={e=>{ setCLinea(e.target.value); setLineaCheckinSel(null); }}
+            />
+            {cLinea&&!lineaCheckinSel&&(
+              <div style={{maxHeight:160,overflowY:"auto",border:"2px solid #3b82f6",borderRadius:8,background:"#eff6ff",marginBottom:6}}>
+                {(linee||[]).filter(l=>l.id.toUpperCase().includes(cLinea.toUpperCase())).map(l=>(
+                  <div key={l.id}
+                    onClick={()=>{ setLineaCheckinSel(l); setCLinea(l.id); setSkuMulti([]); }}
+                    style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #bfdbfe",fontSize:13,fontWeight:600}}
+                  >{l.id}</div>
+                ))}
+              </div>
+            )}
+            {lineaCheckinSel&&<div style={{fontSize:12,color:"#3b82f6",fontWeight:700,marginBottom:6}}>✓ {lineaCheckinSel.id}</div>}
+          </div>
+          <div style={{marginBottom:18}}>
             <label style={S.lbl}>Articoli (seleziona uno o più)</label>
             <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2,marginBottom:6}} placeholder="Filtra per codice, descrizione o collezione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
             <div style={{maxHeight:200,overflowY:"auto",border:"2px solid #f59e0b",borderRadius:8,background:"#fffbeb"}}>
@@ -2111,8 +2134,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <button style={S.bCI} onClick={()=>{ setErr("");
             var listaOp = opSelezionati.length > 0 ? opSelezionati : (nome.trim()&&cogn.trim() ? [{nome:nome.trim(),cognome:cogn.trim(),matricola:nome.trim().toUpperCase()+"-"+cogn.trim().toUpperCase()}] : []);
             if(listaOp.length===0){setErr("Seleziona almeno un operatore.");return;}
-            if(skuMulti.length===0){setErr("Seleziona almeno un articolo.");return;}
-            if(!linea){setErr("Seleziona una linea.");return;}
+            // SKU obbligatorio solo se la linea non è speciale (senza SKU)
+            const lineaEffettiva = lineaCheckinSel || linea;
+            const isLineSenzaSKU = skuList.filter(s=>!s.speciale).length === 0;
+            if(skuMulti.length===0 && !isLineSenzaSKU){setErr("Seleziona almeno un articolo.");return;}
+            if(!linea&&!lineaCheckinSel){setErr("Seleziona una linea.");return;}
             var errori=[]; var registrati=[];
             listaOp.forEach(op=>{ const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
               const haSessioneAttiva = sessSheets.some(s=>{ const nomeMatch = s.nome.toUpperCase()===op.nome.toUpperCase()&&s.cognome.toUpperCase()===op.cognome.toUpperCase();
@@ -2121,9 +2147,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 const d = parseData(s.fine); return d===null||isNaN(d); });
               if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
               const rampaDalTs = now().getTime(); // timestamp base, usato se rampaPerSku[sku] è true
-              skuMulti.forEach(skuItem=>{
+              const skuDaUsare = skuMulti.length > 0 ? skuMulti : [""];
+              skuDaUsare.forEach(skuItem=>{
                 const hasRampa = !!rampaPerSku[skuItem];
-                const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:skuItem,skuCorrente:skuItem,lineaInizio:linea.id,lineaCorrente:linea.id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:hasRampa,rampaDal:hasRampa?rampaDalTs:null};
+                const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:skuItem,skuCorrente:skuItem,lineaInizio:(lineaCheckinSel||linea).id,lineaCorrente:(lineaCheckinSel||linea).id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:hasRampa,rampaDal:hasRampa?rampaDalTs:null};
                 registrati.push(s);
               });
             });
