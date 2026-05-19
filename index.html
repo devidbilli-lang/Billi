@@ -2752,11 +2752,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa"}}>
             <div style={{fontSize:16,fontWeight:800,color:"#7c3aed",marginBottom:8,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={19}/> Modifica {modMultipla.campo==="inizio"?"inizio":"fine"} — {selezionati.size} operatori</div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700,marginTop:6}}>Data</div>
-            <div style={{marginBottom:12}}>
+            <div style={{marginBottom:12,textAlign:"center"}}>
               <DatePicker value={modMultipla.data||(()=>{ const o=new Date(); return `${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`; })()} onChange={v=>setModMultipla({...modMultipla,data:v})}/>
             </div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Orario</div>
-            <div style={{marginBottom:12}}>
+            <div style={{marginBottom:12,textAlign:"center"}}>
               <TimePicker value={modMultipla.orario||(modMultipla.campo==="inizio"?"06:00":"14:00")} onChange={v=>setModMultipla({...modMultipla,orario:v,_err:""})}/>
             </div>
             {modMultipla._err&&<div style={{...S.err,marginBottom:12}}>{modMultipla._err}</div>}
@@ -2789,11 +2789,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}><IconaMatita size={22}/> Modifica orario</div>
             <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{modOrario.campo==="inizio"?"Inizio turno":"Fine turno"} — {modOrario.sess.nome} {modOrario.sess.cognome}</div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Data</div>
-            <div style={{marginBottom:14}}>
+            <div style={{marginBottom:14,textAlign:"center"}}>
               <DatePicker value={modOrario.data} onChange={v=>setModOrario({...modOrario,data:v})}/>
             </div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Orario</div>
-            <div style={{marginBottom:12}}>
+            <div style={{marginBottom:12,textAlign:"center"}}>
               <TimePicker value={modOrario.hh+":"+modOrario.mm} onChange={v=>{ const [h,m]=v.split(":"); setModOrario({...modOrario,hh:h,mm:m}); }}/>
             </div>
             {salvaOrarioErr&&<div style={{...S.err,marginBottom:12}}>{salvaOrarioErr}</div>}
