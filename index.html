@@ -2021,13 +2021,18 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     ); }
   if(mode==="checkin"){ return (
     <div style={S.scr}>
-      <header style={S.hdr}>
-        <div style={S.logo}><div onClick={()=>{ if(onEsci) onEsci(); }} style={{cursor:"pointer"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,marginBottom:2}}><LogoSpinner size={48}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:3,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div></div></div>
-        <div style={S.ora}>{fmt(oraRef)}</div>
-      </header>
-      <div style={S.bod}>
-        <div style={S.card}>
-          <h2 style={S.cT}>Registra Presenza</h2>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"16px 24px",gap:16}}>
+        <div style={{flexShrink:0,paddingTop:8}}>
+          <div onClick={()=>{ if(onEsci) onEsci(); }} style={{cursor:"pointer"}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+              <LogoSpinner size={48}/>
+              <span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:3,lineHeight:1,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+            </div>
+          </div>
+        </div>
+        <div style={{flex:1,display:"flex",justifyContent:"center"}}>
+          <div style={S.card}>
+            <h2 style={S.cT}>Registra Presenza</h2>
           <div style={{border:"1.5px solid #06d6a055",borderRadius:16,marginBottom:14,overflow:"hidden",background:"rgba(6,214,160,0.07)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
             <div style={{background:"linear-gradient(90deg,#06d6a0cc,#06d6a099)",padding:"7px 0",textAlign:"center",backdropFilter:"blur(8px)"}}>
               <span style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:3,textTransform:"uppercase",textShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>Operatori</span>
@@ -2195,6 +2200,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
               setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
           <button style={{...S.bBk,marginTop:12,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
+          </div>
+        </div>
+        <div style={{flexShrink:0,paddingTop:8}}>
+          <div style={S.ora}>{fmt(oraRef)}</div>
         </div>
       </div>
     </div>
