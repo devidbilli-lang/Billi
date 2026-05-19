@@ -1593,7 +1593,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     if(_okVal < 0){ setErr("❌ Borse Prodotte non può essere negativo."); return; }
     if(_koVal2 < 0){ setErr("❌ Borse KO non può essere negativo."); return; }
     if(_miVal2 < 0){ setErr("❌ Migliorabili non può essere negativo."); return; }
-    if(_koVal2 > _okVal && _okVal > 0){ setErr("❌ Le Borse KO ("+_koVal2+") non possono superare le Borse Prodotte ("+_okVal+")."); return; }
+    // Rimosso blocco KO > Prodotte — si può salvare comunque
     // Mostra modal di conferma
     setModalConfermaQ({
       titolo: "Conferma salvataggio",
