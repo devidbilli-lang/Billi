@@ -2959,7 +2959,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:isPianificato?"#fef3c7":att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
+                  <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:isPianificato?"#fef3c7":(!att2)?"#fee2e2":haFinePers?"#fdf4ff":att2&&inCorso?"#06b6d422":"#dcfce7"}}>
                     {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
                       <input type="checkbox" checked={selezionati.has(s.matricola||s.nome)} onChange={e=>{const ns=new Set(selezionati);if(e.target.checked)ns.add(s.matricola||s.nome);else ns.delete(s.matricola||s.nome);setSelezionati(ns);}} style={{accentColor:"#7c3aed",width:14,height:14}}/>
                     </td>}
