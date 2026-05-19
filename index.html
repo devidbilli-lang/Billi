@@ -2028,44 +2028,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
       <div style={S.bod}>
         <div style={S.card}>
           <h2 style={S.cT}>Registra Presenza</h2>
-          <div style={{marginBottom:18}}>
-            <label style={S.lbl}>Operatori ({opSelezionati.length} selezionati)</label>
-            {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
-            {operatori.length>0&&(
-              <div style={{marginBottom:8}}>
-                <input style={{...S.inp,borderColor:"#22c55e",borderWidth:2}} placeholder="Cerca nome o cognome..." value={cOp} onChange={e=>setCOp(e.target.value)}/>
-                {cOp.length>=2&&(
-                  <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:8,marginTop:4,overflow:"hidden"}}>
-                    {operatori.filter(o=>o.nome.toUpperCase().includes(cOp.toUpperCase())||o.cognome.toUpperCase().includes(cOp.toUpperCase())||o.matricola.includes(cOp.toUpperCase())).slice(0,6).map(o=>{ const sel=opSelezionati.some(x=>x.matricola===o.matricola);
-                      return (
-                        <div key={o.matricola} onClick={()=>{ if(sel) setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola)); else setOpSelezionati(p=>[...p,o]); }} style={{padding:"8px 14px",cursor:"pointer",borderBottom:"1px solid #f1f5f9",display:"flex",gap:10,alignItems:"center",background:sel?"#22c55e18":"transparent"}}
-                          onMouseEnter={e=>e.currentTarget.style.background=sel?"#22c55e28":"#f1f5f9"}
-                          onMouseLeave={e=>e.currentTarget.style.background=sel?"#22c55e18":"transparent"}>
-                          <span style={{width:18,height:18,border:"2px solid "+(sel?"#22c55e":"#475569"),borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#22c55e",flexShrink:0}}>{sel?"✓":""}</span>
-                          <span style={{fontSize:13,color:"#1e293b"}}>{o.nome} {o.cognome}</span>
-                          <span style={{fontSize:11,color:"#94a3b8",marginLeft:"auto"}}>{o.matricola}</span>
-                        </div>
-                      ); })}
-                  </div>
-                )}
-              </div>
-            )}
-            {opSelezionati.length>0&&(
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}}>
-                {opSelezionati.map(o=>(
-                  <span key={o.matricola} style={{background:"#22c55e18",border:"1px solid #22c55e44",borderRadius:20,padding:"4px 10px",fontSize:12,color:"#22c55e",display:"flex",alignItems:"center",gap:6}}>
-                    {o.nome} {o.cognome}
-                    <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
           <div style={{border:"1.5px solid #68e4d555",borderRadius:16,marginBottom:14,overflow:"hidden",background:"rgba(104,228,213,0.07)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
             <div style={{background:"linear-gradient(90deg,#68e4d5cc,#68e4d599)",padding:"7px 0",textAlign:"center",backdropFilter:"blur(8px)"}}>
-              <span style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:3,textTransform:"uppercase",textShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>Operatori</span>
+              <span style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:3,textTransform:"uppercase",textShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>Operatori ({opSelezionati.length} selezionati)</span>
             </div>
             <div style={{padding:"10px 12px"}}>
+              {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
               <input style={{...S.inp,marginBottom:6,background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)"}} placeholder="Cerca operatore..." value={cOp} onChange={e=>{setCOp(e.target.value);}}/>
               {cOp&&(
                 <div style={{maxHeight:160,overflowY:"auto",border:"1px solid #68e4d544",borderRadius:8,background:"rgba(255,255,255,0.5)",backdropFilter:"blur(6px)",marginBottom:6}}>
@@ -2126,36 +2094,46 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
             <div style={{padding:"10px 12px"}}>
               <input style={{...S.inp,marginBottom:6,background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)"}} placeholder="Filtra per codice, descrizione o collezione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
-              <div style={{maxHeight:200,overflowY:"auto",border:"1px solid #ffc35e44",borderRadius:8,background:"rgba(255,255,255,0.4)",backdropFilter:"blur(6px)"}}>
-                {skuList.filter(s=>!s.speciale&&(!cSku||s.sku.includes(cSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).map(s=>(
-                  <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
-                    <input type="checkbox" checked={skuMulti.includes(s.sku)}
-                      onChange={e=>{
-                        const sel=e.target.checked?[...skuMulti,s.sku]:skuMulti.filter(x=>x!==s.sku);
-                        if(!e.target.checked){ const r={...rampaPerSku}; delete r[s.sku]; setRampaPerSku(r); }
-                        setSkuMulti(sel); setSku(sel[0]||"");
-                      }}
-                      style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
-                    <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
-                    {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
-                    {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:"auto"}}>{s.collezione}</span>}
-                    {skuMulti.includes(s.sku)&&(()=>{
-                      const _rampe = rampeSheets||window._rampeSheets||[];
-                      const giaInRampa = _rampe.some(r=>r.sku===s.sku&&(r.giorni_completati||r.giorni||0)<15);
-                      return <label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",cursor:giaInRampa?"not-allowed":"pointer",padding:"4px 8px",background:"#eff6ff88",border:"1px solid "+(giaInRampa?"#3b82f6":"#3b82f688"),borderRadius:6}}>
-                        <input type="checkbox" checked={giaInRampa||!!rampaPerSku[s.sku]}
-                          disabled={giaInRampa}
-                          onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
-                          style={{accentColor:"#3b82f6",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
-                        <span style={{fontSize:11,color:"#3b82f6",fontWeight:700}}>{giaInRampa?"📈 in rampa":"📈 rampa"}</span>
-                      </label>;
-                    })()}
-                  </label>
-                ))}
-              </div>
+              {cSku&&(
+                <div style={{maxHeight:200,overflowY:"auto",border:"1px solid #ffc35e44",borderRadius:8,background:"rgba(255,255,255,0.4)",backdropFilter:"blur(6px)"}}>
+                  {skuList.filter(s=>!s.speciale&&(s.sku.includes(cSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).map(s=>(
+                    <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
+                      <input type="checkbox" checked={skuMulti.includes(s.sku)}
+                        onChange={e=>{
+                          const sel=e.target.checked?[...skuMulti,s.sku]:skuMulti.filter(x=>x!==s.sku);
+                          if(!e.target.checked){ const r={...rampaPerSku}; delete r[s.sku]; setRampaPerSku(r); }
+                          setSkuMulti(sel); setSku(sel[0]||"");
+                        }}
+                        style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
+                      <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
+                      {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
+                      {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:"auto"}}>{s.collezione}</span>}
+                      {skuMulti.includes(s.sku)&&(()=>{
+                        const _rampe = rampeSheets||window._rampeSheets||[];
+                        const giaInRampa = _rampe.some(r=>r.sku===s.sku&&(r.giorni_completati||r.giorni||0)<15);
+                        return <label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",cursor:giaInRampa?"not-allowed":"pointer",padding:"4px 8px",background:"#eff6ff88",border:"1px solid "+(giaInRampa?"#3b82f6":"#3b82f688"),borderRadius:6}}>
+                          <input type="checkbox" checked={giaInRampa||!!rampaPerSku[s.sku]}
+                            disabled={giaInRampa}
+                            onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
+                            style={{accentColor:"#3b82f6",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
+                          <span style={{fontSize:11,color:"#3b82f6",fontWeight:700}}>{giaInRampa?"📈 in rampa":"📈 rampa"}</span>
+                        </label>;
+                      })()}
+                    </label>
+                  ))}
+                </div>
+              )}
               {skuMulti.length>0&&(
-                <div style={{marginTop:6,padding:"4px 8px",background:"#f59e0b22",borderRadius:6,fontSize:12,color:"#92400e",fontWeight:700}}>
-                  ✓ {skuMulti.length} articol{skuMulti.length===1?"o":"i"} selezionat{skuMulti.length===1?"o":"i"}
+                <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:6}}>
+                  {skuMulti.map(skuId=>{
+                    const skuObj=skuList.find(x=>x.sku===skuId);
+                    return (
+                      <span key={skuId} style={{background:"#f59e0b22",border:"1px solid #f59e0b66",borderRadius:20,padding:"3px 8px",fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
+                        {skuId}{skuObj&&skuObj.descrizione?" — "+skuObj.descrizione:""}
+                        <span onClick={()=>{ const sel=skuMulti.filter(x=>x!==skuId); const r={...rampaPerSku}; delete r[skuId]; setRampaPerSku(r); setSkuMulti(sel); setSku(sel[0]||""); }} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:13,lineHeight:1}}>×</span>
+                      </span>
+                    );
+                  })}
                 </div>
               )}
             </div>
