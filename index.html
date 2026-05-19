@@ -263,6 +263,109 @@ const S = { scr:  {minHeight:"100vh",background:"#e2e8f0"}, hdr:  {display:"flex
 };
 const MS = { ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}, md: {background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:18,width:"90%",maxWidth:460,overflow:"hidden",animation:"fadeUp 0.3s ease"}, mh: {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px",borderBottom:"1px solid #e2e8f0"}, mt: {fontWeight:700,fontSize:16,color:"#a855f7"}, mx: {background:"transparent",border:"none",color:"#64748b",cursor:"pointer",fontSize:18,fontFamily:"'Montserrat',sans-serif"}, an: {flex:1,padding:10,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,color:"#475569",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
 };
+// TimePicker custom: 2 input HH/MM in stile Montserrat viola chiaro.
+// Props: value (string "HH:MM"), onChange (callback con nuovo "HH:MM"), size (compact|normal)
+function TimePicker({ value, onChange, size }) {
+  const [h, m] = (value||"").split(":");
+  const hh = h||"00";
+  const mm = m||"00";
+  const compact = size === "compact";
+  const inputW = compact ? 56 : 80;
+  const fontS = compact ? 16 : 24;
+  const padV = compact ? 6 : 10;
+  const update = (newHh, newMm) => { if(onChange) onChange(newHh+":"+newMm); };
+  const onChangeH = e => {
+    let v = e.target.value.replace(/\D/g,"").slice(0,2);
+    if(v!==""){ const n = Math.min(23,Math.max(0,parseInt(v,10))); v = String(n).padStart(v.length>=2?2:1,"0"); }
+    update(v, mm);
+  };
+  const onBlurH = e => { const v=e.target.value; const nv = v===""?"00":String(Math.min(23,Math.max(0,parseInt(v,10)||0))).padStart(2,"0"); update(nv, mm); };
+  const onChangeM = e => {
+    let v = e.target.value.replace(/\D/g,"").slice(0,2);
+    if(v!==""){ const n = Math.min(59,Math.max(0,parseInt(v,10))); v = String(n).padStart(v.length>=2?2:1,"0"); }
+    update(hh, v);
+  };
+  const onBlurM = e => { const v=e.target.value; const nv = v===""?"00":String(Math.min(59,Math.max(0,parseInt(v,10)||0))).padStart(2,"0"); update(hh, nv); };
+  return (
+    <div style={{display:"inline-flex",alignItems:"center",gap:compact?4:8,fontFamily:"'Montserrat',sans-serif"}}>
+      <input type="number" min="0" max="23" inputMode="numeric"
+        style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
+        value={hh} onChange={onChangeH} onBlur={onBlurH} onFocus={e=>e.target.select()} placeholder="HH"/>
+      <span style={{fontSize:compact?20:28,fontWeight:800,color:"#7c3aed"}}>:</span>
+      <input type="number" min="0" max="59" inputMode="numeric"
+        style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
+        value={mm} onChange={onChangeM} onBlur={onBlurM} onFocus={e=>e.target.select()} placeholder="MM"/>
+    </div>
+  );
+}
+// DatePicker custom: 3 input GG/MM/AAAA in stile Montserrat viola chiaro.
+// Props: value (string "YYYY-MM-DD"), onChange (callback con nuovo "YYYY-MM-DD"), size
+// Verifica che una stringa "YYYY-MM-DD" rappresenti una data valida del calendario
+// e sia entro un range ragionevole (±1 anno da oggi).
+// Ritorna {valida:boolean, messaggio:string}
+function dataValida(str) {
+  if (!str || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return {valida:false, messaggio:"Data non valida (GG/MM/AAAA)"};
+  const [y,m,g] = str.split("-").map(n=>parseInt(n,10));
+  if (m<1||m>12) return {valida:false, messaggio:"Mese non valido (1-12)"};
+  if (g<1||g>31) return {valida:false, messaggio:"Giorno non valido (1-31)"};
+  // Controllo giorno-mese reale (es. 31/02 non valido)
+  const d = new Date(y, m-1, g);
+  if (d.getFullYear()!==y || d.getMonth()!==m-1 || d.getDate()!==g) {
+    return {valida:false, messaggio:`Il ${g}/${m}/${y} non esiste`};
+  }
+  // Range ±1 anno da oggi
+  const oggi = new Date();
+  const limiteMin = new Date(oggi.getFullYear()-1, oggi.getMonth(), oggi.getDate());
+  const limiteMax = new Date(oggi.getFullYear()+1, oggi.getMonth(), oggi.getDate());
+  if (d < limiteMin) return {valida:false, messaggio:"Data troppo nel passato (max 1 anno fa)"};
+  if (d > limiteMax) return {valida:false, messaggio:"Data troppo nel futuro (max 1 anno avanti)"};
+  return {valida:true, messaggio:""};
+}
+
+function DatePicker({ value, onChange, size }) {
+  const v = value || "";
+  let yy="", mo="", gg="";
+  if (v.length === 10 && v.includes("-")) { const [y,m,g] = v.split("-"); yy=y; mo=m; gg=g; }
+  const compact = size === "compact";
+  const wGG = compact ? 50 : 64;
+  const wAA = compact ? 80 : 96;
+  const fontS = compact ? 16 : 22;
+  const padV = compact ? 6 : 10;
+  const update = (nGg, nMo, nYy) => { if(onChange) onChange(nYy+"-"+nMo+"-"+nGg); };
+  const onChangeG = e => {
+    let nv = e.target.value.replace(/\D/g,"").slice(0,2);
+    if(nv!==""){ const n=Math.min(31,Math.max(1,parseInt(nv,10))); nv=String(n).padStart(nv.length>=2?2:1,"0"); }
+    update(nv, mo, yy);
+  };
+  const onBlurG = e => { const nv=e.target.value; const fin = nv===""?"01":String(Math.min(31,Math.max(1,parseInt(nv,10)||1))).padStart(2,"0"); update(fin, mo, yy); };
+  const onChangeM = e => {
+    let nv = e.target.value.replace(/\D/g,"").slice(0,2);
+    if(nv!==""){ const n=Math.min(12,Math.max(1,parseInt(nv,10))); nv=String(n).padStart(nv.length>=2?2:1,"0"); }
+    update(gg, nv, yy);
+  };
+  const onBlurM = e => { const nv=e.target.value; const fin = nv===""?"01":String(Math.min(12,Math.max(1,parseInt(nv,10)||1))).padStart(2,"0"); update(gg, fin, yy); };
+  const onChangeY = e => {
+    let nv = e.target.value.replace(/\D/g,"").slice(0,4);
+    update(gg, mo, nv);
+  };
+  const onBlurY = e => { const nv=e.target.value; const n=parseInt(nv,10); const fin = isNaN(n)||n<2020||n>2099?String(new Date().getFullYear()):String(n); update(gg, mo, fin); };
+  const inpStyle = { textAlign:"center", fontSize:fontS, fontWeight:800, padding:padV+"px 4px", background:"#f8fafc", border:"1.5px solid #a78bfa", borderRadius:8, color:"#1e293b", fontFamily:"'Montserrat',sans-serif", outline:"none" };
+  return (
+    <div style={{display:"inline-flex",alignItems:"center",gap:compact?4:6,fontFamily:"'Montserrat',sans-serif"}}>
+      <input type="number" min="1" max="31" inputMode="numeric"
+        style={{...inpStyle, width:wGG}}
+        value={gg} onChange={onChangeG} onBlur={onBlurG} onFocus={e=>e.target.select()} placeholder="GG"/>
+      <span style={{fontSize:compact?18:22,fontWeight:800,color:"#7c3aed"}}>/</span>
+      <input type="number" min="1" max="12" inputMode="numeric"
+        style={{...inpStyle, width:wGG}}
+        value={mo} onChange={onChangeM} onBlur={onBlurM} onFocus={e=>e.target.select()} placeholder="MM"/>
+      <span style={{fontSize:compact?18:22,fontWeight:800,color:"#7c3aed"}}>/</span>
+      <input type="number" min="2020" max="2099" inputMode="numeric"
+        style={{...inpStyle, width:wAA}}
+        value={yy} onChange={onChangeY} onBlur={onBlurY} onFocus={e=>e.target.select()} placeholder="AAAA"/>
+    </div>
+  );
+}
 function SugOp({ val, list, onSel }) { if(!val||val.length<2||!list.length) return null;
   const v=val.toUpperCase();
   const m=list.filter(o=>o.matricola.includes(v)||o.nome.toUpperCase().includes(v)||o.cognome.toUpperCase().includes(v)).slice(0,4);
@@ -2337,6 +2440,8 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   };
   const [editOrarioOp, setEditOrarioOp] = useState(null); // matricola in modifica inizio
   const [editOrarioFineOp, setEditOrarioFineOp] = useState(null); // matricola in modifica fine
+  const [tmpOrarioVal, setTmpOrarioVal] = useState(""); // valore HH:MM corrente nell'editor inizio
+  const [tmpOrarioFineVal, setTmpOrarioFineVal] = useState(""); // valore HH:MM corrente nell'editor fine
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -2394,16 +2499,15 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   <span style={{fontSize:11,color:"#64748b"}}>⏰ Inizio:</span>
                   {editOrarioOp===op.matricola ? (
                     <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                      <input type="time" defaultValue={orariTurno[op.matricola]||"06:00"} id={"ot_"+op.matricola}
-                        style={{fontSize:11,padding:"2px 4px",border:"1px solid #a78bfa",borderRadius:4,fontFamily:"inherit"}}/>
-                      <button onClick={()=>{ const v=document.getElementById("ot_"+op.matricola)?.value||"06:00"; salvaOrario(op.matricola,v); setEditOrarioOp(null); }}
-                        style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer"}}>✓</button>
-                      <button onClick={()=>setEditOrarioOp(null)}
-                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer"}}>✕</button>
+                      <TimePicker size="compact" value={tmpOrarioVal||orariTurno[op.matricola]||"06:00"} onChange={v=>setTmpOrarioVal(v)}/>
+                      <button onClick={()=>{ const v=tmpOrarioVal||orariTurno[op.matricola]||"06:00"; salvaOrario(op.matricola,v); setEditOrarioOp(null); setTmpOrarioVal(""); }}
+                        style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓</button>
+                      <button onClick={()=>{setEditOrarioOp(null); setTmpOrarioVal("");}}
+                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     </div>
                   ) : (
                     <span style={{fontSize:11,fontWeight:700,color:(orariTurno[op.matricola]&&orariTurno[op.matricola]!=="06:00")?"#7c3aed":"#94a3b8",cursor:"pointer"}}
-                      onClick={()=>setEditOrarioOp(op.matricola)}>
+                      onClick={()=>{ setEditOrarioOp(op.matricola); setTmpOrarioVal(orariTurno[op.matricola]||"06:00"); }}>
                       {orariTurno[op.matricola]||"06:00"} ✏️
                     </span>
                   )}
@@ -2412,16 +2516,15 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   <span style={{fontSize:11,color:"#64748b"}}>🏁 Fine:</span>
                   {editOrarioFineOp===op.matricola ? (
                     <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                      <input type="time" defaultValue={orariFineTurno[op.matricola]||"14:00"} id={"otf_"+op.matricola}
-                        style={{fontSize:11,padding:"2px 4px",border:"1px solid #ef444488",borderRadius:4,fontFamily:"inherit"}}/>
-                      <button onClick={()=>{ const v=document.getElementById("otf_"+op.matricola)?.value||"14:00"; salvaOrarioFine(op.matricola,v); setEditOrarioFineOp(null); }}
-                        style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer"}}>✓</button>
-                      <button onClick={()=>setEditOrarioFineOp(null)}
-                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer"}}>✕</button>
+                      <TimePicker size="compact" value={tmpOrarioFineVal||orariFineTurno[op.matricola]||"14:00"} onChange={v=>setTmpOrarioFineVal(v)}/>
+                      <button onClick={()=>{ const v=tmpOrarioFineVal||orariFineTurno[op.matricola]||"14:00"; salvaOrarioFine(op.matricola,v); setEditOrarioFineOp(null); setTmpOrarioFineVal(""); }}
+                        style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓</button>
+                      <button onClick={()=>{setEditOrarioFineOp(null); setTmpOrarioFineVal("");}}
+                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     </div>
                   ) : (
                     <span style={{fontSize:11,fontWeight:700,color:(orariFineTurno[op.matricola]&&orariFineTurno[op.matricola]!=="14:00")?"#ef4444":"#94a3b8",cursor:"pointer"}}
-                      onClick={()=>setEditOrarioFineOp(op.matricola)}>
+                      onClick={()=>{ setEditOrarioFineOp(op.matricola); setTmpOrarioFineVal(orariFineTurno[op.matricola]||"14:00"); }}>
                       {orariFineTurno[op.matricola]||"14:00"} ✏️
                     </span>
                   )}
@@ -2637,12 +2740,25 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa"}}>
             <div style={{fontSize:16,fontWeight:800,color:"#7c3aed",marginBottom:8}}>✏️ Modifica {modMultipla.campo==="inizio"?"inizio":"fine"} — {selezionati.size} operatori</div>
-            <input type="datetime-local" style={{...S.inp,marginBottom:12}} value={modMultipla.valore} onChange={e=>setModMultipla({...modMultipla,valore:e.target.value})}/>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700,marginTop:6}}>Data</div>
+            <div style={{marginBottom:12}}>
+              <DatePicker value={modMultipla.data||(()=>{ const o=new Date(); return `${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`; })()} onChange={v=>setModMultipla({...modMultipla,data:v})}/>
+            </div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Orario</div>
+            <div style={{marginBottom:12}}>
+              <TimePicker value={modMultipla.orario||(modMultipla.campo==="inizio"?"06:00":"14:00")} onChange={v=>setModMultipla({...modMultipla,orario:v,_err:""})}/>
+            </div>
+            {modMultipla._err&&<div style={{...S.err,marginBottom:12}}>{modMultipla._err}</div>}
             <div style={{display:"flex",gap:8}}>
-              <button style={{flex:1,padding:10,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer"}} onClick={async()=>{
-                if(!modMultipla.valore) return;
-                const nd = new Date(modMultipla.valore);
-                if(isNaN(nd)) return;
+              <button style={{flex:1,padding:10,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+                const orario = modMultipla.orario||(modMultipla.campo==="inizio"?"06:00":"14:00");
+                const [hh,mm] = orario.split(":").map(n=>parseInt(n,10));
+                if(isNaN(hh)||isNaN(mm)||hh<0||hh>23||mm<0||mm>59){setModMultipla({...modMultipla,_err:"Orario non valido (HH:MM)."});return;}
+                const dataStr = modMultipla.data||(()=>{ const o=new Date(); return `${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`; })();
+                const chk = dataValida(dataStr);
+                if(!chk.valida){setModMultipla({...modMultipla,_err:chk.messaggio+"."});return;}
+                const [yy,mo,gg] = dataStr.split("-").map(n=>parseInt(n,10));
+                const nd = new Date(yy, mo-1, gg, hh, mm, 0, 0);
                 setLoading(true); setLoadingMsg("Aggiornamento "+selezionati.size+" operatori...");
                 const toUpdate = fil.filter(s=>selezionati.has(s.matricola||s.nome));
                 for(const s of toUpdate){
@@ -2651,7 +2767,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 setLoading(false); setModMultipla(null); setSelezionati(new Set());
                 if(onAggiornaSessioni) onAggiornaSessioni();
               }}>✓ Salva</button>
-              <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer"}} onClick={()=>setModMultipla(null)}>Annulla</button>
+              <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModMultipla(null)}>Annulla</button>
             </div>
           </div>
         </div>
@@ -2661,15 +2777,25 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
             <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif"}}>✏️ Modifica orario</div>
             <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{modOrario.campo==="inizio"?"Inizio turno":"Fine turno"} — {modOrario.sess.nome} {modOrario.sess.cognome}</div>
-            <input type="datetime-local" style={{...S.inp,marginBottom:12}} value={modOrario.valore} onChange={e=>setModOrario({...modOrario,valore:e.target.value})}/>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Data</div>
+            <div style={{marginBottom:14}}>
+              <DatePicker value={modOrario.data} onChange={v=>setModOrario({...modOrario,data:v})}/>
+            </div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Orario</div>
+            <div style={{marginBottom:12}}>
+              <TimePicker value={modOrario.hh+":"+modOrario.mm} onChange={v=>{ const [h,m]=v.split(":"); setModOrario({...modOrario,hh:h,mm:m}); }}/>
+            </div>
             {salvaOrarioErr&&<div style={{...S.err,marginBottom:12}}>{salvaOrarioErr}</div>}
             <button style={{...S.bCI,marginBottom:10}} onClick={async()=>{
-              if(!modOrario.valore){setSalvaOrarioErr("Inserisci una data valida.");return;}
-              const nuovaData=new Date(modOrario.valore);
-              if(isNaN(nuovaData)){setSalvaOrarioErr("Data non valida.");return;}
+              const hh=parseInt(modOrario.hh,10); const mm=parseInt(modOrario.mm,10);
+              if(isNaN(hh)||isNaN(mm)||hh<0||hh>23||mm<0||mm>59){setSalvaOrarioErr("Orario non valido (HH:MM).");return;}
+              const chk = dataValida(modOrario.data||"");
+              if(!chk.valida){setSalvaOrarioErr(chk.messaggio+".");return;}
+              const [yy,mo,gg] = (modOrario.data||"").split("-").map(n=>parseInt(n,10));
+              const nd = new Date(yy, mo-1, gg, hh, mm, 0, 0);
               setLoading(true); setLoadingMsg("Salvataggio orario...");
               try{
-                await fetchConRetry(nexusUrl("modificaorario",{sessionId:modOrario.sess.id,campo:modOrario.campo,valore:nuovaData.toISOString()}),5,1000);
+                await fetchConRetry(nexusUrl("modificaorario",{sessionId:modOrario.sess.id,campo:modOrario.campo,valore:nd.toISOString()}),5,1000);
                 setModOrario(null);setSalvaOrarioErr("");
                 if(onAggiornaSessioni) onAggiornaSessioni();
               }catch(e){setSalvaOrarioErr("Errore salvataggio.");}
@@ -3087,8 +3213,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               <div style={{background:"#7c3aed",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,justifyContent:"space-between",margin:"8px 24px",boxShadow:"0 4px 20px #7c3aed66"}}>
                 <span style={{color:"#fff",fontWeight:700,fontSize:13}}>{selezionati.size} selezionat{selezionati.size===1?"o":"i"}</span>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  <button onClick={()=>setModMultipla({campo:"inizio",valore:""})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✏️ Inizio</button>
-                  <button onClick={()=>setModMultipla({campo:"fine",valore:""})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✏️ Fine</button>
+                  <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✏️ Inizio</button>
+                  <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✏️ Fine</button>
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
                     setLoading(true); setLoadingMsg("Eliminazione...");
@@ -3185,13 +3311,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           }
                           return fmtSafe(s.inizio);
                         })()}</span>
-                        {editOrario&&<button onClick={()=>{ try{ const d=new Date(s.inizio); setModOrario({sess:s,campo:"inizio",valore:!isNaN(d)?d.toISOString().slice(0,16):""}); }catch(e){ setModOrario({sess:s,campo:"inizio",valore:""}); } }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
+                        {editOrario&&<button onClick={()=>{ const d=new Date(s.inizio); const oggi=new Date(); let hh="06",mm="00",data=""; if(!isNaN(d)){ hh=String(d.getHours()).padStart(2,"0"); mm=String(d.getMinutes()).padStart(2,"0"); data=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; } else { data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; } setModOrario({sess:s,campo:"inizio",hh,mm,data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
                       </div>
                     </td>
                     <td style={S.td}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         {s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}
-                        {editOrario&&<button onClick={()=>{ try{ const d=new Date(s.fine); setModOrario({sess:s,campo:"fine",valore:!isNaN(d)?d.toISOString().slice(0,16):""}); }catch(e){ setModOrario({sess:s,campo:"fine",valore:""}); } }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
+                        {editOrario&&!s._pianificato&&<button onClick={()=>{ const d=new Date(s.fine); const oggi=new Date(); let hh="14",mm="00",data=""; if(!isNaN(d)){ hh=String(d.getHours()).padStart(2,"0"); mm=String(d.getMinutes()).padStart(2,"0"); data=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; } else { data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; } setModOrario({sess:s,campo:"fine",hh,mm,data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}>✏️</button>}
                         {(()=>{
                           // Sessioni chiuse della stessa matricola su questa linea oggi
                           const sessChiuse = sessioni.filter(sx=>
