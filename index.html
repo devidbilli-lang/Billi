@@ -366,14 +366,18 @@ function DatePicker({ value, onChange, size }) {
     </div>
   );
 }
-// Icona matita SVG: stile minimal-professionale, corpo nero pieno.
+// Icona matita SVG: corpo a contorno + tappino gomma nero pieno.
 // size: dimensione in pixel (default 14)
 function IconaMatita({ size }) {
   const s = size || 14;
   return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="#000000" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle"}}>
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-      <path d="m15 5 4 4" fill="none"/>
+    <svg width={s} height={s} viewBox="0 0 24 24" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle"}}>
+      {/* Corpo della matita: contorno */}
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" fill="none"/>
+      {/* Tappino/gomma in alto a destra: piccolo poligono pieno nero */}
+      <path d="M14 6l4 4 1.5-1.5a2 2 0 0 0-2.5-2.5L14 6Z" fill="#000000" stroke="none"/>
+      {/* Linea di separazione tra gomma e corpo */}
+      <path d="m15 5 4 4" fill="none" stroke="#f59e0b"/>
     </svg>
   );
 }
