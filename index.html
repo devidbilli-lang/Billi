@@ -1786,11 +1786,11 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
 
             </div>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#ef4444",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>✕ Borse KO</label>
+              <label style={{...S.lbl,color:"#ef4444",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse KO</label>
               <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",color:"#ef4444"}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
             </div>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#f59e0b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>~ Migliorabili</label>
+              <label style={{...S.lbl,color:"#f59e0b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Migliorabili</label>
               <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
             </div>
           </div>
@@ -3498,7 +3498,7 @@ function App() { const [view,setView]             = useState("login");
           onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr}
           onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}
           rampeSheets={rampeSheets}
-          editOrario={URL_VIEW==="admin" || accesso.ruolo==="admin"}
+          editOrario={true}
           onTornaIndietro={()=>setView("checkin")}/>
       )}
     </div>
