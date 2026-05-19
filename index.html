@@ -322,7 +322,7 @@ function CambioSkuInline({ sess, skuList, linee, onOk, onClose }) { const [nSku,
               <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");setErr("");}}/>
             </div>
           )}
-          <input style={{...S.inp,fontFamily:"monospace",borderColor:"#f59e0b44"}} placeholder="es. SKU-001"
+          <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="es. SKU-001"
             value={nSku} onChange={e=>{setNSku(e.target.value.toUpperCase());setErr("");}}/>
           {err&&<div style={{...S.err,marginTop:8}}>{err}</div>}
           <div style={{display:"flex",gap:10,marginTop:16}}>
@@ -416,7 +416,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
               <div style={{marginTop:10}}>
                 <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca SKU..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
                 <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");}}/>
-                <input style={{...S.inp,marginTop:8,fontFamily:"monospace"}} placeholder="SKU selezionato" value={nSku} onChange={e=>setNSku(e.target.value.toUpperCase())}/>
+                <input style={{...S.inp,marginTop:8}} placeholder="SKU selezionato" value={nSku} onChange={e=>setNSku(e.target.value.toUpperCase())}/>
               </div>
             )}
           </div>
