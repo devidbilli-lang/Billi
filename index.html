@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1v0GJ6GQoid1C
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -1995,6 +1995,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); localStorage.setItem(kSel, JSON.stringify(listaOp)); }catch(e){}
               (async () => {
                 // Leggi orari turno da localStorage
+                // Leggi orari da localStorage (già sincronizzati con D1 all'avvio)
                 const _orariTurno = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; } })();
                 const oraAttuale = new Date();
                 for (const s of registrati) {
@@ -2002,8 +2003,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   const orarioOp = _orariTurno[s.matricola] || "06:00";
                   const [hTurno, mTurno] = orarioOp.split(":").map(Number);
                   const oraOp = new Date(); oraOp.setHours(hTurno, mTurno, 0, 0);
-                  if(oraOp > oraAttuale) {
-                    // Orario futuro — pianifica il check-in
+                  const diffMs = oraOp.getTime() - oraAttuale.getTime();
+                  if(diffMs > 10 * 60 * 1000) {
+                    // Orario futuro (>10 min) — pianifica il check-in
                     await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
                     // Non chiamare onSuccess — verrà registrato in automatico
                   } else {
@@ -2099,18 +2101,39 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   const [orariTurno, setOrariTurno] = useState(()=>{
     try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; }
   });
+  const [orariFineTurno, setOrariFineTurno] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; }
+  });
+
+  // Carica orari da D1 all'avvio (sincronizza tra dispositivi)
+  React.useEffect(()=>{
+    fetch(nexusUrl('leggiOrariOperatori',{})).then(r=>r.json()).then(j=>{
+      if(j.ok&&j.data.orari){
+        const inizio = {}; const fine = {};
+        Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; });
+        setOrariTurno(prev=>({...prev,...inizio}));
+        setOrariFineTurno(prev=>({...prev,...fine}));
+        localStorage.setItem('nexus_orari_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'),...inizio}));
+        localStorage.setItem('nexus_orari_fine_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'),...fine}));
+      }
+    }).catch(()=>{});
+  },[]);
+
   const salvaOrario = (matricola, orario) => {
     const nuovi = {...orariTurno, [matricola]: orario};
     setOrariTurno(nuovi);
     localStorage.setItem('nexus_orari_turno', JSON.stringify(nuovi));
+    // Salva anche su D1
+    const fineCorrente = orariFineTurno[matricola]||'14:00';
+    fetch(nexusUrl('salvaOrarioOperatore',{matricola,orarioInizio:orario,orarioFine:fineCorrente}),{mode:'cors'}).catch(()=>{});
   };
-  const [orariFineTurno, setOrariFineTurno] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; }
-  });
   const salvaOrarioFine = (matricola, orario) => {
     const nuovi = {...orariFineTurno, [matricola]: orario};
     setOrariFineTurno(nuovi);
     localStorage.setItem('nexus_orari_fine_turno', JSON.stringify(nuovi));
+    // Salva anche su D1
+    const inizioCorrente = orariTurno[matricola]||'06:00';
+    fetch(nexusUrl('salvaOrarioOperatore',{matricola,orarioInizio:inizioCorrente,orarioFine:orario}),{mode:'cors'}).catch(()=>{});
   };
   const [editOrarioOp, setEditOrarioOp] = useState(null); // matricola in modifica inizio
   const [editOrarioFineOp, setEditOrarioFineOp] = useState(null); // matricola in modifica fine
