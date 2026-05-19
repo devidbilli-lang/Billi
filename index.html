@@ -2034,15 +2034,14 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
         <div style={{flex:1,display:"flex",justifyContent:"center"}}>
           <div style={S.card}>
             <h2 style={S.cT}>Registra Presenza</h2>
-          <div style={{border:"1.5px solid #06d6a055",borderRadius:16,marginBottom:14,overflow:"hidden",background:"rgba(6,214,160,0.07)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
-            <div style={{background:"linear-gradient(90deg,#06d6a0cc,#06d6a099)",padding:"7px 0",textAlign:"center",backdropFilter:"blur(8px)"}}>
-              <span style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:3,textTransform:"uppercase",textShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>Operatori</span>
-            </div>
-            <div style={{padding:"10px 12px"}}>
-              {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#00d4aa18",border:"1px solid #00d4aa",borderRadius:6,color:"#00d4aa",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
-              <input ref={cOpRef} style={{...S.inp,marginBottom:6,background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)"}} placeholder="Cerca operatore..." value={cOp} onChange={e=>{setCOp(e.target.value);}}/>
+          <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
+            <div style={{width:4,background:"#06d6a0",borderRadius:2,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Operatori</div>
+              {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#06d6a018",border:"1px solid #06d6a0",borderRadius:6,color:"#047857",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
+              <input ref={cOpRef} style={{...S.inp,marginBottom:6}} placeholder="Cerca operatore..." value={cOp} onChange={e=>{setCOp(e.target.value);}}/>
               {cOp&&(
-                <div style={{maxHeight:160,overflowY:"auto",border:"1px solid #06d6a044",borderRadius:8,background:"rgba(255,255,255,0.5)",backdropFilter:"blur(6px)",marginBottom:6}}>
+                <div style={{maxHeight:160,overflowY:"auto",border:"1px solid #06d6a044",borderRadius:8,background:"#ffffff",marginBottom:6}}>
                   {operatori.filter(o=>{const q=cOp.toUpperCase();return o.nome.toUpperCase().includes(q)||o.cognome.toUpperCase().includes(q)||(o.matricola||"").toUpperCase().includes(q);}).map(o=>{
                     const sel=opSelezionati.some(x=>x.matricola===o.matricola);
                     return (<div key={o.matricola} onClick={()=>{
@@ -2075,20 +2074,19 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
           </div>
 
-          <div style={{border:"1.5px solid #ff5ef255",borderRadius:16,marginBottom:14,overflow:"hidden",background:"rgba(255,94,242,0.07)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
-            <div style={{background:"linear-gradient(90deg,#ff5ef2cc,#ff5ef299)",padding:"7px 0",textAlign:"center"}}>
-              <span style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:3,textTransform:"uppercase",textShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>Linea di Produzione</span>
-            </div>
-            <div style={{padding:"10px 12px"}}>
+          <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
+            <div style={{width:4,background:"#ff5ef2",borderRadius:2,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Linea di Produzione</div>
               {!lineaCheckinSel&&(
-                <input style={{...S.inp,marginBottom:6,background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)"}}
+                <input style={{...S.inp,marginBottom:6}}
                   placeholder="Cerca linea..."
                   value={cLinea}
                   onChange={e=>{ setCLinea(e.target.value); setLineaCheckinSel(null); }}
                 />
               )}
               {lineaCheckinSel&&(
-                <div style={{...S.inp,marginBottom:6,background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,cursor:"pointer",borderColor:lineaCheckinSel.colore||"#ff5ef2"}}
+                <div style={{...S.inp,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,cursor:"pointer",borderColor:lineaCheckinSel.colore||"#ff5ef2"}}
                   onClick={()=>{ setLineaCheckinSel(null); setCLinea(""); }}>
                   <span style={{color:lineaCheckinSel.colore||"#ff5ef2",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>
                     <strong style={{fontWeight:800}}>{lineaCheckinSel.id}</strong>
@@ -2098,7 +2096,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 </div>
               )}
               {cLinea&&!lineaCheckinSel&&(
-                <div style={{maxHeight:140,overflowY:"auto",border:"1px solid #ff5ef244",borderRadius:8,background:"rgba(255,255,255,0.5)",backdropFilter:"blur(6px)"}}>
+                <div style={{maxHeight:140,overflowY:"auto",border:"1px solid #ff5ef244",borderRadius:8,background:"#ffffff"}}>
                   {(linee||[]).filter(l=>l.id.toUpperCase().includes(cLinea.toUpperCase())||(l.nome||"").toUpperCase().includes(cLinea.toUpperCase())).map(l=>(
                     <div key={l.id}
                       onClick={()=>{ setLineaCheckinSel(l); setCLinea(""); setSkuMulti([]); }}
@@ -2114,14 +2112,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           </div>
 
           {(()=>{ const _lEff = lineaCheckinSel||linea; const _isPrepDG = _lEff && ((_lEff.id||"").toUpperCase().includes("PREPARAZIONE DG") || (_lEff.nome||"").toUpperCase().includes("PREPARAZIONE DG")); if(_isPrepDG) return null; return (
-          <div style={{border:"1.5px solid #f59e0b55",borderRadius:16,marginBottom:14,overflow:"hidden",background:"rgba(245,158,11,0.07)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
-            <div style={{background:"linear-gradient(90deg,#f59e0bcc,#f59e0b99)",padding:"7px 0",textAlign:"center"}}>
-              <span style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:3,textTransform:"uppercase",textShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>Articoli</span>
-            </div>
-            <div style={{padding:"10px 12px"}}>
-              <input style={{...S.inp,marginBottom:6,background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)"}} placeholder="Filtra per codice, descrizione o collezione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+          <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
+            <div style={{width:4,background:"#f59e0b",borderRadius:2,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Articoli</div>
+              <input style={{...S.inp,marginBottom:6}} placeholder="Filtra per codice, descrizione o collezione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
               {cSku&&(
-                <div style={{maxHeight:200,overflowY:"auto",border:"1px solid #f59e0b44",borderRadius:8,background:"rgba(255,255,255,0.4)",backdropFilter:"blur(6px)"}}>
+                <div style={{maxHeight:200,overflowY:"auto",border:"1px solid #f59e0b44",borderRadius:8,background:"#ffffff"}}>
                   {skuList.filter(s=>!s.speciale&&(s.sku.includes(cSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).map(s=>(
                     <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
                       <input type="checkbox" checked={skuMulti.includes(s.sku)}
