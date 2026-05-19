@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgcM63Gwj6RPqP
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -139,9 +139,6 @@ async function inviaEvento(p) {
   const tid = setTimeout(()=>ctrl.abort(),12000);
   const r = await fetch(url,{mode:"cors",signal:ctrl.signal}).finally(()=>clearTimeout(tid));
   if(r&&r.ok){
-    // Mirror su Sheets in background
-    const asUrl = APPS_SCRIPT_URL+"?"+new URLSearchParams({action:"evento",sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""}).toString();
-    fetch(asUrl,{mode:"cors"}).catch(()=>{});
     return true;
   }
   return false;
@@ -1183,7 +1180,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   const [riepilogo, setRiepilogo] = useState([]);
   useEffect(()=>{
     // Carica riepilogo da Apps Script per dati storici borse prodotte
-    fetch(APPS_SCRIPT_URL+"?action=leggiRiepilogo").then(r=>r.json()).then(j=>{
+    fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data&&j.data.righe) setRiepilogo(j.data.righe);
     }).catch(()=>{});
   },[]);
@@ -2464,7 +2461,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   React.useEffect(()=>{
     const caricaProd = async () => {
       try {
-        const r = await fetch(APPS_SCRIPT_URL+"?action=produzione");
+        const r = await fetch(nexusUrl("produzione",{}));
         const j = await r.json();
         if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }
       } catch(e){}
@@ -2696,7 +2693,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       await fetch(nexusUrl("eliminaPianificati",{matricola:modOrario.sess.matricola,lineaDa:modOrario.sess.lineaCorrente}),{mode:"cors"});
                     } else {
                       await fetch(nexusUrl("eliminasessione",{sessionId:_sessId}),{mode:"cors"});
-                      fetch(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(_sessId),{mode:"cors"}).catch(()=>{});
                     }
                     setSalvaOrarioErr("");
                     if(onAggiornaSessioni) onAggiornaSessioni();
@@ -3064,7 +3060,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       </div>
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
         {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"],["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:6}}><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L8 3M13 8L8 13" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Entra in Produzione</span>)]].map(([t,l])=>(
-          <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(APPS_SCRIPT_URL+"?action=produzione",3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#e2e8f0"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#475569"}}>{l}</button>
+          <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#e2e8f0"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#475569"}}>{l}</button>
         ))}
       </div>
       {tab==="sessioni"&&(
@@ -3101,7 +3097,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     for(const s of toDelete){
                       try{
                         await fetch(nexusUrl("eliminasessione",{sessionId:s.id}),{mode:"cors"});
-                        fetch(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(s.id),{mode:"cors"}).catch(()=>{});
                       }catch(e){}
                     }
                     setLoading(false); setSelezionati(new Set());
