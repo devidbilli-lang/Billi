@@ -1632,7 +1632,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         const totMigl = lista.reduce((a,r)=>a+r.migl,0);
         return (
           <div
-            style={{position:"fixed",bottom:20,right:16,zIndex:2000,width:"calc(100vw - 32px)",maxWidth:420,background:"rgba(255,255,255,0.75)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(124,58,237,0.25)",borderRadius:20,boxShadow:"0 8px 40px rgba(124,58,237,0.25)",fontFamily:"'Montserrat',sans-serif",userSelect:"none"}}
+            style={{position:"fixed",bottom:16,right:16,zIndex:2000,width:"calc(100vw - 32px)",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none"}}
             onMouseDown={e=>{
               const el = e.currentTarget;
               const startX = e.clientX - el.getBoundingClientRect().left;
@@ -1647,11 +1647,11 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               document.addEventListener("mouseup",onUp);
             }}
           >
-            <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(124,58,237,0.15)",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"grab"}}>
-              <span style={{fontWeight:800,fontSize:14,color:"#7c3aed"}}>📊 Riepilogo oggi</span>
-              <button onClick={()=>setShowRiepilogoQ(v=>!v)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#94a3b8"}}>{showRiepilogoQ?"✕":"▼"}</button>
+            <div style={{padding:"8px 14px 6px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"grab",borderBottom:"1px solid rgba(255,255,255,0.3)"}}>
+              <span style={{fontWeight:700,fontSize:11,color:"rgba(124,58,237,0.7)",letterSpacing:2,textTransform:"uppercase"}}>oggi</span>
+              <div style={{width:32,height:3,borderRadius:2,background:"rgba(124,58,237,0.3)"}}/>
             </div>
-            <div style={{padding:"12px 16px",maxHeight:400,overflowY:"auto"}}>
+            <div style={{padding:"8px 14px 14px",maxHeight:360,overflowY:"auto"}}>
               {lista.length===0&&<div style={{color:"#94a3b8",fontSize:13,textAlign:"center"}}>Nessun dato oggi</div>}
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s.sku===r.sku);
