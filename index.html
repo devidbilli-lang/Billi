@@ -366,12 +366,12 @@ function DatePicker({ value, onChange, size }) {
     </div>
   );
 }
-// Icona matita SVG: stile minimal-professionale, colorabile via currentColor.
+// Icona matita SVG: stile minimal-professionale, colore nero fisso.
 // size: dimensione in pixel (default 14)
 function IconaMatita({ size }) {
   const s = size || 14;
   return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle"}}>
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle"}}>
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
       <path d="m15 5 4 4"/>
     </svg>
