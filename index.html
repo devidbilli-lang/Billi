@@ -1510,6 +1510,13 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [err, setErr]       = useState("");
   const [modalConfermaQ, setModalConfermaQ] = useState(null);
   const [lineaSelQ, setLineaSelQ] = useState("");
+  const [qualitaOggi, setQualitaOggi] = useState([]);
+  // Carica dati qualità di oggi per mostrare totali per SKU
+  React.useEffect(()=>{
+    fetch(nexusUrl("leggiqualita",{})).then(r=>r.json()).then(j=>{
+      if(j.ok&&j.data) setQualitaOggi(j.data);
+    }).catch(()=>{});
+  },[]);
   const isAdminQ = !linea;
   const lineaEffettiva = isAdminQ ? lineaSelQ : linea?.id;
   const lObj = linea ? (linee.find(l=>l.id===linea.id)||linea) : {id:"Admin",colore:"#7c3aed"};
@@ -1667,6 +1674,13 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#1e293b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse Prodotte</label>
               <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px"}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
+              {sku&&(()=>{
+                const lineaId = linea?.id || lineaSelQ;
+                const totSku = qualitaOggi
+                  .filter(q=>q.sku===sku&&(!lineaId||q.linea===lineaId))
+                  .reduce((acc,q)=>acc+(Number(q.ok)||0),0);
+                return totSku>0 ? <div style={{fontSize:11,color:"#7c3aed",fontWeight:700,marginTop:4,textAlign:"center"}}>già inserite oggi: {totSku} borse</div> : null;
+              })()}
             </div>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#ef4444",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>✕ Borse KO</label>
