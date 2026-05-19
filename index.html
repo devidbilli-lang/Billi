@@ -1632,19 +1632,44 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         const totMigl = lista.reduce((a,r)=>a+r.migl,0);
         return (
           <div
-            style={{position:"fixed",bottom:16,right:16,zIndex:2000,width:"calc(100vw - 32px)",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none"}}
+            style={{position:"fixed",top:120,left:"50%",transform:"translateX(-50%)",zIndex:2000,width:"calc(100vw - 32px)",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none",cursor:"default"}}
             onMouseDown={e=>{
               const el = e.currentTarget;
-              const startX = e.clientX - el.getBoundingClientRect().left;
-              const startY = e.clientY - el.getBoundingClientRect().top;
+              const rect = el.getBoundingClientRect();
+              const startX = e.clientX - rect.left;
+              const startY = e.clientY - rect.top;
+              el.style.transform = "none";
+              el.style.left = rect.left+"px";
+              el.style.top = rect.top+"px";
               const onMove = ev=>{
-                el.style.left = (ev.clientX-startX)+"px";
-                el.style.top = (ev.clientY-startY)+"px";
-                el.style.right = "auto";
+                const nx = ev.clientX - startX;
+                const ny = ev.clientY - startY;
+                el.style.left = Math.max(0, Math.min(window.innerWidth-rect.width, nx))+"px";
+                el.style.top = Math.max(0, Math.min(window.innerHeight-100, ny))+"px";
               };
               const onUp = ()=>{ document.removeEventListener("mousemove",onMove); document.removeEventListener("mouseup",onUp); };
               document.addEventListener("mousemove",onMove);
               document.addEventListener("mouseup",onUp);
+            }}
+            onTouchStart={e=>{
+              const el = e.currentTarget;
+              const rect = el.getBoundingClientRect();
+              const t = e.touches[0];
+              const startX = t.clientX - rect.left;
+              const startY = t.clientY - rect.top;
+              el.style.transform = "none";
+              el.style.left = rect.left+"px";
+              el.style.top = rect.top+"px";
+              const onMove = ev=>{
+                const t2=ev.touches[0];
+                const nx = t2.clientX - startX;
+                const ny = t2.clientY - startY;
+                el.style.left = Math.max(0, Math.min(window.innerWidth-rect.width, nx))+"px";
+                el.style.top = Math.max(0, Math.min(window.innerHeight-100, ny))+"px";
+              };
+              const onEnd = ()=>{ document.removeEventListener("touchmove",onMove); document.removeEventListener("touchend",onEnd); };
+              document.addEventListener("touchmove",onMove,{passive:false});
+              document.addEventListener("touchend",onEnd);
             }}
           >
             <div style={{padding:"8px 14px 6px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"grab",borderBottom:"1px solid rgba(255,255,255,0.3)"}}>
@@ -1652,7 +1677,11 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               <div style={{width:32,height:3,borderRadius:2,background:"rgba(124,58,237,0.3)"}}/>
             </div>
             <div style={{padding:"8px 14px 14px",maxHeight:360,overflowY:"auto"}}>
-              {lista.length===0&&<div style={{color:"#94a3b8",fontSize:13,textAlign:"center"}}>Nessun dato oggi</div>}
+              {lista.length===0&&<div style={{display:"flex",gap:20,justifyContent:"center",padding:"8px 0"}}>
+                <span style={{fontSize:26,fontWeight:900,color:"#7c3aed"}}>✅ 0</span>
+                <span style={{fontSize:26,fontWeight:900,color:"#ef4444"}}>✕ 0</span>
+                <span style={{fontSize:26,fontWeight:900,color:"#f59e0b"}}>~ 0</span>
+              </div>}
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s.sku===r.sku);
                 return <div key={r.sku} style={{marginBottom:10,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
@@ -1660,15 +1689,15 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   {skuObj?.descrizione&&<div style={{fontSize:10,color:"#94a3b8",marginBottom:4}}>{skuObj.descrizione}</div>}
                   <div style={{display:"flex",gap:16,marginTop:4}}>
                     <span style={{fontSize:22,fontWeight:800,color:"#7c3aed"}}>✅ {r.ok}</span>
-                    <span style={{fontSize:22,fontWeight:800,color:"#ef4444"}}>✕ {r.ko||"-"}</span>
-                    <span style={{fontSize:22,fontWeight:800,color:"#f59e0b"}}>~ {r.migl||"-"}</span>
+                    <span style={{fontSize:22,fontWeight:800,color:"#ef4444"}}>✕ {r.ko||0}</span>
+                    <span style={{fontSize:22,fontWeight:800,color:"#f59e0b"}}>~ {r.migl||0}</span>
                   </div>
                 </div>;
               })}
               {lista.length>0&&<div style={{borderTop:"2px solid #e2e8f0",paddingTop:10,display:"flex",gap:20,justifyContent:"center"}}>
                 <span style={{fontSize:26,fontWeight:900,color:"#7c3aed"}}>✅ {totOk}</span>
-                <span style={{fontSize:26,fontWeight:900,color:"#ef4444"}}>✕ {totKo||"-"}</span>
-                <span style={{fontSize:26,fontWeight:900,color:"#f59e0b"}}>~ {totMigl||"-"}</span>
+                <span style={{fontSize:26,fontWeight:900,color:"#ef4444"}}>✕ {totKo||0}</span>
+                <span style={{fontSize:26,fontWeight:900,color:"#f59e0b"}}>~ {totMigl||0}</span>
               </div>}
             </div>
           </div>
