@@ -2061,8 +2061,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
           </div>
 
-          <div style={{border:"1.5px solid #4f46e555",borderRadius:16,marginBottom:14,overflow:"hidden",background:"rgba(79,70,229,0.07)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
-            <div style={{background:"linear-gradient(90deg,#4f46e5cc,#4f46e599)",padding:"7px 0",textAlign:"center"}}>
+          <div style={{border:"1.5px solid #ff5ef255",borderRadius:16,marginBottom:14,overflow:"hidden",background:"rgba(255,94,242,0.07)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
+            <div style={{background:"linear-gradient(90deg,#ff5ef2cc,#ff5ef299)",padding:"7px 0",textAlign:"center"}}>
               <span style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:3,textTransform:"uppercase",textShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>Linea di Produzione</span>
             </div>
             <div style={{padding:"10px 12px"}}>
@@ -2072,19 +2072,19 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 onChange={e=>{ setCLinea(e.target.value); setLineaCheckinSel(null); }}
               />
               {cLinea&&!lineaCheckinSel&&(
-                <div style={{maxHeight:140,overflowY:"auto",border:"1px solid #4f46e544",borderRadius:8,background:"rgba(255,255,255,0.5)",backdropFilter:"blur(6px)"}}>
+                <div style={{maxHeight:140,overflowY:"auto",border:"1px solid #ff5ef244",borderRadius:8,background:"rgba(255,255,255,0.5)",backdropFilter:"blur(6px)"}}>
                   {(linee||[]).filter(l=>l.id.toUpperCase().includes(cLinea.toUpperCase())||(l.nome||"").toUpperCase().includes(cLinea.toUpperCase())).map(l=>(
                     <div key={l.id}
                       onClick={()=>{ setLineaCheckinSel(l); setCLinea(l.id); setSkuMulti([]); }}
-                      style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #4f46e522",borderLeft:"4px solid "+(l.colore||"#4f46e5")}}
+                      style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #ff5ef222",borderLeft:"4px solid "+(l.colore||"#ff5ef2")}}
                     >
-                      <span style={{fontSize:13,fontWeight:700,color:l.colore||"#4f46e5"}}>{l.id}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:l.colore||"#ff5ef2"}}>{l.id}</span>
                       {l.nome&&<span style={{fontSize:11,color:"#94a3b8",fontFamily:"monospace"}}>{l.nome}</span>}
                     </div>
                   ))}
                 </div>
               )}
-              {lineaCheckinSel&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:700,marginTop:4,color:lineaCheckinSel.colore||"#4f46e5"}}>✓ {lineaCheckinSel.id}{lineaCheckinSel.nome&&<span style={{fontSize:11,color:"#94a3b8",fontFamily:"monospace"}}>{lineaCheckinSel.nome}</span>}</div>}
+              {lineaCheckinSel&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:700,marginTop:4,color:lineaCheckinSel.colore||"#ff5ef2"}}>✓ {lineaCheckinSel.id}{lineaCheckinSel.nome&&<span style={{fontSize:11,color:"#94a3b8",fontFamily:"monospace"}}>{lineaCheckinSel.nome}</span>}</div>}
             </div>
           </div>
 
