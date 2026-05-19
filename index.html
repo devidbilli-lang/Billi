@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1v0GJ6GQoid1C
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -2504,8 +2504,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 onOk:async()=>{
                   setModalConferma(null); setLoading(true); setLoadingMsg("Eliminazione sessione...");
                   try{
-                    await fetch(nexusUrl("eliminasessione",{sessionId:_sessId}),{mode:"cors"});
-                    fetch(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(_sessId),{mode:"cors"}).catch(()=>{});
+                    if(modOrario.sess._pianificato){
+                      // Per pianificati: elimina tutti i pianificati della matricola su quella linea
+                      await fetch(nexusUrl("eliminaPianificati",{matricola:modOrario.sess.matricola,lineaDa:modOrario.sess.lineaCorrente}),{mode:"cors"});
+                    } else {
+                      await fetch(nexusUrl("eliminasessione",{sessionId:_sessId}),{mode:"cors"});
+                      fetch(APPS_SCRIPT_URL+"?action=eliminasessione&sessionId="+encodeURIComponent(_sessId),{mode:"cors"}).catch(()=>{});
+                    }
                     setSalvaOrarioErr("");
                     if(onAggiornaSessioni) onAggiornaSessioni();
                   }catch(e){ setSalvaOrarioErr("Errore eliminazione."); }
