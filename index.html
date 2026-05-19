@@ -1511,6 +1511,9 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [modalConfermaQ, setModalConfermaQ] = useState(null);
   const [lineaSelQ, setLineaSelQ] = useState("");
   const [qualitaOggi, setQualitaOggi] = useState([]);
+  const [showRiepilogoQ, setShowRiepilogoQ] = useState(false);
+  const [posRiepQ, setPosRiepQ] = React.useRef({x:20,y:80});
+  const dragRef = React.useRef(null);
   // Carica dati qualità di oggi per mostrare totali per SKU
   React.useEffect(()=>{
     fetch(nexusUrl("leggiqualita",{})).then(r=>r.json()).then(j=>{
@@ -1613,6 +1616,66 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
+      {showRiepilogoQ&&(()=>{
+        // Calcola totali per SKU della linea oggi
+        const lineaId2 = linea?.id || lineaSelQ;
+        const righe = qualitaOggi.filter(q=>!lineaId2||q.linea===lineaId2);
+        const skuMap = {};
+        righe.forEach(q=>{
+          const k = q.sku;
+          if(!skuMap[k]) skuMap[k]={sku:k,ok:0,ko:0,migl:0};
+          skuMap[k].ok += Number(q.ok)||0;
+          skuMap[k].ko += Number(q.ko)||0;
+          skuMap[k].migl += Number(q.migliorabili)||0;
+        });
+        const lista = Object.values(skuMap).sort((a,b)=>b.ok-a.ok);
+        const totOk = lista.reduce((a,r)=>a+r.ok,0);
+        const totKo = lista.reduce((a,r)=>a+r.ko,0);
+        const totMigl = lista.reduce((a,r)=>a+r.migl,0);
+        return (
+          <div
+            style={{position:"fixed",top:80,right:20,zIndex:2000,width:320,background:"rgba(255,255,255,0.7)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",border:"1px solid rgba(124,58,237,0.3)",borderRadius:16,boxShadow:"0 8px 32px rgba(124,58,237,0.2)",fontFamily:"'Montserrat',sans-serif",userSelect:"none"}}
+            onMouseDown={e=>{
+              const el = e.currentTarget;
+              const startX = e.clientX - el.getBoundingClientRect().left;
+              const startY = e.clientY - el.getBoundingClientRect().top;
+              const onMove = ev=>{
+                el.style.left = (ev.clientX-startX)+"px";
+                el.style.top = (ev.clientY-startY)+"px";
+                el.style.right = "auto";
+              };
+              const onUp = ()=>{ document.removeEventListener("mousemove",onMove); document.removeEventListener("mouseup",onUp); };
+              document.addEventListener("mousemove",onMove);
+              document.addEventListener("mouseup",onUp);
+            }}
+          >
+            <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(124,58,237,0.15)",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"grab"}}>
+              <span style={{fontWeight:800,fontSize:14,color:"#7c3aed"}}>📊 Riepilogo oggi</span>
+              <button onClick={()=>setShowRiepilogoQ(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#94a3b8"}}>✕</button>
+            </div>
+            <div style={{padding:"12px 16px",maxHeight:400,overflowY:"auto"}}>
+              {lista.length===0&&<div style={{color:"#94a3b8",fontSize:13,textAlign:"center"}}>Nessun dato oggi</div>}
+              {lista.map(r=>{
+                const skuObj = (skuList||[]).find(s=>s.sku===r.sku);
+                return <div key={r.sku} style={{marginBottom:10,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#1e293b",marginBottom:4}}>{r.sku}</div>
+                  {skuObj?.descrizione&&<div style={{fontSize:10,color:"#94a3b8",marginBottom:4}}>{skuObj.descrizione}</div>}
+                  <div style={{display:"flex",gap:12}}>
+                    <span style={{fontSize:13,fontWeight:700,color:"#7c3aed"}}>✅ {r.ok}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:"#ef4444"}}>✕ {r.ko}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:"#f59e0b"}}>~ {r.migl}</span>
+                  </div>
+                </div>;
+              })}
+              {lista.length>0&&<div style={{borderTop:"2px solid #e2e8f0",paddingTop:8,display:"flex",gap:12}}>
+                <span style={{fontSize:14,fontWeight:800,color:"#7c3aed"}}>✅ {totOk}</span>
+                <span style={{fontSize:14,fontWeight:800,color:"#ef4444"}}>✕ {totKo}</span>
+                <span style={{fontSize:14,fontWeight:800,color:"#f59e0b"}}>~ {totMigl}</span>
+              </div>}
+            </div>
+          </div>
+        );
+      })()}
       {modalConfermaQ&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}}>
           <div style={{background:"#fff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa,0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
@@ -1633,6 +1696,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:18,fontWeight:800,color:lObj.colore,fontFamily:"'Montserrat',sans-serif"}}>🔒 {linea.id}</span>
+          <button onClick={()=>setShowRiepilogoQ(v=>!v)} style={{background:"rgba(124,58,237,0.15)",border:"1px solid #a78bfa",borderRadius:8,padding:"6px 12px",color:"#7c3aed",fontWeight:700,fontSize:13,cursor:"pointer",backdropFilter:"blur(8px)"}}>📊 Riepilogo oggi</button>
 
         </div>
       </header>
