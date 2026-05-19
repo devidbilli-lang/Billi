@@ -3170,7 +3170,7 @@ function App() { const [view,setView]             = useState("login");
       const j = await r.json();
       if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni); window._sessSheets=j.data.sessioni;
         if(j.data.rampe){ setRampeSheets(j.data.rampe); window._rampeSheets=j.data.rampe; }
-        if(j.data.sessioni.length === 0) setSess([]);
+        if(j.data.sessioni.length === 0){ setSess([]); setSessSheets([]); }
         setDashSync("ok"); setUltimoSync2(new Date());
         } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
   useEffect(()=>{ caricaSessioni();
