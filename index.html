@@ -2904,6 +2904,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               ))}</tr></thead>
               <tbody>{fil.map((s,i)=>{ const l=getLinea(s.lineaCorrente,linee);
                 const att2=!s.fine;
+                const isPianificato = !!s._pianificato;
+                const oraPrevistaFmt = isPianificato && s._oraPrevista ? 
+                  new Date(s._oraPrevista).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : null;
                 const dur=(()=>{
   // Se l'operatore è arrivato per trasferimento, il timer parte dal momento del trasferimento
   let ini = parseData(s.inizio);
@@ -2918,12 +2921,15 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
                 return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
+                  <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:isPianificato?"#fef3c7":att2&&inCorso?"#06b6d422":att2?"#dcfce7":"#fee2e2"}}>
                     {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
                       <input type="checkbox" checked={selezionati.has(s.matricola||s.nome)} onChange={e=>{const ns=new Set(selezionati);if(e.target.checked)ns.add(s.matricola||s.nome);else ns.delete(s.matricola||s.nome);setSelezionati(ns);}} style={{accentColor:"#7c3aed",width:14,height:14}}/>
                     </td>}
                     <td style={S.td}><span style={{background:"#f1f5f9",color:"#94a3b8",fontSize:11,padding:"2px 7px",borderRadius:4}}>{i+1}</span></td>
-                    <td style={S.td}>{s.nome} {s.cognome}</td>
+                    <td style={S.td}>
+                      {s.nome} {s.cognome}
+                      {isPianificato&&<span style={{background:"#f59e0b22",color:"#f59e0b",border:"1px solid #f59e0b44",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700,marginLeft:6}}>⏳ {oraPrevistaFmt}</span>}
+                    </td>
                     <td style={{...S.td,textAlign:"center"}}>
                       {(()=>{
                         // Sessioni attive di questa persona su questa linea
@@ -3191,7 +3197,9 @@ function App() { const [view,setView]             = useState("login");
       const tid2 = setTimeout(()=>ctrl2.abort(), 25000);
       const r = await fetch(nexusUrl("sessioni",{}), {signal:ctrl2.signal}).finally(()=>clearTimeout(tid2));
       const j = await r.json();
-      if(j.ok&&j.data.sessioni){ setSessSheets(j.data.sessioni); window._sessSheets=j.data.sessioni;
+      if(j.ok&&j.data.sessioni){ 
+        const tuttiSess = [...j.data.sessioni, ...(j.data.pianificati||[])];
+        setSessSheets(tuttiSess); window._sessSheets=tuttiSess;
         if(j.data.rampe){ setRampeSheets(j.data.rampe); window._rampeSheets=j.data.rampe; }
         if(j.data.sessioni.length === 0){ setSess([]); setSessSheets([]); }
         setDashSync("ok"); setUltimoSync2(new Date());
