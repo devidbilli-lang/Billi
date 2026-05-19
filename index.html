@@ -180,6 +180,22 @@ async function codaProcessa() {
 
 setInterval(codaProcessa, 10000);
 setTimeout(codaProcessa, 2000);
+
+// Carica orari operatori da D1 all'avvio e aggiorna localStorage
+setTimeout(()=>{
+  fetch(nexusUrl('leggiOrariOperatori',{})).then(r=>r.json()).then(j=>{
+    if(j.ok&&j.data.orari){
+      const inizio = {}; const fine = {};
+      Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; });
+      const prevInizio = JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}');
+      const prevFine = JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}');
+      localStorage.setItem('nexus_orari_turno', JSON.stringify({...prevInizio,...inizio}));
+      localStorage.setItem('nexus_orari_fine_turno', JSON.stringify({...prevFine,...fine}));
+      console.log('[NEXUS] Orari caricati da D1:', Object.keys(inizio).length, 'operatori');
+    }
+  }).catch(()=>{});
+}, 3000);
+
 // Invia orari fine turno al Worker all'avvio
 setTimeout(()=>{
   try {
