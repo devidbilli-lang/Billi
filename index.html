@@ -1512,8 +1512,6 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [lineaSelQ, setLineaSelQ] = useState("");
   const [qualitaOggi, setQualitaOggi] = useState([]);
   const [showRiepilogoQ, setShowRiepilogoQ] = useState(false);
-  const [posRiepQ, setPosRiepQ] = React.useRef({x:20,y:80});
-  const dragRef = React.useRef(null);
   // Carica dati qualità di oggi per mostrare totali per SKU
   React.useEffect(()=>{
     fetch(nexusUrl("leggiqualita",{})).then(r=>r.json()).then(j=>{
