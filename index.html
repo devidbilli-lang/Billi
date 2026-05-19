@@ -2519,7 +2519,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   ) : (
                     <span style={{fontSize:11,fontWeight:700,color:(orariTurno[op.matricola]&&orariTurno[op.matricola]!=="06:00")?"#7c3aed":"#94a3b8",cursor:"pointer"}}
                       onClick={()=>{ setEditOrarioOp(op.matricola); setTmpOrarioVal(orariTurno[op.matricola]||"06:00"); }}>
-                      {orariTurno[op.matricola]||"06:00"} <IconaMatita size={11}/>
+                      {orariTurno[op.matricola]||"06:00"} <IconaMatita size={14}/>
                     </span>
                   )}
                 </div>
@@ -2536,7 +2536,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   ) : (
                     <span style={{fontSize:11,fontWeight:700,color:(orariFineTurno[op.matricola]&&orariFineTurno[op.matricola]!=="14:00")?"#ef4444":"#94a3b8",cursor:"pointer"}}
                       onClick={()=>{ setEditOrarioFineOp(op.matricola); setTmpOrarioFineVal(orariFineTurno[op.matricola]||"14:00"); }}>
-                      {orariFineTurno[op.matricola]||"14:00"} <IconaMatita size={11}/>
+                      {orariFineTurno[op.matricola]||"14:00"} <IconaMatita size={14}/>
                     </span>
                   )}
                 </div>
@@ -2750,7 +2750,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {editOrario&&modMultipla&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa"}}>
-            <div style={{fontSize:16,fontWeight:800,color:"#7c3aed",marginBottom:8,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={16}/> Modifica {modMultipla.campo==="inizio"?"inizio":"fine"} — {selezionati.size} operatori</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#7c3aed",marginBottom:8,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={19}/> Modifica {modMultipla.campo==="inizio"?"inizio":"fine"} — {selezionati.size} operatori</div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700,marginTop:6}}>Data</div>
             <div style={{marginBottom:12}}>
               <DatePicker value={modMultipla.data||(()=>{ const o=new Date(); return `${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`; })()} onChange={v=>setModMultipla({...modMultipla,data:v})}/>
@@ -2786,7 +2786,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {modOrario&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
-            <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}><IconaMatita size={18}/> Modifica orario</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}><IconaMatita size={22}/> Modifica orario</div>
             <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{modOrario.campo==="inizio"?"Inizio turno":"Fine turno"} — {modOrario.sess.nome} {modOrario.sess.cognome}</div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Data</div>
             <div style={{marginBottom:14}}>
@@ -3224,8 +3224,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               <div style={{background:"#7c3aed",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,justifyContent:"space-between",margin:"8px 24px",boxShadow:"0 4px 20px #7c3aed66"}}>
                 <span style={{color:"#fff",fontWeight:700,fontSize:13}}>{selezionati.size} selezionat{selezionati.size===1?"o":"i"}</span>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={12}/> Inizio</button>
-                  <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={12}/> Fine</button>
+                  <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Inizio</button>
+                  <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Fine</button>
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
                     setLoading(true); setLoadingMsg("Eliminazione...");
@@ -3322,13 +3322,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           }
                           return fmtSafe(s.inizio);
                         })()}</span>
-                        {editOrario&&<button onClick={()=>{ const d=new Date(s.inizio); const oggi=new Date(); let hh="06",mm="00",data=""; if(!isNaN(d)){ hh=String(d.getHours()).padStart(2,"0"); mm=String(d.getMinutes()).padStart(2,"0"); data=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; } else { data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; } setModOrario({sess:s,campo:"inizio",hh,mm,data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={12}/></button>}
+                        {editOrario&&<button onClick={()=>{ const d=new Date(s.inizio); const oggi=new Date(); let hh="06",mm="00",data=""; if(!isNaN(d)){ hh=String(d.getHours()).padStart(2,"0"); mm=String(d.getMinutes()).padStart(2,"0"); data=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; } else { data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; } setModOrario({sess:s,campo:"inizio",hh,mm,data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={14}/></button>}
                       </div>
                     </td>
                     <td style={S.td}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         {s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}
-                        {editOrario&&<button onClick={()=>{ const d=new Date(s.fine); const oggi=new Date(); let hh="14",mm="00",data=""; if(!isNaN(d)){ hh=String(d.getHours()).padStart(2,"0"); mm=String(d.getMinutes()).padStart(2,"0"); data=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; } else { data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; } setModOrario({sess:s,campo:"fine",hh,mm,data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={12}/></button>}
+                        {editOrario&&<button onClick={()=>{ const d=new Date(s.fine); const oggi=new Date(); let hh="14",mm="00",data=""; if(!isNaN(d)){ hh=String(d.getHours()).padStart(2,"0"); mm=String(d.getMinutes()).padStart(2,"0"); data=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; } else { data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; } setModOrario({sess:s,campo:"fine",hh,mm,data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={14}/></button>}
                         {(()=>{
                           // Sessioni chiuse della stessa matricola su questa linea oggi
                           const sessChiuse = sessioni.filter(sx=>
