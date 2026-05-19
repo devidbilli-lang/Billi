@@ -2367,7 +2367,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   // Aggiungi pianificati raggruppati per matricola+linea (non per SKU)
   const matAttive = new Set(Object.values(filMap).filter(s=>!s.fine||s.fine===""||s.fine===null||s.fine==="null").map(s=>s.matricola));
   const pianoMap = {};
-  sessioni.filter(s=>s._pianificato && !matAttive.has(s.matricola)).forEach(s=>{
+  sessioni.filter(s=>s._pianificato && !matAttive.has(s.matricola) && (fL==="ALL"||s.lineaCorrente===fL)).forEach(s=>{
     const key = s.matricola+"|"+s.lineaCorrente;
     if(!pianoMap[key]){
       pianoMap[key] = {...s, _skuPianificati:[s.sku]};
