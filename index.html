@@ -232,18 +232,21 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
   const [difettiList,setDifettiList] = useState([]);
   const [sync,setSync]           = useState("caricamento");
   const [ts,setTs]               = useState(null);
-  const load = useCallback(async()=>{ setSync("caricamento");
+  const load = useCallback(async(silenzioso)=>{
+    // Solo al primo caricamento mostro il logo. I refresh periodici sono silenziosi
+    // per non far "flashare" lo splash screen ogni minuto.
+    if(!silenzioso) setSync("caricamento");
     try { const d = await api.config();
       if(d){ if(d.linee&&d.linee.length) setLinee(d.linee);
         if(d.operatori) setOperatori(d.operatori);
         if(d.skuList)   setSkuList(d.skuList);
         if(d.difetti)  setDifettiList(d.difetti||[]);
-        setSync("ok"); setTs(new Date()); } else setSync("errore"); } catch{ setSync("errore"); } },[]);
-  useEffect(()=>{ load();
-    const t = setInterval(load, 60000);
+        setSync("ok"); setTs(new Date()); } else if(!silenzioso) setSync("errore"); } catch{ if(!silenzioso) setSync("errore"); } },[]);
+  useEffect(()=>{ load(false); // primo caricamento mostra logo
+    const t = setInterval(()=>load(true), 60000); // refresh silenziosi
     return ()=>clearInterval(t);
   },[load]);
-  return { linee, operatori, skuList, difettiList, sync, ts, reload:load };
+  return { linee, operatori, skuList, difettiList, sync, ts, reload:()=>load(false) };
 }
 function tappe(s) { const fine = s.fine ? new Date(s.fine) : now();
   const out  = [];
