@@ -696,11 +696,23 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const _hFine = Math.floor(secFineTurnoAssoluto/3600)%24;
   const _mFine = Math.round((secFineTurnoAssoluto%3600)/60);
   const labelFine = String(_hFine).padStart(2,"0")+":"+String(_mFine).padStart(2,"0");
-  // Escludi pianificati dal conteggio operatori reali
+  // Sessioni ATTIVE ora (per dato realtime durante il turno)
   const sessAttive = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!s._pianificato);
+  // Sessioni della GIORNATA su questa linea (anche chiuse, per "lo stato finale" dopo CHECKOUT)
+  // Usate come fallback quando il turno è chiuso: la dashboard continua a mostrare i totali del turno
+  const oggiDate = new Date(); oggiDate.setHours(0,0,0,0);
+  const sessGiornata = sessioni.filter(s=>{
+    if(s._pianificato) return false;
+    if((s.lineaCorrente!==lineaId)&&(s.lineaInizio!==lineaId)) return false;
+    const d = parseData(s.inizio);
+    return d && d>=oggiDate.getTime();
+  });
+  // Se non ci sono sessioni attive ma ci sono sessioni di oggi → turno terminato, mostra i dati finali
+  const turnoTerminato = sessAttive.length === 0 && sessGiornata.length > 0;
+  const sessRiferimento = turnoTerminato ? sessGiornata : sessAttive;
   // Deduplica per matricola: una matricola = un operatore (prendi sessione più recente)
   const sessAttivePerMat = {};
-  sessAttive.forEach(s=>{
+  sessRiferimento.forEach(s=>{
     const mat = s.matricola||s.nome||s.id;
     if(!mat) return;
     const d = parseData(s.inizio);
