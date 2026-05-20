@@ -704,7 +704,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   // NON scende per uscite anticipate o entrate tardive
   const obFinale = tc>0 ? (()=>{
     const sessioniLinea = sessioni.filter(s=>
-      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
+      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio&&!s._pianificato
     );
     // Per ogni matricola: calcola minuti disponibili meno periodi improduttivi
     const minPerMat = {};
@@ -820,7 +820,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   // OBIETTIVO FISSO: max persone uniche registrate oggi × ore turno / TC
   const obiettivoFisso = tc>0 ? (()=>{
     const sessioniLinea = sessioni.filter(s=>
-      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio
+      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio&&!s._pianificato
     );
     // Matricole uniche che hanno lavorato su produzione (escluse riparazioni)
     const matricoleUniche = new Set();
@@ -1581,7 +1581,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         if(tc<=0) return;
 
         // Obiettivo Reale: minuti effettivi / TC
-        const sessioniLinea = sessioni.filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio);
+        const sessioniLinea = sessioni.filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio&&!s._pianificato);
         const minPerMat = {};
         sessioniLinea.forEach(s=>{
           const mat = s.matricola||s.nome||s.id; if(!mat) return;
@@ -2459,7 +2459,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
-    const sessAtt = sessioni.find(s => (s.matricola===chiave||s.matricola===op.matricola) && !s.fine);
+    const sessAtt = sessioni.find(s => (s.matricola===chiave||s.matricola===op.matricola) && !s.fine && !s._pianificato);
     const ultimaSess = sessioni.filter(s => s.matricola===chiave||s.matricola===op.matricola).sort((a,b)=> (parseData(b.inizio)||0)-(parseData(a.inizio)||0))[0];
     return { op, sessAtt, ultimaSess }; });
   const presenti = stati.filter(s=>s.sessAtt).length;
