@@ -1319,6 +1319,10 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   const [modRampa, setModRampa] = useState(null); // {sku, lineaId, dataAttuale, dataNuova, err}
   const [refreshKey, setRefreshKey] = useState(0);
   const [nOpOverride, setNOpOverride] = useState({}); // {sku: numero personalizzato} per scenari "what-if"
+  const [filtroStato, setFiltroStato] = useState("attive"); // attive | completate | tutte
+  const [filtroDataDa, setFiltroDataDa] = useState("");
+  const [filtroDataA, setFiltroDataA] = useState("");
+  const [cercaSku, setCercaSku] = useState("");
   useEffect(()=>{
     // Carica riepilogo da Apps Script per dati storici borse prodotte
     fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
@@ -1327,26 +1331,91 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   },[]);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
   const rampaMap = {};
-  for(const r of (rampeSheets||[])){ if(r.sku && r.rampaDal){ const g = giorniLavorativiJS(r.rampaDal);
-      if(!rampaMap[r.sku]) rampaMap[r.sku] = { dal:r.rampaDal, giorni:g, lineaId:r.lineaId }; } }
+  // Leggi rampe da rampeSheets (tabella rampe del DB). Il campo è `dal`, supporto anche legacy `rampaDal`.
+  for(const r of (rampeSheets||[])){
+    const dal = r.dal || r.rampaDal;
+    if(r.sku && dal){
+      const g = giorniLavorativiJS(dal);
+      // Se più record per stesso SKU, prendi quello con data più recente (rampa più recente)
+      if(!rampaMap[r.sku] || dal > rampaMap[r.sku].dal) {
+        rampaMap[r.sku] = { dal, giorni:g, lineaId:r.linea_id || r.lineaId, completata: !!r.completata };
+      }
+    }
+  }
+  // Estrai rampe anche dalle sessioni attuali (per SKU che potrebbero non essere ancora in rampeSheets)
   for(const s of sessioni){ let rdal = s.rampaDal||null;
     if(!rdal && (s.skuA||"").includes("__RAMPA__")){ const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime(); }
-    if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=giorniLavorativiJS(rdal); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente}; } } }
+    if(rdal){ const sku=s.skuCorrente||s.sku||""; if(sku&&!rampaMap[sku]){ const g=giorniLavorativiJS(rdal); rampaMap[sku]={dal:rdal,giorni:g,lineaId:s.lineaCorrente,completata:false}; } } }
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
-  // Mostra solo SKU con rampa attiva (non completata)
-  const tuttiSku = [...new Set([...Object.keys(rampaMap),...Object.keys(totMap)])]
-    .filter(sku => rampaMap[sku] && (rampaMap[sku].giorni||0) < 15)
-    .sort();
+  // Filtri storici: stato (attive/completate/tutte), range date, ricerca SKU
+  const fDataDaTs = filtroDataDa ? (()=>{ const [y,m,g]=filtroDataDa.split("-").map(n=>parseInt(n,10)); return new Date(y,m-1,g,0,0,0,0).getTime(); })() : null;
+  const fDataATs = filtroDataA ? (()=>{ const [y,m,g]=filtroDataA.split("-").map(n=>parseInt(n,10)); return new Date(y,m-1,g,23,59,59,999).getTime(); })() : null;
+  const queryCerca = (cercaSku||"").trim().toUpperCase();
+  const tuttiSku = Object.keys(rampaMap)
+    .filter(sku => {
+      const r = rampaMap[sku];
+      if(!r) return false;
+      const isCompletata = r.completata || (r.giorni||0) >= 15;
+      // Filtro stato
+      if(filtroStato === "attive" && isCompletata) return false;
+      if(filtroStato === "completate" && !isCompletata) return false;
+      // Filtro date
+      if(fDataDaTs && r.dal < fDataDaTs) return false;
+      if(fDataATs && r.dal > fDataATs) return false;
+      // Filtro ricerca SKU
+      if(queryCerca && !sku.toUpperCase().includes(queryCerca)) return false;
+      return true;
+    })
+    .sort((a,b) => (rampaMap[b].dal||0) - (rampaMap[a].dal||0)); // ordina per data più recente prima
+  // Costruisco la barra dei filtri come componente riusabile in entrambi i return (vuoto + con risultati)
+  const BarraFiltri = (
+    <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"14px 18px",marginBottom:12,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:8,padding:3}}>
+        {[["attive","Attive"],["completate","Completate"],["tutte","Tutte"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setFiltroStato(v)}
+            style={{padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,background:filtroStato===v?"#7c3aed":"transparent",color:filtroStato===v?"#fff":"#64748b"}}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#64748b"}}>
+        <span style={{fontWeight:700,color:"#1e293b"}}>Da:</span>
+        <DatePicker size="compact" value={filtroDataDa} onChange={v=>setFiltroDataDa(v)}/>
+        {filtroDataDa&&<button onClick={()=>setFiltroDataDa("")} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:14,fontWeight:700,padding:"0 4px"}}>×</button>}
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#64748b"}}>
+        <span style={{fontWeight:700,color:"#1e293b"}}>A:</span>
+        <DatePicker size="compact" value={filtroDataA} onChange={v=>setFiltroDataA(v)}/>
+        {filtroDataA&&<button onClick={()=>setFiltroDataA("")} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:14,fontWeight:700,padding:"0 4px"}}>×</button>}
+      </div>
+      <input type="text" value={cercaSku} onChange={e=>setCercaSku(e.target.value)} placeholder="Cerca SKU..."
+        style={{padding:"7px 12px",border:"1.5px solid #cbd5e1",borderRadius:6,fontSize:12,fontFamily:"'Montserrat',sans-serif",color:"#1e293b",outline:"none",flex:1,minWidth:140}}/>
+      {(filtroStato!=="attive"||filtroDataDa||filtroDataA||cercaSku)&&(
+        <button onClick={()=>{setFiltroStato("attive");setFiltroDataDa("");setFiltroDataA("");setCercaSku("");}}
+          style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>
+          ↻ Reset filtri
+        </button>
+      )}
+      <div style={{marginLeft:"auto",fontSize:12,color:"#64748b",fontWeight:700}}>
+        {tuttiSku.length} rampa{tuttiSku.length===1?"":"e"}
+      </div>
+    </div>
+  );
   if(!tuttiSku.length) return (
-    <div style={{textAlign:"center",padding:60,color:"#64748b"}}>
-      <div style={{fontSize:40,marginBottom:12}}>📈</div>
-      <div style={{fontSize:14,fontWeight:600,color:"#64748b",marginBottom:8}}>Nessuna Rampa di Crescita attiva</div>
+    <div>
+      {BarraFiltri}
+      <div style={{textAlign:"center",padding:60,color:"#64748b"}}>
+        <div style={{fontSize:40,marginBottom:12}}>📈</div>
+        <div style={{fontSize:14,fontWeight:600,color:"#64748b",marginBottom:8}}>Nessuna rampa trovata con i filtri selezionati</div>
+      </div>
     </div>
   );
   return (
-    <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
-      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampa di Crescita</div>
+    <div>
+      {BarraFiltri}
+      <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
+      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampe di Crescita</div>
       {tuttiSku.map(sku=>{ const ms=totMap[sku]||0; const rampa=rampaMap[sku]||null; const g=rampa?rampa.giorni:null;
         const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
@@ -1499,6 +1568,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
             })()}
           </div>
         ); })}
+      </div>
       {modRampa&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
