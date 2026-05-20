@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgcM63Gwj6RPqP
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -1327,10 +1327,15 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   const [filtroDataDa, setFiltroDataDa] = useState("");
   const [filtroDataA, setFiltroDataA] = useState("");
   const [cercaSku, setCercaSku] = useState("");
+  const [operatoriPerGiorno, setOperatoriPerGiorno] = useState([]); // [{sku, data:dd/MM/yyyy, nOperatori}]
   useEffect(()=>{
     // Carica riepilogo da Apps Script per dati storici borse prodotte
     fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data&&j.data.righe) setRiepilogo(j.data.righe);
+    }).catch(()=>{});
+    // Carica operatori unici per giorno+sku per media rampa
+    fetch(nexusUrl("leggiOperatoriPerGiorno",{})).then(r=>r.json()).then(j=>{
+      if(j.ok&&j.data&&j.data.righe) setOperatoriPerGiorno(j.data.righe);
     }).catch(()=>{});
   },[]);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
@@ -1452,9 +1457,35 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               const PERC = [0,20,35,45,55,64,73,76,82,85,88,92,95,98,100];
               const skuObj = skuList.find(s=>s.sku===sku) || {};
               const tc = skuObj.tc || skuObj.tc_minuti || skuObj.tcMinuti || 0;
-              // Conta operatori reali attivi su questo SKU (se 0, default 1 per mostrare comunque la curva)
-              const nOpReale = new Set(sessioni.filter(s=>(s.skuCorrente||s.sku)===sku&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size || 1;
-              // nOp finale: usa override personalizzato se impostato, altrimenti il numero reale
+              // nOpReale: media operatori sui giorni di rampa GIÀ TRASCORSI.
+              // Per ogni giorno della rampa (da g1 a oggi), conta matricole uniche su questo SKU
+              // dal dato `operatoriPerGiorno` (precaricato da leggiOperatoriPerGiorno).
+              // Se la rampa non è iniziata o non ci sono dati storici, fallback a sessioni attive.
+              let nOpReale;
+              if(rampa && rampa.dal){
+                // Calcola giorni della rampa passati (lavorativi) e raccogli nOp per ognuno
+                const valoriPerGiorno = [];
+                const giorniTrascorsi = Math.min(rampa.giorni || 1, 15);
+                for(let d=1; d<=giorniTrascorsi; d++){
+                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
+                  const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
+                  const riga = (operatoriPerGiorno||[]).find(r=>r.sku===sku && (r.data||"").slice(0,10)===fmtG);
+                  if(riga && riga.nOperatori > 0) valoriPerGiorno.push(riga.nOperatori);
+                }
+                if(valoriPerGiorno.length > 0){
+                  // Media arrotondata al numero intero più vicino
+                  const somma = valoriPerGiorno.reduce((a,b)=>a+b, 0);
+                  nOpReale = Math.round(somma / valoriPerGiorno.length);
+                } else {
+                  // Nessun dato storico: fallback a operatori attivi adesso
+                  nOpReale = new Set(sessioni.filter(s=>(s.skuCorrente||s.sku)===sku&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size || 1;
+                }
+              } else {
+                // Niente rampa, fallback semplice
+                nOpReale = new Set(sessioni.filter(s=>(s.skuCorrente||s.sku)===sku&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size || 1;
+              }
+              if(!nOpReale || nOpReale < 1) nOpReale = 1;
+              // nOp finale: usa override personalizzato se impostato, altrimenti il numero reale (media)
               const nOp = nOpOverride[sku] !== undefined ? nOpOverride[sku] : nOpReale;
               const isOverride = nOpOverride[sku] !== undefined && nOpOverride[sku] !== nOpReale;
               const minTurno = nOp * 8 * 60; // minuti totali turno
