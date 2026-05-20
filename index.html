@@ -324,45 +324,66 @@ function dataValida(str) {
 
 function DatePicker({ value, onChange, size }) {
   const v = value || "";
-  let yy="", mo="", gg="";
-  if (v.length === 10 && v.includes("-")) { const [y,m,g] = v.split("-"); yy=y; mo=m; gg=g; }
+  let initYY="", initMO="", initGG="";
+  if (v.length === 10 && v.includes("-")) { const [y,m,g] = v.split("-"); initYY=y; initMO=m; initGG=g; }
+  // State locale per consentire editing libero (cancellare, digitare cifre intermedie, etc.)
+  const [ggL, setGgL] = React.useState(initGG);
+  const [moL, setMoL] = React.useState(initMO);
+  const [yyL, setYyL] = React.useState(initYY);
+  // Sincronizza state locale con prop value quando cambia da fuori
+  React.useEffect(()=>{
+    if (v.length === 10 && v.includes("-")) {
+      const [y,m,g] = v.split("-");
+      setYyL(y); setMoL(m); setGgL(g);
+    }
+  }, [v]);
   const compact = size === "compact";
   const wGG = compact ? 50 : 64;
   const wAA = compact ? 80 : 96;
   const fontS = compact ? 16 : 22;
   const padV = compact ? 6 : 10;
-  const update = (nGg, nMo, nYy) => { if(onChange) onChange(nYy+"-"+nMo+"-"+nGg); };
-  const onChangeG = e => {
-    let nv = e.target.value.replace(/\D/g,"").slice(0,2);
-    if(nv!==""){ const n=Math.min(31,Math.max(1,parseInt(nv,10))); nv=String(n).padStart(nv.length>=2?2:1,"0"); }
-    update(nv, mo, yy);
+  const emitChange = (nGg, nMo, nYy) => {
+    if (onChange && nGg && nMo && nYy && nYy.length===4) {
+      onChange(nYy+"-"+nMo+"-"+nGg);
+    }
   };
-  const onBlurG = e => { const nv=e.target.value; const fin = nv===""?"01":String(Math.min(31,Math.max(1,parseInt(nv,10)||1))).padStart(2,"0"); update(fin, mo, yy); };
-  const onChangeM = e => {
-    let nv = e.target.value.replace(/\D/g,"").slice(0,2);
-    if(nv!==""){ const n=Math.min(12,Math.max(1,parseInt(nv,10))); nv=String(n).padStart(nv.length>=2?2:1,"0"); }
-    update(gg, nv, yy);
+  // Durante l'editing: accetta cifre, non normalizza (per non rompere la digitazione)
+  const onChangeG = e => { const nv = e.target.value.replace(/\D/g,"").slice(0,2); setGgL(nv); };
+  const onChangeM = e => { const nv = e.target.value.replace(/\D/g,"").slice(0,2); setMoL(nv); };
+  const onChangeY = e => { const nv = e.target.value.replace(/\D/g,"").slice(0,4); setYyL(nv); };
+  // Al blur: normalizza con padding e clamp ai limiti
+  const onBlurG = () => {
+    let n = parseInt(ggL,10);
+    if (isNaN(n)||n<1) n=1; if (n>31) n=31;
+    const fin = String(n).padStart(2,"0");
+    setGgL(fin); emitChange(fin, moL.padStart(2,"0"), yyL);
   };
-  const onBlurM = e => { const nv=e.target.value; const fin = nv===""?"01":String(Math.min(12,Math.max(1,parseInt(nv,10)||1))).padStart(2,"0"); update(gg, fin, yy); };
-  const onChangeY = e => {
-    let nv = e.target.value.replace(/\D/g,"").slice(0,4);
-    update(gg, mo, nv);
+  const onBlurM = () => {
+    let n = parseInt(moL,10);
+    if (isNaN(n)||n<1) n=1; if (n>12) n=12;
+    const fin = String(n).padStart(2,"0");
+    setMoL(fin); emitChange(ggL.padStart(2,"0"), fin, yyL);
   };
-  const onBlurY = e => { const nv=e.target.value; const n=parseInt(nv,10); const fin = isNaN(n)||n<2020||n>2099?String(new Date().getFullYear()):String(n); update(gg, mo, fin); };
+  const onBlurY = () => {
+    let n = parseInt(yyL,10);
+    if (isNaN(n)||n<2020||n>2099) n = new Date().getFullYear();
+    const fin = String(n);
+    setYyL(fin); emitChange(ggL.padStart(2,"0"), moL.padStart(2,"0"), fin);
+  };
   const inpStyle = { textAlign:"center", fontSize:fontS, fontWeight:800, padding:padV+"px 4px", background:"#f8fafc", border:"1.5px solid #a78bfa", borderRadius:8, color:"#1e293b", fontFamily:"'Montserrat',sans-serif", outline:"none" };
   return (
     <div style={{display:"inline-flex",alignItems:"center",gap:compact?4:6,fontFamily:"'Montserrat',sans-serif"}}>
-      <input type="number" min="1" max="31" inputMode="numeric"
+      <input type="text" inputMode="numeric" maxLength={2}
         style={{...inpStyle, width:wGG}}
-        value={gg} onChange={onChangeG} onBlur={onBlurG} onFocus={e=>e.target.select()} placeholder="GG"/>
+        value={ggL} onChange={onChangeG} onBlur={onBlurG} onFocus={e=>e.target.select()} placeholder="GG"/>
       <span style={{fontSize:compact?18:22,fontWeight:800,color:"#7c3aed"}}>/</span>
-      <input type="number" min="1" max="12" inputMode="numeric"
+      <input type="text" inputMode="numeric" maxLength={2}
         style={{...inpStyle, width:wGG}}
-        value={mo} onChange={onChangeM} onBlur={onBlurM} onFocus={e=>e.target.select()} placeholder="MM"/>
+        value={moL} onChange={onChangeM} onBlur={onBlurM} onFocus={e=>e.target.select()} placeholder="MM"/>
       <span style={{fontSize:compact?18:22,fontWeight:800,color:"#7c3aed"}}>/</span>
-      <input type="number" min="2020" max="2099" inputMode="numeric"
+      <input type="text" inputMode="numeric" maxLength={4}
         style={{...inpStyle, width:wAA}}
-        value={yy} onChange={onChangeY} onBlur={onBlurY} onFocus={e=>e.target.select()} placeholder="AAAA"/>
+        value={yyL} onChange={onChangeY} onBlur={onBlurY} onFocus={e=>e.target.select()} placeholder="AAAA"/>
     </div>
   );
 }
