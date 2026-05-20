@@ -1318,6 +1318,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   const [riepilogo, setRiepilogo] = useState([]);
   const [modRampa, setModRampa] = useState(null); // {sku, lineaId, dataAttuale, dataNuova, err}
   const [refreshKey, setRefreshKey] = useState(0);
+  const [nOpOverride, setNOpOverride] = useState({}); // {sku: numero personalizzato} per scenari "what-if"
   useEffect(()=>{
     // Carica riepilogo da Apps Script per dati storici borse prodotte
     fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
@@ -1383,8 +1384,11 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               const PERC = [0,20,35,45,55,64,73,76,82,85,88,92,95,98,100];
               const skuObj = skuList.find(s=>s.sku===sku) || {};
               const tc = skuObj.tc || skuObj.tc_minuti || skuObj.tcMinuti || 0;
-              // Conta operatori attivi su questo SKU (se 0, default 1 per mostrare comunque la curva)
-              const nOp = new Set(sessioni.filter(s=>(s.skuCorrente||s.sku)===sku&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size || 1;
+              // Conta operatori reali attivi su questo SKU (se 0, default 1 per mostrare comunque la curva)
+              const nOpReale = new Set(sessioni.filter(s=>(s.skuCorrente||s.sku)===sku&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size || 1;
+              // nOp finale: usa override personalizzato se impostato, altrimenti il numero reale
+              const nOp = nOpOverride[sku] !== undefined ? nOpOverride[sku] : nOpReale;
+              const isOverride = nOpOverride[sku] !== undefined && nOpOverride[sku] !== nOpReale;
               const minTurno = nOp * 8 * 60; // minuti totali turno
               // Obiettivo teorico a pieno regime (giorno 15)
               const obMax = tc > 0 ? Math.floor(minTurno / tc) : 0;
@@ -1418,7 +1422,19 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               }
               return (
                 <div style={{marginTop:10,background:"#f8fafc",borderRadius:8,padding:"8px 6px 4px 6px",maxWidth:520}}>
-                  <div style={{fontSize:9,color:"#94a3b8",fontWeight:700,marginBottom:2,textTransform:"uppercase",letterSpacing:1}}>Curva Obiettivo Teorica — {nOp} op × TC {tc ? tc.toFixed(1) : "?"} min</div>
+                  <div style={{fontSize:9,color:"#94a3b8",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:1,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <span>Curva Obiettivo Teorica —</span>
+                    <input type="number" min="1" max="999" value={nOp}
+                      onChange={e=>{ const v=parseInt(e.target.value,10); if(!isNaN(v)&&v>=1&&v<=999) setNOpOverride(prev=>({...prev,[sku]:v})); else if(e.target.value==="") setNOpOverride(prev=>({...prev,[sku]:""})); }}
+                      onBlur={e=>{ if(e.target.value==="") setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;}); }}
+                      style={{width:42,padding:"2px 4px",fontSize:11,fontWeight:800,textAlign:"center",border:"1.5px solid "+(isOverride?"#7c3aed":"#cbd5e1"),borderRadius:4,color:isOverride?"#7c3aed":"#1e293b",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
+                    <span>op × TC {tc ? tc.toFixed(1) : "?"} min</span>
+                    {isOverride&&(
+                      <button onClick={()=>setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;})}
+                        style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textTransform:"uppercase",letterSpacing:0.5}}
+                        title={"Torna al numero reale ("+nOpReale+")"}>↻ {nOpReale} reali</button>
+                    )}
+                  </div>
                   <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{overflow:"visible"}}>
                     {/* Griglia Y */}
                     {[0,25,50,75,100].map(p=>{
