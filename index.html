@@ -1384,7 +1384,34 @@ function TabRiepilogoLinee({ dati, linee, sessioni, skuList, qualitaPerSku={}, s
           // Dati specifici articolo principale
           const qDataMain = skuPrincipale ? (qualitaPerSku[l.id+"_"+skuPrincipale]||qualitaPerSku[l.nome+"_"+skuPrincipale]||{}) : {};
           const borseProdMain = qDataMain.ok||0;
-          const obFinaleMain = qDataMain.obReale||qDataMain.obTeorico||0;
+          // Obiettivo finale: prima dal D1 (obReale), se 0 lo ricalcolo lato client dalle sessioni
+          let obFinaleMain = qDataMain.obReale||qDataMain.obTeorico||0;
+          if(obFinaleMain===0 && skuPrincipale){
+            const skObjMain = (skuList||[]).find(x=>x.sku===skuPrincipale);
+            const tcMain = skObjMain?.tc||0;
+            if(tcMain>0){
+              // Sessioni di oggi su questo sku+linea
+              const sessSku = sessLinea.filter(s=>(s.skuCorrente||s.sku)===skuPrincipale && !isSkuSpeciale(s.skuCorrente||s.sku||""));
+              if(sessSku.length>0){
+                // Primo check-in linea per calcolo fine turno (8h)
+                const tsInizioMin = Math.min(...sessSku.map(s=>parseData(s.inizio)).filter(d=>d).map(d=>d.getTime()));
+                if(isFinite(tsInizioMin)){
+                  const dPrimo = new Date(tsInizioMin);
+                  const secFineLinea = dPrimo.getHours()*3600 + dPrimo.getMinutes()*60 + 8*3600;
+                  const matVisti = {};
+                  let minTotali = 0;
+                  for(const s of sessSku){
+                    const mat = s.matricola||s.nome||""; if(!mat||matVisti[mat]) continue;
+                    matVisti[mat]=true;
+                    const dI = parseData(s.inizio); if(!dI) continue;
+                    const secCheckin = dI.getHours()*3600+dI.getMinutes()*60;
+                    minTotali += Math.max(0,(secFineLinea-secCheckin)/60);
+                  }
+                  obFinaleMain = minTotali>0 ? Math.ceil(minTotali/tcMain) : 0;
+                }
+              }
+            }
+          }
           const notaMain = skuPrincipale ? (noteMap[l.id+"|"+skuPrincipale]||"") : "";
           // Stato turno linea: attivo se almeno una sessione di oggi è ancora aperta
           const sessAttiveLinea = sessLinea.filter(s=>!s.fine||s.fine===""||s.fine===null||s.fine==="null");
@@ -1458,8 +1485,8 @@ function TabRiepilogoLinee({ dati, linee, sessioni, skuList, qualitaPerSku={}, s
                     {efficienzaPct!=null && (
                       <path d="M 20 110 A 80 80 0 0 1 180 110" stroke={colEff} strokeWidth="16" fill="none" strokeLinecap="round" strokeDasharray={archFilled+" "+archMax}/>
                     )}
-                    <text x="100" y="95" fontSize="42" fontWeight="900" textAnchor="middle" fill={colEffText} fontFamily="'Montserrat',sans-serif">{efficienzaPct!=null?efficienzaPct+"%":"—"}</text>
-                    <text x="100" y="120" fontSize="11" fontWeight="700" textAnchor="middle" fill="#64748b" letterSpacing="2" fontFamily="'Montserrat',sans-serif">EFFICIENZA</text>
+                    <text x="100" y="97" fontSize="36" fontWeight="900" textAnchor="middle" fill={colEffText} fontFamily="'Montserrat',sans-serif">{efficienzaPct!=null?efficienzaPct+"%":"—"}</text>
+                    <text x="100" y="120" fontSize="10" fontWeight="700" textAnchor="middle" fill="#64748b" letterSpacing="2" fontFamily="'Montserrat',sans-serif">EFFICIENZA</text>
                   </svg>
                   {/* Rampa con KO + MIGL affiancati */}
                   <div style={{display:"flex",alignItems:"stretch",gap:5,width:"100%",fontFamily:"'Montserrat',sans-serif"}}>
@@ -1501,11 +1528,11 @@ function TabRiepilogoLinee({ dati, linee, sessioni, skuList, qualitaPerSku={}, s
                       <div style={{fontSize:36,fontWeight:900,color:"#111827",lineHeight:1.05}}>{nOpDay}</div>
                     </div>
                     <div style={{background:"#ffffff",border:"2px solid "+(turnoAttivo?"#6d28d9":"#22c55e"),boxShadow:"0 0 10px "+(turnoAttivo?"#6d28d944":"#22c55e44"),borderRadius:12,padding:"10px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center"}}>
-                      <div style={{fontSize:9,color:turnoAttivo?"#6d28d9":"#15803d",fontWeight:800,letterSpacing:1}}>{obLabel}</div>
-                      <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:4,lineHeight:1.05}}>
-                        <span style={{fontSize:28,fontWeight:900,color:"#111827"}}>{borseProdMain}</span>
-                        <span style={{fontSize:14,color:"#94a3b8"}}>/</span>
-                        <span style={{fontSize:22,fontWeight:900,color:turnoAttivo?"#6d28d9":"#22c55e"}}>{obDisplay}</span>
+                      <div style={{fontSize:9,color:turnoAttivo?"#6d28d9":"#15803d",fontWeight:800,letterSpacing:1,marginBottom:2}}>{obLabel}</div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:2,lineHeight:1}}>
+                        <span style={{fontSize:34,fontWeight:900,color:"#111827",fontFamily:"'Montserrat',sans-serif"}}>{borseProdMain}</span>
+                        <span style={{fontSize:30,fontWeight:300,color:"#cbd5e1",transform:"skewX(-12deg)",margin:"0 1px"}}>/</span>
+                        <span style={{fontSize:34,fontWeight:900,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif"}}>{obDisplay}</span>
                       </div>
                     </div>
                   </div>
@@ -3135,10 +3162,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             const skuQ = q.sku||"";
             const lineaQ = q.linea||"";
             const k = lineaQ+"_"+skuQ;
-            if(!map[k]) map[k]={ok:0,ko:0,migl:0};
+            if(!map[k]) map[k]={ok:0,ko:0,migl:0,obReale:0,obTeorico:0};
             map[k].ok += Number(q.ok)||0;
             map[k].ko += Number(q.ko)||0;
             map[k].migl += Number(q.migliorabili)||0;
+            // Obiettivo: prendi il massimo (le righe possono ripetersi, l'obiettivo è lo stesso per linea+sku+giorno)
+            if(Number(q.obReale)>map[k].obReale) map[k].obReale = Number(q.obReale)||0;
+            if(Number(q.obTeorico)>map[k].obTeorico) map[k].obTeorico = Number(q.obTeorico)||0;
           });
           console.log("[QUALITA MAP] chiavi map:", Object.keys(map));
           setQualitaPerSku(map);
