@@ -1006,18 +1006,39 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
               const tcItem=skuObjItem?.tc||0;
               // Obiettivo finale
               // Calcolo obiettivo: minuti effettivi divisi equamente per numero di articoli attivi
+              // A turno terminato include anche le sessioni già chiuse.
               const obFinaleItem = tcItem>0 ? (()=>{
-                // Filtra solo sessioni attive su questo SKU specifico
-                const sessioniSku = sessioni.filter(s=>
-                  s.lineaCorrente===lineaId &&
-                  (s.skuCorrente||s.sku)===skuItem &&
-                  (!s.fine||s.fine===""||s.fine===null||s.fine==="null") &&
-                  !isSkuSpeciale(s.skuCorrente||s.sku||"") &&
-                  s.inizio
-                );
+                // Filtra sessioni di OGGI su questo SKU specifico per la linea.
+                // Se turno attivo: solo sessioni senza CHECKOUT.
+                // Se turno terminato: tutte le sessioni di oggi (anche chiuse).
+                const oggi00 = new Date(); oggi00.setHours(0,0,0,0);
+                const filtraSess = (s)=>{
+                  if(s.lineaCorrente!==lineaId) return false;
+                  if((s.skuCorrente||s.sku)!==skuItem) return false;
+                  if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
+                  if(!s.inizio) return false;
+                  if(turnoTerminato){
+                    const d = parseData(s.inizio);
+                    if(!d || d.getTime() < oggi00.getTime()) return false;
+                  } else {
+                    if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
+                  }
+                  return true;
+                };
+                const sessioniSku = sessioni.filter(filtraSess);
                 // Conta SKU simultanei per ogni matricola (per divisione equa)
                 const nSimPerMatItem = {};
-                sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!isSkuSpeciale(s.skuCorrente||s.sku||"")).forEach(s=>{
+                sessioni.filter(s=>{
+                  if(s.lineaCorrente!==lineaId) return false;
+                  if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
+                  if(turnoTerminato){
+                    const d = parseData(s.inizio);
+                    if(!d || d.getTime() < oggi00.getTime()) return false;
+                  } else {
+                    if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
+                  }
+                  return true;
+                }).forEach(s=>{
                   const mat=s.matricola||s.nome; if(!mat) return;
                   const ts=parseData(s.inizio); if(!ts) return;
                   if(!nSimPerMatItem[mat]) nSimPerMatItem[mat]={skus:new Set(),tsMin:ts.getTime()};
