@@ -997,8 +997,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                                     : (nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)");
             const fSep   = compatto ? (nRighe<=1?"clamp(10px,1.5vw,15px)":"clamp(8px,1.2vw,12px)")
                                     : (nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)");
-            const fSvg   = compatto ? (nRighe<=1?16:12) : (nRighe<=1?24:nRighe<=2?18:14);
-            const fKo    = compatto ? (nRighe<=1?"clamp(16px,2.4vw,28px)":nRighe<=2?"clamp(13px,2vw,22px)":"clamp(11px,1.6vw,18px)")
+            const fSvg   = compatto ? (nRighe<=1?13:11) : (nRighe<=1?24:nRighe<=2?18:14);
+            const fKo    = compatto ? (nRighe<=1?"clamp(11px,1.5vw,16px)":nRighe<=2?"clamp(10px,1.3vw,14px)":"clamp(9px,1.1vw,12px)")
                                     : (nRighe<=1?"clamp(32px,5vw,60px)":nRighe<=2?"clamp(20px,3.5vw,40px)":"clamp(14px,2.5vw,26px)");
             const hdrPad = compatto ? "4px 8px" : (nRighe<=1?"10px 16px":nRighe<=2?"7px 12px":"4px 8px");
             const hdrFs  = compatto ? (nRighe<=1?"clamp(10px,1.4vw,13px)":"clamp(9px,1.2vw,12px)")
@@ -1207,8 +1207,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
       </div>
 
-{/* Barra progresso 8 ore - usa tick per aggiornamento al secondo */}
-      {ob60!==null&&(()=>{
+{/* Barra progresso 8 ore - usa tick per aggiornamento al secondo. Nascosta in vista griglia. */}
+      {!compatto&&ob60!==null&&(()=>{
         void tick; // forza re-render ogni secondo
         const ob8ore = ob60 * oreTotali;
         const percBorse = ob8ore > 0 ? Math.min(100, Math.round(borse/ob8ore*100)) : 0;
