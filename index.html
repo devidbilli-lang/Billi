@@ -1396,7 +1396,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                 </div>
               );
               // Dimensioni SVG
-              const W = 340, H = 140, PL = 40, PR = 10, PT = 10, PB = 30;
+              const W = 280, H = 110, PL = 28, PR = 8, PT = 14, PB = 18;
               const iW = W-PL-PR, iH = H-PT-PB;
               const xStep = iW / 14;
               const yMax = obMax * 1.05;
@@ -1406,50 +1406,56 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               const pts = curvaOb.map((v,i) => px(i)+","+py(v)).join(" ");
               // Giorno corrente
               const gOggi = Math.min((g||0), 15);
+              // Borse prodotte per giorno (riusato per disegno e per etichette)
+              const borsePerGiorno = [];
+              if(rampa&&rampa.dal&&riepilogo.length>0){
+                for(let d=1;d<=15;d++){
+                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
+                  const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
+                  const riga = riepilogo.find(r=>r.sku===sku&&(r.data||"").slice(0,10)===fmtG);
+                  borsePerGiorno.push(riga?Number(riga.borseProdotte||0):null);
+                }
+              }
               return (
-                <div style={{marginTop:12,background:"#f8fafc",borderRadius:8,padding:"10px 8px 4px 8px"}}>
-                  <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>Curva Obiettivo Teorica — {nOp} op × TC {tc ? tc.toFixed(1) : "?"} min</div>
+                <div style={{marginTop:10,background:"#f8fafc",borderRadius:8,padding:"8px 6px 4px 6px",maxWidth:520}}>
+                  <div style={{fontSize:9,color:"#94a3b8",fontWeight:700,marginBottom:2,textTransform:"uppercase",letterSpacing:1}}>Curva Obiettivo Teorica — {nOp} op × TC {tc ? tc.toFixed(1) : "?"} min</div>
                   <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{overflow:"visible"}}>
                     {/* Griglia Y */}
                     {[0,25,50,75,100].map(p=>{
                       const y = py(obMax*p/100);
                       return <g key={p}>
                         <line x1={PL} y1={y} x2={W-PR} y2={y} stroke="#e2e8f0" strokeWidth="0.5"/>
-                        <text x={PL-4} y={y+3} fontSize="7" textAnchor="end" fill="#94a3b8">{Math.round(obMax*p/100)}</text>
+                        <text x={PL-3} y={y+2} fontSize="6" textAnchor="end" fill="#94a3b8">{Math.round(obMax*p/100)}</text>
                       </g>;
                     })}
-                    {/* Asse X - giorni */}
-                    {[1,5,10,15].map(d=>{
+                    {/* Asse X - tutti i 15 giorni */}
+                    {Array.from({length:15},(_,i)=>i+1).map(d=>{
                       const x = px(d-1);
                       return <g key={d}>
-                        <line x1={x} y1={PT} x2={x} y2={PT+iH} stroke="#e2e8f0" strokeWidth="0.5"/>
-                        <text x={x} y={H-2} fontSize="7" textAnchor="middle" fill="#94a3b8">g{d}</text>
+                        <line x1={x} y1={PT+iH} x2={x} y2={PT+iH+2} stroke="#cbd5e1" strokeWidth="0.5"/>
+                        <text x={x} y={H-1} fontSize="6" textAnchor="middle" fill="#94a3b8">g{d}</text>
                       </g>;
                     })}
-                    {/* Curva borse prodotte (blu) */}
+                    {/* Curva borse prodotte (blu) con etichette */}
                     {(()=>{
-                      // Borse prodotte per giorno dalla rampa
-                      const borsePerGiorno = [];
-                      if(rampa&&rampa.dal&&riepilogo.length>0){
-                        for(let d=1;d<=15;d++){
-                          const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
-                          const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
-                          const riga = riepilogo.find(r=>r.sku===sku&&(r.data||"").slice(0,10)===fmtG);
-                          borsePerGiorno.push(riga?Number(riga.borseProdotte||0):null);
-                        }
-                      }
                       const ptsBlu = borsePerGiorno.map((v,i)=>v!==null?px(i)+","+py(v):null).filter(Boolean).join(" ");
                       if(!ptsBlu) return null;
                       return <>
-                        <polyline points={ptsBlu} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round"/>
-                        {borsePerGiorno.map((v,i)=>v!==null?<circle key={i} cx={px(i)} cy={py(v)} r="2.5" fill="#3b82f6"/>:null)}
+                        <polyline points={ptsBlu} fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinejoin="round"/>
+                        {borsePerGiorno.map((v,i)=>v!==null?<g key={i}>
+                          <circle cx={px(i)} cy={py(v)} r="2" fill="#3b82f6"/>
+                          <text x={px(i)} y={py(v)+8} fontSize="6" textAnchor="middle" fill="#3b82f6" fontWeight="700">{v}</text>
+                        </g>:null)}
                       </>;
                     })()}
                     {/* Curva teorica */}
-                    <polyline points={pts} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round"/>
-                    {/* Punti curva */}
+                    <polyline points={pts} fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeLinejoin="round"/>
+                    {/* Punti curva teorica con etichette */}
                     {curvaOb.map((v,i)=>(
-                      <circle key={i} cx={px(i)} cy={py(v)} r="2.5" fill="#f59e0b"/>
+                      <g key={i}>
+                        <circle cx={px(i)} cy={py(v)} r="2" fill="#f59e0b"/>
+                        <text x={px(i)} y={py(v)-4} fontSize="6" textAnchor="middle" fill="#f59e0b" fontWeight="700">{v}</text>
+                      </g>
                     ))}
 
                     {/* Asse X */}
@@ -1457,9 +1463,9 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                     {/* Asse Y */}
                     <line x1={PL} y1={PT} x2={PL} y2={PT+iH} stroke="#cbd5e1" strokeWidth="1"/>
                   </svg>
-                  <div style={{display:"flex",gap:16,marginTop:2}}>
-                    <div style={{fontSize:9,color:"#f59e0b",display:"flex",alignItems:"center",gap:4}}><span style={{width:16,height:2,background:"#f59e0b",display:"inline-block",borderRadius:1}}></span>Obiettivo teorico</div>
-                    <div style={{fontSize:9,color:"#3b82f6",display:"flex",alignItems:"center",gap:4}}><span style={{width:16,height:2,background:"#3b82f6",display:"inline-block",borderRadius:1}}></span>Borse prodotte</div>
+                  <div style={{display:"flex",gap:12,marginTop:1}}>
+                    <div style={{fontSize:8,color:"#f59e0b",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#f59e0b",display:"inline-block",borderRadius:1}}></span>Obiettivo teorico</div>
+                    <div style={{fontSize:8,color:"#3b82f6",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#3b82f6",display:"inline-block",borderRadius:1}}></span>Borse prodotte</div>
 
                   </div>
                 </div>
