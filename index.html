@@ -888,7 +888,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
 
   return (
     <div style={{padding:"16px 12px",display:"flex",flexDirection:"column",flex:1}}>
-      {/* Campo straordinario */}
+      {/* Campo straordinario - nascosto in vista griglia (compatto) */}
+      {!compatto && (
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:"rgba(255,255,255,0.08)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(167,139,250,0.8)",borderRadius:10,padding:"10px 14px",boxShadow:"0 8px 32px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(124,58,237,0.2)"}}>
         <span style={{fontSize:13,fontWeight:700,color:"#a78bfa"}}>⏱ Straordinario</span>
         <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
@@ -898,6 +899,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         </div>
         {oreExtra>0&&<span style={{fontSize:11,color:"#a78bfa",fontWeight:600}}>Fine turno: {labelFine}</span>}
       </div>
+      )}
 
             {/* LAYOUT: colonna sinistra 3 card alte | colonna destra articoli */}
       <div style={{display:"flex",gap:8,alignItems:"stretch",marginBottom:8}}>
@@ -1289,9 +1291,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   );
 }
 
-function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={} }) {
+function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
   const [lineaSel, setLineaSel] = React.useState("");
-  const [vistaGriglia, setVistaGriglia] = React.useState(false);
   if (!dati) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:300}}>
       <LogoSpinner size={120}/>
@@ -2955,6 +2956,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modTrasf, setModTrasf] = useState(null); // {lineaDest, opSelezionati, lineaDestObj, pwd, errPwd, step}
 
   const [tab,setTab]      = useState("sessioni");
+  const [vistaGrigliaProd,setVistaGrigliaProd] = useState(false);
   const [,setTk]          = useState(0);
   const [modCorso,setModCorso]       = useState(null);
   const [modCambioSku,setModCambioSku] = useState(null);
@@ -3442,6 +3444,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
         </div>
       </header>
+      {!(tab==="produzione"&&vistaGrigliaProd) && (
       <div style={{display:"flex",gap:12,padding:"20px 24px",overflowX:"auto",justifyContent:"center",flexWrap:"wrap"}}>
         <div style={{flex:"0 0 110px",width:110,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:12,padding:14,textAlign:"center"}}>
           <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{new Set(sessioni.filter(s=>(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)).map(s=>s.matricola||s.nome)).size}</div>
@@ -3529,6 +3532,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             </div>
           ); })}
       </div>
+      )}
       <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
         {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"],["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:6}}><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L8 3M13 8L8 13" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Entra in Produzione</span>)]].map(([t,l])=>(
           <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} style={{padding:"10px 22px",border:"2px solid "+(tab===t?"#00d4aa":"#e2e8f0"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"#00d4aa22":"transparent",color:tab===t?"#00d4aa":"#475569"}}>{l}</button>
@@ -3722,7 +3726,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
-      {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku}/>}
+      {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
       <div style={{height:40}}/>
     </div>
   );
