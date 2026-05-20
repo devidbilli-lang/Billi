@@ -1386,6 +1386,39 @@ function TabRiepilogoLinee({ dati, linee, sessioni, skuList, qualitaPerSku={}, s
           const borseProdMain = qDataMain.ok||0;
           const obFinaleMain = qDataMain.obReale||qDataMain.obTeorico||0;
           const notaMain = skuPrincipale ? (noteMap[l.id+"|"+skuPrincipale]||"") : "";
+          // Stato turno linea: attivo se almeno una sessione di oggi è ancora aperta
+          const sessAttiveLinea = sessLinea.filter(s=>!s.fine||s.fine===""||s.fine===null||s.fine==="null");
+          const turnoAttivo = sessAttiveLinea.length>0;
+          // Obiettivo dinamico: turno attivo → orario alla prossima ora, turno terminato → finale
+          let obDisplay = obFinaleMain;
+          let obLabel = "OBIETTIVO";
+          if(turnoAttivo && obFinaleMain>0){
+            // Primo check-in linea (in secondi del giorno)
+            const tsInizi = sessLinea.map(s=>parseData(s.inizio)).filter(d=>d).map(d=>d.getTime());
+            if(tsInizi.length>0){
+              const tsPrimoCheckin = Math.min(...tsInizi);
+              const dPrimo = new Date(tsPrimoCheckin);
+              const secInizio = dPrimo.getHours()*3600 + dPrimo.getMinutes()*60;
+              const oreTotali = 8; // turno standard
+              const now = new Date();
+              const secOra = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+              const oraInizioDec = secInizio/3600;
+              const oraAttualeDec = secOra/3600;
+              const oraTurnoFine = oraInizioDec + oreTotali;
+              const orePassate = Math.max(0, oraAttualeDec - oraInizioDec);
+              const prossimaOraDec = oraInizioDec + Math.ceil(orePassate);
+              if(prossimaOraDec <= oraTurnoFine && prossimaOraDec > oraInizioDec){
+                // Obiettivo prossima ora = (obFinale/oreTotali) * ore già passate fino a prossima_ora
+                const ob60 = obFinaleMain / oreTotali;
+                obDisplay = Math.ceil(ob60 * (prossimaOraDec - oraInizioDec));
+                const pHH = Math.floor(prossimaOraDec) % 24;
+                const pMM = Math.round((prossimaOraDec % 1) * 60);
+                obLabel = "OB. ALLE "+String(pHH).padStart(2,"0")+":"+String(pMM).padStart(2,"0");
+              }
+            }
+          } else if(!turnoAttivo){
+            obLabel = "OB. FINALE";
+          }
           // Rampa per articolo principale (se presente)
           let rampaGiorni = null;
           // Cerca rampa dal contesto sessioni (rampaDal compilato da action=sessioni)
@@ -1403,21 +1436,16 @@ function TabRiepilogoLinee({ dati, linee, sessioni, skuList, qualitaPerSku={}, s
 
           return (
             <div key={l.id} style={{background:"#ffffff",borderTop:"4px solid "+(l.colore||"#7c3aed"),borderRadius:0,boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
-              {/* Header riga */}
-              <div style={{padding:"6px 10px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+              {/* Header riga: nome linea + articolo principale */}
+              <div style={{padding:"6px 10px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:9,height:9,borderRadius:"50%",background:l.colore||"#7c3aed",flexShrink:0}}/>
-                <div style={{fontSize:13,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0,flex:1}}>{l.id}</div>
-                {/* KO/Migl compatti */}
-                <div style={{display:"flex",gap:8,alignItems:"center",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>
-                  <div style={{display:"flex",alignItems:"baseline",gap:3}}>
-                    <span style={{fontSize:8,color:"rgba(239,68,68,0.8)",fontWeight:700,letterSpacing:1}}>KO</span>
-                    <span style={{fontSize:14,fontWeight:900,color:"#ef4444",lineHeight:1}}>{d.borseKO||0}</span>
+                <div style={{fontSize:13,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>{l.id}</div>
+                {skuPrincipale && (
+                  <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5,background:"#f5f3ff",border:"1px solid #c4b5fd",borderRadius:6,padding:"2px 8px",flexShrink:0}}>
+                    <span style={{fontSize:8,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>SKU</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#7c3aed",whiteSpace:"nowrap"}}>{skuPrincipale}</span>
                   </div>
-                  <div style={{display:"flex",alignItems:"baseline",gap:3}}>
-                    <span style={{fontSize:8,color:"rgba(245,158,11,0.8)",fontWeight:700,letterSpacing:1}}>MIGL</span>
-                    <span style={{fontSize:14,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{d.borseMigl||0}</span>
-                  </div>
-                </div>
+                )}
               </div>
               {/* Corpo: SX arco + rampa | DX operatori/obiettivo/articolo + nota */}
               <div style={{padding:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"stretch"}}>
@@ -1433,48 +1461,56 @@ function TabRiepilogoLinee({ dati, linee, sessioni, skuList, qualitaPerSku={}, s
                     <text x="100" y="95" fontSize="42" fontWeight="900" textAnchor="middle" fill={colEffText} fontFamily="'Montserrat',sans-serif">{efficienzaPct!=null?efficienzaPct+"%":"—"}</text>
                     <text x="100" y="120" fontSize="11" fontWeight="700" textAnchor="middle" fill="#64748b" letterSpacing="2" fontFamily="'Montserrat',sans-serif">EFFICIENZA</text>
                   </svg>
-                  {/* Rampa: icona + N/15 */}
-                  {rampaGiorni!=null ? (
-                    <div style={{display:"flex",alignItems:"center",gap:6,background:"#fff7ed",border:"1.5px solid #f59e0b",borderRadius:8,padding:"4px 10px"}}>
-                      <span style={{fontSize:14}}>📈</span>
-                      <div style={{display:"flex",alignItems:"baseline",gap:3}}>
-                        <span style={{fontSize:18,fontWeight:900,color:"#111827",lineHeight:1}}>{rampaGiorni}</span>
-                        <span style={{fontSize:11,color:"#94a3b8"}}>/</span>
-                        <span style={{fontSize:14,fontWeight:900,color:"#92400e",lineHeight:1}}>15</span>
+                  {/* Rampa con KO + MIGL affiancati */}
+                  <div style={{display:"flex",alignItems:"stretch",gap:5,width:"100%",fontFamily:"'Montserrat',sans-serif"}}>
+                    {rampaGiorni!=null ? (
+                      <div style={{display:"flex",alignItems:"center",gap:5,background:"#fff7ed",border:"1.5px solid #f59e0b",borderRadius:8,padding:"4px 8px"}}>
+                        <span style={{fontSize:13}}>📈</span>
+                        <span style={{fontSize:8,color:"#92400e",fontWeight:800,letterSpacing:1}}>RAMPA</span>
+                        <div style={{display:"flex",alignItems:"baseline",gap:2}}>
+                          <span style={{fontSize:15,fontWeight:900,color:"#111827",lineHeight:1}}>{rampaGiorni}</span>
+                          <span style={{fontSize:10,color:"#94a3b8"}}>/</span>
+                          <span style={{fontSize:12,fontWeight:900,color:"#92400e",lineHeight:1}}>15</span>
+                        </div>
                       </div>
+                    ) : (
+                      <div style={{display:"flex",alignItems:"center",gap:5,background:"#f8fafc",border:"1.5px dashed #cbd5e1",borderRadius:8,padding:"4px 8px",opacity:0.55}}>
+                        <span style={{fontSize:13}}>📈</span>
+                        <span style={{fontSize:9,color:"#94a3b8",fontWeight:700,fontStyle:"italic"}}>no rampa</span>
+                      </div>
+                    )}
+                    {/* KO */}
+                    <div style={{flex:1,background:"#fff",border:"1.5px solid #fecaca",borderRadius:8,padding:"4px 6px",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                      <span style={{fontSize:8,color:"rgba(239,68,68,0.85)",fontWeight:800,letterSpacing:1}}>KO</span>
+                      <span style={{fontSize:16,fontWeight:900,color:"#ef4444",lineHeight:1}}>{d.borseKO||0}</span>
                     </div>
-                  ) : (
-                    <div style={{display:"flex",alignItems:"center",gap:6,background:"#f8fafc",border:"1.5px dashed #cbd5e1",borderRadius:8,padding:"4px 10px",opacity:0.55}}>
-                      <span style={{fontSize:14}}>📈</span>
-                      <span style={{fontSize:11,color:"#94a3b8",fontWeight:700,fontStyle:"italic"}}>Nessuna rampa</span>
+                    {/* Migl */}
+                    <div style={{flex:1,background:"#fff",border:"1.5px solid #fed7aa",borderRadius:8,padding:"4px 6px",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                      <span style={{fontSize:8,color:"rgba(245,158,11,0.85)",fontWeight:800,letterSpacing:1}}>MIGL</span>
+                      <span style={{fontSize:16,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{d.borseMigl||0}</span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* DX: operatori + obiettivo + articolo + nota */}
+                {/* DX: operatori + obiettivo grandi + nota */}
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {/* Operatori + Obiettivo affiancati */}
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    <div style={{background:"#ffffff",border:"1.5px solid #7c3aed",borderRadius:10,padding:"6px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OPERATORI</div>
-                      <div style={{fontSize:22,fontWeight:900,color:"#111827",lineHeight:1.1}}>{nOpDay}</div>
+                  {/* Operatori + Obiettivo affiancati GRANDI */}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,flex:1}}>
+                    <div style={{background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 10px #7c3aed44",borderRadius:12,padding:"10px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+                      <div style={{fontSize:10,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OPERATORI</div>
+                      <div style={{fontSize:36,fontWeight:900,color:"#111827",lineHeight:1.05}}>{nOpDay}</div>
                     </div>
-                    <div style={{background:"#ffffff",border:"1.5px solid #6d28d9",borderRadius:10,padding:"6px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OBIETTIVO</div>
-                      <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:3,lineHeight:1.1}}>
-                        <span style={{fontSize:18,fontWeight:900,color:"#111827"}}>{borseProdMain}</span>
-                        <span style={{fontSize:11,color:"#94a3b8"}}>/</span>
-                        <span style={{fontSize:14,fontWeight:900,color:"#6d28d9"}}>{obFinaleMain}</span>
+                    <div style={{background:"#ffffff",border:"2px solid "+(turnoAttivo?"#6d28d9":"#22c55e"),boxShadow:"0 0 10px "+(turnoAttivo?"#6d28d944":"#22c55e44"),borderRadius:12,padding:"10px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+                      <div style={{fontSize:9,color:turnoAttivo?"#6d28d9":"#15803d",fontWeight:800,letterSpacing:1}}>{obLabel}</div>
+                      <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:4,lineHeight:1.05}}>
+                        <span style={{fontSize:28,fontWeight:900,color:"#111827"}}>{borseProdMain}</span>
+                        <span style={{fontSize:14,color:"#94a3b8"}}>/</span>
+                        <span style={{fontSize:22,fontWeight:900,color:turnoAttivo?"#6d28d9":"#22c55e"}}>{obDisplay}</span>
                       </div>
                     </div>
                   </div>
-                  {/* Articolo grande */}
-                  <div style={{background:"#fafafa",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"6px 8px",textAlign:"center"}}>
-                    <div style={{fontSize:9,color:"#64748b",fontWeight:800,letterSpacing:1}}>ARTICOLO</div>
-                    <div style={{fontSize:13,fontWeight:800,color:"#7c3aed",lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{skuPrincipale||"—"}</div>
-                  </div>
                   {/* Nota linea + bottone edit */}
-                  <div style={{display:"flex",gap:5,alignItems:"stretch",flex:1}}>
+                  <div style={{display:"flex",gap:5,alignItems:"stretch"}}>
                     {notaMain ? (
                       <div style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"5px 8px",fontSize:10,color:"#92400e",display:"flex",alignItems:"center",overflow:"hidden"}}>
                         <span style={{fontWeight:700,marginRight:3,flexShrink:0}}>📝</span>
