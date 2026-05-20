@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgcM63Gwj6RPqP
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -1295,6 +1295,8 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
 
 function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
   const [riepilogo, setRiepilogo] = useState([]);
+  const [modRampa, setModRampa] = useState(null); // {sku, lineaId, dataAttuale, dataNuova, err}
+  const [refreshKey, setRefreshKey] = useState(0);
   useEffect(()=>{
     // Carica riepilogo da Apps Script per dati storici borse prodotte
     fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
@@ -1336,9 +1338,16 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               const dataInizio = new Date(rampa.dal);
               const dataFine = aggiungiGiorniLavorativi(rampa.dal, 15);
               const fmtD = d => d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
+              const isoData = `${dataInizio.getFullYear()}-${String(dataInizio.getMonth()+1).padStart(2,"0")}-${String(dataInizio.getDate()).padStart(2,"0")}`;
               return (
-                <div style={{display:"flex",gap:16,marginBottom:8}}>
-                  <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Inizio: </span>{fmtD(dataInizio)}</div>
+                <div style={{display:"flex",gap:16,marginBottom:8,alignItems:"center"}}>
+                  <div style={{fontSize:12,color:"#64748b",display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontWeight:700,color:"#1e293b"}}>Inizio: </span>{fmtD(dataInizio)}
+                    <button onClick={()=>setModRampa({sku,lineaId:rampa.lineaId,dataAttuale:isoData,dataNuova:isoData,err:""})}
+                      style={{background:"transparent",border:"none",cursor:"pointer",padding:"2px"}} title="Modifica data inizio rampa">
+                      <IconaMatita size={14}/>
+                    </button>
+                  </div>
                   <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Fine teorica: </span><span style={{color:completata?"#22c55e":"#f59e0b",fontWeight:700}}>{fmtD(dataFine)}</span></div>
                 </div>
               );
@@ -1432,6 +1441,39 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
             })()}
           </div>
         ); })}
+      {modRampa&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={19}/> Modifica inizio rampa</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>SKU: <strong style={{color:"#1e293b"}}>{modRampa.sku}</strong></div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Nuova data inizio</div>
+            <div style={{marginBottom:14,textAlign:"center"}}>
+              <DatePicker value={modRampa.dataNuova} onChange={v=>setModRampa({...modRampa,dataNuova:v,err:""})}/>
+            </div>
+            <div style={{fontSize:11,color:"#94a3b8",marginBottom:14,padding:"8px 12px",background:"#f8fafc",borderRadius:6,border:"1px solid #e2e8f0"}}>
+              ℹ️ Cambiare la data di inizio sposta anche il calcolo dei giorni completati e la curva di crescita teorica.
+            </div>
+            {modRampa.err&&<div style={{...S.err,marginBottom:12}}>{modRampa.err}</div>}
+            <div style={{display:"flex",gap:8}}>
+              <button style={{flex:1,padding:10,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+                const chk = dataValida(modRampa.dataNuova||"");
+                if(!chk.valida){setModRampa({...modRampa,err:chk.messaggio+"."});return;}
+                const [yy,mo,gg] = modRampa.dataNuova.split("-").map(n=>parseInt(n,10));
+                const nd = new Date(yy, mo-1, gg, 6, 0, 0, 0);
+                try{
+                  const r = await fetch(nexusUrl("modificaRampa",{sku:modRampa.sku,lineaId:modRampa.lineaId||"",nuovaData:nd.toISOString()}),{mode:"cors"});
+                  const j = await r.json();
+                  if(!j.ok){setModRampa({...modRampa,err:"Errore: "+(j.error||"sconosciuto")});return;}
+                  setModRampa(null);
+                  setRefreshKey(k=>k+1);
+                  window.location.reload();
+                }catch(e){setModRampa({...modRampa,err:"Errore di rete."});}
+              }}>✓ Salva</button>
+              <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModRampa(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
