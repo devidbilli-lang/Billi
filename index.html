@@ -1395,7 +1395,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               // Curva teorica per ogni giorno
               const curvaOb = PERC.map(p => obMax > 0 ? Math.round(obMax * p / 100) : 0);
               if(obMax === 0) return (
-                <div style={{marginTop:12,background:"#fef3c7",border:"1px solid #f59e0b66",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#92400e"}}>
+                <div style={{marginTop:12,background:"#fef3c7",border:"1px solid #c17aff66",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#92400e"}}>
                   ⚠️ Impossibile mostrare il grafico: tempo ciclo (TC) non definito per SKU <strong>{sku}</strong>. Verifica l'anagrafica SKU.
                 </div>
               );
@@ -1422,18 +1422,28 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               }
               return (
                 <div style={{marginTop:10,background:"#f8fafc",borderRadius:8,padding:"8px 6px 4px 6px",maxWidth:520}}>
-                  <div style={{fontSize:9,color:"#94a3b8",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:1,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                    <span>Curva Obiettivo Teorica —</span>
+                  <div style={{
+                    marginBottom:8,
+                    padding:"10px 14px",
+                    background:"rgba(255,255,255,0.55)",
+                    backdropFilter:"blur(10px)",
+                    WebkitBackdropFilter:"blur(10px)",
+                    border:"1.5px solid #a78bfa",
+                    borderRadius:12,
+                    boxShadow:"0 2px 12px rgba(124,58,237,0.08)"
+                  }}>
+                  <div style={{fontSize:13,color:"#000000",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6,flexWrap:"wrap",fontFamily:"'Montserrat',sans-serif"}}>
+                    <span>Curva Obiettivo Teorica -</span>
                     <input type="number" min="1" max="999" value={nOp}
                       onChange={e=>{ const v=parseInt(e.target.value,10); if(!isNaN(v)&&v>=1&&v<=999) setNOpOverride(prev=>({...prev,[sku]:v})); else if(e.target.value==="") setNOpOverride(prev=>({...prev,[sku]:""})); }}
                       onBlur={e=>{ if(e.target.value==="") setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;}); }}
-                      style={{width:42,padding:"2px 4px",fontSize:11,fontWeight:800,textAlign:"center",border:"1.5px solid "+(isOverride?"#7c3aed":"#cbd5e1"),borderRadius:4,color:isOverride?"#7c3aed":"#1e293b",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
-                    <span>op × TC {tc ? tc.toFixed(1) : "?"} min</span>
-                    {isOverride&&(
-                      <button onClick={()=>setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;})}
-                        style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textTransform:"uppercase",letterSpacing:0.5}}
-                        title={"Torna al numero reale ("+nOpReale+")"}>↻ {nOpReale} reali</button>
-                    )}
+                      style={{width:56,padding:"4px 6px",fontSize:17,fontWeight:800,textAlign:"center",border:"1.5px solid "+(isOverride?"#7c3aed":"#cbd5e1"),borderRadius:6,color:isOverride?"#7c3aed":"#000000",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
+                    <span>- TC {tc ? tc.toFixed(1).replace('.', ',') : "?"} min -</span>
+                    <button onClick={()=>setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;})}
+                      disabled={!isOverride}
+                      style={{background:isOverride?"#7c3aed":"#e2e8f0",color:isOverride?"#fff":"#94a3b8",border:"none",borderRadius:6,padding:"4px 10px",fontSize:15,fontWeight:800,cursor:isOverride?"pointer":"default",fontFamily:"'Montserrat',sans-serif"}}
+                      title={isOverride?"Torna al numero reale ("+nOpReale+")":"Numero reale attuale"}>↻ {nOpReale} Reali</button>
+                  </div>
                   </div>
                   <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{overflow:"visible"}}>
                     {/* Griglia Y */}
@@ -1457,20 +1467,20 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                       const ptsBlu = borsePerGiorno.map((v,i)=>v!==null?px(i)+","+py(v):null).filter(Boolean).join(" ");
                       if(!ptsBlu) return null;
                       return <>
-                        <polyline points={ptsBlu} fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinejoin="round"/>
+                        <polyline points={ptsBlu} fill="none" stroke="#56e3ab" strokeWidth="1.5" strokeLinejoin="round"/>
                         {borsePerGiorno.map((v,i)=>v!==null?<g key={i}>
-                          <circle cx={px(i)} cy={py(v)} r="2" fill="#3b82f6"/>
-                          <text x={px(i)} y={py(v)+8} fontSize="6" textAnchor="middle" fill="#3b82f6" fontWeight="700">{v}</text>
+                          <circle cx={px(i)} cy={py(v)} r="2" fill="#56e3ab"/>
+                          <text x={px(i)} y={py(v)+8} fontSize="6" textAnchor="middle" fill="#56e3ab" fontWeight="700">{v}</text>
                         </g>:null)}
                       </>;
                     })()}
                     {/* Curva teorica */}
-                    <polyline points={pts} fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <polyline points={pts} fill="none" stroke="#c17aff" strokeWidth="1.5" strokeLinejoin="round"/>
                     {/* Punti curva teorica con etichette */}
                     {curvaOb.map((v,i)=>(
                       <g key={i}>
-                        <circle cx={px(i)} cy={py(v)} r="2" fill="#f59e0b"/>
-                        <text x={px(i)} y={py(v)-4} fontSize="6" textAnchor="middle" fill="#f59e0b" fontWeight="700">{v}</text>
+                        <circle cx={px(i)} cy={py(v)} r="2" fill="#c17aff"/>
+                        <text x={px(i)} y={py(v)-4} fontSize="6" textAnchor="middle" fill="#c17aff" fontWeight="700">{v}</text>
                       </g>
                     ))}
 
@@ -1480,8 +1490,8 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                     <line x1={PL} y1={PT} x2={PL} y2={PT+iH} stroke="#cbd5e1" strokeWidth="1"/>
                   </svg>
                   <div style={{display:"flex",gap:12,marginTop:1}}>
-                    <div style={{fontSize:8,color:"#f59e0b",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#f59e0b",display:"inline-block",borderRadius:1}}></span>Obiettivo teorico</div>
-                    <div style={{fontSize:8,color:"#3b82f6",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#3b82f6",display:"inline-block",borderRadius:1}}></span>Borse prodotte</div>
+                    <div style={{fontSize:8,color:"#c17aff",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#c17aff",display:"inline-block",borderRadius:1}}></span>Obiettivo teorico</div>
+                    <div style={{fontSize:8,color:"#56e3ab",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#56e3ab",display:"inline-block",borderRadius:1}}></span>Borse prodotte</div>
 
                   </div>
                 </div>
