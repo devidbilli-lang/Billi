@@ -1381,15 +1381,20 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
             {rampa&&rampa.dal&&(()=>{
               // Grafico rampa di crescita
               const PERC = [0,20,35,45,55,64,73,76,82,85,88,92,95,98,100];
-              const tc = (skuList.find(s=>s.sku===sku)||{}).tc_minuti || (skuList.find(s=>s.sku===sku)||{}).tcMinuti || 0;
-              // Conta operatori attivi su questo SKU
+              const skuObj = skuList.find(s=>s.sku===sku) || {};
+              const tc = skuObj.tc || skuObj.tc_minuti || skuObj.tcMinuti || 0;
+              // Conta operatori attivi su questo SKU (se 0, default 1 per mostrare comunque la curva)
               const nOp = new Set(sessioni.filter(s=>(s.skuCorrente||s.sku)===sku&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")).map(s=>s.matricola||s.nome)).size || 1;
               const minTurno = nOp * 8 * 60; // minuti totali turno
               // Obiettivo teorico a pieno regime (giorno 15)
               const obMax = tc > 0 ? Math.floor(minTurno / tc) : 0;
               // Curva teorica per ogni giorno
               const curvaOb = PERC.map(p => obMax > 0 ? Math.round(obMax * p / 100) : 0);
-              if(obMax === 0) return null;
+              if(obMax === 0) return (
+                <div style={{marginTop:12,background:"#fef3c7",border:"1px solid #f59e0b66",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#92400e"}}>
+                  ⚠️ Impossibile mostrare il grafico: tempo ciclo (TC) non definito per SKU <strong>{sku}</strong>. Verifica l'anagrafica SKU.
+                </div>
+              );
               // Dimensioni SVG
               const W = 340, H = 140, PL = 40, PR = 10, PT = 10, PB = 30;
               const iW = W-PL-PR, iH = H-PT-PB;
@@ -2359,9 +2364,18 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
               const rampaDalTs = now().getTime(); // timestamp base, usato se rampaPerSku[sku] è true
               const skuDaUsare = skuMulti.length > 0 ? skuMulti : [""];
+              const _rampeAttive = rampeSheets || window._rampeSheets || [];
               skuDaUsare.forEach(skuItem=>{
-                const hasRampa = !!rampaPerSku[skuItem];
-                const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:skuItem,skuCorrente:skuItem,lineaInizio:(lineaCheckinSel||linea).id,lineaCorrente:(lineaCheckinSel||linea).id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:hasRampa,rampaDal:hasRampa?rampaDalTs:null};
+                // Cerca rampa esistente per questo SKU (non completata)
+                const rampaEsistente = _rampeAttive.find(r=>r.sku===skuItem && (r.giorni_completati||r.giorni||0)<15);
+                const giaInRampa = !!rampaEsistente;
+                // hasRampa è true se: l'utente ha messo il flag OPPURE lo SKU è già in rampa
+                const hasRampa = !!rampaPerSku[skuItem] || giaInRampa;
+                // Se è già in rampa, usa il timestamp originale della rampa esistente; altrimenti usa "adesso"
+                const rampaDalEffettivo = giaInRampa
+                  ? (rampaEsistente.dal || rampaEsistente.rampaDal || rampaDalTs)
+                  : rampaDalTs;
+                const s={id:crypto.randomUUID(),nome:op.nome,cognome:op.cognome,matricola:k,sku:skuItem,skuCorrente:skuItem,lineaInizio:(lineaCheckinSel||linea).id,lineaCorrente:(lineaCheckinSel||linea).id,inizio:now().toISOString(),fine:null,trasferimenti:[],rampa:hasRampa,rampaDal:hasRampa?rampaDalEffettivo:null};
                 registrati.push(s);
               });
             });
