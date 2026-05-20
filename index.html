@@ -1380,20 +1380,10 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
           </button>
         ))}
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#64748b"}}>
-        <span style={{fontWeight:700,color:"#1e293b"}}>Da:</span>
-        <DatePicker size="compact" value={filtroDataDa} onChange={v=>setFiltroDataDa(v)}/>
-        {filtroDataDa&&<button onClick={()=>setFiltroDataDa("")} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:14,fontWeight:700,padding:"0 4px"}}>×</button>}
-      </div>
-      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#64748b"}}>
-        <span style={{fontWeight:700,color:"#1e293b"}}>A:</span>
-        <DatePicker size="compact" value={filtroDataA} onChange={v=>setFiltroDataA(v)}/>
-        {filtroDataA&&<button onClick={()=>setFiltroDataA("")} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:14,fontWeight:700,padding:"0 4px"}}>×</button>}
-      </div>
       <input type="text" value={cercaSku} onChange={e=>setCercaSku(e.target.value)} placeholder="Cerca SKU..."
         style={{padding:"7px 12px",border:"1.5px solid #cbd5e1",borderRadius:6,fontSize:12,fontFamily:"'Montserrat',sans-serif",color:"#1e293b",outline:"none",flex:1,minWidth:140}}/>
-      {(filtroStato!=="attive"||filtroDataDa||filtroDataA||cercaSku)&&(
-        <button onClick={()=>{setFiltroStato("attive");setFiltroDataDa("");setFiltroDataA("");setCercaSku("");}}
+      {(filtroStato!=="attive"||cercaSku)&&(
+        <button onClick={()=>{setFiltroStato("attive");setCercaSku("");}}
           style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>
           ↻ Reset filtri
         </button>
