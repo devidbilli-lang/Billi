@@ -610,7 +610,7 @@ const SKU_SPECIALI = [
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[] }) {
+function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
   const [tick, setTick] = React.useState(0);
   const _now = new Date(); // si ricalcola ad ogni tick
   const _hh = _now.getHours(); const _mm = _now.getMinutes(); const _ss = _now.getSeconds();
@@ -906,10 +906,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         <div style={{display:"flex",flexDirection:"column",gap:8,width:"28%"}}>
 
           {/* Operatori */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Operatori</div>
+          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:compatto?"8px":"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+            <div style={{fontSize:compatto?"clamp(11px,1.4vw,15px)":"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:compatto?2:6}}>Operatori</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
-              <div style={{fontSize:"clamp(56px,8vw,100px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
+              <div style={{fontSize:compatto?"clamp(28px,4vw,48px)":"clamp(56px,8vw,100px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
               {(nRiparazione>0||nCorso>0)&&(
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:8,padding:"6px 10px",fontSize:"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nRiparazione} Riparazione</div>}
@@ -920,8 +920,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
           </div>
 
           {/* Efficienza */}
-          <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-            <div style={{fontSize:"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:6}}>Efficienza</div>
+          <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:compatto?"8px":"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+            <div style={{fontSize:compatto?"clamp(11px,1.4vw,15px)":"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:compatto?2:6}}>Efficienza</div>
             {(()=>{const pct=efficienzaPct||0;return(
               <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
                 <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
@@ -990,14 +990,20 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             const nRighe = Math.ceil(nSku/2);
             // 2 articoli per riga
             // nRighe=1 → grandi, nRighe=2 → medi, nRighe=3+ → compatti
-            const fBig   = nRighe<=1?"clamp(44px,7vw,88px)":nRighe<=2?"clamp(28px,4.5vw,56px)":"clamp(18px,3vw,36px)";
-            const fMid   = nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)";
-            const fSep   = nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)";
-            const fSvg   = nRighe<=1?24:nRighe<=2?18:14;
-            const fKo    = nRighe<=1?"clamp(32px,5vw,60px)":nRighe<=2?"clamp(20px,3.5vw,40px)":"clamp(14px,2.5vw,26px)";
-            const hdrPad = nRighe<=1?"10px 16px":nRighe<=2?"7px 12px":"4px 8px";
-            const hdrFs  = nRighe<=1?"clamp(14px,2.2vw,20px)":nRighe<=2?"clamp(12px,1.8vw,16px)":"clamp(10px,1.4vw,13px)";
-            const cardPad= nRighe<=1?"8px 12px":nRighe<=2?"5px 8px":"3px 5px";
+            // In vista griglia (compatto) i valori sono ridotti ulteriormente.
+            const fBig   = compatto ? (nRighe<=1?"clamp(20px,3vw,34px)":nRighe<=2?"clamp(16px,2.4vw,26px)":"clamp(13px,2vw,20px)")
+                                    : (nRighe<=1?"clamp(44px,7vw,88px)":nRighe<=2?"clamp(28px,4.5vw,56px)":"clamp(18px,3vw,36px)");
+            const fMid   = compatto ? (nRighe<=1?"clamp(16px,2.4vw,26px)":nRighe<=2?"clamp(13px,2vw,20px)":"clamp(11px,1.6vw,16px)")
+                                    : (nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)");
+            const fSep   = compatto ? (nRighe<=1?"clamp(10px,1.5vw,15px)":"clamp(8px,1.2vw,12px)")
+                                    : (nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)");
+            const fSvg   = compatto ? (nRighe<=1?16:12) : (nRighe<=1?24:nRighe<=2?18:14);
+            const fKo    = compatto ? (nRighe<=1?"clamp(16px,2.4vw,28px)":nRighe<=2?"clamp(13px,2vw,22px)":"clamp(11px,1.6vw,18px)")
+                                    : (nRighe<=1?"clamp(32px,5vw,60px)":nRighe<=2?"clamp(20px,3.5vw,40px)":"clamp(14px,2.5vw,26px)");
+            const hdrPad = compatto ? "4px 8px" : (nRighe<=1?"10px 16px":nRighe<=2?"7px 12px":"4px 8px");
+            const hdrFs  = compatto ? (nRighe<=1?"clamp(10px,1.4vw,13px)":"clamp(9px,1.2vw,12px)")
+                                    : (nRighe<=1?"clamp(14px,2.2vw,20px)":nRighe<=2?"clamp(12px,1.8vw,16px)":"clamp(10px,1.4vw,13px)");
+            const cardPad= compatto ? "3px 5px" : (nRighe<=1?"8px 12px":nRighe<=2?"5px 8px":"3px 5px");
 
             return coppie.map((coppia,ci)=>(
               <div key={ci} style={{display:"flex",gap:8,flex:1,minHeight:0}}>
@@ -1128,7 +1134,8 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                       );
                     })()}
 
-                    {/* Obj Orario - grigio lunare. A turno terminato mostra l'obiettivo finale della giornata. */}
+                    {/* Obj Orario - grigio lunare. Nascosta in vista griglia (compatto). */}
+                    {!compatto && (
                     <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800}}>{inTurnoItem?"ALLE "+prossimaOraLabelItem:(turnoTerminato?"FINALE":"—")}</div>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -1156,6 +1163,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
                         </div>
                       )}
                     </div>
+                    )}
 
                     {/* KO + Migl affiancati con faccette */}
                     <div style={{flex:1,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:10,padding:cardPad,display:"flex",alignItems:"center",justifyContent:"space-around",gap:4}}>
@@ -1336,8 +1344,8 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   <div style={{width:11,height:11,borderRadius:"50%",background:l.colore||"#7c3aed",flexShrink:0}}/>
                   <div style={{fontSize:14,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.id}</div>
                 </div>
-                {/* zoom rimpicciolisce tutto il contenuto proporzionalmente */}
-                <div style={{zoom:0.6,padding:"10px 8px"}}>
+                {/* compatto=true riduce font e nasconde card gialla; zoom leggero per la griglia */}
+                <div style={{zoom:0.8,padding:"6px 6px"}}>
                   <ObiettivoProduzione
                     sessioni={sessioni||[]}
                     lineaId={l.id}
@@ -1349,6 +1357,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     coloreLinea={l.colore||"#7c3aed"}
                     qualitaPerSku={qualitaPerSku||{}}
                     linee={linee||[]}
+                    compatto={true}
                   />
                 </div>
               </div>
