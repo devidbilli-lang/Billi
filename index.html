@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgcM63Gwj6RPqP
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -1317,6 +1317,7 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
 function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
   const [riepilogo, setRiepilogo] = useState([]);
   const [modRampa, setModRampa] = useState(null); // {sku, lineaId, dataAttuale, dataNuova, err}
+  const [confElimRampa, setConfElimRampa] = useState(null); // {sku, lineaId} per conferma eliminazione
   const [refreshKey, setRefreshKey] = useState(0);
   const [nOpOverride, setNOpOverride] = useState({}); // {sku: numero personalizzato} per scenari "what-if"
   const [filtroStato, setFiltroStato] = useState("attive"); // attive | completate | tutte
@@ -1431,7 +1432,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
               const fmtD = d => d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
               const isoData = `${dataInizio.getFullYear()}-${String(dataInizio.getMonth()+1).padStart(2,"0")}-${String(dataInizio.getDate()).padStart(2,"0")}`;
               return (
-                <div style={{display:"flex",gap:16,marginBottom:8,alignItems:"center"}}>
+                <div style={{display:"flex",gap:16,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
                   <div style={{fontSize:12,color:"#64748b",display:"flex",alignItems:"center",gap:6}}>
                     <span style={{fontWeight:700,color:"#1e293b"}}>Inizio: </span>{fmtD(dataInizio)}
                     <button onClick={()=>setModRampa({sku,lineaId:rampa.lineaId,dataAttuale:isoData,dataNuova:isoData,err:""})}
@@ -1440,6 +1441,11 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                     </button>
                   </div>
                   <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Fine teorica: </span><span style={{color:completata?"#22c55e":"#f59e0b",fontWeight:700}}>{fmtD(dataFine)}</span></div>
+                  <button onClick={()=>setConfElimRampa({sku,lineaId:rampa.lineaId})}
+                    style={{background:"transparent",border:"1px solid #ef4444",color:"#ef4444",cursor:"pointer",padding:"3px 10px",fontSize:11,fontWeight:700,borderRadius:6,fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:4}}
+                    title="Elimina rampa">
+                    🗑 Elimina rampa
+                  </button>
                 </div>
               );
             })()}
@@ -1490,16 +1496,21 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                 }
               }
               return (
-                <div style={{marginTop:10,background:"#f8fafc",borderRadius:8,padding:"8px 6px 4px 6px",maxWidth:520}}>
+                <div style={{
+                  marginTop:10,
+                  background:"rgba(255,255,255,0.55)",
+                  backdropFilter:"blur(10px)",
+                  WebkitBackdropFilter:"blur(10px)",
+                  border:"1.5px solid #a78bfa",
+                  borderRadius:12,
+                  boxShadow:"0 2px 12px rgba(124,58,237,0.08)",
+                  padding:"10px 8px 6px 8px",
+                  maxWidth:520
+                }}>
                   <div style={{
                     marginBottom:8,
-                    padding:"10px 14px",
-                    background:"rgba(255,255,255,0.55)",
-                    backdropFilter:"blur(10px)",
-                    WebkitBackdropFilter:"blur(10px)",
-                    border:"1.5px solid #a78bfa",
-                    borderRadius:12,
-                    boxShadow:"0 2px 12px rgba(124,58,237,0.08)"
+                    paddingBottom:8,
+                    borderBottom:"1px solid #a78bfa44"
                   }}>
                   <div style={{fontSize:13,color:"#000000",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6,flexWrap:"wrap",fontFamily:"'Montserrat',sans-serif"}}>
                     <span>Curva Obiettivo Teorica -</span>
@@ -1598,6 +1609,29 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                 }catch(e){setModRampa({...modRampa,err:"Errore di rete."});}
               }}>✓ Salva</button>
               <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModRampa(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confElimRampa&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #ef4444aa, 0 0 40px 12px #ef444466",fontFamily:"'Montserrat',sans-serif"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#ef4444",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🗑 Elimina rampa</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:14}}>Stai per eliminare la rampa per SKU <strong style={{color:"#1e293b"}}>{confElimRampa.sku}</strong>.</div>
+            <div style={{fontSize:12,color:"#92400e",padding:"10px 12px",background:"#fef3c7",border:"1px solid #f59e0b66",borderRadius:8,marginBottom:14}}>
+              ⚠️ <strong>Attenzione:</strong> verrà rimossa la marcatura di rampa dalle sessioni associate. Le sessioni stesse <strong>rimangono</strong> (operatori, check-in, qualità). Non è reversibile.
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button style={{flex:1,padding:10,background:"#ef4444",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+                try{
+                  const r = await fetch(nexusUrl("eliminaRampa",{sku:confElimRampa.sku,lineaId:confElimRampa.lineaId||""}),{mode:"cors"});
+                  const j = await r.json();
+                  if(!j.ok){alert("Errore: "+(j.error||"sconosciuto"));return;}
+                  setConfElimRampa(null);
+                  window.location.reload();
+                }catch(e){alert("Errore di rete.");}
+              }}>🗑 Sì, elimina</button>
+              <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setConfElimRampa(null)}>Annulla</button>
             </div>
           </div>
         </div>
