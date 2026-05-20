@@ -971,8 +971,10 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
         {/* COLONNA DESTRA - 2 articoli per riga */}
         <div style={{flex:1,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
           {(()=>{
+            // A turno attivo: solo SKU con sessioni attive ora.
+            // A turno terminato: SKU lavorati nella giornata (anche con CHECKOUT).
             const skuAttiviLinea=[...new Set(
-              sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
+              sessRiferimento.filter(s=>s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
               .map(s=>s.skuCorrente||s.sku)
             )];
             if(skuAttiviLinea.length===0) return (
