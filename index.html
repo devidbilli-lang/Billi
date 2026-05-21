@@ -4128,13 +4128,14 @@ function App() { const [view,setView]             = useState("login");
   );
 
   // Qualità come overlay modale invece di pagina intera
+  // I check viewQualita devono venire PRIMA del LoginDashboard condizionale,
+  // altrimenti il return sotto cattura tutto e il click su "Qualità" non apre nulla.
+  if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
+  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); setView("checkin"); }}/>;
 
   if(!accesso && view !== "login") {
     return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>;
   }
-  // Qualità come overlay
-  if(viewQualita==="login") return <LoginQualita linee={linee} sync={sync} onLogin={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }} onBack={()=>setViewQualita(false)}/>;
-  if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); setView("checkin"); }}/>;
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",color:"#1e293b"}}>
       <div style={{background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
