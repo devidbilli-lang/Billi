@@ -1159,7 +1159,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       const borseItem = qData.ok||0;
                       return (
                     <div style={{flex:1,background:"#ffffff",border:"2px solid "+(inRampaItem?"#f59e0b":"#7c3aed"),boxShadow:"0 0 10px 3px "+(inRampaItem?"#f59e0b44":"#7c3aed44"),borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
-                      <div style={{fontSize:9,color:inRampaItem?"#92400e":"#6d28d9",fontWeight:800,letterSpacing:1}}>{inRampaItem?("RAMPA g"+giornoRampaItem+"/15"):"OBIETTIVO"}</div>
+                      {inRampaItem ? (
+                        <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1px solid #fdba74",borderRadius:20,padding:"2px 10px"}}>
+                          <IconaRampa size={13} color="#ea580c"/>
+                          <span style={{fontSize:12,fontWeight:800,color:"#9a3412",lineHeight:1}}>{giornoRampaItem}/15</span>
+                        </div>
+                      ) : (
+                        <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OBIETTIVO</div>
+                      )}
                       <div style={{display:"flex",alignItems:"baseline",gap:6}}>
                         <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
                         <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
@@ -2971,9 +2978,19 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
               </div>
               {presente&&sessAtt&&(
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 12px",fontSize:12}}>
-                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
                     <span style={{color:linea.colore,fontWeight:600}}>{linea.id} — {linea.nome}</span>
                     <code style={S.sku}>{sessAtt.skuCorrente||sessAtt.sku}</code>
+                    {sessAtt.rampaDal&&(()=>{
+                      const gg = giorniLavorativiJS(sessAtt.rampaDal);
+                      if(gg>15) return null;
+                      return (
+                        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1px solid #fdba74",borderRadius:20,padding:"2px 10px"}}>
+                          <IconaRampa size={13} color="#ea580c"/>
+                          <span style={{fontSize:12,fontWeight:800,color:"#9a3412",lineHeight:1}}>{gg}/15</span>
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
