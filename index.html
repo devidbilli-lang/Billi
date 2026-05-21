@@ -86,7 +86,7 @@ const fmtSafe = s => { const d=parseData(s); return d?fmtFull(d):"–"; };
 const durataStr = ms => { if(!ms||ms<0) return "-"; const m=Math.floor(ms/60000),h=Math.floor(m/60); return h>0?(h+"h "+(m%60)+"m"):(m+"m"); };
 const getLinea  = (id,linee) => linee.find(l=>l.id===id)||linee[0];
 // Icona rampa di crescita (freccia/grafico in salita - trending up). Sostituisce l'emoji 📈.
-const IconaRampa = ({size=16, color="#f59e0b"}) => (
+const IconaRampa = ({size=16, color="#ff6937"}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
        stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
        style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
@@ -1160,9 +1160,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       return (
                     <div style={{flex:1,background:"#ffffff",border:"2px solid "+(inRampaItem?"#f59e0b":"#7c3aed"),boxShadow:"0 0 10px 3px "+(inRampaItem?"#f59e0b44":"#7c3aed44"),borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                       {inRampaItem ? (
-                        <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1px solid #fdba74",borderRadius:20,padding:"2px 10px"}}>
-                          <IconaRampa size={13} color="#ea580c"/>
-                          <span style={{fontSize:12,fontWeight:800,color:"#9a3412",lineHeight:1}}>{giornoRampaItem}/15</span>
+                        <div style={{display:"inline-flex",alignItems:"center",gap:7,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 14px"}}>
+                          <IconaRampa size={18} color="#ff6937"/>
+                          <span style={{fontSize:16,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/15</span>
                         </div>
                       ) : (
                         <div style={{fontSize:9,color:"#6d28d9",fontWeight:800,letterSpacing:1}}>OBIETTIVO</div>
@@ -1565,7 +1565,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
     <div>
       {BarraFiltri}
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
-      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20,display:"flex",alignItems:"center",gap:6}}><IconaRampa size={14}/> Rampe di Crescita</div>
+      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#ff6937",marginBottom:20,display:"flex",alignItems:"center",gap:6}}><IconaRampa size={14}/> Rampe di Crescita</div>
       {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
         const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
@@ -1600,7 +1600,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             })()}
             {g!==null&&(
               <div style={{marginBottom:6}}>
-                <span style={{fontSize:13,fontWeight:700,color:colRampa,display:"inline-flex",alignItems:"center",gap:5}}><IconaRampa size={14} color={colRampa}/> Giorno {g} / 15{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
+                <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 12px"}}><IconaRampa size={14} color="#ff6937"/><span style={{fontSize:13,fontWeight:800,color:"#ff6937",lineHeight:1}}>Giorno {g} / 15</span>{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:4}}>✓ COMPLETATA</span>}</span>
               </div>
             )}
             {rampa&&rampa.dal&&(()=>{
@@ -2721,7 +2721,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                             disabled={giaInRampa}
                             onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
                             style={{accentColor:"#3b82f6",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
-                          <span style={{fontSize:11,color:"#3b82f6",fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><IconaRampa size={12} color="#3b82f6"/>{giaInRampa?"in rampa":"rampa"}</span>
+                          <span style={{display:"inline-flex",alignItems:"center",gap:5,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}><IconaRampa size={12} color="#ff6937"/><span style={{fontSize:11,color:"#ff6937",fontWeight:800,lineHeight:1}}>{giaInRampa?"in rampa":"rampa"}</span></span>
                         </label>;
                       })()}
                     </label>
@@ -2985,9 +2985,9 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                       const gg = giorniLavorativiJS(sessAtt.rampaDal);
                       if(gg>15) return null;
                       return (
-                        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1px solid #fdba74",borderRadius:20,padding:"2px 10px"}}>
-                          <IconaRampa size={13} color="#ea580c"/>
-                          <span style={{fontSize:12,fontWeight:800,color:"#9a3412",lineHeight:1}}>{gg}/15</span>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"4px 12px"}}>
+                          <IconaRampa size={14} color="#ff6937"/>
+                          <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1}}>{gg}/15</span>
                         </span>
                       );
                     })()}
