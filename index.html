@@ -1565,7 +1565,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
     <div>
       {BarraFiltri}
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
-      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#ff6937",marginBottom:20,display:"flex",alignItems:"center",gap:6}}><IconaRampa size={14}/> Rampe di Crescita</div>
+      <div style={{fontSize:22,letterSpacing:1,textTransform:"uppercase",color:"#ff6937",marginBottom:24,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><IconaRampa size={26}/> Rampe di Crescita</div>
       {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
         const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
@@ -2709,7 +2709,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                           if(!e.target.checked){ const r={...rampaPerSku}; delete r[s.sku]; setRampaPerSku(r); }
                           setSkuMulti(sel); setSku(sel[0]||"");
                         }}
-                        style={{width:18,height:18,accentColor:"#ff6937",cursor:"pointer",flexShrink:0}}/>
+                        style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
                       <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
                       {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
                       {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:"auto"}}>{s.collezione}</span>}
