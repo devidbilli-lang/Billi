@@ -85,6 +85,15 @@ const parseData = s => { if(!s) return null;
 const fmtSafe = s => { const d=parseData(s); return d?fmtFull(d):"–"; };
 const durataStr = ms => { if(!ms||ms<0) return "-"; const m=Math.floor(ms/60000),h=Math.floor(m/60); return h>0?(h+"h "+(m%60)+"m"):(m+"m"); };
 const getLinea  = (id,linee) => linee.find(l=>l.id===id)||linee[0];
+// Icona rampa di crescita (freccia/grafico in salita - trending up). Sostituisce l'emoji 📈.
+const IconaRampa = ({size=16, color="#f59e0b"}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+       stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+       style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+    <polyline points="16 7 22 7 22 13"/>
+  </svg>
+);
 const store = { get:(k,d)=>{ try{ const v=sessionStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } }, set:(k,v)=>{ try{ sessionStorage.setItem(k,JSON.stringify(v)); }catch{} }
 };
 const fetchTimeout = (url, ms=20000) => { const ctrl = new AbortController();
@@ -1540,7 +1549,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
     <div>
       {BarraFiltri}
       <div style={{textAlign:"center",padding:60,color:"#64748b"}}>
-        <div style={{fontSize:40,marginBottom:12}}>📈</div>
+        <div style={{marginBottom:12}}><IconaRampa size={40}/></div>
         <div style={{fontSize:14,fontWeight:600,color:"#64748b",marginBottom:8}}>Nessuna rampa trovata con i filtri selezionati</div>
       </div>
     </div>
@@ -1549,7 +1558,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
     <div>
       {BarraFiltri}
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
-      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampe di Crescita</div>
+      <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20,display:"flex",alignItems:"center",gap:6}}><IconaRampa size={14}/> Rampe di Crescita</div>
       {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
         const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
@@ -1584,7 +1593,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             })()}
             {g!==null&&(
               <div style={{marginBottom:6}}>
-                <span style={{fontSize:13,fontWeight:700,color:colRampa}}>📈 Giorno {g} / 15{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
+                <span style={{fontSize:13,fontWeight:700,color:colRampa,display:"inline-flex",alignItems:"center",gap:5}}><IconaRampa size={14} color={colRampa}/> Giorno {g} / 15{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:8}}>✓ COMPLETATA</span>}</span>
               </div>
             )}
             {rampa&&rampa.dal&&(()=>{
@@ -2705,7 +2714,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                             disabled={giaInRampa}
                             onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
                             style={{accentColor:"#3b82f6",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
-                          <span style={{fontSize:11,color:"#3b82f6",fontWeight:700}}>{giaInRampa?"📈 in rampa":"📈 rampa"}</span>
+                          <span style={{fontSize:11,color:"#3b82f6",fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><IconaRampa size={12} color="#3b82f6"/>{giaInRampa?"in rampa":"rampa"}</span>
                         </label>;
                       })()}
                     </label>
@@ -3808,7 +3817,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const rDal = rampaS?.rampaDal || s.rampaDal;
                         if(!rDal) return null;
                         const gg = giorniLavorativiJS(rDal);
-                        return <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3}}>📈 {gg}/15</div>;
+                        return <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3,display:"flex",alignItems:"center",gap:4}}><IconaRampa size={12}/> {gg}/15</div>;
                       })()}
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
