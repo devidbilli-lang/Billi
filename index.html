@@ -3814,6 +3814,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       {!isPianificato&&haFinePers&&<span style={{background:"#e879f922",color:"#d946ef",border:"1px solid #d946ef44",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8}}>⏳ {orarioFinePers}</span>}
                     </td>
                     <td style={{...S.td,textAlign:"center"}}>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
                       {(()=>{
                         // Sessioni attive di questa persona su questa linea
                         const sessAttiviLinea = sessioni.filter(ss=>(ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome)&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
@@ -3821,7 +3822,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const key = s.matricola+"|"+s.lineaCorrente;
                         return (
                           <button onClick={()=>setPopupSkuOp(popupSkuOp===key?null:key)}
-                            style={{background:"#f8f5ff",border:"2px solid #7c3aed",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:6,margin:"0 auto"}}>
+                            style={{background:"#f8f5ff",border:"2px solid #7c3aed",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>
                             {att2&&nAttivi>0&&<div style={{width:8,height:8,borderRadius:"50%",background:"#22c55e",boxShadow:"0 0 4px #22c55e",flexShrink:0}}/>}
                             <span style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>{nAttivi>0?nAttivi:"—"} articol{nAttivi===1?"o":"i"}</span>
                             <span style={{fontSize:10,color:"#7c3aed"}}>▼</span>
@@ -3834,8 +3835,15 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const rDal = rampaS?.rampaDal || s.rampaDal;
                         if(!rDal) return null;
                         const gg = giorniLavorativiJS(rDal);
-                        return <div style={{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:3,display:"flex",alignItems:"center",gap:4}}><IconaRampa size={12}/> {gg}/15</div>;
+                        if(gg>15) return null;
+                        return (
+                          <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1px solid #fdba74",borderRadius:20,padding:"3px 10px"}}>
+                            <IconaRampa size={13} color="#ea580c"/>
+                            <span style={{fontSize:12,fontWeight:800,color:"#9a3412",lineHeight:1}}>{gg}/15</span>
+                          </span>
+                        );
                       })()}
+                      </div>
                     </td>
                     <td style={S.td}><span style={{...S.tag,background:l.colore+"22",color:l.colore,borderColor:l.colore+"44"}}>{l.id}</span></td>
                     <td style={S.td}>
