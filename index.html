@@ -1589,9 +1589,9 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                       <IconaMatita size={14}/>
                     </button>
                   </div>
-                  <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#1e293b"}}>Fine teorica: </span><span style={{color:completata?"#22c55e":"#f59e0b",fontWeight:700}}>{fmtD(dataFine)}</span></div>
+                  <div style={{fontSize:12,color:"#64748b"}}><span style={{fontWeight:700,color:"#000000"}}>Fine teorica: </span><span style={{color:completata?"#22c55e":"#ff6937",fontWeight:700}}>{fmtD(dataFine)}</span></div>
                   <button onClick={()=>setConfElimRampa({sku,lineaId:rampa.lineaId})}
-                    style={{background:"transparent",border:"1px solid #ef4444",color:"#ef4444",cursor:"pointer",padding:"3px 10px",fontSize:11,fontWeight:700,borderRadius:6,fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:4}}
+                    style={{background:"#ef4444",border:"none",color:"#ffffff",cursor:"pointer",padding:"4px 12px",fontSize:11,fontWeight:700,borderRadius:6,fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:4}}
                     title="Elimina rampa">
                     🗑 Elimina rampa
                   </button>
