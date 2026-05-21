@@ -3837,9 +3837,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const gg = giorniLavorativiJS(rDal);
                         if(gg>15) return null;
                         return (
-                          <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1px solid #fdba74",borderRadius:20,padding:"3px 10px"}}>
-                            <IconaRampa size={13} color="#ea580c"/>
-                            <span style={{fontSize:12,fontWeight:800,color:"#9a3412",lineHeight:1}}>{gg}/15</span>
+                          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"6px 14px"}}>
+                            <IconaRampa size={14} color="#ff6937"/>
+                            <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1}}>{gg}/15</span>
                           </span>
                         );
                       })()}
