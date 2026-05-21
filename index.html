@@ -1163,7 +1163,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     {/* Obj Orario - grigio lunare. Nascosta in vista griglia (compatto). */}
                     {!compatto && (
                     <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
-                      <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800}}>{inTurnoItem?"ALLE "+prossimaOraLabelItem:(turnoTerminato?"FINALE":"—")}</div>
+                      <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800,textAlign:"center",width:"100%"}}>{inTurnoItem?"alle "+prossimaOraLabelItem:(turnoTerminato?"FINALE":"—")}</div>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         <span style={{fontSize:fBig,fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:(turnoTerminato?(obFinaleItemRampa||0):"—")}</span>
                         {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
