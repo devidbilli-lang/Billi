@@ -1686,10 +1686,8 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               return (
                 <div style={{
                   marginTop:10,
-                  background:"rgba(255,255,255,0.55)",
-                  backdropFilter:"blur(10px)",
-                  WebkitBackdropFilter:"blur(10px)",
-                  border:"1.5px solid #ff6937",
+                  background:"#ffffff",
+                  border:"2.5px solid #ff6937",
                   borderRadius:12,
                   boxShadow:"0 2px 12px rgba(255,105,55,0.10)",
                   padding:"10px 8px 6px 8px",
@@ -1705,7 +1703,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                     <input type="number" min="1" max="999" value={nOp}
                       onChange={e=>{ const v=parseInt(e.target.value,10); if(!isNaN(v)&&v>=1&&v<=999) setNOpOverride(prev=>({...prev,[sku]:v})); else if(e.target.value==="") setNOpOverride(prev=>({...prev,[sku]:""})); }}
                       onBlur={e=>{ if(e.target.value==="") setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;}); }}
-                      style={{width:56,padding:"4px 6px",fontSize:17,fontWeight:800,textAlign:"center",border:"1.5px solid "+(isOverride?"#ff6937":"#cbd5e1"),borderRadius:6,color:isOverride?"#ff6937":"#000000",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
+                      style={{width:56,padding:"4px 6px",fontSize:17,fontWeight:800,textAlign:"center",border:"1.5px solid #ff6937",borderRadius:6,color:isOverride?"#ff6937":"#000000",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
                     <span>- TC {tc ? tc.toFixed(1).replace('.', ',') : "?"} min -</span>
                     <button onClick={()=>setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;})}
                       disabled={!isOverride}
@@ -1714,6 +1712,15 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                   </div>
                   </div>
                   <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{overflow:"visible"}}>
+                    <defs>
+                      <filter id="neonRampa" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur stdDeviation="2.2" result="blur"/>
+                        <feMerge>
+                          <feMergeNode in="blur"/>
+                          <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                      </filter>
+                    </defs>
                     {/* Griglia Y */}
                     {[0,25,50,75,100].map(p=>{
                       const y = py(obMax*p/100);
@@ -1727,7 +1734,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                       const x = px(d-1);
                       return <g key={d}>
                         <line x1={x} y1={PT+iH} x2={x} y2={PT+iH+2} stroke="#cbd5e1" strokeWidth="0.5"/>
-                        <text x={x} y={H-1} fontSize="6" textAnchor="middle" fill="#94a3b8">g{d}</text>
+                        <text x={x} y={H-1} fontSize="6" textAnchor="middle" fill="#94a3b8">{d}</text>
                       </g>;
                     })}
                     {/* Curva borse prodotte (blu) con etichette */}
@@ -1743,7 +1750,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                       </>;
                     })()}
                     {/* Curva teorica */}
-                    <polyline points={pts} fill="none" stroke="#ff6937" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <polyline points={pts} fill="none" stroke="#ff6937" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" filter="url(#neonRampa)"/>
                     {/* Punti curva teorica con etichette */}
                     {curvaOb.map((v,i)=>(
                       <g key={i}>
@@ -1821,7 +1828,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                         {/* asse X giorni */}
                         {Array.from({length:15},(_,i)=>i+1).map(d=>{ const x=px(d-1); return (
                           <g key={d}>
-                            <text x={x} y={H-2} fontSize="7" textAnchor="middle" fill="#94a3b8">g{d}</text>
+                            <text x={x} y={H-2} fontSize="7" textAnchor="middle" fill="#94a3b8">{d}</text>
                           </g>
                         ); })}
                         {/* curva teorica (viola) */}
