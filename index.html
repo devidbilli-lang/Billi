@@ -730,7 +730,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
   const nRiparazione=sessAttiveUniche.filter(s=>isSkuSpeciale(s.skuCorrente||s.sku||"")).length;
   const nCorso=sessAttiveUniche.filter(s=>s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")).length;
   const nOpProduzione=nOp-nRiparazione-nCorso;
-  const skuObj=skuList.find(s=>s.sku===skuPiu);
+  const skuObj=skuList.find(s=>s&&s.sku===skuPiu);
   const tc=skuObj?.tc||0;
   // Fine turno = primo check-in della linea + (8h + straordinario)
   const secFineTurno = secFineTurnoAssoluto;
@@ -1012,7 +1012,7 @@ function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, b
             return coppie.map((coppia,ci)=>(
               <div key={ci} style={{display:"flex",gap:8,flex:1,minHeight:0}}>
               {coppia.map(skuItem=>{
-              const skuObjItem=skuList.find(x=>x.sku===skuItem);
+              const skuObjItem=skuList.find(x=>x&&x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
               // Obiettivo finale
               // Calcolo obiettivo: minuti effettivi divisi equamente per numero di articoli attivi
@@ -1580,7 +1580,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
             {rampa&&rampa.dal&&(()=>{
               // Grafico rampa di crescita
               const PERC = PERC_RAMPA;
-              const skuObj = skuList.find(s=>s.sku===sku) || {};
+              const skuObj = skuList.find(s=>s&&s.sku===sku) || {};
               const tc = skuObj.tc || skuObj.tc_minuti || skuObj.tcMinuti || 0;
               // nOpReale: media operatori sui giorni di rampa GIÀ TRASCORSI.
               // Per ogni giorno della rampa (da g1 a oggi), conta matricole uniche su questo SKU
@@ -1594,7 +1594,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                 for(let d=1; d<=giorniTrascorsi; d++){
                   const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
-                  const riga = (operatoriPerGiorno||[]).find(r=>r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && (r.data||"").slice(0,10)===fmtG);
+                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && (r.data||"").slice(0,10)===fmtG);
                   if(riga && riga.nOperatori > 0) valoriPerGiorno.push(riga.nOperatori);
                 }
                 if(valoriPerGiorno.length > 0){
@@ -1640,7 +1640,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
                 for(let d=1;d<=15;d++){
                   const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
-                  const riga = riepilogo.find(r=>r.sku===sku&&(r.data||"").slice(0,10)===fmtG);
+                  const riga = riepilogo.find(r=>r&&r.sku===sku&&(!rampaLinea||r.linea===rampaLinea)&&(r.data||"").slice(0,10)===fmtG);
                   borsePerGiorno.push(riga?Number(riga.borseProdotte||0):null);
                 }
               }
@@ -1907,7 +1907,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
         <tbody>
           {righe.map((r,i)=>{
             const lObj = linee.find(l=>l.id===r.linea)||{colore:"#94a3b8"};
-            const skuObj = skuList.find(s=>s.sku===r.sku);
+            const skuObj = skuList.find(s=>s&&s.sku===r.sku);
             const dataFmt = (()=>{ try { const d=new Date(r.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); } catch(e){} return r.data; })();
             return (
               <tr key={i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
@@ -2004,7 +2004,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           if(sk&&!SKU_SPECIALI.some(x=>x.sku===sk)) skuCount[sk]=(skuCount[sk]||0)+1;
         });
         const skuPiu = Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
-        const skuObj = skuConSpecialiList.find(s=>s.sku===skuPiu);
+        const skuObj = skuConSpecialiList.find(s=>s&&s.sku===skuPiu);
         const tc = skuObj?.tc||0;
         if(tc<=0) return;
 
@@ -2239,7 +2239,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                 </div>
               </div>}
               {lista.map(r=>{
-                const skuObj = (skuList||[]).find(s=>s.sku===r.sku);
+                const skuObj = (skuList||[]).find(s=>s&&s.sku===r.sku);
                 return <div key={r.sku} style={{marginBottom:10,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#1e293b",marginBottom:4}}>{r.sku}</div>
                   {skuObj?.descrizione&&<div style={{fontSize:10,color:"#94a3b8",marginBottom:4}}>{skuObj.descrizione}</div>}
@@ -2318,7 +2318,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                 ))}
               </div>
             )}
-            {sku&&(()=>{ const skuObj=skuList.find(s=>s.sku===sku); return (
+            {sku&&(()=>{ const skuObj=skuList.find(s=>s&&s.sku===sku); return (
               <div style={{marginTop:6,padding:"8px 12px",background:"#f59e0b11",border:"1px solid #f59e0b44",borderRadius:6,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                 <span style={{fontSize:14,fontWeight:800,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>{sku}</span>
                 {skuObj&&skuObj.descrizione&&<span style={{fontSize:14,color:"#f59e0b",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{skuObj.descrizione}</span>}
@@ -2691,7 +2691,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               {skuMulti.length>0&&(
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:6}}>
                   {skuMulti.map(skuId=>{
-                    const skuObj=skuList.find(x=>x.sku===skuId);
+                    const skuObj=skuList.find(x=>x&&x.sku===skuId);
                     return (
                       <span key={skuId} style={{background:"#f59e0b22",border:"1px solid #f59e0b66",borderRadius:20,padding:"3px 8px",fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
                         {skuId}{skuObj&&skuObj.descrizione?" — "+skuObj.descrizione:""}
@@ -3173,7 +3173,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               </div>
               <div style={{padding:"12px 20px 6px",fontSize:13,color:"#64748b",fontWeight:600}}>{op?op.nome+" "+op.cognome:""} — {lin}</div>
               <div style={{padding:"0 12px 16px"}}>
-                {skuOp.map((ss,si)=>{const o=skuList.find(x=>x.sku===(ss.skuCorrente||ss.sku));return(
+                {skuOp.map((ss,si)=>{const o=skuList.find(x=>x&&x.sku===(ss.skuCorrente||ss.sku));return(
                   <div key={si} style={{padding:"10px 14px",borderBottom:si<skuOp.length-1?"1px solid #ede9fe":"none",display:"flex",alignItems:"center",gap:10,opacity:ss._attiva?1:0.5}}>
                     <div style={{width:10,height:10,borderRadius:"50%",background:ss._attiva?"#22c55e":"#cbd5e1",flexShrink:0,boxShadow:ss._attiva?"0 0 6px #22c55e":"none"}}/>
                     <code style={{...S.sku,fontSize:14}}>{o?o.sku:(ss.skuCorrente||ss.sku)}</code>
@@ -3491,7 +3491,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   <label style={{...S.lbl,color:"#f59e0b"}}>SKU Articolo</label>
                   <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
                     <option value="">-- Seleziona articolo --</option>
-                    {skuLinea.map(s=>{ const skuObj = skuList.find(x=>x.sku===s); return <option key={s} value={s}>{s}{skuObj?" — "+skuObj.descrizione:""}</option>; })}
+                    {skuLinea.map(s=>{ const skuObj = skuList.find(x=>x&&x.sku===s); return <option key={s} value={s}>{s}{skuObj?" — "+skuObj.descrizione:""}</option>; })}
                   </select>
                 </div>
                 <div style={{marginBottom:14}}>
