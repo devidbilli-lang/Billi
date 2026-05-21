@@ -1431,7 +1431,12 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
   return d;
 }
 
-function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTick] = useState(0);
+function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, skuList:_skuList }) { const [tick,setTick] = useState(0);
+  // Difesa: gli array possono contenere elementi null (righe vuote da Sheets/worker). Filtriamoli.
+  const sessioni = (_sessioni||[]).filter(Boolean);
+  const linee = (_linee||[]).filter(Boolean);
+  const rampeSheets = (_rampeSheets||[]).filter(Boolean);
+  const skuList = (_skuList||[]).filter(Boolean);
   const [riepilogo, setRiepilogo] = useState([]);
   const [modRampa, setModRampa] = useState(null); // {sku, lineaId, dataAttuale, dataNuova, err}
   const [confElimRampa, setConfElimRampa] = useState(null); // {sku, lineaId} per conferma eliminazione
@@ -1447,15 +1452,15 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   useEffect(()=>{
     // Carica riepilogo da Apps Script per dati storici borse prodotte
     fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
-      if(j.ok&&j.data&&j.data.righe) setRiepilogo(j.data.righe);
+      if(j.ok&&j.data&&j.data.righe) setRiepilogo((j.data.righe||[]).filter(Boolean));
     }).catch(()=>{});
     // Carica operatori unici per giorno+sku per media rampa
     fetch(nexusUrl("leggiOperatoriPerGiorno",{})).then(r=>r.json()).then(j=>{
-      if(j.ok&&j.data&&j.data.righe) setOperatoriPerGiorno(j.data.righe);
+      if(j.ok&&j.data&&j.data.righe) setOperatoriPerGiorno((j.data.righe||[]).filter(Boolean));
     }).catch(()=>{});
     // Carica rampe completate archiviate (storico curve teorica vs reale)
     fetch(nexusUrl("leggiRampeStorico",{})).then(r=>r.json()).then(j=>{
-      if(j.ok&&j.data&&j.data.storico) setRampeStorico(j.data.storico);
+      if(j.ok&&j.data&&j.data.storico) setRampeStorico((j.data.storico||[]).filter(Boolean));
     }).catch(()=>{});
   },[]);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
@@ -1736,7 +1741,7 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             Rampe Completate — Storico ({rampeStorico.length})
           </div>
-          {rampeStorico.map(rs=>{
+          {rampeStorico.filter(rs=>rs&&rs.sku).map(rs=>{
             const key = rs.sku+"|||"+rs.lineaId;
             const lineaObj = getLinea(rs.lineaId, linee);
             const aperto = storicoAperto===key;
