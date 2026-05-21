@@ -1705,11 +1705,11 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                     <input type="number" min="1" max="999" value={nOp}
                       onChange={e=>{ const v=parseInt(e.target.value,10); if(!isNaN(v)&&v>=1&&v<=999) setNOpOverride(prev=>({...prev,[sku]:v})); else if(e.target.value==="") setNOpOverride(prev=>({...prev,[sku]:""})); }}
                       onBlur={e=>{ if(e.target.value==="") setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;}); }}
-                      style={{width:56,padding:"4px 6px",fontSize:17,fontWeight:800,textAlign:"center",border:"1.5px solid "+(isOverride?"#7c3aed":"#cbd5e1"),borderRadius:6,color:isOverride?"#7c3aed":"#000000",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
+                      style={{width:56,padding:"4px 6px",fontSize:17,fontWeight:800,textAlign:"center",border:"1.5px solid "+(isOverride?"#ff6937":"#cbd5e1"),borderRadius:6,color:isOverride?"#ff6937":"#000000",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
                     <span>- TC {tc ? tc.toFixed(1).replace('.', ',') : "?"} min -</span>
                     <button onClick={()=>setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;})}
                       disabled={!isOverride}
-                      style={{background:isOverride?"#7c3aed":"#e2e8f0",color:isOverride?"#fff":"#94a3b8",border:"none",borderRadius:6,padding:"4px 10px",fontSize:15,fontWeight:800,cursor:isOverride?"pointer":"default",fontFamily:"'Montserrat',sans-serif"}}
+                      style={{background:isOverride?"#ff6937":"#e2e8f0",color:isOverride?"#fff":"#94a3b8",border:"none",borderRadius:6,padding:"4px 10px",fontSize:15,fontWeight:800,cursor:isOverride?"pointer":"default",fontFamily:"'Montserrat',sans-serif"}}
                       title={isOverride?"Torna al numero reale ("+nOpReale+")":"Numero reale attuale"}>↻ {nOpReale} Reali</button>
                   </div>
                   </div>
