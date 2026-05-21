@@ -1648,8 +1648,21 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 for(let d=1;d<=15;d++){
                   const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
-                  const riga = riepilogo.find(r=>r&&r.sku===sku&&(!rampaLinea||r.linea===rampaLinea)&&(r.data||"").slice(0,10)===fmtG);
-                  borsePerGiorno.push(riga?Number(riga.borseProdotte||0):null);
+                  // Match linea robusto: la linea nel riepilogo può essere id o nome.
+                  const matchLinea = (rl) => {
+                    if(!rampaLinea) return true;
+                    if(!rl) return false;
+                    if(rl===rampaLinea) return true;
+                    if(lineaObj && (rl===lineaObj.id || rl===lineaObj.nome)) return true;
+                    return false;
+                  };
+                  // Somma le borse di tutte le righe del giorno per questo sku+linea (possono esserci più righe)
+                  const righeGiorno = riepilogo.filter(r=>r&&r.sku===sku&&matchLinea(r.linea)&&(r.data||"").slice(0,10)===fmtG);
+                  if(righeGiorno.length>0){
+                    borsePerGiorno.push(righeGiorno.reduce((a,r)=>a+Number(r.borseProdotte||0),0));
+                  } else {
+                    borsePerGiorno.push(null);
+                  }
                 }
               }
               return (
