@@ -1545,7 +1545,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       {BarraFiltri}
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampe di Crescita</div>
-      {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
+      {tuttiSku.map(key=>{ try { const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
         const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
@@ -1732,7 +1732,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               );
             })()}
           </div>
-        ); })}
+        ); } catch(e) { console.error("ERRORE RAMPA key=",key,"rampaMap[key]=",rampaMap[key],e); return <div key={key} style={{color:"#ef4444",fontSize:12,padding:8}}>Errore su rampa {key}: {e.message}</div>; } })}
       </div>
       {/* PUNTO 3: STORICO RAMPE COMPLETATE - curva teorica vs reale */}
       {rampeStorico.length>0 && (
