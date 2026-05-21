@@ -612,7 +612,10 @@ const SKU_SPECIALI = [
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
-function ObiettivoProduzione({ sessioni, lineaId, skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
+  // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
+  const sessioni = (_sessioni||[]).filter(Boolean);
+  const skuList = (_skuList||[]).filter(Boolean);
   const [tick, setTick] = React.useState(0);
   const _now = new Date(); // si ricalcola ad ogni tick
   const _hh = _now.getHours(); const _mm = _now.getMinutes(); const _ss = _now.getSeconds();
@@ -1545,7 +1548,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       {BarraFiltri}
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#f59e0b",marginBottom:20}}>📈 Rampe di Crescita</div>
-      {tuttiSku.map(key=>{ try { const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
+      {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
         const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
@@ -1732,7 +1735,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               );
             })()}
           </div>
-        ); } catch(e) { console.error("ERRORE RAMPA key=",key,"rampaMap[key]=",rampaMap[key],e); return <div key={key} style={{color:"#ef4444",fontSize:12,padding:8}}>Errore su rampa {key}: {e.message}</div>; } })}
+        ); })}
       </div>
       {/* PUNTO 3: STORICO RAMPE COMPLETATE - curva teorica vs reale */}
       {rampeStorico.length>0 && (
@@ -1811,6 +1814,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
           })}
         </div>
       )}
+      {modRampa&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
             <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={19}/> Modifica inizio rampa</div>
