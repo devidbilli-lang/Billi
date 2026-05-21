@@ -1434,7 +1434,7 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
   return d;
 }
 
-function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, skuList:_skuList }) { const [tick,setTick] = useState(0);
+function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, skuList:_skuList, lineaFiltro=null }) { const [tick,setTick] = useState(0);
   // Difesa: gli array possono contenere elementi null (righe vuote da Sheets/worker). Filtriamoli.
   const sessioni = (_sessioni||[]).filter(Boolean);
   const linee = (_linee||[]).filter(Boolean);
@@ -1498,6 +1498,8 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       const r = rampaMap[key];
       if(!r) return false;
       const sku = r.sku;
+      // Filtro linea di accesso: se entri come linea, vedi SOLO le tue rampe.
+      if(lineaFiltro && r.lineaId !== lineaFiltro.id && r.lineaId !== lineaFiltro.nome) return false;
       const isCompletata = r.completata || (r.giorni||0) >= 15;
       // Filtro stato
       if(filtroStato === "attive" && isCompletata) return false;
@@ -1751,13 +1753,13 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
         ); })}
       </div>
       {/* PUNTO 3: STORICO RAMPE COMPLETATE - curva teorica vs reale */}
-      {rampeStorico.length>0 && (
+      {(()=>{ const storicoVis = rampeStorico.filter(rs=>rs&&rs.sku && (!lineaFiltro || rs.lineaId===lineaFiltro.id || rs.lineaId===lineaFiltro.nome)); return storicoVis.length>0 && (
         <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
           <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#22c55e",marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            Rampe Completate — Storico ({rampeStorico.length})
+            Rampe Completate — Storico ({storicoVis.length})
           </div>
-          {rampeStorico.filter(rs=>rs&&rs.sku).map(rs=>{
+          {storicoVis.map(rs=>{
             const key = rs.sku+"|||"+rs.lineaId;
             const lineaObj = getLinea(rs.lineaId, linee);
             const aperto = storicoAperto===key;
@@ -1826,7 +1828,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             );
           })}
         </div>
-      )}
+      ); })()}
       {modRampa&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
@@ -3853,7 +3855,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           )}
         </div>
       )}
-      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList}/></div>}
+      {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList} lineaFiltro={lineaFiltro}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
       {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
