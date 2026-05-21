@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgcM63Gwj6RPqP
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -1442,6 +1442,8 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
   const [filtroDataA, setFiltroDataA] = useState("");
   const [cercaSku, setCercaSku] = useState("");
   const [operatoriPerGiorno, setOperatoriPerGiorno] = useState([]); // [{sku, data:dd/MM/yyyy, nOperatori}]
+  const [rampeStorico, setRampeStorico] = useState([]); // rampe completate archiviate
+  const [storicoAperto, setStoricoAperto] = useState(null); // chiave sku|||linea della rampa storica espansa
   useEffect(()=>{
     // Carica riepilogo da Apps Script per dati storici borse prodotte
     fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
@@ -1450,6 +1452,10 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
     // Carica operatori unici per giorno+sku per media rampa
     fetch(nexusUrl("leggiOperatoriPerGiorno",{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data&&j.data.righe) setOperatoriPerGiorno(j.data.righe);
+    }).catch(()=>{});
+    // Carica rampe completate archiviate (storico curve teorica vs reale)
+    fetch(nexusUrl("leggiRampeStorico",{})).then(r=>r.json()).then(j=>{
+      if(j.ok&&j.data&&j.data.storico) setRampeStorico(j.data.storico);
     }).catch(()=>{});
   },[]);
   useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
@@ -1723,7 +1729,83 @@ function RiepSku({ sessioni, linee, rampeSheets, skuList }) { const [tick,setTic
           </div>
         ); })}
       </div>
-      {modRampa&&(
+      {/* PUNTO 3: STORICO RAMPE COMPLETATE - curva teorica vs reale */}
+      {rampeStorico.length>0 && (
+        <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
+          <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#22c55e",marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Rampe Completate — Storico ({rampeStorico.length})
+          </div>
+          {rampeStorico.map(rs=>{
+            const key = rs.sku+"|||"+rs.lineaId;
+            const lineaObj = getLinea(rs.lineaId, linee);
+            const aperto = storicoAperto===key;
+            const teorica = rs.curvaTeorica||[];
+            const reale = rs.curvaReale||[];
+            const maxVal = Math.max(1, ...teorica, ...reale);
+            // Totali per badge sintesi
+            const totT = teorica.reduce((a,b)=>a+(b||0),0);
+            const totR = reale.reduce((a,b)=>a+(b||0),0);
+            const pctR = totT>0 ? Math.round(totR/totT*100) : 0;
+            return (
+              <div key={key} style={{marginBottom:12,border:"1px solid #f1f5f9",borderRadius:10,overflow:"hidden"}}>
+                {/* Header cliccabile */}
+                <div onClick={()=>setStoricoAperto(aperto?null:key)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:aperto?"#f8fafc":"#fff"}}>
+                  <code style={{...S.sku,minWidth:80,fontSize:13}}>{rs.sku}</code>
+                  {lineaObj&&<span style={{...S.tag,background:lineaObj.colore+"22",color:lineaObj.colore,borderColor:lineaObj.colore+"44",fontSize:12,fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{lineaObj.id}</span>}
+                  <span style={{fontSize:11,color:"#94a3b8"}}>completata il {rs.completataIl}</span>
+                  <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:12,fontWeight:800,color:pctR>=90?"#22c55e":pctR>=70?"#f59e0b":"#ef4444"}}>{pctR}% del teorico</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" style={{transform:aperto?"rotate(180deg)":"none",transition:"transform .2s"}}><path d="M6 9l6 6 6-6"/></svg>
+                  </div>
+                </div>
+                {/* Grafico espanso */}
+                {aperto&&(()=>{
+                  const W=440,H=180,PL=34,PR=12,PT=16,PB=24;
+                  const iW=W-PL-PR,iH=H-PT-PB;
+                  const xStep=iW/14;
+                  const yMax=maxVal*1.05;
+                  const px=i=>PL+i*xStep;
+                  const py=v=>PT+iH-(v/yMax*iH);
+                  const ptsT=teorica.map((v,i)=>px(i)+","+py(v||0)).join(" ");
+                  const ptsR=reale.map((v,i)=>px(i)+","+py(v||0)).join(" ");
+                  return (
+                    <div style={{padding:"12px 14px 8px",borderTop:"1px solid #f1f5f9"}}>
+                      <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{overflow:"visible"}}>
+                        {/* griglia Y */}
+                        {[0,25,50,75,100].map(pp=>{ const y=py(maxVal*pp/100); return (
+                          <g key={pp}>
+                            <line x1={PL} y1={y} x2={W-PR} y2={y} stroke="#e2e8f0" strokeWidth="0.5"/>
+                            <text x={PL-4} y={y+3} fontSize="7" textAnchor="end" fill="#94a3b8">{Math.round(maxVal*pp/100)}</text>
+                          </g>
+                        ); })}
+                        {/* asse X giorni */}
+                        {Array.from({length:15},(_,i)=>i+1).map(d=>{ const x=px(d-1); return (
+                          <g key={d}>
+                            <text x={x} y={H-2} fontSize="7" textAnchor="middle" fill="#94a3b8">g{d}</text>
+                          </g>
+                        ); })}
+                        {/* curva teorica (viola) */}
+                        <polyline points={ptsT} fill="none" stroke="#c17aff" strokeWidth="2" strokeLinejoin="round"/>
+                        {teorica.map((v,i)=><circle key={"t"+i} cx={px(i)} cy={py(v||0)} r="2" fill="#c17aff"/>)}
+                        {/* curva reale (verde) */}
+                        <polyline points={ptsR} fill="none" stroke="#22c55e" strokeWidth="2" strokeLinejoin="round"/>
+                        {reale.map((v,i)=><circle key={"r"+i} cx={px(i)} cy={py(v||0)} r="2" fill="#22c55e"/>)}
+                        <line x1={PL} y1={PT} x2={PL} y2={PT+iH} stroke="#cbd5e1" strokeWidth="1"/>
+                        <line x1={PL} y1={PT+iH} x2={W-PR} y2={PT+iH} stroke="#cbd5e1" strokeWidth="1"/>
+                      </svg>
+                      <div style={{display:"flex",gap:16,marginTop:4,justifyContent:"center"}}>
+                        <div style={{fontSize:10,color:"#c17aff",display:"flex",alignItems:"center",gap:4}}><span style={{width:14,height:2,background:"#c17aff",display:"inline-block",borderRadius:1}}></span>Teorica ({totT})</div>
+                        <div style={{fontSize:10,color:"#22c55e",display:"flex",alignItems:"center",gap:4}}><span style={{width:14,height:2,background:"#22c55e",display:"inline-block",borderRadius:1}}></span>Reale ({totR})</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })}
+        </div>
+      )}
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
             <div style={{fontSize:18,fontWeight:800,color:"#7c3aed",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={19}/> Modifica inizio rampa</div>
