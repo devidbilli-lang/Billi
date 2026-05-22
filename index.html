@@ -2888,8 +2888,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     <div style={S.scr}>
       <header style={{...S.hdr,position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:10,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
-          {ultimoSync2&&<span style={{fontSize:10,color:"#22c55e",fontWeight:700}}>● Live</span>}
+          <span title={syncCfg.t} style={{width:11,height:11,borderRadius:"50%",background:syncCfg.c,boxShadow:"0 0 6px "+syncCfg.c,display:"inline-block",flexShrink:0}}/>
         </div>
         <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)"}}>
           <div style={S.ora}>{fmtFull(oraRef).split(",")[0]} — {fmt(oraRef)}</div>
@@ -3765,8 +3764,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         <div style={{fontSize:18,fontWeight:700,color:"#00d4aa",letterSpacing:1,display:"flex",gap:8,alignItems:"center"}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer"}} onClick={()=>{ if(onTornaIndietro) onTornaIndietro(); else if(onEsci) onEsci(); }}><LogoSpinner size={48}/><span style={{fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span></div>
         </div>
-        <div style={{display:"flex",gap:8}}>
-          <span style={{display:"flex",alignItems:"center",gap:6,background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:6,padding:"4px 10px",fontSize:10,color:"#22c55e",fontWeight:700}}>SHEETS LIVE</span>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <span title="Sheets connesso" style={{width:12,height:12,borderRadius:"50%",background:"#22c55e",boxShadow:"0 0 6px #22c55e",display:"inline-block",flexShrink:0}}/>
           <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
         </div>
       </header>
@@ -4291,7 +4290,7 @@ function App() { const [view,setView]             = useState("login");
             <span style={{fontSize:14,fontWeight:800,color:"#7c3aed",letterSpacing:2,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
           </div>
           <span style={{marginLeft:8,fontSize:12,background:"#f59e0b22",color:"#f59e0b",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 10px",fontWeight:700}}>👁 Sola lettura</span>
-          <span style={{marginLeft:"auto",fontSize:11,color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
+          <span title={syncCfg.t} style={{marginLeft:"auto",width:11,height:11,borderRadius:"50%",background:syncCfg.c,boxShadow:"0 0 6px "+syncCfg.c,display:"inline-block",flexShrink:0}}/>
         </div>
         <Dashboard sessioni={sessSheets} setSessioni={setSessSheets} linee={linee} skuList={skuList} operatori={operatori} rampeSheets={rampeSheets} isAdmin={true} lineaFiltro={null} onReset={null} onCO={null} onCOSheets={null} onTr={null} onAggiornaSessioni={caricaSessioni} readOnly={true} editOrario={URL_VIEW==="admin"} onTornaIndietro={()=>setView("checkin")}/>
       </div>
