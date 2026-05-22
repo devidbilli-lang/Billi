@@ -45,7 +45,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCU0b7-w-BTWu3
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -2795,9 +2795,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 const _orariTurno = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; } })();
 
                 const oraAttuale = new Date();
+                // Orari odierni (solo per oggi) hanno precedenza sullo standard
+                const _orariOggi = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); } catch(e){ return {}; } })();
+                const _oggiStr = oraAttuale.toLocaleDateString('it-IT');
                 for (const s of registrati) {
-                  // Controlla orario inizio turno per questa matricola
-                  const orarioOp = _orariTurno[s.matricola] || "06:00";
+                  // Controlla orario inizio turno per questa matricola (odierno se valido, altrimenti standard)
+                  const oggiOp = _orariOggi[s.matricola];
+                  const orarioOp = (oggiOp && oggiOp.data===_oggiStr && oggiOp.inizioOggi) ? oggiOp.inizioOggi : (_orariTurno[s.matricola] || "06:00");
                   const [hTurno, mTurno] = orarioOp.split(":").map(Number);
                   const oraOp = new Date(); oraOp.setHours(hTurno, mTurno, 0, 0);
                   const diffMs = oraOp.getTime() - oraAttuale.getTime();
@@ -2905,20 +2909,45 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   const [orariFineTurno, setOrariFineTurno] = useState(()=>{
     try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; }
   });
+  // Orari ODIERNI (validi solo per oggi): {matricola:{inizioOggi, fineOggi}}
+  const [orariOggi, setOrariOggi] = useState({});
 
   // Carica orari da D1 all'avvio (sincronizza tra dispositivi)
   React.useEffect(()=>{
     fetch(nexusUrl('leggiOrariOperatori',{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data.orari){
-        const inizio = {}; const fine = {};
-        Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; });
+        const inizio = {}; const fine = {}; const oggiMap = {};
+        Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; if(v.inizioOggi||v.fineOggi){ oggiMap[mat]={inizioOggi:v.inizioOggi||"", fineOggi:v.fineOggi||""}; } });
         setOrariTurno(prev=>({...prev,...inizio}));
         setOrariFineTurno(prev=>({...prev,...fine}));
+        setOrariOggi(oggiMap);
         localStorage.setItem('nexus_orari_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'),...inizio}));
         localStorage.setItem('nexus_orari_fine_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'),...fine}));
       }
     }).catch(()=>{});
   },[]);
+
+  // Salva orario odierno (solo per oggi, non tocca lo standard)
+  const salvaOggi = (matricola, inizioOggi, fineOggi) => {
+    setOrariOggi(prev=>({...prev,[matricola]:{inizioOggi,fineOggi}}));
+    fetch(nexusUrl('salvaOrarioOggi',{matricola,orarioInizioOggi:inizioOggi,orarioFineOggi:fineOggi}),{mode:'cors'}).catch(()=>{});
+    // Aggiorna localStorage per il check-in pianificato (con data odierna)
+    try {
+      const oggiStr = new Date().toLocaleDateString('it-IT');
+      const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
+      lo[matricola] = {inizioOggi, fineOggi, data:oggiStr};
+      localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
+    } catch(e){}
+  };
+  const rimuoviOggi = (matricola) => {
+    setOrariOggi(prev=>{ const cp={...prev}; delete cp[matricola]; return cp; });
+    fetch(nexusUrl('rimuoviOrarioOggi',{matricola}),{mode:'cors'}).catch(()=>{});
+    try {
+      const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
+      delete lo[matricola];
+      localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
+    } catch(e){}
+  };
 
   const salvaOrario = (matricola, orario) => {
     const nuovi = {...orariTurno, [matricola]: orario};
@@ -2940,6 +2969,9 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   const [editOrarioFineOp, setEditOrarioFineOp] = useState(null); // matricola in modifica fine
   const [tmpOrarioVal, setTmpOrarioVal] = useState(""); // valore HH:MM corrente nell'editor inizio
   const [tmpOrarioFineVal, setTmpOrarioFineVal] = useState(""); // valore HH:MM corrente nell'editor fine
+  const [editOggiOp, setEditOggiOp] = useState(null); // matricola in modifica orario odierno
+  const [tmpOggiInizio, setTmpOggiInizio] = useState("");
+  const [tmpOggiFine, setTmpOggiFine] = useState("");
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -3038,6 +3070,40 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   )}
                 </div>
               </div>
+              {/* PIANIFICAZIONE ODIERNA: orario valido solo per oggi, non tocca lo standard */}
+              {(()=>{
+                const oggi = orariOggi[op.matricola];
+                const haOggi = oggi && (oggi.inizioOggi || oggi.fineOggi);
+                const inEdit = editOggiOp===op.matricola;
+                return (
+                  <div style={{marginTop:6,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:"6px 10px",background:haOggi?"#fff7f3":"#f8fafc",borderRadius:8,border:"1px solid "+(haOggi?"#ff6937":"#e2e8f0")}}>
+                    <span style={{fontSize:10,fontWeight:800,color:haOggi?"#ff6937":"#94a3b8",letterSpacing:0.5,textTransform:"uppercase"}}>Solo oggi</span>
+                    {inEdit ? (
+                      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                        <span style={{fontSize:10,color:"#64748b"}}>Inizio</span>
+                        <TimePicker size="compact" value={tmpOggiInizio||"06:00"} onChange={v=>setTmpOggiInizio(v)}/>
+                        <span style={{fontSize:10,color:"#64748b"}}>Fine</span>
+                        <TimePicker size="compact" value={tmpOggiFine||"14:00"} onChange={v=>setTmpOggiFine(v)}/>
+                        <button onClick={()=>{ salvaOggi(op.matricola, tmpOggiInizio||"06:00", tmpOggiFine||"14:00"); setEditOggiOp(null); }}
+                          style={{background:"#ff6937",color:"#fff",border:"none",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓</button>
+                        <button onClick={()=>setEditOggiOp(null)}
+                          style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 8px",fontSize:11,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
+                      </div>
+                    ) : haOggi ? (
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,fontWeight:800,color:"#ff6937"}}>{oggi.inizioOggi||"—"} → {oggi.fineOggi||"—"}</span>
+                        <span onClick={()=>{ setEditOggiOp(op.matricola); setTmpOggiInizio(oggi.inizioOggi||"06:00"); setTmpOggiFine(oggi.fineOggi||"14:00"); }}
+                          style={{cursor:"pointer",color:"#ff6937"}}><IconaMatita size={13}/></span>
+                        <button onClick={()=>rimuoviOggi(op.matricola)}
+                          style={{background:"transparent",border:"1px solid #ef444466",color:"#ef4444",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>rimuovi</button>
+                      </div>
+                    ) : (
+                      <button onClick={()=>{ setEditOggiOp(op.matricola); setTmpOggiInizio(orariTurno[op.matricola]||"06:00"); setTmpOggiFine(orariFineTurno[op.matricola]||"14:00"); }}
+                        style={{background:"#fff",border:"1px solid #ff6937",color:"#ff6937",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>+ Imposta orario di oggi</button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ); })}
       </div>
@@ -3871,7 +3937,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     <td style={S.td}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         {s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}
-                        {editOrario&&<button onClick={()=>{ const d=new Date(s.fine); const oggi=new Date(); let hh="14",mm="00",data=""; if(!isNaN(d)){ hh=String(d.getHours()).padStart(2,"0"); mm=String(d.getMinutes()).padStart(2,"0"); data=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; } else { data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; } setModOrario({sess:s,campo:"fine",hh,mm,data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={14}/></button>}
+                        {editOrario&&<button onClick={()=>{ const oggi=new Date(); const data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; setModOrario({sess:s,campo:"fine",hh:"14",mm:"00",data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={14}/></button>}
                         {(()=>{
                           // Sessioni chiuse della stessa matricola su questa linea oggi
                           const sessChiuse = sessioni.filter(sx=>
