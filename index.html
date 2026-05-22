@@ -3199,7 +3199,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       } catch(e){}
     };
     caricaProd();
-    const tp = setInterval(caricaProd, 60000);
+    const tp = setInterval(caricaProd, 120000); // 120s: dimezza le letture produzione/qualità
     return ()=>clearInterval(tp);
   },[]);
   const [salvaOrarioErr, setSalvaOrarioErr] = React.useState("");
@@ -4215,7 +4215,7 @@ function App() { const [view,setView]             = useState("login");
         setDashSync("ok"); setUltimoSync2(new Date());
         } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
   useEffect(()=>{ caricaSessioni();
-    const t = setInterval(caricaSessioni, 30000);
+    const t = setInterval(caricaSessioni, 90000); // 90s invece di 30s: riduce di 3x le letture D1
     return ()=>clearInterval(t); },[caricaSessioni]);
   const add = s => { setSess(p=>[s,...p]);
     api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")}); };
