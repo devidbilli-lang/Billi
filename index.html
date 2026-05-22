@@ -4364,18 +4364,14 @@ function App() { const [view,setView]             = useState("login");
   }
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",color:"#1e293b"}}>
-      <div style={{background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"5px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
-        <span style={{color:syncCfg.c,fontWeight:700}}>{syncCfg.t}</span>
-        {sync==="ok"&&<span style={{color:"#475569"}}>· {linee.length} linee · {operatori.length} operatori · {skuList.length} SKU · {ts?fmt(ts):"-"}</span>}
-        {(sync==="ok"||sync==="errore")&&<button onClick={reload} style={{background:"transparent",border:"1px solid #e2e8f0",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>Ricarica</button>}
+      <div style={{background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"8px 20px",display:"flex",alignItems:"center",gap:12,fontSize:11}}>
+        <span title={syncCfg.t} style={{width:12,height:12,borderRadius:"50%",background:syncCfg.c,boxShadow:"0 0 6px "+syncCfg.c,display:"inline-block",flexShrink:0}}/>
       </div>
       {view!=="checkin"&&(
         <div style={{display:"flex",gap:8,padding:"12px 20px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",alignItems:"center"}}>
           {view==="dashboard"&&(
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:11,color:dashCfg.c,fontWeight:700}}>{dashCfg.t}</span>
-              {ultimoSync2&&<span style={{fontSize:10,color:"#475569"}}>Aggiornato: {fmt(ultimoSync2)}</span>}
-              <button onClick={caricaSessioni} style={{background:"transparent",border:"1px solid #e2e8f0",borderRadius:4,color:"#64748b",cursor:"pointer",fontSize:11,padding:"2px 8px",fontFamily:"'Montserrat',sans-serif"}}>↻</button>
+              <span title={dashCfg.t} style={{width:12,height:12,borderRadius:"50%",background:dashCfg.c,boxShadow:"0 0 6px "+dashCfg.c,display:"inline-block",flexShrink:0}}/>
             </span>
           )}
         </div>
