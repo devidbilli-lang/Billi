@@ -2113,16 +2113,16 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [lineaSelQ, setLineaSelQ] = useState("");
   const [qualitaOggi, setQualitaOggi] = useState([]);
   const [showRiepilogoQ, setShowRiepilogoQ] = useState(false);
-  // Carica dati qualità di oggi per mostrare totali per SKU
-  React.useEffect(()=>{
+  // Carica dati qualità di oggi per mostrare totali per SKU (richiamabile dopo ogni registrazione)
+  const caricaQualitaOggi = React.useCallback(()=>{
     fetch(nexusUrl("leggiqualita",{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data){
-        // leggiqualita può restituire array o oggetto con proprietà
         const arr = Array.isArray(j.data) ? j.data : (Array.isArray(j.data.qualita) ? j.data.qualita : []);
         setQualitaOggi(arr);
       }
     }).catch(()=>{});
   },[]);
+  React.useEffect(()=>{ caricaQualitaOggi(); },[caricaQualitaOggi]);
   const isAdminQ = !linea;
   const lineaEffettiva = isAdminQ ? lineaSelQ : linea?.id;
   const lObj = linea ? (linee.find(l=>l.id===linea.id)||linea) : {id:"Admin",colore:"#7c3aed"};
@@ -2205,7 +2205,21 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     try {
       await fetchConRetry(nexusUrl("qualita",{linea:lineaEffettiva||"",sku,ok:ok||0,ko:ko||0,migliorabili:migl||0,noteKo:nKoStr,noteMigl:nMiglStr,obReale:obRealeQ||"",obTeorico:obTeoricoQ||""}), 5, 1000);
       setMsg("✓ Salvato!");
+      // Aggiornamento IMMEDIATO del riquadro OGGI: somma i valori appena registrati allo stato locale
+      const okN = Number(ok)||0, koN = Number(ko)||0, miglN = Number(migl)||0;
+      setQualitaOggi(prev=>{
+        const arr = [...prev];
+        const idx = arr.findIndex(q=>q && q.linea===lineaEffettiva && q.sku===sku);
+        if(idx>=0){
+          arr[idx] = {...arr[idx], ok:(Number(arr[idx].ok)||0)+okN, ko:(Number(arr[idx].ko)||0)+koN, migliorabili:(Number(arr[idx].migliorabili)||0)+miglN};
+        } else {
+          arr.push({linea:lineaEffettiva, sku, ok:okN, ko:koN, migliorabili:miglN});
+        }
+        return arr;
+      });
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
+      // Ricarica da D1 per allineare i totali reali (merge note, ecc.)
+      setTimeout(caricaQualitaOggi, 800);
     } catch(e){ setErr("Errore salvataggio. Riprova."); setMsg(null); }
     setTimeout(()=>setMsg(null), 3000);
       }
