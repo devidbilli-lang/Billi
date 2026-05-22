@@ -1940,12 +1940,13 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   // Salva modifica valori (sovrascrive i totali del giorno)
   const salvaModificaQ = async (r) => {
     setSalvandoQ(true);
-    const giorno = (()=>{ try { const d=new Date(r.data); if(!isNaN(d)) return d.toISOString().substring(0,10); } catch(e){} return (r.data||"").substring(0,10); })();
+    // Passa la data grezza (es. "22/05/2026" o ISO): il worker normalizza entrambi i formati.
+    const giorno = (r.data||"").toString().split(" ")[0].split(",")[0].trim();
     try {
       await fetch(nexusUrl("modificaQualita",{linea:r.linea,sku:r.sku,data:giorno,ok:tmpQ.ok||0,ko:tmpQ.ko||0,migliorabili:tmpQ.migl||0}),{mode:"cors"});
     } catch(e) {}
     setEditQ(null); setSalvandoQ(false);
-    setTimeout(caricaQ, 600);
+    setTimeout(caricaQ, 1000);
   };
   const dati = lineaFiltro ? qualita.filter(q => q.linea === lineaFiltro.id) : qualita;
   const aggMap = {};
