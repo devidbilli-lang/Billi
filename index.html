@@ -2501,12 +2501,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [opSelezionati,setOpSelezionati] = useState([]);
   const [rampa,setRampa]                 = useState(false);
   const [rampaPerSku,setRampaPerSku]     = useState({}); // {sku: true/false}
-  const [lineaCheckinSel,setLineaCheckinSel] = useState(null); // linea selezionata nel form check-in
+  const [lineaCheckinSel,setLineaCheckinSel] = useState(lineaFiltro||null); // linea selezionata nel form check-in (default: linea di accesso)
   const [cLinea,setCLinea]               = useState(""); // ricerca linea
   const [pwdLinea,setPwdLinea]           = useState("");
   const [pwdOk,setPwdOk]                 = useState(false);
   const [errPwd,setErrPwd]               = useState("");
   const [oraRef, setOraRef] = useState(now());
+  useEffect(()=>{ if(lineaFiltro) setLineaCheckinSel(lineaFiltro); },[lineaFiltro]);
   useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
   const sessAtt = k => { const key = k.trim().toUpperCase();
     const isAttiva = s => { if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
