@@ -3792,13 +3792,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               <div style={{fontSize:28,fontWeight:800,color:l.colore,lineHeight:1}}>{nAtt}</div>
               <div style={{fontSize:13,color:l.colore,marginTop:2,marginBottom:6,fontWeight:600}}>{l.id}</div>
               <div style={{flex:1}}/>
-              <div style={{display:"flex",gap:4,marginTop:6}}>
-                <button onClick={()=>setModTrasf({lineaDest:l})} style={{flex:1,fontSize:11,fontWeight:700,padding:"6px 4px",background:"#a855f711",border:"1px solid #a855f766",borderRadius:6,color:"#a855f7",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>↔ Trasf.</button>
-                {(!lineaFiltro || lineaFiltro.id === l.id)
-                  ? <button onClick={()=>setModNoteLinea({linea:l, nota:""})} style={{flex:1,fontSize:11,fontWeight:700,padding:"6px 4px",background:"#f59e0b11",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>📝 Note</button>
-                  : <div style={{flex:1}}/>
-                }
-              </div>
               {nAtt>0&&(
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null"));
                   if(attiveLinea.length===0) return;
@@ -3864,9 +3857,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       </div>
       )}
       <div style={{padding:"0 24px 16px",display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+        <button onClick={()=>{ const lt = lineaFiltro || linee[0]; if(lt) setModTrasf({lineaDest:lt}); }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #a855f755"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; }} style={{padding:"10px 22px",border:"2px solid #a855f7",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:"#a855f711",color:"#a855f7",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>↔ Trasferimento</button>
         {[["sessioni","Sessioni"],["operatori","Operatori"],["sku","Rampa di Crescita"],["qualita","Qualità"],["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path fillRule="evenodd" clipRule="evenodd" d="M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22Zm1.2 5.3a1 1 0 0 0-1.4 1.4L15 11H6.5a1 1 0 1 0 0 2H15l-3.2 3.3a1 1 0 0 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5Z" fill="currentColor"/></svg>Entra in Produzione</span>)]].map(([t,l])=>(
           <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #7c3aed55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=tab===t?"0 0 10px 2px #7c3aed44":"none"; }} style={{padding:"10px 22px",border:"2px solid #7c3aed",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.55)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",color:"#000000",boxShadow:tab===t?"0 0 10px 2px #7c3aed44":"none",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>{l}</button>
         ))}
+        <button onClick={()=>{ const ln = lineaFiltro || linee[0]; if(ln) setModNoteLinea({linea:ln, nota:""}); }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #f59e0b55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; }} style={{padding:"10px 22px",border:"2px solid #f59e0b",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:"#f59e0b11",color:"#f59e0b",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>📝 Note</button>
       </div>
       {tab==="sessioni"&&(
         <div style={{padding:"0 24px 16px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
