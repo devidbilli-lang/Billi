@@ -2888,7 +2888,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     <div style={S.scr}>
       <header style={{...S.hdr,position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          {sync==="errore"&&<span style={{fontSize:12,fontWeight:800,color:"#ef4444",background:"#fee2e2",border:"1px solid #ef4444",borderRadius:6,padding:"3px 12px"}}>Errore</span>}
+          {syncCfg&&syncCfg.t==="Sheets non raggiungibile"&&<span style={{fontSize:12,fontWeight:800,color:"#ef4444",background:"#fee2e2",border:"1px solid #ef4444",borderRadius:6,padding:"3px 12px"}}>Errore</span>}
         </div>
         <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)"}}>
           <div style={S.ora}>{fmtFull(oraRef).split(",")[0]} — {fmt(oraRef)}</div>
