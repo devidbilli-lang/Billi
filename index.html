@@ -3280,7 +3280,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         const matchLinea = ss => ss.lineaCorrente===lin || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).id || ss.lineaCorrente===(linee.find(l=>l.nome===lin||l.id===lin)||{}).nome;
         const skuTutti = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat && matchLinea(ss));
         const skuMap = {};
-        skuTutti.forEach(ss=>{ const k=ss.skuCorrente||ss.sku; if(!k) return;
+        skuTutti.forEach(ss=>{
+          // Pianificato con più articoli: espandi la lista _skuPianificati
+          if(ss._pianificato && Array.isArray(ss._skuPianificati) && ss._skuPianificati.length>0){
+            ss._skuPianificati.forEach(skP=>{ if(!skP) return; if(!skuMap[skP]) skuMap[skP]={...ss,sku:skP,skuCorrente:skP,_attiva:false,_pianificato:true}; });
+            return;
+          }
+          const k=ss.skuCorrente||ss.sku; if(!k) return;
           const aperta=!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null";
           // Verde SOLO se aperta E sulla stessa linea
           const attiva = aperta && matchLinea(ss);
@@ -3899,10 +3905,17 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
                       {(()=>{
-                        // Sessioni attive di questa persona su questa linea
-                        const sessAttiviLinea = sessioni.filter(ss=>(ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome)&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
-                        const nAttivi = sessAttiviLinea.length;
+                        // Per i PIANIFICATI: il numero di articoli è la lista _skuPianificati.
+                        // Per gli ATTIVI: conta le sessioni attive di questa persona su questa linea.
                         const key = s.matricola+"|"+s.lineaCorrente;
+                        let nAttivi, etichetta;
+                        if(s._pianificato){
+                          const skuPian = Array.isArray(s._skuPianificati)&&s._skuPianificati.length>0 ? s._skuPianificati : [s.sku].filter(Boolean);
+                          nAttivi = skuPian.length;
+                        } else {
+                          const sessAttiviLinea = sessioni.filter(ss=>(ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome)&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
+                          nAttivi = sessAttiviLinea.length;
+                        }
                         return (
                           <button onClick={()=>setPopupSkuOp(popupSkuOp===key?null:key)}
                             style={{background:"#f8f5ff",border:"2px solid #7c3aed",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>
