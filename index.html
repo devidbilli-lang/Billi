@@ -1962,7 +1962,14 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     if (q.noteKo)   aggMap[k].noteKo   = q.noteKo;
     if (q.noteMigl) aggMap[k].noteMigl = q.noteMigl;
   }
-  const righe = Object.values(aggMap).sort((a,b) => b.data > a.data ? 1 : -1);
+  const righe = Object.values(aggMap).sort((a,b) => {
+    // 1) Data decrescente (più recente in alto)
+    if (a.data !== b.data) return b.data > a.data ? 1 : -1;
+    // 2) Stessa data: raggruppa per linea (alfabetico)
+    if ((a.linea||"") !== (b.linea||"")) return (a.linea||"").localeCompare(b.linea||"");
+    // 3) Stessa linea: ordina per SKU
+    return (a.sku||"").localeCompare(b.sku||"");
+  });
   if (loading) return <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>;
   if (righe.length === 0) return <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessun dato qualità per oggi.</div>;
   return (
