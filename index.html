@@ -2309,8 +2309,10 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s&&s.sku===r.sku);
                 return <div key={r.sku} style={{marginBottom:10,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#1e293b",marginBottom:4}}>{r.sku}</div>
-                  {skuObj?.descrizione&&<div style={{fontSize:10,color:"#94a3b8",marginBottom:4}}>{skuObj.descrizione}</div>}
+                  <div style={{display:"inline-flex",flexDirection:"column",alignItems:"flex-start",gap:1,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"4px 12px",marginBottom:6}}>
+                    <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1.2}}>{r.sku}</span>
+                    {skuObj?.descrizione&&<span style={{fontSize:10,color:"#ff6937cc",lineHeight:1.2}}>{skuObj.descrizione}</span>}
+                  </div>
                   <div style={{display:"flex",gap:8,marginTop:6}}>
                     <div style={{flex:1,background:"rgba(0,0,0,0.06)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
                       <div style={{fontSize:10,color:"#64748b",fontWeight:600,marginBottom:2}}>Prodotte</div>
