@@ -1301,7 +1301,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   const textColor = percTempo>50?"#ffffff":"#1e293b";
                   if(secRim<=0) return (
                     <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
-                      <span style={{fontSize:18,fontWeight:900,color:"#ef4444"}}>⏹ Turno terminato</span>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:7,background:"#ffffff",border:"2px solid #ff6363",borderRadius:8,padding:"5px 14px",fontSize:16,fontWeight:800,color:"#ff6363",lineHeight:1}}>⏹ Turno terminato</span>
                     </div>
                   );
                   const hR=Math.floor(secRim/3600), mR=Math.floor((secRim%3600)/60), sR=secRim%60;
