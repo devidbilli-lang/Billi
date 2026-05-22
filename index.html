@@ -3766,7 +3766,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <span title="Sheets connesso" style={{width:12,height:12,borderRadius:"50%",background:"#22c55e",boxShadow:"0 0 6px #22c55e",display:"inline-block",flexShrink:0}}/>
-          <button style={{padding:"6px 14px",background:"transparent",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}} onClick={()=>{ const p=prompt("Password admin per confermare il reset:"); if(p===null) return; if(p===ADMIN_PWD){ if(confirm("Sei sicuro? Tutte le sessioni verranno eliminate.")) onReset(); } else alert("Password errata."); }}>Reset</button>
         </div>
       </header>
       {!(tab==="produzione"&&vistaGrigliaProd) && (
