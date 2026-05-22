@@ -3830,12 +3830,20 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
                     setLoading(true); setLoadingMsg("Eliminazione...");
-                    // Elimina TUTTE le sessioni delle matricole selezionate (anche multi-SKU)
+                    // Elimina TUTTE le sessioni delle matricole selezionate (anche multi-SKU e pianificati)
                     const toDelete = sessioni.filter(s=>selezionati.has(s.matricola||s.nome));
-                    for(const s of toDelete){
-                      try{
-                        await fetch(nexusUrl("eliminasessione",{sessionId:s.id}),{mode:"cors"});
-                      }catch(e){}
+                    // Raccogli tutti i session_id unici da eliminare
+                    const sessionIds = new Set();
+                    toDelete.forEach(s=>{ if(s.id) sessionIds.add(s.id); });
+                    for(const sid of sessionIds){
+                      try{ await fetch(nexusUrl("eliminasessione",{sessionId:sid}),{mode:"cors"}); }catch(e){}
+                    }
+                    // Elimina anche eventuali pianificati residui per ciascuna matricola+linea selezionata
+                    const matLinee = new Set();
+                    toDelete.forEach(s=>{ matLinee.add((s.matricola||s.nome||"")+"|||"+(s.lineaCorrente||"")); });
+                    for(const ml of matLinee){
+                      const [mat,lin] = ml.split("|||");
+                      if(mat){ try{ await fetch(nexusUrl("eliminaPianificati",{matricola:mat,lineaDa:lin||""}),{mode:"cors"}); }catch(e){} }
                     }
                     setLoading(false); setSelezionati(new Set());
                     if(onAggiornaSessioni) onAggiornaSessioni();
