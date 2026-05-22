@@ -20,6 +20,7 @@ body{background:#f0f2f5;font-family:'Montserrat',sans-serif;color:#e2e8f0;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
 @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 tr{animation:rowIn 0.25s ease both;}
+.tabQ td:not(:last-child){border-right:2px dashed #7c3aed44;}
 input:focus{border-color:#00d4aa!important;outline:none;}
 button:hover{filter:brightness(1.12);}
 ::-webkit-scrollbar{width:6px;height:6px;}
@@ -1966,10 +1967,10 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   if (righe.length === 0) return <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessun dato qualità per oggi.</div>;
   return (
     <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
-      <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <table className="tabQ" style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
-          <tr>{[["Data","#475569"],["Linea","#475569"],["SKU","#475569"],["Borse Prodotte","#1e293b"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi)=>(
-            <th key={hi} style={{padding:"12px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2px solid #e2e8f0",background:"#f8fafc",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>{h}</th>
+          <tr>{[["Data","#475569"],["Linea","#475569"],["SKU","#475569"],["Borse Prodotte","#1e293b"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
+            <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
           ))}</tr>
         </thead>
         <tbody>
