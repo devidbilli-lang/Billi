@@ -2839,7 +2839,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 </button>
       </header>
       <div style={S.bod}>
-        <div style={S.card}>
+        <div style={{...S.card,maxWidth:640}}>
           <div style={{textAlign:"center",marginBottom:28}}>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,marginBottom:8}}>
               <LogoSpinner size={72}/>
@@ -3168,10 +3168,12 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const pianoMap = {};
   sessioni.filter(s=>s._pianificato && !matAttive.has(s.matricola) && (fL==="ALL"||s.lineaCorrente===fL)).forEach(s=>{
     const key = s.matricola+"|"+s.lineaCorrente;
+    // Il worker può già fornire _skuPianificati (lista completa degli articoli pianificati).
+    const skuLista = Array.isArray(s._skuPianificati) && s._skuPianificati.length>0 ? s._skuPianificati : [s.sku];
     if(!pianoMap[key]){
-      pianoMap[key] = {...s, _skuPianificati:[s.sku]};
+      pianoMap[key] = {...s, _skuPianificati:[...skuLista]};
     } else {
-      pianoMap[key]._skuPianificati.push(s.sku);
+      skuLista.forEach(sk=>{ if(!pianoMap[key]._skuPianificati.includes(sk)) pianoMap[key]._skuPianificati.push(sk); });
     }
   });
   const pianificatiDaMostrare = Object.values(pianoMap);
