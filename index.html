@@ -3037,6 +3037,8 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   const [editOggiOp, setEditOggiOp] = useState(null); // matricola in modifica orario odierno
   const [tmpOggiInizio, setTmpOggiInizio] = useState("");
   const [tmpOggiFine, setTmpOggiFine] = useState("");
+  // Modal centrato per modifica orario: {op, tipo:'standard'|'oggi', inizio:'HH:MM', fine:'HH:MM'}
+  const [modOrarioOp, setModOrarioOp] = useState(null);
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -3102,41 +3104,17 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
               <div style={{marginTop:8,display:"flex",gap:16,flexWrap:"wrap",alignItems:"center",padding:"6px 10px",background:"#f6f3fe",borderRadius:8,border:"1px solid #7c3aed"}}>
                 <span style={{fontSize:10,fontWeight:800,color:"#7c3aed",letterSpacing:0.5}}>Turno Standard</span>
                 <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:11,fontWeight:700,color:"#5bde9c",width:42}}>Inizio:</span>
-                  {editOrarioOp===op.matricola ? (
-                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                      <TimePicker size="compact" value={tmpOrarioVal||orariTurno[op.matricola]||"06:00"} onChange={v=>setTmpOrarioVal(v)}/>
-                      <button onClick={()=>{ const v=tmpOrarioVal||orariTurno[op.matricola]||"06:00"; salvaOrario(op.matricola,v); setEditOrarioOp(null); setTmpOrarioVal(""); }}
-                        style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓</button>
-                      <button onClick={()=>{setEditOrarioOp(null); setTmpOrarioVal("");}}
-                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
-                    </div>
-                  ) : (
-                    <span style={{fontSize:11,fontWeight:700,color:"#5bde9c",cursor:"pointer"}}
-                      onClick={()=>{ setEditOrarioOp(op.matricola); setTmpOrarioVal(orariTurno[op.matricola]||"06:00"); }}>
-                      {orariTurno[op.matricola]||"06:00"} <IconaMatita size={14}/>
-                    </span>
-                  )}
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,fontWeight:700,color:"#5bde9c",width:42}}>Inizio:</span>
+                    <span style={{fontSize:11,fontWeight:700,color:"#5bde9c"}}>{orariTurno[op.matricola]||"06:00"}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:11,fontWeight:700,color:"#ff6363",width:42}}>Fine:</span>
+                    <span style={{fontSize:11,fontWeight:700,color:"#ff6363"}}>{orariFineTurno[op.matricola]||"14:00"}</span>
+                  </div>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:11,fontWeight:700,color:"#ff6363",width:42}}>Fine:</span>
-                  {editOrarioFineOp===op.matricola ? (
-                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                      <TimePicker size="compact" value={tmpOrarioFineVal||orariFineTurno[op.matricola]||"14:00"} onChange={v=>setTmpOrarioFineVal(v)}/>
-                      <button onClick={()=>{ const v=tmpOrarioFineVal||orariFineTurno[op.matricola]||"14:00"; salvaOrarioFine(op.matricola,v); setEditOrarioFineOp(null); setTmpOrarioFineVal(""); }}
-                        style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓</button>
-                      <button onClick={()=>{setEditOrarioFineOp(null); setTmpOrarioFineVal("");}}
-                        style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
-                    </div>
-                  ) : (
-                    <span style={{fontSize:11,fontWeight:700,color:"#ff6363",cursor:"pointer"}}
-                      onClick={()=>{ setEditOrarioFineOp(op.matricola); setTmpOrarioFineVal(orariFineTurno[op.matricola]||"14:00"); }}>
-                      {orariFineTurno[op.matricola]||"14:00"} <IconaMatita size={14}/>
-                    </span>
-                  )}
-                </div>
-                </div>
+                <button onClick={()=>setModOrarioOp({op, tipo:"standard", inizio:orariTurno[op.matricola]||"06:00", fine:orariFineTurno[op.matricola]||"14:00"})}
+                  style={{background:"#fff",border:"1px solid #7c3aed",color:"#7c3aed",borderRadius:6,padding:"4px 8px",cursor:"pointer",display:"inline-flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={13}/> Modifica</button>
               </div>
               {/* PIANIFICAZIONE ODIERNA: orario valido solo per oggi, non tocca lo standard */}
               {(()=>{
@@ -3146,27 +3124,16 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 return (
                   <div style={{marginTop:6,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:"6px 10px",background:haOggi?"#fff7f3":"#f8fafc",borderRadius:8,border:"1px solid "+(haOggi?"#ff6937":"#e2e8f0")}}>
                     <span style={{fontSize:10,fontWeight:800,color:"#ff6937",letterSpacing:0.5}}>Solo Oggi</span>
-                    {inEdit ? (
-                      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{fontSize:10,color:"#64748b"}}>Inizio</span>
-                        <TimePicker size="compact" value={tmpOggiInizio||"06:00"} onChange={v=>setTmpOggiInizio(v)}/>
-                        <span style={{fontSize:10,color:"#64748b"}}>Fine</span>
-                        <TimePicker size="compact" value={tmpOggiFine||"14:00"} onChange={v=>setTmpOggiFine(v)}/>
-                        <button onClick={()=>{ salvaOggi(op.matricola, tmpOggiInizio||"06:00", tmpOggiFine||"14:00"); setEditOggiOp(null); }}
-                          style={{background:"#ff6937",color:"#fff",border:"none",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓</button>
-                        <button onClick={()=>setEditOggiOp(null)}
-                          style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 8px",fontSize:11,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
-                      </div>
-                    ) : haOggi ? (
+                    {haOggi ? (
                       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                         <span style={{fontSize:11,fontWeight:800,color:"#ff6937"}}>{oggi.inizioOggi||"—"} → {oggi.fineOggi||"—"}</span>
-                        <span onClick={()=>{ setEditOggiOp(op.matricola); setTmpOggiInizio(oggi.inizioOggi||"06:00"); setTmpOggiFine(oggi.fineOggi||"14:00"); }}
-                          style={{cursor:"pointer",color:"#ff6937"}}><IconaMatita size={13}/></span>
+                        <button onClick={()=>setModOrarioOp({op, tipo:"oggi", inizio:oggi.inizioOggi||"06:00", fine:oggi.fineOggi||"14:00"})}
+                          style={{background:"#fff",border:"1px solid #ff6937",color:"#ff6937",borderRadius:6,padding:"3px 8px",cursor:"pointer",display:"inline-flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={13}/> Modifica</button>
                         <button onClick={()=>rimuoviOggi(op.matricola)}
                           style={{background:"transparent",border:"1px solid #ef444466",color:"#ef4444",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>rimuovi</button>
                       </div>
                     ) : (
-                      <button onClick={()=>{ setEditOggiOp(op.matricola); setTmpOggiInizio(orariTurno[op.matricola]||"06:00"); setTmpOggiFine(orariFineTurno[op.matricola]||"14:00"); }}
+                      <button onClick={()=>setModOrarioOp({op, tipo:"oggi", inizio:orariTurno[op.matricola]||"06:00", fine:orariFineTurno[op.matricola]||"14:00"})}
                         style={{background:"#fff",border:"1px solid #ff6937",color:"#ff6937",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>+ Imposta orario di oggi</button>
                     )}
                   </div>
@@ -3175,6 +3142,34 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
             </div>
           ); })}
       </div>
+      {modOrarioOp&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px "+(modOrarioOp.tipo==="oggi"?"#ffc299":"#a78bfa")+", 0 0 40px 12px "+(modOrarioOp.tipo==="oggi"?"#ff693766":"#7c3aed66")}}>
+            <div style={{fontSize:18,fontWeight:800,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}><IconaMatita size={22}/> Modifica orario</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:2}}>{modOrarioOp.op.nome} {modOrarioOp.op.cognome}</div>
+            <div style={{fontSize:12,fontWeight:800,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:18,letterSpacing:0.5}}>{modOrarioOp.tipo==="oggi"?"Solo Oggi":"Turno Standard"}</div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Inizio</div>
+            <div style={{marginBottom:14,textAlign:"center"}}>
+              <TimePicker value={modOrarioOp.inizio} onChange={v=>setModOrarioOp({...modOrarioOp,inizio:v})}/>
+            </div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:700}}>Fine</div>
+            <div style={{marginBottom:18,textAlign:"center"}}>
+              <TimePicker value={modOrarioOp.fine} onChange={v=>setModOrarioOp({...modOrarioOp,fine:v})}/>
+            </div>
+            <button style={{...S.bCI,marginBottom:10}} onClick={()=>{
+              const m = modOrarioOp.op.matricola;
+              if(modOrarioOp.tipo==="oggi"){
+                salvaOggi(m, modOrarioOp.inizio, modOrarioOp.fine);
+              } else {
+                salvaOrario(m, modOrarioOp.inizio);
+                salvaOrarioFine(m, modOrarioOp.fine);
+              }
+              setModOrarioOp(null);
+            }}>Salva</button>
+            <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>setModOrarioOp(null)}>← Annulla</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
