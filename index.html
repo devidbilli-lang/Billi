@@ -3107,12 +3107,12 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 <span style={{fontSize:10,fontWeight:800,color:"#7c3aed",letterSpacing:0.5}}>Turno Standard</span>
                 <div style={{display:"flex",flexDirection:"column",gap:4}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{fontSize:11,fontWeight:700,color:"#5bde9c",width:42}}>Inizio:</span>
-                    <span style={{fontSize:14,fontWeight:800,color:"#5bde9c"}}>{orariTurno[op.matricola]||"06:00"}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:"#7c3aed",width:42}}>Inizio:</span>
+                    <span style={{fontSize:14,fontWeight:800,color:"#7c3aed"}}>{orariTurno[op.matricola]||"06:00"}</span>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{fontSize:11,fontWeight:700,color:"#ff6363",width:42}}>Fine:</span>
-                    <span style={{fontSize:14,fontWeight:800,color:"#ff6363"}}>{orariFineTurno[op.matricola]||"14:00"}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:"#7c3aed",width:42}}>Fine:</span>
+                    <span style={{fontSize:14,fontWeight:800,color:"#7c3aed"}}>{orariFineTurno[op.matricola]||"14:00"}</span>
                   </div>
                 </div>
                 <button onClick={()=>setModOrarioOp({op, tipo:"standard", inizio:orariTurno[op.matricola]||"06:00", fine:orariFineTurno[op.matricola]||"14:00"})}
