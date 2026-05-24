@@ -288,11 +288,13 @@ const MS = { ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display
 };
 // TimePicker custom: 2 input HH/MM in stile Montserrat viola chiaro.
 // Props: value (string "HH:MM"), onChange (callback con nuovo "HH:MM"), size (compact|normal)
-function TimePicker({ value, onChange, size }) {
+function TimePicker({ value, onChange, size, color }) {
   const [h, m] = (value||"").split(":");
   const hh = h||"00";
   const mm = m||"00";
   const compact = size === "compact";
+  const col = color || "#7c3aed";
+  const colBordo = color || "#a78bfa";
   const inputW = compact ? 40 : 80;
   const fontS = compact ? 13 : 24;
   const padV = compact ? 4 : 10;
@@ -312,11 +314,11 @@ function TimePicker({ value, onChange, size }) {
   return (
     <div style={{display:"inline-flex",alignItems:"center",gap:compact?4:8,fontFamily:"'Montserrat',sans-serif"}}>
       <input type="number" min="0" max="23" inputMode="numeric" className="tp-num"
-        style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
+        style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid "+colBordo,borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
         value={hh} onChange={onChangeH} onBlur={onBlurH} onFocus={e=>e.target.select()} placeholder="HH"/>
-      <span style={{fontSize:compact?15:28,fontWeight:800,color:"#7c3aed"}}>:</span>
+      <span style={{fontSize:compact?15:28,fontWeight:800,color:col}}>:</span>
       <input type="number" min="0" max="59" inputMode="numeric" className="tp-num"
-        style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
+        style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid "+colBordo,borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
         value={mm} onChange={onChangeM} onBlur={onBlurM} onFocus={e=>e.target.select()} placeholder="MM"/>
     </div>
   );
@@ -3150,11 +3152,11 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
             <div style={{fontSize:12,fontWeight:800,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:18,letterSpacing:0.5}}>{modOrarioOp.tipo==="oggi"?"Solo Oggi":"Turno Standard"}</div>
             <div style={{fontSize:12,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio</div>
             <div style={{marginBottom:14,textAlign:"center"}}>
-              <TimePicker value={modOrarioOp.inizio} onChange={v=>setModOrarioOp({...modOrarioOp,inizio:v})}/>
+              <TimePicker value={modOrarioOp.inizio} color={modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOrarioOp({...modOrarioOp,inizio:v})}/>
             </div>
             <div style={{fontSize:12,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine</div>
             <div style={{marginBottom:18,textAlign:"center"}}>
-              <TimePicker value={modOrarioOp.fine} onChange={v=>setModOrarioOp({...modOrarioOp,fine:v})}/>
+              <TimePicker value={modOrarioOp.fine} color={modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOrarioOp({...modOrarioOp,fine:v})}/>
             </div>
             <button style={{...S.bCI,marginBottom:10,background:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",color:"#ffffff"}} onClick={()=>{
               const m = modOrarioOp.op.matricola;
