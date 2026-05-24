@@ -3097,10 +3097,11 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   </div>
                 </div>
               )}
-              {/* Orario inizio e fine turno */}
-              <div style={{marginTop:8,display:"flex",gap:16,flexWrap:"wrap"}}>
+              {/* Orario inizio e fine turno STANDARD */}
+              <div style={{marginTop:8,display:"flex",gap:16,flexWrap:"wrap",alignItems:"center",padding:"6px 10px",background:"#f6f3fe",borderRadius:8,border:"1px solid #7c3aed"}}>
+                <span style={{fontSize:10,fontWeight:800,color:"#7c3aed",letterSpacing:0.5}}>Turno Standard</span>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:11,color:"#64748b"}}>⏰ Inizio:</span>
+                  <span style={{fontSize:11,fontWeight:700,color:"#5bde9c"}}>Inizio:</span>
                   {editOrarioOp===op.matricola ? (
                     <div style={{display:"flex",gap:4,alignItems:"center"}}>
                       <TimePicker size="compact" value={tmpOrarioVal||orariTurno[op.matricola]||"06:00"} onChange={v=>setTmpOrarioVal(v)}/>
@@ -3110,14 +3111,14 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                         style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     </div>
                   ) : (
-                    <span style={{fontSize:11,fontWeight:700,color:(orariTurno[op.matricola]&&orariTurno[op.matricola]!=="06:00")?"#7c3aed":"#94a3b8",cursor:"pointer"}}
+                    <span style={{fontSize:11,fontWeight:700,color:"#5bde9c",cursor:"pointer"}}
                       onClick={()=>{ setEditOrarioOp(op.matricola); setTmpOrarioVal(orariTurno[op.matricola]||"06:00"); }}>
                       {orariTurno[op.matricola]||"06:00"} <IconaMatita size={14}/>
                     </span>
                   )}
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:11,color:"#64748b"}}>🏁 Fine:</span>
+                  <span style={{fontSize:11,fontWeight:700,color:"#ff6363"}}>Fine:</span>
                   {editOrarioFineOp===op.matricola ? (
                     <div style={{display:"flex",gap:4,alignItems:"center"}}>
                       <TimePicker size="compact" value={tmpOrarioFineVal||orariFineTurno[op.matricola]||"14:00"} onChange={v=>setTmpOrarioFineVal(v)}/>
@@ -3127,7 +3128,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                         style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"2px 6px",fontSize:10,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     </div>
                   ) : (
-                    <span style={{fontSize:11,fontWeight:700,color:(orariFineTurno[op.matricola]&&orariFineTurno[op.matricola]!=="14:00")?"#ef4444":"#94a3b8",cursor:"pointer"}}
+                    <span style={{fontSize:11,fontWeight:700,color:"#ff6363",cursor:"pointer"}}
                       onClick={()=>{ setEditOrarioFineOp(op.matricola); setTmpOrarioFineVal(orariFineTurno[op.matricola]||"14:00"); }}>
                       {orariFineTurno[op.matricola]||"14:00"} <IconaMatita size={14}/>
                     </span>
@@ -3141,7 +3142,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 const inEdit = editOggiOp===op.matricola;
                 return (
                   <div style={{marginTop:6,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:"6px 10px",background:haOggi?"#fff7f3":"#f8fafc",borderRadius:8,border:"1px solid "+(haOggi?"#ff6937":"#e2e8f0")}}>
-                    <span style={{fontSize:10,fontWeight:800,color:haOggi?"#ff6937":"#94a3b8",letterSpacing:0.5,textTransform:"uppercase"}}>Solo oggi</span>
+                    <span style={{fontSize:10,fontWeight:800,color:haOggi?"#ff6937":"#94a3b8",letterSpacing:0.5}}>Solo Oggi</span>
                     {inEdit ? (
                       <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                         <span style={{fontSize:10,color:"#64748b"}}>Inizio</span>
