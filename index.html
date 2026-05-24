@@ -3156,7 +3156,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
             <div style={{marginBottom:18,textAlign:"center"}}>
               <TimePicker value={modOrarioOp.fine} onChange={v=>setModOrarioOp({...modOrarioOp,fine:v})}/>
             </div>
-            <button style={{...S.bCI,marginBottom:10}} onClick={()=>{
+            <button style={{...S.bCI,marginBottom:10,background:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",color:"#ffffff"}} onClick={()=>{
               const m = modOrarioOp.op.matricola;
               if(modOrarioOp.tipo==="oggi"){
                 salvaOggi(m, modOrarioOp.inizio, modOrarioOp.fine);
