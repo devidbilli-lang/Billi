@@ -21,6 +21,7 @@ body{background:#f0f2f5;font-family:'Montserrat',sans-serif;color:#e2e8f0;}
 @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 tr{animation:rowIn 0.25s ease both;}
 .tabQ td:not(:last-child){border-right:2px dashed #7c3aed44;}
+.tp-num::-webkit-inner-spin-button,.tp-num::-webkit-outer-spin-button{transform:scale(0.7);opacity:0.6;}
 input:focus{border-color:#00d4aa!important;outline:none;}
 button:hover{filter:brightness(1.12);}
 ::-webkit-scrollbar{width:6px;height:6px;}
@@ -310,11 +311,11 @@ function TimePicker({ value, onChange, size }) {
   const onBlurM = e => { const v=e.target.value; const nv = v===""?"00":String(Math.min(59,Math.max(0,parseInt(v,10)||0))).padStart(2,"0"); update(hh, nv); };
   return (
     <div style={{display:"inline-flex",alignItems:"center",gap:compact?4:8,fontFamily:"'Montserrat',sans-serif"}}>
-      <input type="number" min="0" max="23" inputMode="numeric"
+      <input type="number" min="0" max="23" inputMode="numeric" className="tp-num"
         style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
         value={hh} onChange={onChangeH} onBlur={onBlurH} onFocus={e=>e.target.select()} placeholder="HH"/>
       <span style={{fontSize:compact?15:28,fontWeight:800,color:"#7c3aed"}}>:</span>
-      <input type="number" min="0" max="59" inputMode="numeric"
+      <input type="number" min="0" max="59" inputMode="numeric" className="tp-num"
         style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
         value={mm} onChange={onChangeM} onBlur={onBlurM} onFocus={e=>e.target.select()} placeholder="MM"/>
     </div>
