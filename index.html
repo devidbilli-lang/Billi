@@ -292,9 +292,9 @@ function TimePicker({ value, onChange, size }) {
   const hh = h||"00";
   const mm = m||"00";
   const compact = size === "compact";
-  const inputW = compact ? 56 : 80;
-  const fontS = compact ? 16 : 24;
-  const padV = compact ? 6 : 10;
+  const inputW = compact ? 40 : 80;
+  const fontS = compact ? 13 : 24;
+  const padV = compact ? 4 : 10;
   const update = (newHh, newMm) => { if(onChange) onChange(newHh+":"+newMm); };
   const onChangeH = e => {
     let v = e.target.value.replace(/\D/g,"").slice(0,2);
@@ -313,7 +313,7 @@ function TimePicker({ value, onChange, size }) {
       <input type="number" min="0" max="23" inputMode="numeric"
         style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
         value={hh} onChange={onChangeH} onBlur={onBlurH} onFocus={e=>e.target.select()} placeholder="HH"/>
-      <span style={{fontSize:compact?20:28,fontWeight:800,color:"#7c3aed"}}>:</span>
+      <span style={{fontSize:compact?15:28,fontWeight:800,color:"#7c3aed"}}>:</span>
       <input type="number" min="0" max="59" inputMode="numeric"
         style={{width:inputW,textAlign:"center",fontSize:fontS,fontWeight:800,padding:padV+"px 4px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:8,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",outline:"none"}}
         value={mm} onChange={onChangeM} onBlur={onBlurM} onFocus={e=>e.target.select()} placeholder="MM"/>
