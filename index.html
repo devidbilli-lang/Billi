@@ -215,6 +215,10 @@ function caricaOrariDaD1() {
 }
 caricaOrariDaD1(); // subito
 setTimeout(caricaOrariDaD1, 1000); // e dopo 1 secondo
+// Ricarica periodica: allinea gli orari pianificati (standard + solo oggi) su TUTTI i dispositivi.
+// Senza questo, un dispositivo non vedrebbe gli orari impostati su un altro dispositivo,
+// e l'obiettivo userebbe le 8h piene invece dell'orario di uscita pianificato.
+setInterval(caricaOrariDaD1, 60000); // ogni 60 secondi
 
 // Invia orari fine turno al Worker all'avvio
 setTimeout(()=>{
@@ -916,8 +920,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(haCheckout){
         const dFine = parseData(s.fine); tsFineSessione = dFine ? dFine.getTime() : tsIn + oreTotali*3600*1000;
       } else {
+        // Orario di fine PIANIFICATO. Priorità: dati dalla sessione (D1, condivisi tra dispositivi),
+        // poi fallback al localStorage locale. Così funziona su qualsiasi dispositivo.
         const oggiOp = _orariOggiL[mat];
-        const finePian = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : _orariFineStd[mat];
+        const fineOggiLocal = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : "";
+        const finePian = s.orarioFineOggiPian || fineOggiLocal || s.orarioFinePian || _orariFineStd[mat];
         tsFineSessione = finePian ? hmToSecFromTs(finePian, tsIn) : tsIn + oreTotali*3600*1000;
       }
       // Costruisci i segmenti: ognuno con {linea, dal, al}
