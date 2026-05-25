@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFR8VNUtPuBj8
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -3316,6 +3316,12 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       if(onAggiornaSessioni) onAggiornaSessioni();
     } catch(e){ /* silenzioso */ setEditSegmento(null); }
   };
+  const eliminaSegmentoFn = async (sessionId, segIndex) => {
+    try {
+      await fetchConRetry(nexusUrl("eliminaSegmento",{sessionId,segIndex}), 4, 800);
+      if(onAggiornaSessioni) onAggiornaSessioni();
+    } catch(e){ /* silenzioso */ }
+  };
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
     // Costruisce mappa: matricola -> Set di linee su cui ha sessione ATTIVA
   const matricoleAttivePerLinea = {};
@@ -3413,13 +3419,15 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           let cursore = tsIn;
           let lineaCorr = ss.lineaInizio;
           let inizioMeta = {sessionId:ss.id, tipoSeg:"inizio", tsRif:tsIn};
+          let segIdx = 0;
           for(const t of trasf){
-            segmenti.push({linea:lineaCorr, dal:cursore, al:t.ts, chiuso:true, inizioMeta, fineMeta:{sessionId:ss.id, tipoSeg:"trasf", tsRif:t.ts}});
+            segmenti.push({linea:lineaCorr, dal:cursore, al:t.ts, chiuso:true, inizioMeta, fineMeta:{sessionId:ss.id, tipoSeg:"trasf", tsRif:t.ts}, sessionId:ss.id, segIndex:segIdx});
             cursore = t.ts; lineaCorr = t.a;
             inizioMeta = {sessionId:ss.id, tipoSeg:"trasf", tsRif:t.ts};
+            segIdx++;
           }
           // Ultimo segmento
-          segmenti.push({linea:lineaCorr, dal:cursore, al:tsFine, chiuso:haCheckout, inizioMeta, fineMeta:(haCheckout?{sessionId:ss.id, tipoSeg:"fine", tsRif:tsFine}:null)});
+          segmenti.push({linea:lineaCorr, dal:cursore, al:tsFine, chiuso:haCheckout, inizioMeta, fineMeta:(haCheckout?{sessionId:ss.id, tipoSeg:"fine", tsRif:tsFine}:null), sessionId:ss.id, segIndex:segIdx});
         });
         segmenti.sort((a,b)=>(a.dal||0)-(b.dal||0));
         const nomeLinea = (id)=>{ const l=linee.find(x=>x.id===id||x.nome===id); return l?l.id:id; };
@@ -3467,6 +3475,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         </span>
                       )}
                       <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",background:"#ffffff",border:"2px solid "+col,borderRadius:8,padding:"3px 10px",fontSize:13,fontWeight:800,color:col}}>{h>0?h+"h ":""}{m}m</span>
+                      <button onClick={()=>{
+                        setModalConferma({
+                          titolo:"Elimina segmento",
+                          messaggio:"Eliminare il periodo su "+nomeLinea(seg.linea)+" ("+fmtOra(seg.dal)+" → "+(seg.al?fmtOra(seg.al):"in corso")+")? I minuti verranno tolti dal totale.",
+                          colorBtn:"ef4444", testoBtn:"🗑 Elimina",
+                          onOk:()=>{ setModalConferma(null); eliminaSegmentoFn(seg.sessionId, seg.segIndex); }
+                        });
+                      }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:15,padding:"2px 4px",color:"#ef4444",flexShrink:0}} title="Elimina segmento">🗑</button>
                     </div>
                   );
                 })}
