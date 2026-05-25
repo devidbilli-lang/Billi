@@ -783,91 +783,67 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // Si scala solo per: corso, riparazione, trasferimento ad altra linea
   // NON scende per uscite anticipate o entrate tardive
   const obFinale = tc>0 ? (()=>{
+    // LOGICA A SEGMENTI: per ogni operatore costruisco i periodi di permanenza su QUESTA linea
+    // usando i timestamp reali (check-in + trasferimenti + fine). Questa linea conta SOLO i minuti
+    // dei segmenti che le competono (gestisce A→B→A sommando più segmenti). Per l'ultimo segmento
+    // aperto: fine PIANIFICATA se in turno, REALE se uscito. Sottrae corsi; esclude riparazioni.
     const sessioniLinea = sessioni.filter(s=>
-      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio&&!s._pianificato
+      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId||(s.trasferimenti||[]).some(t=>t.a===lineaId||t.da===lineaId))
+      &&s.inizio&&!s._pianificato
     );
-    // Per ogni matricola: calcola minuti disponibili meno periodi improduttivi
-    const minPerMat = {};
-
+    const _orariFineStd = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); }catch(e){ return {}; } })();
+    const _orariOggiL = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
+    const _oggiStrL = new Date().toLocaleDateString('it-IT');
+    const hmToTs = (hm, refTs)=>{ const [h,m]=(hm||"").split(":").map(Number); const d=new Date(refTs); d.setHours(h||0,m||0,0,0); return d.getTime(); };
+    // Una sessione per matricola (la più recente). Le riparazioni (SKU speciale) sono escluse.
+    const perMat = {};
     sessioniLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
-      const dInizio = parseData(s.inizio);
-      if(!dInizio) return;
-      const sku = s.skuCorrente||s.sku||"";
-      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
-
-      // Base: ore dal check-in (o dal trasferimento se arrivato da altra linea) a fine turno
-      // - se ancora in turno → fino a fine turno teorico
-      // - se uscito → fino al checkout reale (cala il dinamico)
-      let secIng = dInizio.getHours()*3600+dInizio.getMinutes()*60;
-      // Se l'operatore è arrivato per trasferimento, usa l'orario del trasferimento
-      if(s.lineaInizio!==lineaId && s.trasferimenti&&s.trasferimenti.length>0){
-        // Cerca il trasferimento verso questa linea
-        const trVers = s.trasferimenti.filter(t=>(t.a||"").trim().toLowerCase()===(lineaId||"").trim().toLowerCase());
-        if(trVers.length>0){
-          const dTr = parseData(trVers[trVers.length-1].quando);
-          if(dTr) secIng = dTr.getHours()*3600+dTr.getMinutes()*60;
-        }
+      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return; // riparazioni non contano per l'obiettivo
+      if(!perMat[mat] || (s.tsInizio||0) > (perMat[mat].tsInizio||0)) perMat[mat] = s;
+    });
+    let minTotali = 0;
+    for(const mat of Object.keys(perMat)){
+      const s = perMat[mat];
+      const tsIn = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||null);
+      if(!tsIn) continue;
+      const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+      const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      let tsFineSessione;
+      if(haCheckout){
+        const dF = parseData(s.fine); tsFineSessione = dF ? dF.getTime() : tsIn + oreTotali*3600*1000;
+      } else {
+        // Fine pianificata: dati condivisi da D1 → localStorage → straordinario(8h+extra)
+        const oggiOp = _orariOggiL[mat];
+        const fineOggiLocal = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : "";
+        const finePian = s.orarioFineOggiPian || fineOggiLocal || s.orarioFinePian || _orariFineStd[mat];
+        tsFineSessione = finePian ? hmToTs(finePian, tsIn) : tsIn + oreTotali*3600*1000;
       }
-      const dFine = attiva ? null : parseData(s.fine);
-      const secFineEff = (attiva||!dFine)
-        ? secFineTurno
-        : Math.min(dFine.getHours()*3600+dFine.getMinutes()*60, secFineTurno);
-      const minBase = Math.max(0,(secFineEff-secIng)/60);
-
-      if(!minPerMat[mat]) minPerMat[mat]={base:minBase, sottrai:0, contato:false};
-      else {
-        // Se rientra (nuova sessione attiva) aggiorna con la base corretta
-        if(attiva) minPerMat[mat].base = Math.max(minPerMat[mat].base, minBase);
-        else if(!minPerMat[mat].contato) minPerMat[mat].base = minBase;
+      // Costruisci i segmenti per linea
+      const segmenti = [];
+      let cursore = tsIn, lineaCorr = s.lineaInizio;
+      for(const t of trasf){ segmenti.push({linea:lineaCorr, dal:cursore, al:t.ts}); cursore=t.ts; lineaCorr=t.a; }
+      segmenti.push({linea:lineaCorr, dal:cursore, al:tsFineSessione});
+      // Somma i minuti dei segmenti su QUESTA linea
+      let minOp = 0;
+      for(const seg of segmenti){
+        if(seg.linea!==lineaId) continue;
+        const m = Math.round((seg.al - seg.dal)/60000);
+        if(m>0) minOp += m;
       }
-      minPerMat[mat].contato = true;
-
-      // Scala per riparazione (sessione attiva con SKU riparazione)
-      if(isSkuSpeciale(sku)){
-        const secFineRip = attiva ? secFineTurno : (()=>{
-          const dF = parseData(s.fine);
-          return dF ? Math.min(dF.getHours()*3600+dF.getMinutes()*60, secFineTurno) : secFineTurno;
-        })();
-        minPerMat[mat].sottrai += Math.max(0,(secFineRip-secIng)/60);
-        return;
-      }
-
-      // Scala per trasferimento verso altra linea
-      // - sessione chiusa con lineaCorrente diversa → era qui, poi trasferito via
-      // - sessione attiva con lineaCorrente diversa → è già su altra linea, escludi completamente
-      if(s.lineaCorrente!==lineaId){
-        if(!attiva){
-          // Era qui, poi trasferito: conta solo fino al momento del trasferimento
-          const dF = parseData(s.fine);
-          const secFineLinea = dF ? Math.min(dF.getHours()*3600+dF.getMinutes()*60, secFineTurno) : secFineTurno;
-          minPerMat[mat].sottrai += Math.max(0,(secFineTurno-secFineLinea)/60);
-        } else {
-          // È attivo ma su altra linea (trasferito via) → non contribuisce più
-          if(minPerMat[mat]) delete minPerMat[mat];
-        }
-        return;
-      }
-
-      // Scala per corsi
-      if(s.corsi&&s.corsi.length>0){
+      // Sottrai i corsi/sospensioni che cadono su questa linea
+      if(s.corsi && s.corsi.length>0 && s.lineaCorrente===lineaId){
         s.corsi.forEach(c=>{
-          const dCorsoIn = parseData(c.quando);
-          if(!dCorsoIn) return;
-          const secCorsoIn = dCorsoIn.getHours()*3600+dCorsoIn.getMinutes()*60;
-          let secCorsoOut;
-          if(c.rientro){ const dR=parseData(c.rientro); secCorsoOut=dR?dR.getHours()*3600+dR.getMinutes()*60:secFineTurno; }
-          else { secCorsoOut = secFineTurno; }
-          minPerMat[mat].sottrai += Math.max(0,(secCorsoOut-secCorsoIn)/60);
+          const dIn = parseData(c.quando); if(!dIn) return;
+          const tsCorsoIn = dIn.getTime();
+          const tsCorsoOut = c.rientro ? (parseData(c.rientro)?.getTime()||tsFineSessione) : tsFineSessione;
+          const m = Math.round((tsCorsoOut - tsCorsoIn)/60000);
+          if(m>0) minOp -= m;
         });
       }
-    });
-
-    let minTotali=0;
-    Object.values(minPerMat).forEach(({base,sottrai})=>{
-      minTotali += Math.max(0, base-sottrai);
-    });
+      if(minOp>0) minTotali += minOp;
+    }
     const tot = minTotali>0 ? Math.ceil(minTotali/tc) : 0;
     return tot>0?tot:null;
   })() : null;
@@ -913,68 +889,6 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // ha lavorato) usando i timestamp di check-in, trasferimenti e fine. Questa linea conta
   // SOLO i minuti dei segmenti che le competono (anche se l'operatore è tornato più volte).
   // Per l'ULTIMO segmento aperto: fine PIANIFICATA se ancora in linea, REALE se uscito (auto-corregge).
-  const obiettivoFisso = tc>0 ? (()=>{
-    const sessioniLinea = sessioni.filter(s=>
-      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId||(s.trasferimenti||[]).some(t=>t.a===lineaId||t.da===lineaId))
-      &&s.inizio&&!s._pianificato
-    );
-    const _orariFineStd = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); }catch(e){ return {}; } })();
-    const _orariOggiL = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
-    const _oggiStrL = new Date().toLocaleDateString('it-IT');
-    const hmToSecFromTs = (hm, refTs)=>{ // hh:mm -> timestamp ms nel giorno del check-in
-      const [h,m]=(hm||"").split(":").map(Number);
-      const d = new Date(refTs); d.setHours(h||0, m||0, 0, 0); return d.getTime();
-    };
-    // Una sessione per matricola (la più recente)
-    const perMat = {};
-    sessioniLinea.forEach(s=>{
-      const mat = s.matricola||s.nome||s.id;
-      if(!mat) return;
-      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
-      if(!perMat[mat] || (s.tsInizio||0) > (perMat[mat].tsInizio||0)) perMat[mat] = s;
-    });
-    let minutiTotali = 0;
-    for(const mat of Object.keys(perMat)){
-      const s = perMat[mat];
-      const tsIn = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||null);
-      if(!tsIn) continue;
-      // Costruisci i confini temporali: [check-in, ...trasferimenti, fine]
-      const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
-      // Determina il tsFine dell'intera sessione (ultimo segmento)
-      const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
-      let tsFineSessione;
-      if(haCheckout){
-        const dFine = parseData(s.fine); tsFineSessione = dFine ? dFine.getTime() : tsIn + oreTotali*3600*1000;
-      } else {
-        // Orario di fine PIANIFICATO. Priorità: dati dalla sessione (D1, condivisi tra dispositivi),
-        // poi fallback al localStorage locale. Così funziona su qualsiasi dispositivo.
-        const oggiOp = _orariOggiL[mat];
-        const fineOggiLocal = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : "";
-        const finePian = s.orarioFineOggiPian || fineOggiLocal || s.orarioFinePian || _orariFineStd[mat];
-        tsFineSessione = finePian ? hmToSecFromTs(finePian, tsIn) : tsIn + oreTotali*3600*1000;
-      }
-      // Costruisci i segmenti: ognuno con {linea, dal, al}
-      const segmenti = [];
-      let cursore = tsIn;
-      let lineaCorr = s.lineaInizio;
-      for(const t of trasf){
-        segmenti.push({linea:lineaCorr, dal:cursore, al:t.ts});
-        cursore = t.ts;
-        lineaCorr = t.a;
-      }
-      // Ultimo segmento: dalla posizione corrente fino al tsFineSessione
-      segmenti.push({linea:lineaCorr, dal:cursore, al:tsFineSessione});
-      // Somma i minuti dei segmenti che competono a QUESTA linea
-      for(const seg of segmenti){
-        if(seg.linea!==lineaId) continue;
-        let min = Math.round((seg.al - seg.dal)/60000);
-        if(min<0) min=0;
-        minutiTotali += min;
-      }
-    }
-    if(minutiTotali===0) return null;
-    return Math.ceil(minutiTotali / tc);
-  })() : null;
   const borse=borseOggi||0;
   const ko=borseKO||0;
   const migl=borseMigl||0;
