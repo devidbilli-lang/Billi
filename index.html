@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFR8VNUtPuBj8
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -3305,7 +3305,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [editSegmento,setEditSegmento] = useState(null); // {meta, valore:'HH:MM', giorno:'YYYY-MM-DD'}
   const salvaOrarioSegmento = async (meta, hhmm, giornoISO) => {
     if(!meta) return;
-    const valore = giornoISO+"T"+hhmm+":00";
+    // Costruisci la data lato client e invia in ISO (come fa modificaorario, che funziona)
+    const [yy,mm,dd] = (giornoISO||"").split("-").map(Number);
+    const [hh,mi] = (hhmm||"").split(":").map(Number);
+    const nd = new Date(yy, (mm||1)-1, dd||1, hh||0, mi||0, 0);
+    const valore = nd.toISOString();
     try {
       await fetchConRetry(nexusUrl("modificaOrarioSegmento",{sessionId:meta.sessionId,tipoSeg:meta.tipoSeg,valore,tsRif:meta.tsRif||""}), 4, 800);
       setEditSegmento(null);
