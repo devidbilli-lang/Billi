@@ -3403,8 +3403,27 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {popupRiepilogoOp&&(()=>{
         const mat = popupRiepilogoOp;
         // Tutte le sessioni dell'operatore oggi (per matricola o nome)
-        const sessOp = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat && !ss._pianificato && ss.inizio)
+        const sessOpRaw = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat && !ss._pianificato && ss.inizio)
           .sort((a,b)=>(a.tsInizio||0)-(b.tsInizio||0));
+        // DE-DUPLICA il multi-articolo: se la stessa persona fa check-in su più articoli
+        // contemporaneamente, vengono create più sessioni (una per SKU) con stessa linea e
+        // stesso orario di inizio. NON vanno sommate: è UNA sola permanenza in linea.
+        // Raggruppa per lineaInizio + tsInizio arrotondato al minuto → tieni una sola sessione.
+        const dedupMap = {};
+        sessOpRaw.forEach(ss=>{
+          const tsIn = ss.tsInizio || (parseData(ss.inizio)?.getTime()) || 0;
+          const minuto = Math.round(tsIn/60000); // arrotonda al minuto (assorbe differenze di ms/sec)
+          const k = (ss.lineaInizio||"")+"|"+minuto;
+          // Preferisci la sessione con trasferimenti/checkout (più "completa") come rappresentante
+          if(!dedupMap[k]) { dedupMap[k] = ss; }
+          else {
+            const cur = dedupMap[k];
+            const ssScore = (ss.trasferimenti?.length||0) + (ss.fine?1:0);
+            const curScore = (cur.trasferimenti?.length||0) + (cur.fine?1:0);
+            if(ssScore > curScore) dedupMap[k] = ss;
+          }
+        });
+        const sessOp = Object.values(dedupMap).sort((a,b)=>(a.tsInizio||0)-(b.tsInizio||0));
         const opInfo = sessOp[0] || {};
         // Costruisci i segmenti (linea, dal, al, minuti) da ogni sessione + trasferimenti
         // Ogni segmento porta i metadati per modificare i suoi confini:
