@@ -3426,8 +3426,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             inizioMeta = {sessionId:ss.id, tipoSeg:"trasf", tsRif:t.ts};
             segIdx++;
           }
-          // Ultimo segmento
-          segmenti.push({linea:lineaCorr, dal:cursore, al:tsFine, chiuso:haCheckout, inizioMeta, fineMeta:(haCheckout?{sessionId:ss.id, tipoSeg:"fine", tsRif:tsFine}:null), sessionId:ss.id, segIndex:segIdx});
+          // Ultimo segmento (fineSessione = ha avuto un CHECKOUT reale → vera uscita)
+          segmenti.push({linea:lineaCorr, dal:cursore, al:tsFine, chiuso:haCheckout, fineSessione:haCheckout, inizioMeta, fineMeta:(haCheckout?{sessionId:ss.id, tipoSeg:"fine", tsRif:tsFine}:null), sessionId:ss.id, segIndex:segIdx});
         });
         segmenti.sort((a,b)=>(a.dal||0)-(b.dal||0));
         const nomeLinea = (id)=>{ const l=linee.find(x=>x.id===id||x.nome===id); return l?l.id:id; };
@@ -3455,7 +3455,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   const editFin = editSegmento && seg.fineMeta && editSegmento.meta && editSegmento.meta.sessionId===seg.fineMeta.sessionId && editSegmento.meta.tipoSeg===seg.fineMeta.tipoSeg && editSegmento.meta.tsRif===seg.fineMeta.tsRif;
                   const apriEdit = (meta, ts)=>{ if(!meta) return; const d=new Date(ts); const giorno=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; const hhmm=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); setEditSegmento({meta, valore:hhmm, giorno}); };
                   return (
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 8px",borderBottom:i<segmenti.length-1?"1px solid #ede9fe":"none",flexWrap:"wrap"}}>
+                    <React.Fragment key={i}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 8px",borderBottom:i<segmenti.length-1?"1px solid #ede9fe":"none",flexWrap:"wrap"}}>
                       <div style={{width:10,height:10,borderRadius:"50%",background:seg.chiuso?"#cbd5e1":"#22c55e",flexShrink:0,boxShadow:seg.chiuso?"none":"0 0 6px #22c55e"}}/>
                       <span style={{display:"inline-flex",alignItems:"center",background:"#ffffff",border:"2px solid "+col,borderRadius:8,padding:"3px 10px",fontSize:12,fontWeight:800,color:col,flexShrink:0}}>{nomeLinea(seg.linea)}</span>
                       {(editIni||editFin) ? (
@@ -3484,6 +3485,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         });
                       }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:15,padding:"2px 4px",color:"#ef4444",flexShrink:0}} title="Elimina segmento">🗑</button>
                     </div>
+                    {seg.fineSessione && i<segmenti.length-1 && (
+                      <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",margin:"0 0 0 18px",borderLeft:"2px dashed #cbd5e1"}}>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fef2f2",border:"1px solid #ef4444",borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#ef4444"}}>✕ Uscita {fmtOra(seg.al)}</span>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#f0fdf4",border:"1px solid #22c55e",borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#16a34a"}}>▶ Rientro {fmtOra(segmenti[i+1]?.dal)}</span>
+                      </div>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </div>
@@ -4203,27 +4211,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         {s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}
                         {editOrario&&<button onClick={()=>{ const oggi=new Date(); const data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; setModOrario({sess:s,campo:"fine",hh:"14",mm:"00",data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={14}/></button>}
-                        {(()=>{
-                          // Sessioni chiuse della stessa matricola su questa linea oggi
-                          const sessChiuse = sessioni.filter(sx=>
-                            (sx.matricola||sx.nome)===(s.matricola||s.nome) &&
-                            sx.lineaCorrente===s.lineaCorrente &&
-                            sx.id!==s.id &&
-                            sx.fine && sx.fine!=="" && sx.fine!==null && sx.fine!=="null"
-                          );
-                          if(sessChiuse.length===0) return null;
-                          return (<div style={{fontSize:10,color:"#94a3b8",marginTop:2,lineHeight:1.6}}>
-                            {sessChiuse.map((sx,i)=>(
-                              <span key={i} style={{display:"block"}}>
-                                <span style={{color:"#10b981"}}>▶ {fmtSafe(sx.inizio)}</span>
-                                <span style={{color:"#ef4444"}}> ⏸ {fmtSafe(sx.fine)}</span>
-                              </span>
-                            ))}
-                          </div>);
-                        })()}
                        </div>
-                       <button onClick={()=>setPopupRiepilogoOp(s.matricola||s.nome)}
-                         style={{marginTop:4,background:"#eff6ff",border:"2px solid #2563eb",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:800,color:"#2563eb"}}>Riepilogo <span style={{fontSize:10}}>▼</span></button>
+                       {isAdmin&&<button onClick={()=>setPopupRiepilogoOp(s.matricola||s.nome)}
+                         style={{marginTop:4,background:"#eff6ff",border:"2px solid #2563eb",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:800,color:"#2563eb"}}>Riepilogo <span style={{fontSize:10}}>▼</span></button>}
                       </div>
                     </td>
                     <td style={S.td}><span style={{background:"#ffffff",color:"#64748b",border:"1px solid #e2e8f0",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
