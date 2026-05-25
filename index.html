@@ -3301,6 +3301,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modCambioSku,setModCambioSku] = useState(null);
   const [modNoteLinea,setModNoteLinea] = useState(null);
   const [popupSkuOp,setPopupSkuOp] = useState(null);
+  const [popupRiepilogoOp,setPopupRiepilogoOp] = useState(null); // matricola per il modal Riepilogo giornata
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
     // Costruisce mappa: matricola -> Set di linee su cui ha sessione ATTIVA
   const matricoleAttivePerLinea = {};
@@ -3379,6 +3380,72 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         setMod(null);
         if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
       }} onClose={()=>setMod(null)}/>}
+      {popupRiepilogoOp&&(()=>{
+        const mat = popupRiepilogoOp;
+        // Tutte le sessioni dell'operatore oggi (per matricola o nome)
+        const sessOp = sessioni.filter(ss=>(ss.matricola||ss.nome)===mat && !ss._pianificato && ss.inizio)
+          .sort((a,b)=>(a.tsInizio||0)-(b.tsInizio||0));
+        const opInfo = sessOp[0] || {};
+        // Costruisci i segmenti (linea, dal, al, minuti) da ogni sessione + trasferimenti
+        const segmenti = [];
+        sessOp.forEach(ss=>{
+          const tsIn = ss.tsInizio || (parseData(ss.inizio)?.getTime());
+          if(!tsIn) return;
+          const trasf = (ss.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+          const haCheckout = ss.fine && ss.fine!=="" && ss.fine!==null && ss.fine!=="null";
+          let tsFine = haCheckout ? (parseData(ss.fine)?.getTime()||null) : null;
+          let cursore = tsIn;
+          let lineaCorr = ss.lineaInizio;
+          for(const t of trasf){
+            segmenti.push({linea:lineaCorr, dal:cursore, al:t.ts, chiuso:true});
+            cursore = t.ts; lineaCorr = t.a;
+          }
+          // Ultimo segmento
+          segmenti.push({linea:lineaCorr, dal:cursore, al:tsFine, chiuso:haCheckout});
+        });
+        segmenti.sort((a,b)=>(a.dal||0)-(b.dal||0));
+        const nomeLinea = (id)=>{ const l=linee.find(x=>x.id===id||x.nome===id); return l?l.id:id; };
+        const coloreLinea = (id)=>{ const l=linee.find(x=>x.id===id||x.nome===id); return l?l.colore:"#7c3aed"; };
+        const fmtOra = (ts)=>{ if(!ts) return "—"; const d=new Date(ts); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
+        let totMin = 0;
+        segmenti.forEach(seg=>{ const fine=seg.al||Date.now(); const m=Math.round((fine-seg.dal)/60000); if(m>0) totMin+=m; });
+        const totH = Math.floor(totMin/60), totM = totMin%60;
+        return (
+          <div style={MS.ov} onClick={()=>setPopupRiepilogoOp(null)}>
+            <div style={{...MS.md,maxWidth:460}} onClick={e=>e.stopPropagation()}>
+              <div style={MS.mh}>
+                <span style={{...MS.mt,color:"#7c3aed"}}>📋 Riepilogo giornata</span>
+                <button style={MS.mx} onClick={()=>setPopupRiepilogoOp(null)}>✕</button>
+              </div>
+              <div style={{padding:"12px 20px 6px",fontSize:14,color:"#1e293b",fontWeight:700}}>{opInfo.nome||""} {opInfo.cognome||""}</div>
+              <div style={{padding:"0 16px 8px"}}>
+                {segmenti.length===0 && <div style={{padding:20,textAlign:"center",color:"#94a3b8",fontSize:13}}>Nessun dato disponibile</div>}
+                {segmenti.map((seg,i)=>{
+                  const fine = seg.al || Date.now();
+                  const min = Math.max(0, Math.round((fine-seg.dal)/60000));
+                  const h=Math.floor(min/60), m=min%60;
+                  const col = coloreLinea(seg.linea);
+                  return (
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 8px",borderBottom:i<segmenti.length-1?"1px solid #ede9fe":"none"}}>
+                      <div style={{width:10,height:10,borderRadius:"50%",background:seg.chiuso?"#cbd5e1":"#22c55e",flexShrink:0,boxShadow:seg.chiuso?"none":"0 0 6px #22c55e"}}/>
+                      <span style={{display:"inline-flex",alignItems:"center",background:"#ffffff",border:"2px solid "+col,borderRadius:8,padding:"3px 10px",fontSize:12,fontWeight:800,color:col,flexShrink:0}}>{nomeLinea(seg.linea)}</span>
+                      <span style={{fontSize:12,color:"#475569",fontWeight:600}}>{fmtOra(seg.dal)} → {seg.al?fmtOra(seg.al):"in corso"}</span>
+                      <span style={{marginLeft:"auto",fontSize:13,fontWeight:800,color:"#7c3aed"}}>{h>0?h+"h ":""}{m}m</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{padding:"8px 20px",margin:"0 16px 12px",background:"#f6f3fe",borderRadius:8,border:"1px solid #7c3aed",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:13,fontWeight:700,color:"#7c3aed"}}>Totale</span>
+                <span style={{fontSize:16,fontWeight:800,color:"#7c3aed"}}>{totH>0?totH+"h ":""}{totM}m</span>
+              </div>
+              <div style={{padding:"0 16px 16px"}}>
+                <button onClick={()=>setPopupRiepilogoOp(null)} style={{...MS.cf,width:"100%",padding:12,fontSize:15}}>Chiudi</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {popupSkuOp&&(()=>{
         const parts = popupSkuOp.split("|");
         const mat = parts[0]; const lin = parts.slice(1).join("|");
@@ -4103,6 +4170,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           </div>);
                         })()}
                        </div>
+                       <button onClick={()=>setPopupRiepilogoOp(s.matricola||s.nome)}
+                         style={{marginTop:4,background:"#f8f5ff",border:"2px solid #7c3aed",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:800,color:"#7c3aed"}}>📋 Riepilogo <span style={{fontSize:10}}>▼</span></button>
                       </div>
                     </td>
                     <td style={S.td}><span style={{background:"#ffffff",color:"#64748b",border:"1px solid #e2e8f0",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
