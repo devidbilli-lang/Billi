@@ -1146,7 +1146,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:hdrPad,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
                         <span style={{fontSize:hdrFs,fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.2}}>{skuItem}</span>
-                        {skuObjItem?.descrizione&&<span style={{fontSize:hdrFs,fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
+                        {!compatto && skuObjItem?.descrizione&&<span style={{fontSize:hdrFs,fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                         {skuObjItem?.collezione&&skuObjItem.collezione.trim()&&(
