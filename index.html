@@ -2292,23 +2292,14 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     const nMiglStr = noteMigl.filter(r=>r.p).map(r=>r.p+(r.q?" ("+r.q+"pz)":"")).join(" | ")||"";
     setMsg("⏳ Salvataggio in corso...");
     try {
-      await fetchConRetry(nexusUrl("qualita",{linea:lineaEffettiva||"",sku,ok:ok||0,ko:ko||0,migliorabili:migl||0,noteKo:nKoStr,noteMigl:nMiglStr,obReale:obRealeQ||"",obTeorico:obTeoricoQ||""}), 5, 1000);
+      const qId = "q_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
+      await fetchConRetry(nexusUrl("qualita",{linea:lineaEffettiva||"",sku,ok:ok||0,ko:ko||0,migliorabili:migl||0,noteKo:nKoStr,noteMigl:nMiglStr,obReale:obRealeQ||"",obTeorico:obTeoricoQ||"",qid:qId}), 5, 1000);
       setMsg("✓ Salvato!");
-      // Aggiornamento IMMEDIATO del riquadro OGGI: somma i valori appena registrati allo stato locale
-      const okN = Number(ok)||0, koN = Number(ko)||0, miglN = Number(migl)||0;
-      setQualitaOggi(prev=>{
-        const arr = [...prev];
-        const idx = arr.findIndex(q=>q && q.linea===lineaEffettiva && q.sku===sku);
-        if(idx>=0){
-          arr[idx] = {...arr[idx], ok:(Number(arr[idx].ok)||0)+okN, ko:(Number(arr[idx].ko)||0)+koN, migliorabili:(Number(arr[idx].migliorabili)||0)+miglN};
-        } else {
-          arr.push({linea:lineaEffettiva, sku, ok:okN, ko:koN, migliorabili:miglN});
-        }
-        return arr;
-      });
       setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
-      // Ricarica da D1 per allineare i totali reali (merge note, ecc.)
-      setTimeout(caricaQualitaOggi, 800);
+      // Ricarica da D1: è l'UNICA fonte di verità per i totali (evita doppi conteggi).
+      // L'INSERT su D1 è già completato (await sopra), quindi la ricarica è subito affidabile.
+      caricaQualitaOggi();
+      setTimeout(caricaQualitaOggi, 1000);
     } catch(e){ setErr("Errore salvataggio. Riprova."); setMsg(null); }
     setTimeout(()=>setMsg(null), 3000);
       }
