@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFR8VNUtPuBj8
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -646,6 +646,18 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const _secOra = _hh*3600+_mm*60+_ss;
   const storKey = "straord_"+lineaId;
   const [oreExtra, setOreExtraRaw] = React.useState(0); // parte sempre da 0, poi Sheets sovrascrive
+  // Obiettivo CONGELATO: quando il turno della linea chiude (tutti in checkout) l'obiettivo si fissa
+  // su D1 e non varia più. Una correzione manuale lo invalida (gestito altrove) → si ricalcola.
+  const [obCongelato, setObCongelato] = React.useState(null); // numero o null
+  const caricaObCongelato = React.useCallback(()=>{
+    fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{
+      if(j.ok && j.data && j.data.obiettivi){
+        const v = j.data.obiettivi[lineaId];
+        setObCongelato((v===undefined||v===null)?null:v);
+      }
+    }).catch(()=>{});
+  },[lineaId]);
+  React.useEffect(()=>{ caricaObCongelato(); const t=setInterval(caricaObCongelato,60000); return()=>clearInterval(t); },[caricaObCongelato]);
   const pausaKey = "pausa_fl_"+lineaId;
   const [inPausa, setInPausaRaw] = React.useState(()=>{ try{ return localStorage.getItem(pausaKey)==="1"; }catch{return false;} });
   const [pausaInizio, setPausaInizioRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(pausaKey+"_ts"); return v?Number(v):null; }catch{return null;} });
@@ -856,7 +868,18 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     const tot = minTotali>0 ? Math.ceil(minTotali/tc) : 0;
     return tot>0?tot:null;
   })() : null;
-  const ob60 = obFinale!=null&&oreTotali>0 ? Math.round(obFinale/oreTotali) : null;
+  // OBIETTIVO EFFETTIVO: se esiste un valore congelato (turno chiuso), usa quello e non ricalcolare.
+  // Altrimenti usa il calcolo dinamico obFinale.
+  const obFinaleEffettivo = (obCongelato!=null) ? obCongelato : obFinale;
+  // CONGELAMENTO: quando il turno è chiuso (tutti in checkout) e non c'è ancora un valore congelato,
+  // salva l'obiettivo corrente su D1 così resta fisso.
+  React.useEffect(()=>{
+    if(turnoTerminato && obCongelato==null && obFinale!=null && obFinale>0){
+      fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obFinale}))
+        .then(r=>r.json()).then(()=>{ setObCongelato(obFinale); }).catch(()=>{});
+    }
+  },[turnoTerminato, obCongelato, obFinale, lineaId]);
+  const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
   // Efficienza = (borse prodotte * TC) / minuti lavorati * 100
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
@@ -3312,6 +3335,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     const valore = nd.toISOString();
     try {
       await fetchConRetry(nexusUrl("modificaOrarioSegmento",{sessionId:meta.sessionId,tipoSeg:meta.tipoSeg,valore,tsRif:meta.tsRif||""}), 4, 800);
+      // Invalida l'obiettivo congelato: la correzione manuale deve ricalcolarlo
+      fetch(nexusUrl("invalidaObiettivoCongelato",{})).catch(()=>{});
       setEditSegmento(null);
       if(onAggiornaSessioni) onAggiornaSessioni();
     } catch(e){ /* silenzioso */ setEditSegmento(null); }
@@ -3319,6 +3344,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const eliminaSegmentoFn = async (sessionId, segIndex) => {
     try {
       await fetchConRetry(nexusUrl("eliminaSegmento",{sessionId,segIndex}), 4, 800);
+      // Invalida l'obiettivo congelato: la correzione manuale deve ricalcolarlo
+      fetch(nexusUrl("invalidaObiettivoCongelato",{})).catch(()=>{});
       if(onAggiornaSessioni) onAggiornaSessioni();
     } catch(e){ /* silenzioso */ }
   };
