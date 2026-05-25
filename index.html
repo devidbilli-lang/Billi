@@ -3455,6 +3455,18 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         let totMin = 0;
         segmenti.forEach(seg=>{ const fine=seg.al||Date.now(); const m=Math.round((fine-seg.dal)/60000); if(m>0) totMin+=m; });
         const totH = Math.floor(totMin/60), totM = totMin%60;
+        // Uscite/rientri INTERMEDI: ogni sessione (tranne l'ultima) che ha un checkout = uscita,
+        // e il check-in della sessione successiva = rientro. Esclude il primo check-in e l'ultima uscita.
+        const uscite = [];
+        for(let k=0; k<sessOp.length-1; k++){
+          const ss = sessOp[k];
+          const haCheckout = ss.fine && ss.fine!=="" && ss.fine!==null && ss.fine!=="null";
+          if(!haCheckout) continue;
+          const tsUscita = parseData(ss.fine)?.getTime();
+          const next = sessOp[k+1];
+          const tsRientro = next.tsInizio || parseData(next.inizio)?.getTime();
+          if(tsUscita && tsRientro) uscite.push({uscita:tsUscita, rientro:tsRientro});
+        }
         return (
           <div style={MS.ov} onClick={()=>setPopupRiepilogoOp(null)}>
             <div style={{...MS.md,maxWidth:460}} onClick={e=>e.stopPropagation()}>
@@ -3504,12 +3516,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         });
                       }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:15,padding:"2px 4px",color:"#ef4444",flexShrink:0}} title="Elimina segmento">🗑</button>
                     </div>
-                    {seg.fineSessione && i<segmenti.length-1 && (
-                      <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",margin:"0 0 0 18px",borderLeft:"2px dashed #cbd5e1"}}>
-                        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fef2f2",border:"1px solid #ef4444",borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#ef4444"}}>✕ Uscita {fmtOra(seg.al)}</span>
-                        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#f0fdf4",border:"1px solid #22c55e",borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#16a34a"}}>▶ Rientro {fmtOra(segmenti[i+1]?.dal)}</span>
-                      </div>
-                    )}
                     </React.Fragment>
                   );
                 })}
@@ -3518,6 +3524,18 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <span style={{fontSize:13,fontWeight:700,color:"#7c3aed"}}>Totale</span>
                 <span style={{fontSize:16,fontWeight:800,color:"#7c3aed"}}>{totH>0?totH+"h ":""}{totM}m</span>
               </div>
+              {uscite.length>0&&(
+                <div style={{padding:"0 16px 12px"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#64748b",marginBottom:6}}>Uscite e rientri nella giornata</div>
+                  {uscite.map((u,ui)=>(
+                    <div key={ui} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:12}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fef2f2",border:"1px solid #ef4444",borderRadius:6,padding:"2px 10px",fontWeight:700,color:"#ef4444"}}>✕ Uscito {fmtOra(u.uscita)}</span>
+                      <span style={{color:"#94a3b8"}}>→</span>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#f0fdf4",border:"1px solid #22c55e",borderRadius:6,padding:"2px 10px",fontWeight:700,color:"#16a34a"}}>▶ Rientrato {fmtOra(u.rientro)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div style={{padding:"0 16px 16px"}}>
                 <button onClick={()=>setPopupRiepilogoOp(null)} style={{...MS.cf,width:"100%",padding:12,fontSize:15}}>Chiudi</button>
               </div>
