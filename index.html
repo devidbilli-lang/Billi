@@ -676,6 +676,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     setOreExtraRaw(v);
     // Salva solo su Sheets, non su localStorage
     fetchConRetry(nexusUrl("salvastraordinario",{lineaId,oreExtra:v}), 3, 1000).catch(()=>{});
+    // Modificare lo straordinario è una correzione manuale: invalida l'obiettivo congelato
+    // di questa linea, così si ricalcola includendo lo straordinario e si ri-congela.
+    fetch(nexusUrl("invalidaObiettivoCongelato",{linea:lineaId})).then(()=>{ setObCongelato(null); }).catch(()=>{});
   };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
