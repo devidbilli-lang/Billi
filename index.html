@@ -878,24 +878,59 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   })();
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
 
-  // OBIETTIVO FISSO: max persone uniche registrate oggi × ore turno / TC
+  // OBIETTIVO: somma dei minuti effettivi di ogni operatore.
+  // Per chi è ancora in linea → orario di fine PIANIFICATO (solo oggi → standard → 8h).
+  // Per chi è già uscito (checkout) → orario di fine REALE. Così l'obiettivo si auto-corregge.
   const obiettivoFisso = tc>0 ? (()=>{
     const sessioniLinea = sessioni.filter(s=>
       (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio&&!s._pianificato
     );
-    // Matricole uniche che hanno lavorato su produzione (escluse riparazioni)
-    const matricoleUniche = new Set();
+    // Leggi orari pianificati da localStorage
+    const _orariStd = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); }catch(e){ return {}; } })();
+    const _orariFineStd = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); }catch(e){ return {}; } })();
+    const _orariOggiL = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
+    const _oggiStrL = new Date().toLocaleDateString('it-IT');
+    // hh:mm -> secondi dall'inizio giornata
+    const hmToSec = (hm)=>{ const [h,m]=(hm||"").split(":").map(Number); return (h||0)*3600+(m||0)*60; };
+    // Una sessione per matricola (la più recente con check-in)
+    const perMat = {};
     sessioniLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
       const sku = s.skuCorrente||s.sku||"";
       if(isSkuSpeciale(sku)) return;
-      matricoleUniche.add(mat);
+      if(!perMat[mat] || (s.tsInizio||0) > (perMat[mat].tsInizio||0)) perMat[mat] = s;
     });
-    const nOpMax = matricoleUniche.size;
-    if(nOpMax===0) return null;
-    const minTotali = nOpMax * oreTotali * 60;
-    return Math.ceil(minTotali / tc);
+    const matricole = Object.keys(perMat);
+    if(matricole.length===0) return null;
+    let minutiTotali = 0;
+    for(const mat of matricole){
+      const s = perMat[mat];
+      // Inizio reale: timestamp del check-in
+      const tsIn = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||null);
+      if(!tsIn) continue;
+      const dIn = new Date(tsIn);
+      const secIn = dIn.getHours()*3600+dIn.getMinutes()*60+dIn.getSeconds();
+      let secFine;
+      const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      if(haCheckout){
+        // USCITO: usa l'orario REALE di checkout
+        const dFine = parseData(s.fine);
+        secFine = dFine ? dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds() : secIn + oreTotali*3600;
+      } else {
+        // IN LINEA: usa l'orario di fine PIANIFICATO (solo oggi → standard → 8h)
+        const oggiOp = _orariOggiL[mat];
+        const finePian = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : _orariFineStd[mat];
+        secFine = finePian ? hmToSec(finePian) : secIn + oreTotali*3600;
+        // Aggiungi le ore straordinarie di linea solo se non c'è un orario fine specifico
+        if(!finePian && oreExtra>0) secFine = secIn + oreTotali*3600;
+      }
+      let minOp = Math.round((secFine - secIn)/60);
+      if(minOp < 0) minOp = 0;
+      minutiTotali += minOp;
+    }
+    if(minutiTotali===0) return null;
+    return Math.ceil(minutiTotali / tc);
   })() : null;
   const borse=borseOggi||0;
   const ko=borseKO||0;
