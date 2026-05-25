@@ -878,56 +878,66 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   })();
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
 
-  // OBIETTIVO: somma dei minuti effettivi di ogni operatore.
-  // Per chi è ancora in linea → orario di fine PIANIFICATO (solo oggi → standard → 8h).
-  // Per chi è già uscito (checkout) → orario di fine REALE. Così l'obiettivo si auto-corregge.
+  // OBIETTIVO: somma dei minuti di permanenza di ogni operatore SU QUESTA LINEA.
+  // Gestisce i trasferimenti: l'operatore viene "spezzato" in segmenti (per ogni linea dove
+  // ha lavorato) usando i timestamp di check-in, trasferimenti e fine. Questa linea conta
+  // SOLO i minuti dei segmenti che le competono (anche se l'operatore è tornato più volte).
+  // Per l'ULTIMO segmento aperto: fine PIANIFICATA se ancora in linea, REALE se uscito (auto-corregge).
   const obiettivoFisso = tc>0 ? (()=>{
     const sessioniLinea = sessioni.filter(s=>
-      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio&&!s._pianificato
+      (s.lineaCorrente===lineaId||s.lineaInizio===lineaId||(s.trasferimenti||[]).some(t=>t.a===lineaId||t.da===lineaId))
+      &&s.inizio&&!s._pianificato
     );
-    // Leggi orari pianificati da localStorage
-    const _orariStd = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); }catch(e){ return {}; } })();
     const _orariFineStd = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); }catch(e){ return {}; } })();
     const _orariOggiL = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
     const _oggiStrL = new Date().toLocaleDateString('it-IT');
-    // hh:mm -> secondi dall'inizio giornata
-    const hmToSec = (hm)=>{ const [h,m]=(hm||"").split(":").map(Number); return (h||0)*3600+(m||0)*60; };
-    // Una sessione per matricola (la più recente con check-in)
+    const hmToSecFromTs = (hm, refTs)=>{ // hh:mm -> timestamp ms nel giorno del check-in
+      const [h,m]=(hm||"").split(":").map(Number);
+      const d = new Date(refTs); d.setHours(h||0, m||0, 0, 0); return d.getTime();
+    };
+    // Una sessione per matricola (la più recente)
     const perMat = {};
     sessioniLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
-      const sku = s.skuCorrente||s.sku||"";
-      if(isSkuSpeciale(sku)) return;
+      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
       if(!perMat[mat] || (s.tsInizio||0) > (perMat[mat].tsInizio||0)) perMat[mat] = s;
     });
-    const matricole = Object.keys(perMat);
-    if(matricole.length===0) return null;
     let minutiTotali = 0;
-    for(const mat of matricole){
+    for(const mat of Object.keys(perMat)){
       const s = perMat[mat];
-      // Inizio reale: timestamp del check-in
       const tsIn = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||null);
       if(!tsIn) continue;
-      const dIn = new Date(tsIn);
-      const secIn = dIn.getHours()*3600+dIn.getMinutes()*60+dIn.getSeconds();
-      let secFine;
+      // Costruisci i confini temporali: [check-in, ...trasferimenti, fine]
+      const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+      // Determina il tsFine dell'intera sessione (ultimo segmento)
       const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      let tsFineSessione;
       if(haCheckout){
-        // USCITO: usa l'orario REALE di checkout
-        const dFine = parseData(s.fine);
-        secFine = dFine ? dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds() : secIn + oreTotali*3600;
+        const dFine = parseData(s.fine); tsFineSessione = dFine ? dFine.getTime() : tsIn + oreTotali*3600*1000;
       } else {
-        // IN LINEA: usa l'orario di fine PIANIFICATO (solo oggi → standard → 8h)
         const oggiOp = _orariOggiL[mat];
         const finePian = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : _orariFineStd[mat];
-        secFine = finePian ? hmToSec(finePian) : secIn + oreTotali*3600;
-        // Aggiungi le ore straordinarie di linea solo se non c'è un orario fine specifico
-        if(!finePian && oreExtra>0) secFine = secIn + oreTotali*3600;
+        tsFineSessione = finePian ? hmToSecFromTs(finePian, tsIn) : tsIn + oreTotali*3600*1000;
       }
-      let minOp = Math.round((secFine - secIn)/60);
-      if(minOp < 0) minOp = 0;
-      minutiTotali += minOp;
+      // Costruisci i segmenti: ognuno con {linea, dal, al}
+      const segmenti = [];
+      let cursore = tsIn;
+      let lineaCorr = s.lineaInizio;
+      for(const t of trasf){
+        segmenti.push({linea:lineaCorr, dal:cursore, al:t.ts});
+        cursore = t.ts;
+        lineaCorr = t.a;
+      }
+      // Ultimo segmento: dalla posizione corrente fino al tsFineSessione
+      segmenti.push({linea:lineaCorr, dal:cursore, al:tsFineSessione});
+      // Somma i minuti dei segmenti che competono a QUESTA linea
+      for(const seg of segmenti){
+        if(seg.linea!==lineaId) continue;
+        let min = Math.round((seg.al - seg.dal)/60000);
+        if(min<0) min=0;
+        minutiTotali += min;
+      }
     }
     if(minutiTotali===0) return null;
     return Math.ceil(minutiTotali / tc);
