@@ -3499,9 +3499,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         }
         return (
           <div style={MS.ov} onClick={()=>setPopupRiepilogoOp(null)}>
-            <div style={{...MS.md,maxWidth:460}} onClick={e=>e.stopPropagation()}>
+            <div style={{...MS.md,maxWidth:460,border:"2px solid #2563eb",boxShadow:"0 0 0 4px #93c5fd, 0 0 40px 12px #2563eb44"}} onClick={e=>e.stopPropagation()}>
               <div style={MS.mh}>
-                <span style={{...MS.mt,color:"#7c3aed"}}>📋 Riepilogo giornata</span>
+                <span style={{...MS.mt,color:"#2563eb"}}>Riepilogo giornata</span>
                 <button style={MS.mx} onClick={()=>setPopupRiepilogoOp(null)}>✕</button>
               </div>
               <div style={{padding:"12px 20px 6px",fontSize:14,color:"#1e293b",fontWeight:700}}>{opInfo.nome||""} {opInfo.cognome||""}</div>
@@ -3550,9 +3550,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   );
                 })}
               </div>
-              <div style={{padding:"8px 20px",margin:"0 16px 12px",background:"#f6f3fe",borderRadius:8,border:"1px solid #7c3aed",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:13,fontWeight:700,color:"#7c3aed"}}>Totale</span>
-                <span style={{fontSize:16,fontWeight:800,color:"#7c3aed"}}>{totH>0?totH+"h ":""}{totM}m</span>
+              <div style={{padding:"8px 20px",margin:"0 16px 12px",background:"#eff6ff",borderRadius:8,border:"1px solid #2563eb",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:13,fontWeight:700,color:"#2563eb"}}>Totale</span>
+                <span style={{fontSize:16,fontWeight:800,color:"#2563eb"}}>{totH>0?totH+"h ":""}{totM}m</span>
               </div>
               {uscite.length>0&&(
                 <div style={{padding:"0 16px 12px"}}>
@@ -3567,7 +3567,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 </div>
               )}
               <div style={{padding:"0 16px 16px"}}>
-                <button onClick={()=>setPopupRiepilogoOp(null)} style={{...MS.cf,width:"100%",padding:12,fontSize:15}}>Chiudi</button>
+                <button onClick={()=>setPopupRiepilogoOp(null)} style={{...MS.cf,width:"100%",padding:12,fontSize:15,background:"#2563eb",color:"#ffffff"}}>Chiudi</button>
               </div>
             </div>
           </div>
