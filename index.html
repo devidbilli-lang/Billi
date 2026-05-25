@@ -814,11 +814,16 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(haCheckout){
         const dF = parseData(s.fine); tsFineSessione = dF ? dF.getTime() : tsIn + oreTotali*3600*1000;
       } else {
-        // Fine pianificata: dati condivisi da D1 → localStorage → straordinario(8h+extra)
+        // In turno: il riferimento è l'orario di FINE TURNO DELLA LINEA (tutti finiscono insieme,
+        // chi entra in ritardo lavora meno). Se l'operatore ha un orario di fine pianificato
+        // PRIMA della fine turno linea (es. esce alle 13 mentre la linea va alle 14), uso quello.
+        const tsFineTurnoLinea = _primoCheckinTs ? (_primoCheckinTs + oreTotali*3600*1000) : (tsIn + oreTotali*3600*1000);
         const oggiOp = _orariOggiL[mat];
         const fineOggiLocal = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : "";
         const finePian = s.orarioFineOggiPian || fineOggiLocal || s.orarioFinePian || _orariFineStd[mat];
-        tsFineSessione = finePian ? hmToTs(finePian, tsIn) : tsIn + oreTotali*3600*1000;
+        const tsFinePian = finePian ? hmToTs(finePian, tsIn) : null;
+        // Usa il MINORE tra fine turno linea e fine pianificata operatore (se uscita anticipata)
+        tsFineSessione = (tsFinePian && tsFinePian < tsFineTurnoLinea) ? tsFinePian : tsFineTurnoLinea;
       }
       // Costruisci i segmenti per linea
       const segmenti = [];
