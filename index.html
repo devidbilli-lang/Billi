@@ -1384,19 +1384,21 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
       </div>
       {/* VISTA GRIGLIA: 3 colonne, ogni card rimpicciolita con zoom */}
       {vistaGriglia ? (() => {
-        const nRighe = Math.ceil(lineeGriglia.filter(l=>perLinea[l.id]).length / 4) || 1;
+        const nCard = lineeGriglia.filter(l=>perLinea[l.id]).length;
+        const nCol = 4;
+        const nRighe = Math.ceil(nCard / nCol) || 1;
         return (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gridAutoRows:`calc((100vh - 150px) / ${nRighe})`,gap:12,height:"calc(100vh - 150px)",overflow:"hidden",padding:"4px"}}>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gridTemplateRows:`repeat(${nRighe}, 1fr)`,gap:12,height:"calc(100vh - 160px)",maxHeight:"calc(100vh - 160px)",overflow:"hidden",padding:"6px",boxSizing:"border-box"}}>
           {lineeGriglia.map(l=>{
             const d=perLinea[l.id]; if(!d) return null;
             return (
-              <div key={l.id} style={{background:"#fff",border:"4px solid "+(l.colore||"#7c3aed"),borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+(l.colore||"#7c3aed")+"99, 0 0 4px "+(l.colore||"#7c3aed")+", inset 0 0 8px "+(l.colore||"#7c3aed")+"22",display:"flex",flexDirection:"column"}}>
+              <div key={l.id} style={{minHeight:0,background:"#fff",border:"4px solid "+(l.colore||"#7c3aed"),borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+(l.colore||"#7c3aed")+"99, 0 0 4px "+(l.colore||"#7c3aed")+", inset 0 0 8px "+(l.colore||"#7c3aed")+"22",display:"flex",flexDirection:"column"}}>
                 <div style={{padding:"5px 10px",borderBottom:"1px solid "+(l.colore||"#7c3aed")+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                   <div style={{width:9,height:9,borderRadius:"50%",background:l.colore||"#7c3aed",flexShrink:0}}/>
                   <div style={{fontSize:12,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.id}</div>
                 </div>
                 {/* compatto=true riduce font e nasconde card gialla; il contenuto è clippato all'altezza della card */}
-                <div style={{flex:1,overflow:"hidden",zoom:0.62,padding:"3px 3px"}}>
+                <div style={{flex:1,overflow:"hidden",zoom:0.5,padding:"2px 2px"}}>
                   <ObiettivoProduzione
                     sessioni={sessioni||[]}
                     lineaId={l.id}
