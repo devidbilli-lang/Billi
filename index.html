@@ -2909,7 +2909,6 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             <div style={{width:4,background:"#06d6a0",borderRadius:2,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Operatori</div>
-              {(()=>{ try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); const ult=JSON.parse(localStorage.getItem(kSel)||"null"); return ult&&ult.length>0?(<button type="button" onClick={()=>setOpSelezionati(ult)} style={{marginBottom:8,padding:"6px 14px",background:"#06d6a018",border:"1px solid #06d6a0",borderRadius:6,color:"#047857",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,width:"100%"}}>↩ Riusa ultima selezione ({ult.length} operatori)</button>):null; }catch(e){ return null; } })()}
               <input ref={cOpRef} style={{...S.inp,marginBottom:6}} placeholder="Cerca operatore..." value={cOp} onChange={e=>{setCOp(e.target.value);}}/>
               {cOp&&(
                 <div style={{maxHeight:160,overflowY:"auto",border:"1px solid #06d6a044",borderRadius:8,background:"#ffffff",marginBottom:6}}>
@@ -3156,27 +3155,6 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:14,color:"#1e293b"}}>{op.nome} {op.cognome}</div>
                   <div style={{fontSize:12,color:"#94a3b8"}}>{op.matricola}</div>
-                  {/* PILLOLE TURNO (scorciatoia di Turni&Operatori): clic → modal conferma/modifica */}
-                  {(()=>{
-                    const oggi = orariOggi[op.matricola];
-                    const haOggi = oggi && (oggi.inizioOggi || oggi.fineOggi);
-                    const iniStd = orariTurno[op.matricola]||"06:00";
-                    const finStd = orariFineTurno[op.matricola]||"14:00";
-                    return (
-                      <div style={{marginTop:6,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                        <button onClick={()=>setModOrarioOp({op, tipo:"standard", inizio:iniStd, fine:finStd})}
-                          style={{display:"inline-flex",alignItems:"center",gap:5,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11,fontWeight:800,color:"#7c3aed"}}>
-                          Standard <span style={{fontWeight:700,opacity:0.85}}>{iniStd}→{finStd}</span>
-                        </button>
-                        <button onClick={()=>setModOrarioOp({op, tipo:"oggi", inizio:(haOggi?oggi.inizioOggi:iniStd)||"06:00", fine:(haOggi?oggi.fineOggi:finStd)||"14:00"})}
-                          style={{display:"inline-flex",alignItems:"center",gap:5,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:11,fontWeight:800,color:"#ff6937"}}>
-                          Solo Oggi {haOggi&&<span style={{fontWeight:700,opacity:0.85}}>{oggi.inizioOggi||"—"}→{oggi.fineOggi||"—"}</span>}
-                        </button>
-                        {haOggi&&<button onClick={()=>rimuoviOggi(op.matricola)}
-                          style={{background:"transparent",border:"1px solid #ef444466",color:"#ef4444",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Rimuovi</button>}
-                      </div>
-                    );
-                  })()}
                 </div>
                 <span style={{fontSize:11,fontWeight:700,color:presente?"#22c55e":"#475569",background:presente?"#22c55e18":"#e1e1e1",padding:"2px 8px",borderRadius:4}}>{presente?"IN TURNO":"ASSENTE"}</span>
               </div>
