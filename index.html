@@ -816,8 +816,19 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     let minTotali = 0;
     for(const mat of Object.keys(perMat)){
       const s = perMat[mat];
-      const tsIn = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||null);
+      let tsIn = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||null);
       if(!tsIn) continue;
+      // INIZIO "solo oggi" posticipato: se l'operatore ha un orario di inizio pianificato per OGGI
+      // PIÙ TARDI del check-in reale (es. entra alle 9 ma ha timbrato alle 6), l'obiettivo deve
+      // proiettare in previsione i minuti effettivi (parte da quell'ora). Speculare alla fine
+      // anticipata: l'inizio usa il MAGGIORE tra check-in reale e inizio pianificato odierno.
+      // Non si applica ai pianificati (già partono dall'ora prevista).
+      if(!s._pianificato){
+        const oggiOpIni = _orariOggiL[mat];
+        const inizioOggiLocal = (oggiOpIni && oggiOpIni.data===_oggiStrL && oggiOpIni.inizioOggi) ? oggiOpIni.inizioOggi : "";
+        const tsInizioPian = inizioOggiLocal ? hmToTs(inizioOggiLocal, tsIn) : null;
+        if(tsInizioPian && tsInizioPian > tsIn) tsIn = tsInizioPian;
+      }
       const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
       const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
       let tsFineSessione;
@@ -884,12 +895,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     const secNow = now3.getHours()*3600+now3.getMinutes()*60+now3.getSeconds();
     let minLavorati = 0;
     const matVisti = new Set();
+    // Orari "solo oggi" per allineare i minuti lavorati all'obiettivo (inizio posticipato)
+    const _orariOggiEff = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
+    const _oggiStrEff = new Date().toLocaleDateString('it-IT');
     sessLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id; if(!mat||matVisti.has(mat)) return;
       if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
       matVisti.add(mat);
       const dI = parseData(s.inizio); if(!dI) return;
-      const secI = dI.getHours()*3600+dI.getMinutes()*60;
+      let secI = dI.getHours()*3600+dI.getMinutes()*60;
+      // INIZIO "solo oggi" posticipato: usa il MAGGIORE tra check-in reale e inizio pianificato odierno
+      if(!s._pianificato){
+        const oggiOpEff = _orariOggiEff[mat];
+        const inizioOggiEff = (oggiOpEff && oggiOpEff.data===_oggiStrEff && oggiOpEff.inizioOggi) ? oggiOpEff.inizioOggi : "";
+        if(inizioOggiEff){ const [hI,mI]=inizioOggiEff.split(":").map(Number); const secPian=(hI||0)*3600+(mI||0)*60; if(secPian>secI) secI=secPian; }
+      }
       const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
       const secF = attiva ? Math.min(secNow, secFineTurno) : (()=>{ const dF=parseData(s.fine); return dF?Math.min(dF.getHours()*3600+dF.getMinutes()*60,secFineTurno):secFineTurno; })();
       minLavorati += Math.max(0,(secF-secI)/60);
