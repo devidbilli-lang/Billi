@@ -98,6 +98,16 @@ const IconaRampa = ({size=16, color="#ff6937"}) => (
 );
 const store = { get:(k,d)=>{ try{ const v=sessionStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } }, set:(k,v)=>{ try{ sessionStorage.setItem(k,JSON.stringify(v)); }catch{} }
 };
+// Sessione di accesso LINEA persistente 12h (localStorage, sopravvive a chiusura/ricarica).
+// Scadenza FISSA dal login: dopo 12h si richiede di nuovo la password. Vale solo per le linee,
+// MAI per l'admin. Difensivo: dato corrotto o scaduto → si torna alla password.
+const SESSIONE_LINEA_MS = 12*60*60*1000; // 12 ore
+const sessioneLinea = {
+  salva:(lineaId)=>{ try{ localStorage.setItem("nexus_sess_linea", JSON.stringify({lineaId, scadenza: Date.now()+SESSIONE_LINEA_MS})); }catch{} },
+  leggi:()=>{ try{ const v=JSON.parse(localStorage.getItem("nexus_sess_linea")||"null"); if(!v||!v.lineaId||!v.scadenza) return null; if(Date.now()>=v.scadenza) return null; return v.lineaId; }catch{ return null; } },
+  pulisci:()=>{ try{ localStorage.removeItem("nexus_sess_linea"); }catch{} }
+};
+
 const fetchTimeout = (url, ms=20000) => { const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {signal:ctrl.signal}).finally(()=>clearTimeout(tid));
@@ -4399,10 +4409,6 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
             <div style={{width:4,height:36,background:"#7c3aed",borderRadius:2,flexShrink:0}}/>
             <div><div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>Linea</div><div style={{fontSize:13,color:"#64748b",marginTop:4}}>Accesso operatore di linea</div></div>
           </button>
-          <button onClick={()=>onQualita&&onQualita()} onMouseEnter={e=>e.currentTarget.style.border="2px solid #7c3aed"} onMouseLeave={e=>e.currentTarget.style.border="1.5px solid #a78bfa"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
-            <div style={{width:4,height:36,background:"#7c3aed",borderRadius:2,flexShrink:0}}/>
-            <div><div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>Qualità</div><div style={{fontSize:13,color:"#64748b",marginTop:4}}>Inserimento dati qualità</div></div>
-          </button>
           <button onClick={()=>setSchermata("admin")} onMouseEnter={e=>e.currentTarget.style.border="2px solid #7c3aed"} onMouseLeave={e=>e.currentTarget.style.border="1.5px solid #a78bfa"} style={{width:"100%",padding:"22px 24px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"left",display:"flex",alignItems:"center",gap:18}}>
             <div style={{width:4,height:36,background:"#7c3aed",borderRadius:2,flexShrink:0}}/>
             <div><div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>Admin</div><div style={{fontSize:13,color:"#64748b",marginTop:4}}>Accesso amministratore</div></div>
@@ -4490,6 +4496,26 @@ function App() { const [view,setView]             = useState("login");
       } catch(e){ console.warn("Auto-login fallito:", e); }
     })();
   },[sync, linee, accesso]);
+
+  // RIPRISTINO SESSIONE LINEA (12h fisse): se esiste una sessione di linea salvata e ancora
+  // valida, e non si è già loggati, entra direttamente in quella linea senza richiedere la
+  // password. Difensivo: se la linea non esiste più o la sessione è scaduta/corrotta → niente,
+  // si resta al login con password.
+  const [sessLineaRipristinata, setSessLineaRipristinata] = useState(false);
+  useEffect(()=>{
+    if(accesso) return;
+    if(sessLineaRipristinata) return;
+    if(sync !== "ok" || linee.length === 0) return;
+    if(getUrlParam("autolinea")) return; // l'auto-login da URL ha priorità
+    setSessLineaRipristinata(true);
+    const lineaId = sessioneLinea.leggi();
+    if(!lineaId) return;                 // nessuna sessione valida → resta a password
+    const linea = linee.find(l=>l.id===lineaId);
+    if(!linea){ sessioneLinea.pulisci(); return; } // linea non più esistente → pulisci
+    setAccesso({ruolo:"linea", linea});
+    setView("checkin");
+  },[sync, linee, accesso, sessLineaRipristinata]);
+
   useEffect(()=>{ store.set("pt_v4",sess); },[sess]);
   const [rampeSheets,setRampeSheets] = useState([]);
   const caricaSessioni = useCallback(async()=>{ setDashSync("caricamento");
@@ -4608,7 +4634,7 @@ function App() { const [view,setView]             = useState("login");
   if(viewQualita==="dashboard"&&lineaQualita) return <DashboardQualita linea={lineaQualita} linee={linee} skuList={skuList} difettiList={difettiList} onEsci={()=>{ setLineaQualita(null); setViewQualita(false); setView("checkin"); }}/>;
 
   if(!accesso && view !== "login") {
-    return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>;
+    return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); if(ruolo==="linea"&&linea) sessioneLinea.salva(linea.id); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>;
   }
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",color:"#1e293b"}}>
@@ -4627,10 +4653,10 @@ function App() { const [view,setView]             = useState("login");
         </div>
       )}
       {view==="checkin"&&(
-        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ setAccesso(null); setView("login"); }} rampeSheets={rampeSheets} onQualita={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }}/>
+        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ sessioneLinea.pulisci(); setAccesso(null); setView("login"); }} rampeSheets={rampeSheets} onQualita={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }}/>
       )}
       {view==="login"&&(
-        <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>
+        <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); if(ruolo==="linea"&&linea) sessioneLinea.salva(linea.id); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>
       )}
       {view==="dashboard"&&accesso&&(
         <Dashboard
