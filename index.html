@@ -2517,6 +2517,96 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
 }
 function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheets, aggiornaSessioni, linee, operatori, skuList, syncCfg, dashCfg, ultimoSync2, lineaFiltro, onGoToDashboard, onEsci, rampeSheets, onQualita }) {
   const [mode,setMode]           = useState("menu");
+  // ── ORARI TURNO (definiti in alto così sono disponibili in tutti i rami: checkin, registra presenza, ecc.) ──
+  const [orariTurno, setOrariTurno] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; }
+  });
+  const [orariFineTurno, setOrariFineTurno] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; }
+  });
+  // Orari ODIERNI (validi solo per oggi): {matricola:{inizioOggi, fineOggi}}
+  const [orariOggi, setOrariOggi] = useState({});
+  React.useEffect(()=>{
+    fetch(nexusUrl('leggiOrariOperatori',{})).then(r=>r.json()).then(j=>{
+      if(j.ok&&j.data.orari){
+        const inizio = {}; const fine = {}; const oggiMap = {};
+        Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; if(v.inizioOggi||v.fineOggi){ oggiMap[mat]={inizioOggi:v.inizioOggi||"", fineOggi:v.fineOggi||""}; } });
+        setOrariTurno(prev=>({...prev,...inizio}));
+        setOrariFineTurno(prev=>({...prev,...fine}));
+        setOrariOggi(oggiMap);
+        localStorage.setItem('nexus_orari_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'),...inizio}));
+        localStorage.setItem('nexus_orari_fine_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'),...fine}));
+      }
+    }).catch(()=>{});
+  },[]);
+  const salvaOggi = (matricola, inizioOggi, fineOggi) => {
+    setOrariOggi(prev=>({...prev,[matricola]:{inizioOggi,fineOggi}}));
+    fetch(nexusUrl('salvaOrarioOggi',{matricola,orarioInizioOggi:inizioOggi,orarioFineOggi:fineOggi}),{mode:'cors'}).catch(()=>{});
+    try {
+      const oggiStr = new Date().toLocaleDateString('it-IT');
+      const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
+      lo[matricola] = {inizioOggi, fineOggi, data:oggiStr};
+      localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
+    } catch(e){}
+  };
+  const rimuoviOggi = (matricola) => {
+    setOrariOggi(prev=>{ const cp={...prev}; delete cp[matricola]; return cp; });
+    fetch(nexusUrl('rimuoviOrarioOggi',{matricola}),{mode:'cors'}).catch(()=>{});
+    try {
+      const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
+      delete lo[matricola];
+      localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
+    } catch(e){}
+  };
+  const salvaOrario = (matricola, orario) => {
+    const nuovi = {...orariTurno, [matricola]: orario};
+    setOrariTurno(nuovi);
+    localStorage.setItem('nexus_orari_turno', JSON.stringify(nuovi));
+    const fineCorrente = orariFineTurno[matricola]||'14:00';
+    fetch(nexusUrl('salvaOrarioOperatore',{matricola,orarioInizio:orario,orarioFine:fineCorrente}),{mode:'cors'}).catch(()=>{});
+  };
+  const salvaOrarioFine = (matricola, orario) => {
+    const nuovi = {...orariFineTurno, [matricola]: orario};
+    setOrariFineTurno(nuovi);
+    localStorage.setItem('nexus_orari_fine_turno', JSON.stringify(nuovi));
+    const inizioCorrente = orariTurno[matricola]||'06:00';
+    fetch(nexusUrl('salvaOrarioOperatore',{matricola,orarioInizio:inizioCorrente,orarioFine:orario}),{mode:'cors'}).catch(()=>{});
+  };
+  const [editOrarioOp, setEditOrarioOp] = useState(null);
+  const [editOrarioFineOp, setEditOrarioFineOp] = useState(null);
+  const [tmpOrarioVal, setTmpOrarioVal] = useState("");
+  const [tmpOrarioFineVal, setTmpOrarioFineVal] = useState("");
+  const [editOggiOp, setEditOggiOp] = useState(null);
+  const [tmpOggiInizio, setTmpOggiInizio] = useState("");
+  const [tmpOggiFine, setTmpOggiFine] = useState("");
+  // Modal centrato per modifica orario: {op, tipo:'standard'|'oggi', inizio:'HH:MM', fine:'HH:MM'}
+  const [modOrarioOp, setModOrarioOp] = useState(null);
+  // Modal turno riutilizzabile (usato sia nel form Registra Presenza sia nella panoramica)
+  const modalTurnoJSX = modOrarioOp&&(
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+      <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px "+(modOrarioOp.tipo==="oggi"?"#ffc299":"#a78bfa")+", 0 0 40px 12px "+(modOrarioOp.tipo==="oggi"?"#ff693766":"#7c3aed66")}}>
+        <div style={{fontSize:18,fontWeight:800,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}><IconaMatita size={22}/> Modifica orario</div>
+        <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:2}}>{modOrarioOp.op.nome} {modOrarioOp.op.cognome}</div>
+        <div style={{fontSize:12,fontWeight:800,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:18,letterSpacing:0.5}}>{modOrarioOp.tipo==="oggi"?"Solo Oggi":"Turno Standard"}</div>
+        <div style={{fontSize:12,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio</div>
+        <div style={{marginBottom:14,textAlign:"center"}}>
+          <TimePicker value={modOrarioOp.inizio} color={modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOrarioOp({...modOrarioOp,inizio:v})}/>
+        </div>
+        <div style={{fontSize:12,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine</div>
+        <div style={{marginBottom:18,textAlign:"center"}}>
+          <TimePicker value={modOrarioOp.fine} color={modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOrarioOp({...modOrarioOp,fine:v})}/>
+        </div>
+        <div style={{fontSize:13,color:"#64748b",textAlign:"center",marginBottom:14}}>Conferma il turno scelto oppure modifica gli orari</div>
+        <button style={{...S.bCI,marginBottom:10,background:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",color:"#ffffff"}} onClick={()=>{
+          const m = modOrarioOp.op.matricola;
+          if(modOrarioOp.tipo==="oggi"){ salvaOggi(m, modOrarioOp.inizio, modOrarioOp.fine); }
+          else { salvaOrario(m, modOrarioOp.inizio); salvaOrarioFine(m, modOrarioOp.fine); }
+          setModOrarioOp(null);
+        }}>✓ Conferma turno</button>
+        <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>setModOrarioOp(null)}>← Annulla</button>
+      </div>
+    </div>
+  );
   const [modQualita,setModQualita] = useState(false);
   const [modPwdQualita,setModPwdQualita] = useState(false);
   const [modLogout,setModLogout] = useState(false);
@@ -2712,13 +2802,33 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 </div>
               )}
               {opSelezionati.length>0&&(
-                <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
-                  {opSelezionati.map(o=>(
-                    <span key={o.matricola} style={{background:"#06d6a022",border:"1px solid #06d6a055",borderRadius:20,padding:"3px 8px",fontSize:11,color:"#047857",display:"flex",alignItems:"center",gap:4}}>
-                      {o.nome} {o.cognome}
-                      <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:13,lineHeight:1}}>×</span>
-                    </span>
-                  ))}
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:6}}>
+                  {opSelezionati.map(o=>{
+                    const oggiO = orariOggi[o.matricola];
+                    const haOggi = oggiO && (oggiO.inizioOggi || oggiO.fineOggi);
+                    const iniStd = orariTurno[o.matricola]||"06:00";
+                    const finStd = orariFineTurno[o.matricola]||"14:00";
+                    return (
+                    <div key={o.matricola} style={{background:"#06d6a012",border:"1px solid #06d6a055",borderRadius:10,padding:"6px 10px",display:"flex",flexDirection:"column",gap:5}}>
+                      <span style={{fontSize:12,color:"#047857",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+                        {o.nome} {o.cognome}
+                        <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
+                      </span>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+                        <button type="button" onClick={()=>setModOrarioOp({op:o, tipo:"standard", inizio:iniStd, fine:finStd})}
+                          style={{display:"inline-flex",alignItems:"center",gap:4,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:8,padding:"2px 8px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:800,color:"#7c3aed"}}>
+                          Standard <span style={{fontWeight:700,opacity:0.85}}>{iniStd}→{finStd}</span>
+                        </button>
+                        <button type="button" onClick={()=>setModOrarioOp({op:o, tipo:"oggi", inizio:(haOggi?oggiO.inizioOggi:iniStd)||"06:00", fine:(haOggi?oggiO.fineOggi:finStd)||"14:00"})}
+                          style={{display:"inline-flex",alignItems:"center",gap:4,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"2px 8px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:800,color:"#ff6937"}}>
+                          Solo Oggi {haOggi&&<span style={{fontWeight:700,opacity:0.85}}>{oggiO.inizioOggi||"—"}→{oggiO.fineOggi||"—"}</span>}
+                        </button>
+                        {haOggi&&<button type="button" onClick={()=>rimuoviOggi(o.matricola)}
+                          style={{background:"transparent",border:"1px solid #ef444466",color:"#ef4444",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Rimuovi</button>}
+                      </div>
+                    </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -2886,6 +2996,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <div style={S.ora}>{fmt(oraRef)}</div>
         </div>
       </div>
+      {modalTurnoJSX}
     </div>
   ); }
   return (
@@ -2963,77 +3074,6 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 }
 function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
   useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),60000); return()=>clearInterval(t); },[]);
-  const [orariTurno, setOrariTurno] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; }
-  });
-  const [orariFineTurno, setOrariFineTurno] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; }
-  });
-  // Orari ODIERNI (validi solo per oggi): {matricola:{inizioOggi, fineOggi}}
-  const [orariOggi, setOrariOggi] = useState({});
-
-  // Carica orari da D1 all'avvio (sincronizza tra dispositivi)
-  React.useEffect(()=>{
-    fetch(nexusUrl('leggiOrariOperatori',{})).then(r=>r.json()).then(j=>{
-      if(j.ok&&j.data.orari){
-        const inizio = {}; const fine = {}; const oggiMap = {};
-        Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; if(v.inizioOggi||v.fineOggi){ oggiMap[mat]={inizioOggi:v.inizioOggi||"", fineOggi:v.fineOggi||""}; } });
-        setOrariTurno(prev=>({...prev,...inizio}));
-        setOrariFineTurno(prev=>({...prev,...fine}));
-        setOrariOggi(oggiMap);
-        localStorage.setItem('nexus_orari_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'),...inizio}));
-        localStorage.setItem('nexus_orari_fine_turno', JSON.stringify({...JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'),...fine}));
-      }
-    }).catch(()=>{});
-  },[]);
-
-  // Salva orario odierno (solo per oggi, non tocca lo standard)
-  const salvaOggi = (matricola, inizioOggi, fineOggi) => {
-    setOrariOggi(prev=>({...prev,[matricola]:{inizioOggi,fineOggi}}));
-    fetch(nexusUrl('salvaOrarioOggi',{matricola,orarioInizioOggi:inizioOggi,orarioFineOggi:fineOggi}),{mode:'cors'}).catch(()=>{});
-    // Aggiorna localStorage per il check-in pianificato (con data odierna)
-    try {
-      const oggiStr = new Date().toLocaleDateString('it-IT');
-      const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
-      lo[matricola] = {inizioOggi, fineOggi, data:oggiStr};
-      localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
-    } catch(e){}
-  };
-  const rimuoviOggi = (matricola) => {
-    setOrariOggi(prev=>{ const cp={...prev}; delete cp[matricola]; return cp; });
-    fetch(nexusUrl('rimuoviOrarioOggi',{matricola}),{mode:'cors'}).catch(()=>{});
-    try {
-      const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
-      delete lo[matricola];
-      localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
-    } catch(e){}
-  };
-
-  const salvaOrario = (matricola, orario) => {
-    const nuovi = {...orariTurno, [matricola]: orario};
-    setOrariTurno(nuovi);
-    localStorage.setItem('nexus_orari_turno', JSON.stringify(nuovi));
-    // Salva anche su D1
-    const fineCorrente = orariFineTurno[matricola]||'14:00';
-    fetch(nexusUrl('salvaOrarioOperatore',{matricola,orarioInizio:orario,orarioFine:fineCorrente}),{mode:'cors'}).catch(()=>{});
-  };
-  const salvaOrarioFine = (matricola, orario) => {
-    const nuovi = {...orariFineTurno, [matricola]: orario};
-    setOrariFineTurno(nuovi);
-    localStorage.setItem('nexus_orari_fine_turno', JSON.stringify(nuovi));
-    // Salva anche su D1
-    const inizioCorrente = orariTurno[matricola]||'06:00';
-    fetch(nexusUrl('salvaOrarioOperatore',{matricola,orarioInizio:inizioCorrente,orarioFine:orario}),{mode:'cors'}).catch(()=>{});
-  };
-  const [editOrarioOp, setEditOrarioOp] = useState(null); // matricola in modifica inizio
-  const [editOrarioFineOp, setEditOrarioFineOp] = useState(null); // matricola in modifica fine
-  const [tmpOrarioVal, setTmpOrarioVal] = useState(""); // valore HH:MM corrente nell'editor inizio
-  const [tmpOrarioFineVal, setTmpOrarioFineVal] = useState(""); // valore HH:MM corrente nell'editor fine
-  const [editOggiOp, setEditOggiOp] = useState(null); // matricola in modifica orario odierno
-  const [tmpOggiInizio, setTmpOggiInizio] = useState("");
-  const [tmpOggiFine, setTmpOggiFine] = useState("");
-  // Modal centrato per modifica orario: {op, tipo:'standard'|'oggi', inizio:'HH:MM', fine:'HH:MM'}
-  const [modOrarioOp, setModOrarioOp] = useState(null);
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
@@ -3119,35 +3159,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
             </div>
           ); })}
       </div>
-      {modOrarioOp&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-          <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px "+(modOrarioOp.tipo==="oggi"?"#ffc299":"#a78bfa")+", 0 0 40px 12px "+(modOrarioOp.tipo==="oggi"?"#ff693766":"#7c3aed66")}}>
-            <div style={{fontSize:18,fontWeight:800,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}><IconaMatita size={22}/> Modifica orario</div>
-            <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:2}}>{modOrarioOp.op.nome} {modOrarioOp.op.cognome}</div>
-            <div style={{fontSize:12,fontWeight:800,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:18,letterSpacing:0.5}}>{modOrarioOp.tipo==="oggi"?"Solo Oggi":"Turno Standard"}</div>
-            <div style={{fontSize:12,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio</div>
-            <div style={{marginBottom:14,textAlign:"center"}}>
-              <TimePicker value={modOrarioOp.inizio} color={modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOrarioOp({...modOrarioOp,inizio:v})}/>
-            </div>
-            <div style={{fontSize:12,color:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine</div>
-            <div style={{marginBottom:18,textAlign:"center"}}>
-              <TimePicker value={modOrarioOp.fine} color={modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOrarioOp({...modOrarioOp,fine:v})}/>
-            </div>
-            <div style={{fontSize:13,color:"#64748b",textAlign:"center",marginBottom:14}}>Conferma il turno scelto oppure modifica gli orari</div>
-            <button style={{...S.bCI,marginBottom:10,background:modOrarioOp.tipo==="oggi"?"#ff6937":"#7c3aed",color:"#ffffff"}} onClick={()=>{
-              const m = modOrarioOp.op.matricola;
-              if(modOrarioOp.tipo==="oggi"){
-                salvaOggi(m, modOrarioOp.inizio, modOrarioOp.fine);
-              } else {
-                salvaOrario(m, modOrarioOp.inizio);
-                salvaOrarioFine(m, modOrarioOp.fine);
-              }
-              setModOrarioOp(null);
-            }}>✓ Conferma turno</button>
-            <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>setModOrarioOp(null)}>← Annulla</button>
-          </div>
-        </div>
-      )}
+      {modalTurnoJSX}
     </div>
   );
 }
