@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFR8VNUtPuBj8
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -2886,6 +2886,25 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                           const sel=e.target.checked?[...skuMulti,s.sku]:skuMulti.filter(x=>x!==s.sku);
                           if(!e.target.checked){ const r={...rampaPerSku}; delete r[s.sku]; setRampaPerSku(r); }
                           setSkuMulti(sel); setSku(sel[0]||"");
+                          // Quando SELEZIONI un articolo, proponi automaticamente gli operatori
+                          // che ci hanno lavorato nel giorno più recente (di solito ieri).
+                          if(e.target.checked){
+                            const lineaPerSku = lineaCheckinSel ? lineaCheckinSel.id : (lineaFiltro?lineaFiltro.id:"");
+                            fetch(nexusUrl("leggiOperatoriPerSku",{sku:s.sku, linea:lineaPerSku}))
+                              .then(r=>r.json()).then(j=>{
+                                if(j.ok && j.data && j.data.operatori && j.data.operatori.length>0){
+                                  setOpSelezionati(prev=>{
+                                    const esistenti = new Set(prev.map(o=>o.matricola));
+                                    const daAggiungere = j.data.operatori
+                                      .filter(o=>!esistenti.has(o.matricola))
+                                      // tieni solo operatori realmente in anagrafica
+                                      .map(o=>operatori.find(x=>x.matricola===o.matricola))
+                                      .filter(Boolean);
+                                    return [...prev, ...daAggiungere];
+                                  });
+                                }
+                              }).catch(()=>{});
+                          }
                         }}
                         style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
                       <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
