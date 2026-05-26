@@ -884,6 +884,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         .then(r=>r.json()).then(()=>{ setObCongelato(obFinale); }).catch(()=>{});
     }
   },[turnoTerminato, obCongelato, obFinale, lineaId]);
+  // SALVATAGGIO CONTINUO (Opzione A): durante il turno l'app è sempre aperta sui tablet di linea,
+  // mentre a fine turno spesso è chiusa ovunque → il congelamento "solo a turno chiuso" poteva
+  // mancare. Qui salviamo l'obiettivo corrente su D1 ad OGNI variazione (anche a turno in corso),
+  // così l'ultimo valore noto è sempre fotografato sul server prima del reset notturno, senza
+  // dipendere da chi tiene l'app aperta a fine turno. Salviamo solo quando il valore CAMBIA
+  // (via ref) per non martellare il worker, e solo se NON è già congelato (turno chiuso).
+  const _ultimoObSalvatoRef = React.useRef(null);
+  React.useEffect(()=>{
+    if(obCongelato!=null) return;            // già congelato: non sovrascrivere
+    if(turnoTerminato) return;               // a turno chiuso ci pensa l'effetto sopra
+    if(obFinale==null || obFinale<=0) return;
+    if(_ultimoObSalvatoRef.current === obFinale) return; // invariato: niente da fare
+    _ultimoObSalvatoRef.current = obFinale;
+    fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obFinale})).catch(()=>{});
+  },[obFinale, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
   // Efficienza = (borse prodotte * TC) / minuti lavorati * 100
   const efficienzaPct = (()=>{
