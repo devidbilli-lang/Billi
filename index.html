@@ -2616,6 +2616,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [cogn,setCogn]           = useState("");
   const [sku,setSku]             = useState("");
   const [skuMulti,setSkuMulti]   = useState([]);
+  // Traccia quali operatori sono stati auto-aggiunti da quale SKU: {sku: [matricole]}
+  // Serve per rimuoverli quando si deseleziona l'articolo.
+  const [opDaSku,setOpDaSku]     = useState({});
   const [linea,setLinea]         = useState(null);
   useEffect(()=>{ if(lineaFiltro) setLinea(lineaFiltro); },[lineaFiltro]);
   const [ris,setRis]             = useState(null);
@@ -2775,6 +2778,134 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <div style={{...S.card,maxWidth:640}}>
             <h2 style={S.cT}>Registra Presenza</h2>
           <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
+            <div style={{width:4,background:"#ff5ef2",borderRadius:2,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Linea di Produzione</div>
+              {!lineaCheckinSel&&(
+                <input style={{...S.inp,marginBottom:6}}
+                  placeholder="Cerca linea..."
+                  value={cLinea}
+                  onChange={e=>{ setCLinea(e.target.value); setLineaCheckinSel(null); }}
+                />
+              )}
+              {lineaCheckinSel&&(
+                <div style={{...S.inp,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,cursor:"pointer",borderColor:lineaCheckinSel.colore||"#ff5ef2"}}
+                  onClick={()=>{ setLineaCheckinSel(null); setCLinea(""); }}>
+                  <span style={{color:lineaCheckinSel.colore||"#ff5ef2",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>
+                    <strong style={{fontWeight:800}}>{lineaCheckinSel.id}</strong>
+                    {lineaCheckinSel.nome&&<span style={{fontWeight:400}}> - {lineaCheckinSel.nome}</span>}
+                  </span>
+                  <span style={{color:"#ef4444",fontWeight:700,fontSize:18,lineHeight:1}}>×</span>
+                </div>
+              )}
+              {cLinea&&!lineaCheckinSel&&(
+                <div style={{maxHeight:140,overflowY:"auto",border:"1px solid #ff5ef244",borderRadius:8,background:"#ffffff"}}>
+                  {(linee||[]).filter(l=>l.id.toUpperCase().includes(cLinea.toUpperCase())||(l.nome||"").toUpperCase().includes(cLinea.toUpperCase())).map(l=>(
+                    <div key={l.id}
+                      onClick={()=>{ setLineaCheckinSel(l); setCLinea(""); setSkuMulti([]); }}
+                      style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #ff5ef222",borderLeft:"4px solid "+(l.colore||"#ff5ef2")}}
+                    >
+                      <span style={{fontSize:13,fontWeight:700,color:l.colore||"#ff5ef2"}}>{l.id}</span>
+                      {l.nome&&<span style={{fontSize:13,color:"#1e293b"}}>{l.nome}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {(()=>{ const _lEff = lineaCheckinSel||linea; const _isPrepDG = _lEff && ((_lEff.id||"").toUpperCase().includes("PREPARAZIONE DG") || (_lEff.nome||"").toUpperCase().includes("PREPARAZIONE DG")); if(_isPrepDG) return null; return (
+          <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
+            <div style={{width:4,background:"#f59e0b",borderRadius:2,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Articoli</div>
+              <input style={{...S.inp,marginBottom:6}} placeholder="Filtra per codice, descrizione o collezione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+              {cSku&&(
+                <div style={{maxHeight:200,overflowY:"auto",border:"1px solid #f59e0b44",borderRadius:8,background:"#ffffff"}}>
+                  {skuList.filter(s=>!s.speciale&&(s.sku.includes(cSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).map(s=>(
+                    <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
+                      <input type="checkbox" checked={skuMulti.includes(s.sku)}
+                        onChange={e=>{
+                          const sel=e.target.checked?[...skuMulti,s.sku]:skuMulti.filter(x=>x!==s.sku);
+                          if(!e.target.checked){ const r={...rampaPerSku}; delete r[s.sku]; setRampaPerSku(r); }
+                          setSkuMulti(sel); setSku(sel[0]||"");
+                          if(e.target.checked){
+                            // SELEZIONA articolo → aggiungi automaticamente gli operatori di ieri
+                            const lineaPerSku = lineaCheckinSel ? lineaCheckinSel.id : (lineaFiltro?lineaFiltro.id:"");
+                            fetch(nexusUrl("leggiOperatoriPerSku",{sku:s.sku, linea:lineaPerSku}))
+                              .then(r=>r.json()).then(j=>{
+                                if(j.ok && j.data && j.data.operatori && j.data.operatori.length>0){
+                                  const daIeri = j.data.operatori
+                                    .map(o=>operatori.find(x=>x.matricola===o.matricola))
+                                    .filter(Boolean);
+                                  setOpSelezionati(prev=>{
+                                    const esistenti = new Set(prev.map(o=>o.matricola));
+                                    const daAggiungere = daIeri.filter(o=>!esistenti.has(o.matricola));
+                                    return [...prev, ...daAggiungere];
+                                  });
+                                  // Memorizza quali operatori sono stati aggiunti da questo SKU
+                                  setOpDaSku(prev=>({...prev, [s.sku]: daIeri.map(o=>o.matricola)}));
+                                }
+                              }).catch(()=>{});
+                          } else {
+                            // DESELEZIONA articolo → rimuovi gli operatori auto-aggiunti da questo SKU,
+                            // ma solo se non sono stati aggiunti anche da un ALTRO articolo ancora selezionato.
+                            const matsQuesto = opDaSku[s.sku] || [];
+                            const altriSku = sel; // articoli rimasti selezionati
+                            const matsDaAltri = new Set();
+                            altriSku.forEach(sk=>{ (opDaSku[sk]||[]).forEach(m=>matsDaAltri.add(m)); });
+                            const daRimuovere = new Set(matsQuesto.filter(m=>!matsDaAltri.has(m)));
+                            if(daRimuovere.size>0){
+                              setOpSelezionati(prev=>prev.filter(o=>!daRimuovere.has(o.matricola)));
+                            }
+                            setOpDaSku(prev=>{ const cp={...prev}; delete cp[s.sku]; return cp; });
+                          }
+                        }}
+                        style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
+                      <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
+                      {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
+                      {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:"auto"}}>{s.collezione}</span>}
+                      {skuMulti.includes(s.sku)&&(()=>{
+                        const _rampe = rampeSheets||window._rampeSheets||[];
+                        const giaInRampa = _rampe.some(r=>r.sku===s.sku&&(r.giorni_completati||r.giorni||0)<15);
+                        return <label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",cursor:giaInRampa?"not-allowed":"pointer",padding:"4px 8px",background:"#fff7f3",border:"1px solid "+(giaInRampa?"#ff6937":"#ff693788"),borderRadius:6}}>
+                          <input type="checkbox" checked={giaInRampa||!!rampaPerSku[s.sku]}
+                            disabled={giaInRampa}
+                            onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
+                            style={{accentColor:"#ff6937",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
+                          <span style={{display:"inline-flex",alignItems:"center",gap:5,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}><IconaRampa size={12} color="#ff6937"/><span style={{fontSize:11,color:"#ff6937",fontWeight:800,lineHeight:1}}>{giaInRampa?"in rampa":"rampa"}</span></span>
+                        </label>;
+                      })()}
+                    </label>
+                  ))}
+                </div>
+              )}
+              {skuMulti.length>0&&(
+                <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:6}}>
+                  {skuMulti.map(skuId=>{
+                    const skuObj=skuList.find(x=>x&&x.sku===skuId);
+                    return (
+                      <span key={skuId} style={{background:"#f59e0b22",border:"1px solid #f59e0b66",borderRadius:20,padding:"3px 8px",fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
+                        {skuId}{skuObj&&skuObj.descrizione?" — "+skuObj.descrizione:""}
+                        <span onClick={()=>{ const sel=skuMulti.filter(x=>x!==skuId); const r={...rampaPerSku}; delete r[skuId]; setRampaPerSku(r); setSkuMulti(sel); setSku(sel[0]||"");
+                          // Rimuovi operatori auto-aggiunti da questo articolo (se non aggiunti da altri ancora selezionati)
+                          const matsQuesto = opDaSku[skuId]||[];
+                          const matsDaAltri = new Set();
+                          sel.forEach(sk=>{ (opDaSku[sk]||[]).forEach(m=>matsDaAltri.add(m)); });
+                          const daRimuovere = new Set(matsQuesto.filter(m=>!matsDaAltri.has(m)));
+                          if(daRimuovere.size>0) setOpSelezionati(prev=>prev.filter(o=>!daRimuovere.has(o.matricola)));
+                          setOpDaSku(prev=>{ const cp={...prev}; delete cp[skuId]; return cp; });
+                        }} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:13,lineHeight:1}}>×</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+          ); })()}
+
+          <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
             <div style={{width:4,background:"#06d6a0",borderRadius:2,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Operatori</div>
@@ -2833,114 +2964,6 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               )}
             </div>
           </div>
-
-          <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
-            <div style={{width:4,background:"#ff5ef2",borderRadius:2,flexShrink:0}}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Linea di Produzione</div>
-              {!lineaCheckinSel&&(
-                <input style={{...S.inp,marginBottom:6}}
-                  placeholder="Cerca linea..."
-                  value={cLinea}
-                  onChange={e=>{ setCLinea(e.target.value); setLineaCheckinSel(null); }}
-                />
-              )}
-              {lineaCheckinSel&&(
-                <div style={{...S.inp,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,cursor:"pointer",borderColor:lineaCheckinSel.colore||"#ff5ef2"}}
-                  onClick={()=>{ setLineaCheckinSel(null); setCLinea(""); }}>
-                  <span style={{color:lineaCheckinSel.colore||"#ff5ef2",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>
-                    <strong style={{fontWeight:800}}>{lineaCheckinSel.id}</strong>
-                    {lineaCheckinSel.nome&&<span style={{fontWeight:400}}> - {lineaCheckinSel.nome}</span>}
-                  </span>
-                  <span style={{color:"#ef4444",fontWeight:700,fontSize:18,lineHeight:1}}>×</span>
-                </div>
-              )}
-              {cLinea&&!lineaCheckinSel&&(
-                <div style={{maxHeight:140,overflowY:"auto",border:"1px solid #ff5ef244",borderRadius:8,background:"#ffffff"}}>
-                  {(linee||[]).filter(l=>l.id.toUpperCase().includes(cLinea.toUpperCase())||(l.nome||"").toUpperCase().includes(cLinea.toUpperCase())).map(l=>(
-                    <div key={l.id}
-                      onClick={()=>{ setLineaCheckinSel(l); setCLinea(""); setSkuMulti([]); }}
-                      style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #ff5ef222",borderLeft:"4px solid "+(l.colore||"#ff5ef2")}}
-                    >
-                      <span style={{fontSize:13,fontWeight:700,color:l.colore||"#ff5ef2"}}>{l.id}</span>
-                      {l.nome&&<span style={{fontSize:13,color:"#1e293b"}}>{l.nome}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {(()=>{ const _lEff = lineaCheckinSel||linea; const _isPrepDG = _lEff && ((_lEff.id||"").toUpperCase().includes("PREPARAZIONE DG") || (_lEff.nome||"").toUpperCase().includes("PREPARAZIONE DG")); if(_isPrepDG) return null; return (
-          <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
-            <div style={{width:4,background:"#f59e0b",borderRadius:2,flexShrink:0}}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:800,fontSize:18,color:"#1e293b",marginBottom:10}}>Articoli</div>
-              <input style={{...S.inp,marginBottom:6}} placeholder="Filtra per codice, descrizione o collezione..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
-              {cSku&&(
-                <div style={{maxHeight:200,overflowY:"auto",border:"1px solid #f59e0b44",borderRadius:8,background:"#ffffff"}}>
-                  {skuList.filter(s=>!s.speciale&&(s.sku.includes(cSku)||(s.descrizione&&s.descrizione.toUpperCase().includes(cSku))||(s.collezione&&s.collezione.toUpperCase().includes(cSku)))).map(s=>(
-                    <label key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:skuMulti.includes(s.sku)?"#fef3c7":"transparent",borderBottom:"1px solid #fde68a"}}>
-                      <input type="checkbox" checked={skuMulti.includes(s.sku)}
-                        onChange={e=>{
-                          const sel=e.target.checked?[...skuMulti,s.sku]:skuMulti.filter(x=>x!==s.sku);
-                          if(!e.target.checked){ const r={...rampaPerSku}; delete r[s.sku]; setRampaPerSku(r); }
-                          setSkuMulti(sel); setSku(sel[0]||"");
-                          // Quando SELEZIONI un articolo, proponi automaticamente gli operatori
-                          // che ci hanno lavorato nel giorno più recente (di solito ieri).
-                          if(e.target.checked){
-                            const lineaPerSku = lineaCheckinSel ? lineaCheckinSel.id : (lineaFiltro?lineaFiltro.id:"");
-                            fetch(nexusUrl("leggiOperatoriPerSku",{sku:s.sku, linea:lineaPerSku}))
-                              .then(r=>r.json()).then(j=>{
-                                if(j.ok && j.data && j.data.operatori && j.data.operatori.length>0){
-                                  setOpSelezionati(prev=>{
-                                    const esistenti = new Set(prev.map(o=>o.matricola));
-                                    const daAggiungere = j.data.operatori
-                                      .filter(o=>!esistenti.has(o.matricola))
-                                      // tieni solo operatori realmente in anagrafica
-                                      .map(o=>operatori.find(x=>x.matricola===o.matricola))
-                                      .filter(Boolean);
-                                    return [...prev, ...daAggiungere];
-                                  });
-                                }
-                              }).catch(()=>{});
-                          }
-                        }}
-                        style={{width:18,height:18,accentColor:"#f59e0b",cursor:"pointer",flexShrink:0}}/>
-                      <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{s.sku}</span>
-                      {s.descrizione&&<span style={{fontSize:11,color:"#64748b"}}>{s.descrizione}</span>}
-                      {s.collezione&&s.collezione.trim()&&<span style={{fontSize:10,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"1px 6px",fontWeight:700,marginLeft:"auto"}}>{s.collezione}</span>}
-                      {skuMulti.includes(s.sku)&&(()=>{
-                        const _rampe = rampeSheets||window._rampeSheets||[];
-                        const giaInRampa = _rampe.some(r=>r.sku===s.sku&&(r.giorni_completati||r.giorni||0)<15);
-                        return <label onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",cursor:giaInRampa?"not-allowed":"pointer",padding:"4px 8px",background:"#fff7f3",border:"1px solid "+(giaInRampa?"#ff6937":"#ff693788"),borderRadius:6}}>
-                          <input type="checkbox" checked={giaInRampa||!!rampaPerSku[s.sku]}
-                            disabled={giaInRampa}
-                            onChange={e=>{if(giaInRampa)return;e.stopPropagation();setRampaPerSku(prev=>({...prev,[s.sku]:e.target.checked}));}}
-                            style={{accentColor:"#ff6937",width:16,height:16,cursor:giaInRampa?"not-allowed":"pointer"}}/>
-                          <span style={{display:"inline-flex",alignItems:"center",gap:5,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}><IconaRampa size={12} color="#ff6937"/><span style={{fontSize:11,color:"#ff6937",fontWeight:800,lineHeight:1}}>{giaInRampa?"in rampa":"rampa"}</span></span>
-                        </label>;
-                      })()}
-                    </label>
-                  ))}
-                </div>
-              )}
-              {skuMulti.length>0&&(
-                <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:6}}>
-                  {skuMulti.map(skuId=>{
-                    const skuObj=skuList.find(x=>x&&x.sku===skuId);
-                    return (
-                      <span key={skuId} style={{background:"#f59e0b22",border:"1px solid #f59e0b66",borderRadius:20,padding:"3px 8px",fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
-                        {skuId}{skuObj&&skuObj.descrizione?" — "+skuObj.descrizione:""}
-                        <span onClick={()=>{ const sel=skuMulti.filter(x=>x!==skuId); const r={...rampaPerSku}; delete r[skuId]; setRampaPerSku(r); setSkuMulti(sel); setSku(sel[0]||""); }} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:13,lineHeight:1}}>×</span>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-          ); })()}
           
           {err&&<div style={S.err}>{err}</div>}
           <button style={{...S.bCI,background:"linear-gradient(135deg,#a78bfa,#8b5cf6)",color:"#ffffff"}} onClick={()=>{ setErr("");
