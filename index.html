@@ -1493,6 +1493,27 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
   return d;
 }
 
+// Confronto data robusto: normalizza giorno/mese/anno da QUALUNQUE formato
+// (gg/mm/aaaa, g/m/aaaa, aaaa-mm-gg ISO, con ora attaccata, spazi/nbsp parassiti)
+// ed evita il fragile confronto stringa slice(0,10). Restituisce true se stesso giorno.
+function _gma(v){
+  if(v==null) return null;
+  var s = String(v).replace(/\u00A0/g," ").trim();
+  if(!s) return null;
+  var mSlash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(mSlash){ return {g:+mSlash[1], m:+mSlash[2], a:+mSlash[3]}; }
+  var mIso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(mIso){ return {g:+mIso[3], m:+mIso[2], a:+mIso[1]}; }
+  var d = new Date(s);
+  if(!isNaN(d)) return {g:d.getDate(), m:d.getMonth()+1, a:d.getFullYear()};
+  return null;
+}
+function stessoGiornoData(a, b){
+  var x = _gma(a), y = _gma(b);
+  if(!x || !y) return false;
+  return x.g===y.g && x.m===y.m && x.a===y.a;
+}
+
 function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, skuList:_skuList, lineaFiltro=null }) { const [tick,setTick] = useState(0);
   // Difesa: gli array possono contenere elementi null (righe vuote da Sheets/worker). Filtriamoli.
   const sessioni = (_sessioni||[]).filter(Boolean);
@@ -1663,7 +1684,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 for(let d=1; d<=giorniTrascorsi; d++){
                   const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
-                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && (r.data||"").slice(0,10)===fmtG);
+                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && stessoGiornoData(r.data, fmtG));
                   if(riga && riga.nOperatori > 0) valoriPerGiorno.push(riga.nOperatori);
                 }
                 if(valoriPerGiorno.length > 0){
@@ -1718,7 +1739,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                     return false;
                   };
                   // Somma le borse di tutte le righe del giorno per questo sku+linea (possono esserci più righe)
-                  const righeGiorno = riepilogo.filter(r=>r&&r.sku===sku&&matchLinea(r.linea)&&(r.data||"").slice(0,10)===fmtG);
+                  const righeGiorno = riepilogo.filter(r=>r&&r.sku===sku&&matchLinea(r.linea)&&stessoGiornoData(r.data, fmtG));
                   if(righeGiorno.length>0){
                     borsePerGiorno.push(righeGiorno.reduce((a,r)=>a+Number(r.borseProdotte||0),0));
                   } else {
