@@ -787,9 +787,12 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     // usando i timestamp reali (check-in + trasferimenti + fine). Questa linea conta SOLO i minuti
     // dei segmenti che le competono (gestisce A→B→A sommando più segmenti). Per l'ultimo segmento
     // aperto: fine PIANIFICATA se in turno, REALE se uscito. Sottrae corsi; esclude riparazioni.
+    // Include sessioni reali E pianificate (check-in/out pianificati): l'obiettivo proietta
+    // anche chi è programmato a entrare/uscire durante il giorno. L'anti-doppio-conteggio sotto
+    // assicura che, se un operatore ha sia la pianificata sia la reale, conti solo la reale.
     const sessioniLinea = sessioni.filter(s=>
       (s.lineaCorrente===lineaId||s.lineaInizio===lineaId||(s.trasferimenti||[]).some(t=>t.a===lineaId||t.da===lineaId))
-      &&s.inizio&&!s._pianificato
+      &&s.inizio
     );
     const _orariFineStd = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); }catch(e){ return {}; } })();
     const _orariOggiL = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
@@ -801,7 +804,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
       if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return; // riparazioni non contano per l'obiettivo
-      if(!perMat[mat] || (s.tsInizio||0) > (perMat[mat].tsInizio||0)) perMat[mat] = s;
+      const esistente = perMat[mat];
+      if(!esistente){ perMat[mat] = s; return; }
+      // ANTI-DOPPIO-CONTEGGIO: se l'operatore ha sia una sessione pianificata sia una reale,
+      // tieni la REALE (la pianificata è solo una previsione che si è già avverata).
+      if(esistente._pianificato && !s._pianificato){ perMat[mat] = s; return; }
+      if(!esistente._pianificato && s._pianificato){ return; } // tieni la reale già presente
+      // Stesso tipo (entrambe reali o entrambe pianificate): tieni la più recente
+      if((s.tsInizio||0) > (esistente.tsInizio||0)) perMat[mat] = s;
     });
     let minTotali = 0;
     for(const mat of Object.keys(perMat)){
