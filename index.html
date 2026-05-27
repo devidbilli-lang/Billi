@@ -3373,6 +3373,32 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modOrario, setModOrario] = React.useState(null);
   const [selezionati, setSelezionati] = React.useState(new Set()); // matricole selezionate
   const [modMultipla, setModMultipla] = React.useState(null); // {campo, valore}
+  // AGGIUNTA ARTICOLO IN LAVORAZIONE (multi-SKU): registra un nuovo CHECKIN sul SKU scelto
+  // per gli operatori indicati, MANTENENDO il SKU che già lavorano (lavorazione simultanea).
+  // sessionId univoco derivato per non collidere col dedup del worker (session_id+sku).
+  const [modAddSku, setModAddSku] = React.useState(null); // { matricole:Set, sku, linea }
+  const aggiungiArticoloLavorazione = async (matricoleSet, skuNuovo, lineaId) => {
+    if(!skuNuovo || !matricoleSet || matricoleSet.size===0) return;
+    setLoading(true); setLoadingMsg("Aggiunta articolo...");
+    const matArr = Array.from(matricoleSet);
+    for(const mat of matArr){
+      // Trova la sessione attiva di questa matricola per recuperare nome/cognome/linea
+      const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
+                   sessioni.find(s => s.matricola===mat && !s.fine);
+      const nome = sAtt ? sAtt.nome : "";
+      const cognome = sAtt ? sAtt.cognome : "";
+      // Linea: preferisci SEMPRE la lineaCorrente della sessione attiva (id normalizzato),
+      // più affidabile del valore passato (che potrebbe essere un nome linea).
+      const lineaUsa = (sAtt && sAtt.lineaCorrente) ? sAtt.lineaCorrente : (lineaId || "");
+      // sessionId univoco: deriva dalla matricola + sku + timestamp, così è una sotto-sessione distinta
+      const nuovoSid = "ADD_"+mat+"_"+skuNuovo+"_"+Date.now();
+      try {
+        await fetch(nexusUrl("evento",{sessionId:nuovoSid, matricola:mat, nome, cognome, sku:skuNuovo, tipo:"CHECKIN", lineaDa:lineaUsa, lineaA:"", skuDa:skuNuovo, skuA:skuNuovo}),{mode:"cors"});
+      } catch(e){}
+    }
+    if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
+    setLoading(false); setModAddSku(null); setSelezionati(new Set());
+  };
   const [loading, setLoading] = React.useState(false);
   const [loadingMsg, setLoadingMsg] = React.useState("");
   const [datiProd, setDatiProd] = React.useState(null);
@@ -3723,7 +3749,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   </div>
                 );})}
               </div>
-              <div style={{padding:"0 16px 16px"}}>
+              <div style={{padding:"0 16px 16px",display:"flex",flexDirection:"column",gap:8}}>
+                {editOrario&&op&&(
+                  <button onClick={()=>{ setModAddSku({matricole:new Set([mat]), sku:"", linea:lin}); setPopupSkuOp(null); }} style={{width:"100%",padding:11,fontSize:14,fontWeight:700,border:"2px solid #f59e0b",borderRadius:8,background:"#fff7ed",color:"#d97706",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>+ Aggiungi articolo</button>
+                )}
                 <button onClick={()=>setPopupSkuOp(null)} style={{...MS.cf,width:"100%",padding:12,fontSize:15}}>Chiudi</button>
               </div>
             </div>
@@ -3764,6 +3793,29 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 if(onAggiornaSessioni) onAggiornaSessioni();
               }}>✓ Salva</button>
               <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModMultipla(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {editOrario&&modAddSku&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #fcd34d, 0 0 40px 12px #f59e0b66"}}>
+            <div style={{fontSize:16,fontWeight:800,color:"#d97706",marginBottom:6,display:"flex",alignItems:"center",gap:6}}>📦 Aggiungi articolo in lavorazione</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>L'articolo verrà aggiunto a {modAddSku.matricole.size} operator{modAddSku.matricole.size===1?"e":"i"}, in aggiunta a quello che già lavorano.</div>
+            <div style={{fontSize:12,color:"#d97706",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800}}>Articolo</div>
+            <select value={modAddSku.sku} onChange={e=>setModAddSku({...modAddSku, sku:e.target.value, _err:""})} style={{width:"100%",padding:"12px 14px",fontSize:15,border:"2px solid #f59e0b",borderRadius:10,marginBottom:16,fontFamily:"'Montserrat',sans-serif",background:"#fff",color:"#1e293b"}}>
+              <option value="">— Seleziona articolo —</option>
+              {skuList.filter(s=>s.sku!=="RIPARAZIONE").map(s=>(
+                <option key={s.sku} value={s.sku}>{s.sku}{s.descrizione?(" — "+s.descrizione):""}</option>
+              ))}
+            </select>
+            {modAddSku._err&&<div style={{...S.err,marginBottom:12}}>{modAddSku._err}</div>}
+            <div style={{display:"flex",gap:8}}>
+              <button style={{flex:1,padding:11,background:"#f59e0b",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
+                if(!modAddSku.sku){ setModAddSku({...modAddSku,_err:"Seleziona un articolo."}); return; }
+                aggiungiArticoloLavorazione(modAddSku.matricole, modAddSku.sku, modAddSku.linea);
+              }}>✓ Aggiungi</button>
+              <button style={{flex:1,padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModAddSku(null)}>Annulla</button>
             </div>
           </div>
         </div>
@@ -4254,6 +4306,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Inizio</button>
                   <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Fine</button>
+                  <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}>📦 Articolo</button>
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
                     setLoading(true); setLoadingMsg("Eliminazione...");
