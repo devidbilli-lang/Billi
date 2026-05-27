@@ -3380,34 +3380,40 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const aggiungiArticoloLavorazione = async (matricoleSet, skuNuovo, lineaId) => {
     if(!skuNuovo || !matricoleSet || matricoleSet.size===0) return;
     setLoading(true); setLoadingMsg("Aggiunta articolo...");
-    const matArr = Array.from(matricoleSet);
-    for(const mat of matArr){
-      // Trova la sessione attiva di questa matricola per recuperare nome/cognome/linea/inizio
-      const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
-                   sessioni.find(s => s.matricola===mat && !s.fine);
-      if(!sAtt) continue; // nessuna sessione attiva: non ha senso aggiungere un articolo
-      const nome = sAtt.nome||""; const cognome = sAtt.cognome||"";
-      // Linea: la lineaCorrente della sessione attiva (id normalizzato), più affidabile del valore passato.
-      const lineaUsa = sAtt.lineaCorrente || lineaId || "";
-      // Orario di inizio del turno della persona: l'articolo aggiunto si considera lavorato
-      // DALL'INIZIO TURNO (compatibile coi calcoli: stesso tsInizio → multi-SKU simultaneo).
-      const tsInizioTurno = (sAtt.tsInizio && sAtt.tsInizio>0) ? sAtt.tsInizio : (parseData(sAtt.inizio)?.getTime()||null);
-      // sessionId univoco: sotto-sessione distinta, non collide col dedup (sku diverso).
-      const nuovoSid = "ADD_"+mat+"_"+skuNuovo+"_"+Date.now();
-      try {
-        // 1) Crea il CHECKIN extra (nasce con l'ora corrente lato worker)
-        const r = await fetch(nexusUrl("evento",{sessionId:nuovoSid, matricola:mat, nome, cognome, sku:skuNuovo, tipo:"CHECKIN", lineaDa:lineaUsa, lineaA:"", skuDa:skuNuovo, skuA:skuNuovo}),{mode:"cors"});
-        let creato = true;
-        try { const j = await r.json(); if(j && j.data && j.data.scritto===false) creato = false; } catch(e){}
-        // 2) Se creato e conosciamo l'inizio turno, allinea l'orario del nuovo checkin all'inizio turno
-        if(creato && tsInizioTurno){
-          await new Promise(res=>setTimeout(res, 600)); // breve attesa: commit del checkin in D1
-          try { await fetch(nexusUrl("modificaorario",{sessionId:nuovoSid, campo:"inizio", valore:new Date(tsInizioTurno).toISOString()}),{mode:"cors"}); } catch(e){}
-        }
-      } catch(e){}
+    try {
+      const matArr = Array.from(matricoleSet);
+      for(const mat of matArr){
+        // Trova la sessione attiva di questa matricola per recuperare nome/cognome/linea/inizio
+        const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
+                     sessioni.find(s => s.matricola===mat && !s.fine);
+        if(!sAtt) continue; // nessuna sessione attiva: non ha senso aggiungere un articolo
+        const nome = sAtt.nome||""; const cognome = sAtt.cognome||"";
+        // Linea: la lineaCorrente della sessione attiva (id normalizzato), più affidabile del valore passato.
+        const lineaUsa = sAtt.lineaCorrente || lineaId || "";
+        // Orario di inizio del turno della persona: l'articolo aggiunto si considera lavorato
+        // DALL'INIZIO TURNO (compatibile coi calcoli: stesso tsInizio → multi-SKU simultaneo).
+        let tsInizioTurno = null;
+        try { tsInizioTurno = (sAtt.tsInizio && sAtt.tsInizio>0) ? sAtt.tsInizio : (parseData(sAtt.inizio)?(parseData(sAtt.inizio).getTime()):null); } catch(e){ tsInizioTurno = null; }
+        // sessionId univoco: sotto-sessione distinta, non collide col dedup (sku diverso).
+        const nuovoSid = "ADD_"+mat+"_"+skuNuovo+"_"+Date.now();
+        try {
+          // 1) Crea il CHECKIN extra (nasce con l'ora corrente lato worker)
+          const r = await fetch(nexusUrl("evento",{sessionId:nuovoSid, matricola:mat, nome, cognome, sku:skuNuovo, tipo:"CHECKIN", lineaDa:lineaUsa, lineaA:"", skuDa:skuNuovo, skuA:skuNuovo}),{mode:"cors"});
+          let creato = true;
+          try { const j = await r.json(); if(j && j.data && j.data.scritto===false) creato = false; } catch(e){}
+          // 2) Se creato e conosciamo l'inizio turno, allinea l'orario del nuovo checkin all'inizio turno
+          if(creato && tsInizioTurno){
+            await new Promise(res=>setTimeout(res, 600)); // breve attesa: commit del checkin in D1
+            try { await fetch(nexusUrl("modificaorario",{sessionId:nuovoSid, campo:"inizio", valore:new Date(tsInizioTurno).toISOString()}),{mode:"cors"}); } catch(e){}
+          }
+        } catch(e){}
+      }
+    } catch(e){
+      // qualunque errore imprevisto: non lasciare lo spinner appeso
+    } finally {
+      setLoading(false); setModAddSku(null); setSelezionati(new Set());
+      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
     }
-    if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
-    setLoading(false); setModAddSku(null); setSelezionati(new Set());
   };
   const [loading, setLoading] = React.useState(false);
   const [loadingMsg, setLoadingMsg] = React.useState("");
