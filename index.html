@@ -1099,7 +1099,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             const cardPad= compatto ? "3px 5px" : (nRighe<=1?"8px 12px":nRighe<=2?"5px 8px":"3px 5px");
 
             return coppie.map((coppia,ci)=>(
-              <div key={ci} style={{display:"flex",gap:8,flex:1,minHeight:0}}>
+              <div key={ci} style={{display:"flex",flexDirection:compatto?"column":"row",gap:compatto?0:8,flex:1,minHeight:0}}>
               {coppia.map(skuItem=>{
               const skuObjItem=skuList.find(x=>x&&x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
@@ -1208,6 +1208,32 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const _k2 = _lNome+"_"+skuItem;
               const qData = qualitaPerSku[_k1]||qualitaPerSku[_k2]||{};
               if(Object.keys(qualitaPerSku).length>0) console.log("[QDATA] cerca:", _k1, "trovato:", !!qualitaPerSku[_k1], "chiavi disp:", Object.keys(qualitaPerSku).slice(0,3));
+              // Numero operatori (quota equa) su questo SKU — serve sia in vista normale (header
+              // viola) sia in vista compatta (lista a righe). Calcolato qui per riusarlo in entrambi.
+              const _opLineaItem = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!isSkuSpeciale(s.skuCorrente||s.sku||""));
+              const _skuPerOpItem = {};
+              _opLineaItem.forEach(s=>{ const m=s.matricola||s.nome; if(!m) return; if(!_skuPerOpItem[m]) _skuPerOpItem[m]=new Set(); _skuPerOpItem[m].add(s.skuCorrente||s.sku); });
+              let nOpSkuItem = 0;
+              Object.entries(_skuPerOpItem).forEach(([mat, skus])=>{ if(skus.has(skuItem)) nOpSkuItem += 1/skus.size; });
+              nOpSkuItem = Math.round(nOpSkuItem * 10) / 10;
+              // VISTA COMPATTA (griglia multi-linea): riga densa con sku · operatori · obiettivo · KO/MIGL
+              if(compatto){
+                return (
+                  <div key={skuItem} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"4px 8px",borderBottom:"1px solid #e2e8f0",fontSize:"clamp(11px,1.4vw,15px)",lineHeight:1.2,minHeight:0}}>
+                    <span style={{fontWeight:900,color:"#6d28d9",letterSpacing:0.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:"1 1 auto",minWidth:0}}>{skuItem}</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:3,fontWeight:800,color:"#111827",flexShrink:0}}>👤 {nOpSkuItem}</span>
+                    <span style={{fontWeight:900,color:"#111827",flexShrink:0,whiteSpace:"nowrap"}}>
+                      <span>{qData.ok||0}</span>
+                      <span style={{color:"#94a3b8",fontWeight:300,margin:"0 2px"}}>/</span>
+                      <span style={{color:inRampaItem?"#ff6937":"#6d28d9"}}>{obFinaleItemRampa||0}</span>
+                    </span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:6,flexShrink:0,whiteSpace:"nowrap"}}>
+                      <span style={{fontWeight:700,color:"#ef4444"}}>KO {qData.ko||0}</span>
+                      <span style={{fontWeight:700,color:"#f59e0b"}}>MGL {qData.migl||0}</span>
+                    </span>
+                  </div>
+                );
+              }
               return (
                 <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
                   {/* Header articolo - nome completo viola */}
