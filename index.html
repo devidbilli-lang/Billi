@@ -1099,7 +1099,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             const cardPad= compatto ? "3px 5px" : (nRighe<=1?"8px 12px":nRighe<=2?"5px 8px":"3px 5px");
 
             return coppie.map((coppia,ci)=>(
-              <div key={ci} style={{display:"flex",flexDirection:compatto?"column":"row",gap:compatto?0:8,flex:1,minHeight:0}}>
+              <div key={ci} style={{display:"flex",flexDirection:"row",flexWrap:compatto?"wrap":"nowrap",gap:compatto?6:8,flex:compatto?"0 0 auto":1,minHeight:0}}>
               {coppia.map(skuItem=>{
               const skuObjItem=skuList.find(x=>x&&x.sku===skuItem);
               const tcItem=skuObjItem?.tc||0;
@@ -1209,28 +1209,58 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const qData = qualitaPerSku[_k1]||qualitaPerSku[_k2]||{};
               if(Object.keys(qualitaPerSku).length>0) console.log("[QDATA] cerca:", _k1, "trovato:", !!qualitaPerSku[_k1], "chiavi disp:", Object.keys(qualitaPerSku).slice(0,3));
               // Numero operatori (quota equa) su questo SKU — serve sia in vista normale (header
-              // viola) sia in vista compatta (lista a righe). Calcolato qui per riusarlo in entrambi.
-              const _opLineaItem = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!isSkuSpeciale(s.skuCorrente||s.sku||""));
+              // viola) sia in vista compatta. A turno terminato includiamo anche le sessioni chiuse
+              // di oggi, altrimenti il conteggio crollerebbe a 0 appena tutti escono.
+              const _oggi00 = new Date(); _oggi00.setHours(0,0,0,0);
+              const _opLineaItem = sessioni.filter(s=>{
+                if(s.lineaCorrente!==lineaId) return false;
+                if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
+                if(turnoTerminato){
+                  const dI = parseData(s.inizio);
+                  if(!dI || dI.getTime() < _oggi00.getTime()) return false;
+                } else {
+                  if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
+                }
+                return true;
+              });
               const _skuPerOpItem = {};
               _opLineaItem.forEach(s=>{ const m=s.matricola||s.nome; if(!m) return; if(!_skuPerOpItem[m]) _skuPerOpItem[m]=new Set(); _skuPerOpItem[m].add(s.skuCorrente||s.sku); });
               let nOpSkuItem = 0;
               Object.entries(_skuPerOpItem).forEach(([mat, skus])=>{ if(skus.has(skuItem)) nOpSkuItem += 1/skus.size; });
               nOpSkuItem = Math.round(nOpSkuItem * 10) / 10;
-              // VISTA COMPATTA (griglia multi-linea): riga densa con sku · operatori · obiettivo · KO/MIGL
+              // VISTA COMPATTA (griglia multi-linea): riquadro stile "Operatori" per ogni SKU
+              // — titolo sku, badge giorni rampa (se in rampa), n° operatori,
+              //   obiettivo grande al centro, KO/MGL piccoli sotto.
               if(compatto){
+                const borseItem = qData.ok||0;
                 return (
-                  <div key={skuItem} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"4px 8px",borderBottom:"1px solid #e2e8f0",fontSize:"clamp(11px,1.4vw,15px)",lineHeight:1.2,minHeight:0}}>
-                    <span style={{fontWeight:900,color:"#6d28d9",letterSpacing:0.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:"1 1 auto",minWidth:0}}>{skuItem}</span>
-                    <span style={{display:"inline-flex",alignItems:"center",gap:3,fontWeight:800,color:"#111827",flexShrink:0}}>👤 {nOpSkuItem}</span>
-                    <span style={{fontWeight:900,color:"#111827",flexShrink:0,whiteSpace:"nowrap"}}>
-                      <span>{qData.ok||0}</span>
-                      <span style={{color:"#94a3b8",fontWeight:300,margin:"0 2px"}}>/</span>
-                      <span style={{color:inRampaItem?"#ff6937":"#6d28d9"}}>{obFinaleItemRampa||0}</span>
-                    </span>
-                    <span style={{display:"inline-flex",alignItems:"center",gap:6,flexShrink:0,whiteSpace:"nowrap"}}>
-                      <span style={{fontWeight:700,color:"#ef4444"}}>KO {qData.ko||0}</span>
-                      <span style={{fontWeight:700,color:"#f59e0b"}}>MGL {qData.migl||0}</span>
-                    </span>
+                  <div key={skuItem} style={{flex:"1 1 45%",minWidth:0,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:3,textAlign:"center"}}>
+                    {/* Titolo SKU */}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,width:"100%"}}>
+                      <span style={{fontSize:"clamp(10px,1.3vw,14px)",fontWeight:900,color:"#6d28d9",letterSpacing:0.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{skuItem}</span>
+                    </div>
+                    {/* Giorni di rampa (solo se presente) */}
+                    {inRampaItem && (
+                      <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1.5px solid #ff6937",borderRadius:6,padding:"1px 6px"}}>
+                        <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:800,color:"#ff6937"}}>📈 {giornoRampaItem}/15</span>
+                      </div>
+                    )}
+                    {/* Numero operatori */}
+                    <div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:"clamp(11px,1.4vw,15px)"}}>👤</span>
+                      <span style={{fontSize:"clamp(13px,1.7vw,18px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpSkuItem}</span>
+                    </div>
+                    {/* Obiettivo grande (stile valore Operatori) */}
+                    <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:4}}>
+                      <span style={{fontSize:"clamp(26px,4vw,46px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
+                      <span style={{fontSize:"clamp(16px,2.4vw,28px)",fontWeight:300,color:"#94a3b8",lineHeight:1}}>/</span>
+                      <span style={{fontSize:"clamp(20px,3vw,34px)",fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
+                    </div>
+                    {/* KO/MGL piccoli */}
+                    <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ef4444"}}>KO {qData.ko||0}</span>
+                      <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#f59e0b"}}>MGL {qData.migl||0}</span>
+                    </div>
                   </div>
                 );
               }
