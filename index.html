@@ -667,7 +667,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       }
     }).catch(()=>{});
   },[lineaId]);
-  React.useEffect(()=>{ caricaObCongelato(); const t=setInterval(caricaObCongelato,60000); return()=>clearInterval(t); },[caricaObCongelato]);
+  React.useEffect(()=>{ caricaObCongelato(); const t=setInterval(caricaObCongelato,15000); return()=>clearInterval(t); },[caricaObCongelato]);
   const pausaKey = "pausa_fl_"+lineaId;
   const [inPausa, setInPausaRaw] = React.useState(()=>{ try{ return localStorage.getItem(pausaKey)==="1"; }catch{return false;} });
   const [pausaInizio, setPausaInizioRaw] = React.useState(()=>{ try{ const v=localStorage.getItem(pausaKey+"_ts"); return v?Number(v):null; }catch{return null;} });
@@ -888,12 +888,23 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const obFinaleEffettivo = (obCongelato!=null) ? obCongelato : obFinale;
   // CONGELAMENTO: quando il turno è chiuso (tutti in checkout) e non c'è ancora un valore congelato,
   // salva l'obiettivo corrente su D1 così resta fisso.
+  // FRENO ANTI-RICONGELAMENTO: dopo una correzione manuale di orario (scritta in localStorage come
+  // timestamp), per qualche secondo NON ricongeliamo, così obFinale ha il tempo di ricalcolarsi sui
+  // dati freschi e ricongeliamo il valore CORRETTO invece di ri-bloccare quello vecchio.
   React.useEffect(()=>{
     if(turnoTerminato && obCongelato==null && obFinale!=null && obFinale>0){
+      let _ultModifica = 0;
+      try{ _ultModifica = Number(localStorage.getItem("nexus_ult_modifica_orario")||"0"); }catch(e){}
+      const _trascorsi = Date.now() - _ultModifica;
+      if(_ultModifica>0 && _trascorsi < 8000){
+        // Modifica recente: rimanda il ricongelamento di qualche secondo per dar tempo al ricalcolo.
+        const _t = setTimeout(()=>{ setObCongelato(c=>c); }, 8000 - _trascorsi + 200);
+        return ()=>clearTimeout(_t);
+      }
       fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obFinale}))
         .then(r=>r.json()).then(()=>{ setObCongelato(obFinale); }).catch(()=>{});
     }
-  },[turnoTerminato, obCongelato, obFinale, lineaId]);
+  },[turnoTerminato, obCongelato, obFinale, lineaId, tick]);
   // SALVATAGGIO CONTINUO (Opzione A): durante il turno l'app è sempre aperta sui tablet di linea,
   // mentre a fine turno spesso è chiusa ovunque → il congelamento "solo a turno chiuso" poteva
   // mancare. Qui salviamo l'obiettivo corrente su D1 ad OGNI variazione (anche a turno in corso),
@@ -3851,6 +3862,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 }
                 // Invalida gli obiettivi congelati del giorno: la modifica multipla può toccare
                 // operatori di linee diverse, quindi si ricalcola tutto sul nuovo orario.
+                try{ localStorage.setItem("nexus_ult_modifica_orario", String(Date.now())); }catch(e){}
                 try{ await fetch(nexusUrl("invalidaObiettivoCongelato",{}),{mode:"cors"}); }catch(e){}
                 setLoading(false); setModMultipla(null); setSelezionati(new Set());
                 if(onAggiornaSessioni) onAggiornaSessioni();
@@ -3923,6 +3935,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               setLoading(true); setLoadingMsg("Salvataggio orario...");
               try{
                 await fetchConRetry(nexusUrl("modificaorario",{sessionId:modOrario.sess.id,campo:modOrario.campo,valore:nd.toISOString()}),5,1000);
+                // Segna il momento della correzione manuale: il componente di linea usa questo
+                // timestamp per non ri-congelare subito l'obiettivo (gli dà tempo di ricalcolarsi).
+                try{ localStorage.setItem("nexus_ult_modifica_orario", String(Date.now())); }catch(e){}
                 // Invalida l'obiettivo congelato della linea: se la correzione avviene a turno
                 // chiuso, l'obiettivo deve ricalcolarsi sul nuovo orario invece di restare bloccato.
                 try{ await fetch(nexusUrl("invalidaObiettivoCongelato",{linea:modOrario.sess.lineaCorrente||""}),{mode:"cors"}); }catch(e){}
