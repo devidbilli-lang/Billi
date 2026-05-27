@@ -3193,6 +3193,12 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),60000); return()=>clearInterval(t); },[]);
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
+  // Orari turno: standard (inizio/fine) e "solo oggi" (validi solo per la data corrente).
+  // Letti dal localStorage, popolato da caricaOrariDaD1 (allineato a D1 ogni 60s).
+  const _orariStdInizio = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); }catch(e){ return {}; } })();
+  const _orariStdFine   = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); }catch(e){ return {}; } })();
+  const _orariOggi      = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
+  const _oggiStr        = new Date().toLocaleDateString('it-IT');
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
     const sessAtt = sessioni.find(s => (s.matricola===chiave||s.matricola===op.matricola) && !s.fine && !s._pianificato);
     const ultimaSess = sessioni.filter(s => s.matricola===chiave||s.matricola===op.matricola).sort((a,b)=> (parseData(b.inizio)||0)-(parseData(a.inizio)||0))[0];
@@ -3234,6 +3240,31 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 </div>
                 <span style={{fontSize:11,fontWeight:700,color:presente?"#22c55e":"#475569",background:presente?"#22c55e18":"#e1e1e1",padding:"2px 8px",borderRadius:4}}>{presente?"IN TURNO":"ASSENTE"}</span>
               </div>
+              {(()=>{
+                // Orario standard dell'operatore (per matricola)
+                const stdI = _orariStdInizio[op.matricola] || "";
+                const stdF = _orariStdFine[op.matricola] || "";
+                // Orario "solo oggi" (valido solo se data === oggi)
+                const oggiOp = _orariOggi[op.matricola];
+                const haOggi = oggiOp && oggiOp.data===_oggiStr && (oggiOp.inizioOggi || oggiOp.fineOggi);
+                const oggiI = haOggi ? (oggiOp.inizioOggi||"") : "";
+                const oggiF = haOggi ? (oggiOp.fineOggi||"") : "";
+                if(!stdI && !stdF && !haOggi) return null;
+                return (
+                  <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
+                      <span style={{fontWeight:700,color:"#64748b",minWidth:62}}>Standard</span>
+                      <span style={{color:"#1e293b",fontWeight:600}}>{(stdI||"06:00")} – {(stdF||"14:00")}</span>
+                    </div>
+                    {haOggi&&(
+                      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
+                        <span style={{fontWeight:700,color:"#d97706",minWidth:62}}>Solo oggi</span>
+                        <span style={{color:"#b45309",fontWeight:700,background:"#fef3c7",padding:"1px 8px",borderRadius:4}}>{(oggiI||stdI||"06:00")} – {(oggiF||stdF||"14:00")}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {presente&&sessAtt&&(
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 12px",fontSize:12}}>
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
