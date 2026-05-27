@@ -3849,6 +3849,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 for(const s of toUpdate){
                   try{ await fetch(nexusUrl("modificaorario",{sessionId:s.id,campo:modMultipla.campo,valore:nd.toISOString()}),{mode:"cors"}); }catch(e){}
                 }
+                // Invalida gli obiettivi congelati del giorno: la modifica multipla può toccare
+                // operatori di linee diverse, quindi si ricalcola tutto sul nuovo orario.
+                try{ await fetch(nexusUrl("invalidaObiettivoCongelato",{}),{mode:"cors"}); }catch(e){}
                 setLoading(false); setModMultipla(null); setSelezionati(new Set());
                 if(onAggiornaSessioni) onAggiornaSessioni();
               }}>✓ Salva</button>
@@ -3920,6 +3923,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               setLoading(true); setLoadingMsg("Salvataggio orario...");
               try{
                 await fetchConRetry(nexusUrl("modificaorario",{sessionId:modOrario.sess.id,campo:modOrario.campo,valore:nd.toISOString()}),5,1000);
+                // Invalida l'obiettivo congelato della linea: se la correzione avviene a turno
+                // chiuso, l'obiettivo deve ricalcolarsi sul nuovo orario invece di restare bloccato.
+                try{ await fetch(nexusUrl("invalidaObiettivoCongelato",{linea:modOrario.sess.lineaCorrente||""}),{mode:"cors"}); }catch(e){}
                 setModOrario(null);setSalvaOrarioErr("");
                 if(onAggiornaSessioni) onAggiornaSessioni();
               }catch(e){setSalvaOrarioErr("Errore salvataggio.");}
