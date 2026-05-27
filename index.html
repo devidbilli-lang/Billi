@@ -1012,14 +1012,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
           {/* Efficienza */}
           <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:compatto?"8px":"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
             <div style={{fontSize:compatto?"clamp(11px,1.4vw,15px)":"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:compatto?2:6}}>Efficienza</div>
-            {(()=>{const pct=efficienzaPct||0;return(
+            {(()=>{const pct=efficienzaPct||0; const arcCol = compatto ? (coloreLinea||"#7c3aed") : "#7c3aed"; return(
               <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
                 <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
-                {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
+                {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={arcCol} strokeWidth="16" strokeLinecap="round"
                   strokeDasharray={`${(pct/100)*Math.PI*90} ${Math.PI*90}`}
-                  style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
-                {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#7c3aed" strokeWidth="16" strokeLinecap="round"
-                  style={{filter:"drop-shadow(0 0 6px #7c3aed)"}}/>}
+                  style={{filter:`drop-shadow(0 0 6px ${arcCol})`}}/>}
+                {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={arcCol} strokeWidth="16" strokeLinecap="round"
+                  style={{filter:`drop-shadow(0 0 6px ${arcCol})`}}/>}
                 <text x="100" y="92" textAnchor="middle" fontSize="44" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
               </svg>
             );})()}
