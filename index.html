@@ -1025,7 +1025,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             );})()}
           </div>
 
-          {/* KO + Migl affiancati */}
+          {/* KO + Migl affiancati - nascosti in vista griglia (compatto): in griglia i totali
+              vanno nell'header della linea, accanto al nome. */}
+          {!compatto && (
           <div style={{flex:1.5,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"row",justifyContent:"space-around",alignItems:"center"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               <svg width={compatto?22:44} height={compatto?22:44} viewBox="0 0 36 36" fill="none">
@@ -1055,6 +1057,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               </div>
             </div>
           </div>
+          )}
 
         </div>
 
@@ -1254,6 +1257,13 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                         <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
                         <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
                         <span style={{fontSize:fMid,fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
+                        {/* KO + MIGL piccoli accanto all'obiettivo SOLO in vista compatta (griglia multi-linea) */}
+                        {compatto && (
+                          <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
+                            <span style={{fontSize:fSep,fontWeight:700,color:"#ef4444",lineHeight:1}}>KO {qData.ko||0}</span>
+                            <span style={{fontSize:fSep,fontWeight:700,color:"#f59e0b",lineHeight:1}}>MIGL {qData.migl||0}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                       );
@@ -1290,7 +1300,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     </div>
                     )}
 
-                    {/* KO + Migl affiancati con faccette */}
+                    {/* KO + Migl affiancati con faccette - nascosti in vista griglia (compatto):
+                        in griglia vengono mostrati piccoli accanto all'obiettivo dello SKU. */}
+                    {!compatto && (
                     <div style={{flex:1,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:10,padding:cardPad,display:"flex",alignItems:"center",justifyContent:"space-around",gap:4}}>
                       <div style={{display:"flex",alignItems:"center",gap:compatto?6:4}}>
                         <svg width={compatto?(fSvg*1.6):fSvg} height={compatto?(fSvg*1.6):fSvg} viewBox="0 0 36 36" fill="none">
@@ -1320,6 +1332,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                         </div>
                       </div>
                     </div>
+                    )}
 
                   </div>
                 </div>
@@ -1470,7 +1483,12 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
               <div key={l.id} style={{minHeight:0,background:"#fff",border:"4px solid "+(l.colore||"#7c3aed"),borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+(l.colore||"#7c3aed")+"99, 0 0 4px "+(l.colore||"#7c3aed")+", inset 0 0 8px "+(l.colore||"#7c3aed")+"22",display:"flex",flexDirection:"column"}}>
                 <div style={{padding:"5px 10px",borderBottom:"1px solid "+(l.colore||"#7c3aed")+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                   <div style={{width:9,height:9,borderRadius:"50%",background:l.colore||"#7c3aed",flexShrink:0}}/>
-                  <div style={{fontSize:12,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.id}</div>
+                  <div style={{fontSize:12,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{l.id}</div>
+                  {/* Totale KO + MIGL della linea, sulla stessa riga del nome, allineati a destra */}
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                    <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {d.borseKO||0}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {d.borseMigl||0}</span>
+                  </div>
                 </div>
                 {/* compatto=true riduce font e nasconde card gialla; il contenuto è clippato all'altezza della card */}
                 <div style={{flex:1,overflow:"hidden",zoom:0.5,padding:"2px 2px"}}>
