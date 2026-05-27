@@ -3199,6 +3199,27 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   const _orariStdFine   = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); }catch(e){ return {}; } })();
   const _orariOggi      = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
   const _oggiStr        = new Date().toLocaleDateString('it-IT');
+  // Modal di modifica orario (standard o solo-oggi) apribile dai pulsantini sulle card.
+  const [modOra, setModOra] = useState(null); // { op, tipo:'standard'|'oggi', inizio, fine }
+  // Salvataggio STANDARD: aggiorna D1 e localStorage subito (così la card si aggiorna senza attendere il refresh 60s).
+  const salvaStd = (matricola, inizio, fine) => {
+    fetch(nexusUrl('salvaOrarioOperatore',{matricola,orarioInizio:inizio,orarioFine:fine}),{mode:'cors'}).catch(()=>{});
+    try {
+      const li = JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); li[matricola]=inizio; localStorage.setItem('nexus_orari_turno', JSON.stringify(li));
+      const lf = JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); lf[matricola]=fine; localStorage.setItem('nexus_orari_fine_turno', JSON.stringify(lf));
+    } catch(e){}
+    setTk(x=>x+1);
+  };
+  // Salvataggio SOLO OGGI: aggiorna D1 e localStorage subito.
+  const salvaOggiOp = (matricola, inizioOggi, fineOggi) => {
+    fetch(nexusUrl('salvaOrarioOggi',{matricola,orarioInizioOggi:inizioOggi,orarioFineOggi:fineOggi}),{mode:'cors'}).catch(()=>{});
+    try {
+      const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
+      lo[matricola] = {inizioOggi, fineOggi, data:_oggiStr};
+      localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
+    } catch(e){}
+    setTk(x=>x+1);
+  };
   const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
     const sessAtt = sessioni.find(s => (s.matricola===chiave||s.matricola===op.matricola) && !s.fine && !s._pianificato);
     const ultimaSess = sessioni.filter(s => s.matricola===chiave||s.matricola===op.matricola).sort((a,b)=> (parseData(b.inizio)||0)-(parseData(a.inizio)||0))[0];
@@ -3249,7 +3270,21 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 const haOggi = oggiOp && oggiOp.data===_oggiStr && (oggiOp.inizioOggi || oggiOp.fineOggi);
                 const oggiI = haOggi ? (oggiOp.inizioOggi||"") : "";
                 const oggiF = haOggi ? (oggiOp.fineOggi||"") : "";
-                if(!stdI && !stdF && !haOggi) return null;
+                if(!stdI && !stdF && !haOggi) {
+                  // Nessun orario impostato: mostro comunque lo standard di default + i pulsanti di modifica
+                  return (
+                    <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
+                        <span style={{fontWeight:700,color:"#64748b",minWidth:62}}>Standard</span>
+                        <span style={{color:"#1e293b",fontWeight:600}}>06:00 – 14:00</span>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>setModOra({op, tipo:"standard", inizio:"06:00", fine:"14:00"})} style={{flex:1,padding:"5px 8px",fontSize:11,fontWeight:700,border:"1px solid #7c3aed",borderRadius:6,background:"#7c3aed11",color:"#7c3aed",cursor:"pointer",fontFamily:"inherit"}}>✎ Standard</button>
+                        <button onClick={()=>setModOra({op, tipo:"oggi", inizio:"06:00", fine:"14:00"})} style={{flex:1,padding:"5px 8px",fontSize:11,fontWeight:700,border:"1px solid #ff6937",borderRadius:6,background:"#ff693711",color:"#ff6937",cursor:"pointer",fontFamily:"inherit"}}>✎ Solo oggi</button>
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
@@ -3262,6 +3297,10 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                         <span style={{color:"#b45309",fontWeight:700,background:"#fef3c7",padding:"1px 8px",borderRadius:4}}>{(oggiI||stdI||"06:00")} – {(oggiF||stdF||"14:00")}</span>
                       </div>
                     )}
+                    <div style={{display:"flex",gap:6,marginTop:2}}>
+                      <button onClick={()=>setModOra({op, tipo:"standard", inizio:(stdI||"06:00"), fine:(stdF||"14:00")})} style={{flex:1,padding:"5px 8px",fontSize:11,fontWeight:700,border:"1px solid #7c3aed",borderRadius:6,background:"#7c3aed11",color:"#7c3aed",cursor:"pointer",fontFamily:"inherit"}}>✎ Standard</button>
+                      <button onClick={()=>setModOra({op, tipo:"oggi", inizio:(oggiI||stdI||"06:00"), fine:(oggiF||stdF||"14:00")})} style={{flex:1,padding:"5px 8px",fontSize:11,fontWeight:700,border:"1px solid #ff6937",borderRadius:6,background:"#ff693711",color:"#ff6937",cursor:"pointer",fontFamily:"inherit"}}>✎ Solo oggi</button>
+                    </div>
                   </div>
                 );
               })()}
@@ -3286,6 +3325,30 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
             </div>
           ); })}
       </div>
+      {modOra&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px "+(modOra.tipo==="oggi"?"#ffc299":"#a78bfa")+", 0 0 40px 12px "+(modOra.tipo==="oggi"?"#ff693766":"#7c3aed66")}}>
+            <div style={{fontSize:18,fontWeight:800,color:modOra.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:4,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",gap:6}}><IconaMatita size={22}/> Modifica orario</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:2}}>{modOra.op.nome} {modOra.op.cognome}</div>
+            <div style={{fontSize:12,fontWeight:800,color:modOra.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:18,letterSpacing:0.5}}>{modOra.tipo==="oggi"?"Solo Oggi":"Turno Standard"}</div>
+            <div style={{fontSize:12,color:modOra.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio</div>
+            <div style={{marginBottom:14,textAlign:"center"}}>
+              <TimePicker value={modOra.inizio} color={modOra.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOra({...modOra,inizio:v})}/>
+            </div>
+            <div style={{fontSize:12,color:modOra.tipo==="oggi"?"#ff6937":"#7c3aed",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine</div>
+            <div style={{marginBottom:18,textAlign:"center"}}>
+              <TimePicker value={modOra.fine} color={modOra.tipo==="oggi"?"#ff6937":"#7c3aed"} onChange={v=>setModOra({...modOra,fine:v})}/>
+            </div>
+            <button style={{...S.bCI,marginBottom:10,background:modOra.tipo==="oggi"?"#ff6937":"#7c3aed",color:"#ffffff"}} onClick={()=>{
+              const m = modOra.op.matricola;
+              if(modOra.tipo==="oggi"){ salvaOggiOp(m, modOra.inizio, modOra.fine); }
+              else { salvaStd(m, modOra.inizio, modOra.fine); }
+              setModOra(null);
+            }}>✓ Salva orario</button>
+            <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>setModOra(null)}>← Annulla</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
