@@ -3377,6 +3377,27 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   // per gli operatori indicati, MANTENENDO il SKU che già lavorano (lavorazione simultanea).
   // sessionId univoco derivato per non collidere col dedup del worker (session_id+sku).
   const [modAddSku, setModAddSku] = React.useState(null); // { matricole:Set, sku, linea }
+  // CORSO MULTIPLO: manda al corso (sospende dalla produzione) tutte le persone selezionate.
+  const [modCorsoMulti, setModCorsoMulti] = React.useState(null); // { matricole:Set, nome }
+  const mandaCorsoMultiplo = async (matricoleSet, nomeCorso) => {
+    if(!matricoleSet || matricoleSet.size===0) return;
+    setLoading(true); setLoadingMsg("Spostamento al corso...");
+    try {
+      const matArr = Array.from(matricoleSet);
+      for(const mat of matArr){
+        const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
+                     sessioni.find(s => s.matricola===mat && !s.fine);
+        if(!sAtt) continue;
+        try {
+          await fetch(nexusUrl("evento",{sessionId:sAtt.id, matricola:mat, nome:sAtt.nome||"", cognome:sAtt.cognome||"", sku:sAtt.skuCorrente||sAtt.sku||"", tipo:"CORSO", lineaDa:sAtt.lineaCorrente, lineaA:sAtt.lineaCorrente, skuDa:sAtt.skuCorrente||sAtt.sku||"", skuA:(nomeCorso||"CORSO")}),{mode:"cors"});
+        } catch(e){}
+      }
+    } catch(e){
+    } finally {
+      setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
+      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
+    }
+  };
   const aggiungiArticoloLavorazione = async (matricoleSet, skuNuovo, lineaId) => {
     if(!skuNuovo || !matricoleSet || matricoleSet.size===0) return;
     setLoading(true); setLoadingMsg("Aggiunta articolo...");
@@ -3832,6 +3853,22 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 aggiungiArticoloLavorazione(modAddSku.matricole, modAddSku.sku, modAddSku.linea);
               }}>✓ Aggiungi</button>
               <button style={{flex:1,padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModAddSku(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {editOrario&&modCorsoMulti&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #67e8f9, 0 0 40px 12px #06b6d466",fontFamily:"'Montserrat',sans-serif"}}>
+            <div style={{fontSize:16,fontWeight:800,color:"#0891b2",marginBottom:6,display:"flex",alignItems:"center",gap:6,fontFamily:"'Montserrat',sans-serif"}}>🎓 Sposta al corso</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:16,fontFamily:"'Montserrat',sans-serif"}}>{modCorsoMulti.matricole.size} operator{modCorsoMulti.matricole.size===1?"e":"i"} verrann{modCorsoMulti.matricole.size===1?"o":"o"} spostat{modCorsoMulti.matricole.size===1?"o":"i"} al corso e si staccano dalla produzione.</div>
+            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,fontFamily:"'Montserrat',sans-serif"}}>Nome corso / formazione</div>
+            <input value={modCorsoMulti.nome} onChange={e=>setModCorsoMulti({...modCorsoMulti, nome:e.target.value})} placeholder="Es. Sicurezza, Formazione macchina..." style={{width:"100%",padding:"12px 14px",fontSize:15,border:"2px solid #06b6d4",borderRadius:10,marginBottom:16,fontFamily:"'Montserrat',sans-serif",background:"#fff",color:"#1e293b",boxSizing:"border-box"}}/>
+            <div style={{display:"flex",gap:8}}>
+              <button style={{flex:1,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
+                mandaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO");
+              }}>✓ Sposta al corso</button>
+              <button style={{flex:1,padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoMulti(null)}>Annulla</button>
             </div>
           </div>
         </div>
@@ -4322,7 +4359,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Inizio</button>
                   <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Fine</button>
-                  <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}>📦 Articolo</button>
+                  <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>📦 Articolo</button>
+                  <button onClick={()=>setModCorsoMulti({matricole:new Set(selezionati), nome:""})} style={{background:"#fff",color:"#06b6d4",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>🎓 Corso</button>
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
                     setLoading(true); setLoadingMsg("Eliminazione...");
