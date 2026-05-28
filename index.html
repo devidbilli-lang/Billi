@@ -3273,12 +3273,19 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   const [hTurno, mTurno] = orarioOp.split(":").map(Number);
                   const oraOp = new Date(); oraOp.setHours(hTurno, mTurno, 0, 0);
                   const diffMs = oraOp.getTime() - oraAttuale.getTime();
-                  if(diffMs > 10 * 60 * 1000) {
-                    // Orario futuro (>10 min) — pianifica il check-in
+                  // RE-CHECK-IN: se la persona ha già fatto checkout oggi (è uscita e ora rientra),
+                  // la registriamo SUBITO indipendentemente dall'orario teorico — è un rientro reale,
+                  // è fisicamente qui adesso, non va pianificata nel futuro.
+                  const giaUscitaOggi = (sessSheets||[]).some(x=>{
+                    const nomeMatch = (x.nome||"").toUpperCase()===(s.nome||"").toUpperCase() && (x.cognome||"").toUpperCase()===(s.cognome||"").toUpperCase();
+                    return nomeMatch && x.fine && x.fine!=="" && x.fine!==null && x.fine!=="null";
+                  });
+                  if(diffMs > 10 * 60 * 1000 && !giaUscitaOggi) {
+                    // Orario futuro (>10 min) e persona NON ancora uscita oggi — pianifica il check-in
                     await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
                     // Non chiamare onSuccess — verrà registrato in automatico
                   } else {
-                    // Orario passato o attuale — registra subito
+                    // Orario passato/attuale, OPPURE rientro dopo uscita — registra subito
                     await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
                     onSuccess(s);
                   }
