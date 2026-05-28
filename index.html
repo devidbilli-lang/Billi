@@ -3617,6 +3617,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modMultipla, setModMultipla] = React.useState(null); // {campo, valore}
   const [modCorsoPian, setModCorsoPian] = React.useState(null); // {sess, nome, oraInizio, oraFine} per modificare corso pianificato
   const [modCorsoReale, setModCorsoReale] = React.useState(null); // {sess, oraEntrata, oraUscita} per modificare orari corso reale in atto
+  const [modCorsoRealeMulti, setModCorsoRealeMulti] = React.useState(null); // {matricole:Set, oraEntrata, oraUscita} modifica orari corso per più persone
   // AGGIUNTA ARTICOLO IN LAVORAZIONE (multi-SKU): registra un nuovo CHECKIN sul SKU scelto
   // per gli operatori indicati, MANTENENDO il SKU che già lavorano (lavorazione simultanea).
   // sessionId univoco derivato per non collidere col dedup del worker (session_id+sku).
@@ -4245,6 +4246,42 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           </div>
         </div>
       )}
+      {modCorsoRealeMulti&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #67e8f9, 0 0 40px 12px #06b6d466",fontFamily:"'Montserrat',sans-serif"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#0891b2",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={20}/> Modifica orari corso</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:16}}>{modCorsoRealeMulti.matricole.size} operatori selezionati</div>
+            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di entrata in corso</div>
+            <div style={{marginBottom:12}}><TimePicker value={modCorsoRealeMulti.oraEntrata} color="#06b6d4" onChange={v=>setModCorsoRealeMulti({...modCorsoRealeMulti, oraEntrata:v})}/></div>
+            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di uscita dal corso (opzionale)</div>
+            <div style={{marginBottom:16}}><TimePicker value={modCorsoRealeMulti.oraUscita||"13:00"} color="#06b6d4" onChange={v=>setModCorsoRealeMulti({...modCorsoRealeMulti, oraUscita:v})}/></div>
+            <button style={{width:"100%",padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}} onClick={async()=>{
+              const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+              setLoading(true); setLoadingMsg("Aggiornamento orari corso...");
+              // Per ogni matricola selezionata, trova le sue sessioni IN CORSO e aggiornane gli orari
+              const matsSel = modCorsoRealeMulti.matricole;
+              const sessInCorso = sessioni.filter(s=>{
+                if(s.fine) return false;
+                if(!(matsSel.has(s.matricola)||matsSel.has(s.nome))) return false;
+                const c=(s.corsi||[]); const uc=c.length>0?c[c.length-1]:null;
+                return uc && uc.tipo==="sospendi";
+              });
+              for(const s of sessInCorso){
+                try{
+                  await fetch(nexusUrl("modificaOrarioCorso",{
+                    sessionId: s.id,
+                    oraEntrata: hmToIso(modCorsoRealeMulti.oraEntrata),
+                    oraUscita: modCorsoRealeMulti.oraUscita?hmToIso(modCorsoRealeMulti.oraUscita):""
+                  }),{mode:"cors"});
+                }catch(e){}
+              }
+              setLoading(false); setModCorsoRealeMulti(null); setSelezionati(new Set());
+              if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+            }}>✓ Salva orari ({modCorsoRealeMulti.matricole.size})</button>
+            <button style={{width:"100%",padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoRealeMulti(null)}>Annulla</button>
+          </div>
+        </div>
+      )}
       {modOrario&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
@@ -4747,6 +4784,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Fine</button>
                   <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>📦 Articolo</button>
                   <button onClick={()=>setModCorsoMulti({matricole:new Set(selezionati), nome:""})} style={{background:"#fff",color:"#06b6d4",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>C Corso</button>
+                  <button onClick={()=>setModCorsoRealeMulti({matricole:new Set(selezionati), oraEntrata:"10:00", oraUscita:""})} style={{background:"#fff",color:"#0891b2",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={14}/> Orari corso</button>
                   <button onClick={()=>rientroCorsoMultiplo(new Set(selezionati))} style={{background:"#fff",color:"#10b981",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>▶ Rientro</button>
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
