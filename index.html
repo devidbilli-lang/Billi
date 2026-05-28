@@ -4678,6 +4678,19 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       {isPianificato&&<span style={{background:"#f59e0b22",color:"#f59e0b",border:"1px solid #f59e0b44",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8}}>⏳ {oraPrevistaFmt}</span>}
                       {!isPianificato&&fineOggiValido&&<span style={{background:"#fff3ee",color:"#ff6937",border:"1px solid #ff6937",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:4}}>⏳ {fineOggiValido}</span>}
                       {!isPianificato&&!fineOggiValido&&haFinePers&&<span style={{background:"#e879f922",color:"#d946ef",border:"1px solid #d946ef44",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8}}>⏳ {orarioFinePers}</span>}
+                      {(()=>{
+                        // Corso PIANIFICATO: mostra "C HH:MM→HH:MM" accanto al nome.
+                        const cp = (s.corsi||[]).find(c=>c._pianificato);
+                        if(!cp) return null;
+                        const fmtHM = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
+                        const ini = fmtHM(cp.quando);
+                        const fin = cp.rientro ? fmtHM(cp.rientro) : "";
+                        return (
+                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:4}}>
+                            <span style={{fontWeight:900}}>C</span> {ini}{fin?("→"+fin):""}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
