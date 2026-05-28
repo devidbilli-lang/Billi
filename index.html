@@ -2713,7 +2713,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   // Riscrive il CHECKIN (inizio) e, se la sessione ha gia' un CHECKOUT, anche la fine.
   // Serve perche' Turni&Operatori (anagrafica) e le Presenze (eventi reali) sono tabelle distinte:
   // senza questo, correggere l'orario non si rifletterebbe sulle sessioni gia' esistenti.
-  const propagaOrarioASessioni = (matricola, inizioOggi, fineOggi) => {
+  const propagaOrarioASessioni = async (matricola, inizioOggi, fineOggi) => {
     try {
       const op = (operatori||[]).find(o=>o.matricola===matricola);
       const chiave = op ? (op.nome.toUpperCase()+"-"+op.cognome.toUpperCase()) : null;
@@ -2733,23 +2733,26 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
         d.setHours(h||0, m||0, 0, 0);
         return d.toISOString();
       };
-      sessOggi.forEach(s=>{
+      // Scritture SEQUENZIALI (await): D1 serializza le scritture, lanciarle in parallelo
+      // sulla stessa sessione puo' far perdere una delle due modifiche.
+      for(const s of sessOggi){
         const baseInizio = parseData(s.inizio) || new Date();
         if(inizioOggi){
           const isoIn = hmToIso(inizioOggi, baseInizio);
-          if(isoIn) fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"inizio",valore:isoIn}),{mode:'cors'}).catch(()=>{});
+          if(isoIn){ try{ await fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"inizio",valore:isoIn}),{mode:'cors'}); }catch(e){} }
         }
         const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
         if(fineOggi && haCheckout){
           const baseFine = parseData(s.fine) || baseInizio;
           const isoFin = hmToIso(fineOggi, baseFine);
-          if(isoFin) fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"fine",valore:isoFin}),{mode:'cors'}).catch(()=>{});
+          if(isoFin){ try{ await fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"fine",valore:isoFin}),{mode:'cors'}); }catch(e){} }
         }
-      });
-      // Invalida l'obiettivo congelato delle linee coinvolte cosi' si ricalcola sui nuovi orari
+      }
+      // Invalida l'obiettivo congelato cosi' si ricalcola sui nuovi orari
       try{ localStorage.setItem("nexus_ult_modifica_orario", String(Date.now())); }catch(e){}
-      fetch(nexusUrl('invalidaObiettivoCongelato',{}),{mode:'cors'}).catch(()=>{});
-      if(typeof aggiornaSessioni==='function') setTimeout(aggiornaSessioni, 1500);
+      try{ await fetch(nexusUrl('invalidaObiettivoCongelato',{}),{mode:'cors'}); }catch(e){}
+      // Ricarica le sessioni SOLO dopo che le scritture sono confermate
+      if(typeof aggiornaSessioni==='function') aggiornaSessioni();
     } catch(e){}
   };
   const salvaOggi = (matricola, inizioOggi, fineOggi) => {
