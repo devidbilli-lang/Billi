@@ -3225,10 +3225,6 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                         <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
                       </span>
                       <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
-                        <button type="button" onClick={()=>setModOrarioOp({op:o, tipo:"standard", inizio:iniStd, fine:finStd})}
-                          style={{display:"inline-flex",alignItems:"center",gap:4,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:8,padding:"2px 8px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:800,color:"#7c3aed"}}>
-                          Standard <span style={{fontWeight:700,opacity:0.85}}>{iniStd}→{finStd}</span>
-                        </button>
                         <button type="button" onClick={()=>setModOrarioOp({op:o, tipo:"oggi", inizio:(haOggi?oggiO.inizioOggi:iniStd)||"06:00", fine:(haOggi?oggiO.fineOggi:finStd)||"14:00"})}
                           style={{display:"inline-flex",alignItems:"center",gap:4,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"2px 8px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:800,color:"#ff6937"}}>
                           Solo Oggi {haOggi&&<span style={{fontWeight:700,opacity:0.85}}>{oggiO.inizioOggi||"—"}→{oggiO.fineOggi||"—"}</span>}
