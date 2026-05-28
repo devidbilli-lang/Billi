@@ -4789,7 +4789,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const ultimaPausa = pause.length>0?pause[pause.length-1]:null;
                 const inPausa = !s.fine && ultimaPausa && ultimaPausa.tipo==="pausa";
                 return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:isPianificato?"#fef3c7":(!att2)?"#fee2e2":fineOggiValido?"#fff3ee":haFinePers?"#fdf4ff":att2&&inCorso?"#06b6d422":"#dcfce7"}}>
+                  <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:isPianificato?"#fef3c7":(!att2)?"#fee2e2":att2&&inPausa?"#fecaca":fineOggiValido?"#fff3ee":haFinePers?"#fdf4ff":att2&&inCorso?"#06b6d422":"#dcfce7"}}>
                     {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
                       <input type="checkbox" checked={selezionati.has(s.matricola||s.nome)} onChange={e=>{const ns=new Set(selezionati);if(e.target.checked)ns.add(s.matricola||s.nome);else ns.delete(s.matricola||s.nome);setSelezionati(ns);}} style={{accentColor:"#7c3aed",width:14,height:14}}/>
                     </td>}
@@ -4880,7 +4880,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     <td style={S.td}><span style={{background:"#ffffff",color:"#64748b",border:"1px solid #e2e8f0",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap"}}>
-                        {att2&&inCorso?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
+                        {att2&&inPausa?<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>:att2&&inCorso?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
                         {att2&&(
                           <>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
