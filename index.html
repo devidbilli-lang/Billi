@@ -869,20 +869,26 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       }
       const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
       const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      // Orario di fine PIANIFICATO dell'operatore (solo-oggi ha precedenza, poi standard)
+      const _oggiOpFine = _orariOggiL[mat];
+      const _fineOggiLocal = (_oggiOpFine && _oggiOpFine.data===_oggiStrL && _oggiOpFine.fineOggi) ? _oggiOpFine.fineOggi : "";
+      const finePianOp = s.orarioFineOggiPian || _fineOggiLocal || s.orarioFinePian || _orariFineStd[mat];
+      const tsFinePianOp = finePianOp ? hmToTs(finePianOp, tsIn) : null;
       let tsFineSessione;
+      // Riferimento di fine PIANIFICATO: l'orario specifico dell'operatore, oppure — se manca —
+      // la fine turno della linea, che è lo standard di default valido per TUTTI.
+      const tsFineTurnoLineaRef = _primoCheckinTs ? (_primoCheckinTs + oreTotali*3600*1000) : (tsIn + oreTotali*3600*1000);
+      const tsFinePianRef = tsFinePianOp || tsFineTurnoLineaRef;
       if(haCheckout){
-        const dF = parseData(s.fine); tsFineSessione = dF ? dF.getTime() : tsIn + oreTotali*3600*1000;
+        const dF = parseData(s.fine); const tsCheckoutReale = dF ? dF.getTime() : tsIn + oreTotali*3600*1000;
+        // DISTINZIONE PIANIFICATO vs EMERGENZA:
+        // - checkout all'orario previsto (o dopo) → resta sul pianificato (obiettivo invariato)
+        // - checkout anticipato oltre 2 min → emergenza, consuntivo sull'orario reale (obiettivo cala)
+        const anticipoMin = (tsFinePianRef - tsCheckoutReale)/60000;
+        tsFineSessione = (anticipoMin > 2) ? tsCheckoutReale : tsFinePianRef;
       } else {
-        // In turno: il riferimento è l'orario di FINE TURNO DELLA LINEA (tutti finiscono insieme,
-        // chi entra in ritardo lavora meno). Se l'operatore ha un orario di fine pianificato
-        // PRIMA della fine turno linea (es. esce alle 13 mentre la linea va alle 14), uso quello.
-        const tsFineTurnoLinea = _primoCheckinTs ? (_primoCheckinTs + oreTotali*3600*1000) : (tsIn + oreTotali*3600*1000);
-        const oggiOp = _orariOggiL[mat];
-        const fineOggiLocal = (oggiOp && oggiOp.data===_oggiStrL && oggiOp.fineOggi) ? oggiOp.fineOggi : "";
-        const finePian = s.orarioFineOggiPian || fineOggiLocal || s.orarioFinePian || _orariFineStd[mat];
-        const tsFinePian = finePian ? hmToTs(finePian, tsIn) : null;
-        // Usa il MINORE tra fine turno linea e fine pianificata operatore (se uscita anticipata)
-        tsFineSessione = (tsFinePian && tsFinePian < tsFineTurnoLinea) ? tsFinePian : tsFineTurnoLinea;
+        // In turno: usa il MINORE tra fine turno linea e fine pianificata operatore (uscita anticipata)
+        tsFineSessione = (tsFinePianOp && tsFinePianOp < tsFineTurnoLineaRef) ? tsFinePianOp : tsFineTurnoLineaRef;
       }
       // Costruisci i segmenti per linea
       const segmenti = [];
@@ -1193,14 +1199,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   const mat=s.matricola||s.nome; if(!mat) return;
                   const dInizio=parseData(s.inizio); if(!dInizio) return;
                   const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
-                  // FIX: se l'operatore ha già fatto checkout, usa l'orario REALE di uscita
-                  // (s.fine), non la fine turno standard. Così l'obiettivo si ricalcola sui minuti
-                  // effettivamente lavorati quando un capolinea corregge l'orario di fine.
                   let secFineEff = secFineTurnoAssoluto;
+                  // Orario di fine pianificato dell'operatore; se manca, usa la fine turno linea
+                  // (standard di default per tutti) come riferimento.
+                  const _finePianHM = s.orarioFineOggiPian || s.orarioFinePian || "";
+                  let secFinePianItem = secFineTurnoAssoluto;
+                  if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60; }
                   const haCheckoutItem = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
                   if(haCheckoutItem){
                     const dFine = parseData(s.fine);
-                    if(dFine) secFineEff = dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds();
+                    const secCheckoutReale = dFine ? dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds() : secFineTurnoAssoluto;
+                    const anticipoSec = secFinePianItem - secCheckoutReale;
+                    secFineEff = (anticipoSec > 120) ? secCheckoutReale : secFinePianItem;
+                  } else if(secFinePianItem < secFineTurnoAssoluto){
+                    // In turno con uscita pianificata anticipata: scontala già da ora
+                    secFineEff = secFinePianItem;
                   }
                   const minBase=Math.max(0,(secFineEff-secIng)/60);
                   const nSim=nSimPerMatItem[mat]?nSimPerMatItem[mat].skus.size:1;
