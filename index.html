@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFR8VNUtPuBj8
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -3558,6 +3558,27 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
     }
   };
+  // Pianifica un corso per piu' operatori: il worker crea i pianificati CORSO (inizio) e
+  // RIENTRO (fine). All'orario stabilito eseguiPianificati li trasforma in eventi reali:
+  // a fine corso -> rientro in produzione se entro il turno, altrimenti checkout automatico.
+  const pianificaCorsoMultiplo = async (matricoleSet, nomeCorso, oraInizioHM, oraFineHM) => {
+    if(!matricoleSet || matricoleSet.size===0 || !oraInizioHM) return;
+    setLoading(true); setLoadingMsg("Pianificazione corso...");
+    const hmToIso = (hm) => { const [h,m]=hm.split(":").map(Number); const d=new Date(); d.setHours(h||0,m||0,0,0); return d.toISOString(); };
+    try {
+      const matArr = Array.from(matricoleSet);
+      await fetch(nexusUrl("pianificaCorso",{
+        matricole: JSON.stringify(matArr),
+        oraInizio: hmToIso(oraInizioHM),
+        oraFine: oraFineHM ? hmToIso(oraFineHM) : "",
+        nomeCorso: nomeCorso||"CORSO"
+      }),{mode:"cors"});
+    } catch(e){
+    } finally {
+      setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
+      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 2000);
+    }
+  };
   // RIENTRO MULTIPLO: riporta in produzione le persone selezionate che sono al corso.
   const rientroCorsoMultiplo = async (matricoleSet) => {
     if(!matricoleSet || matricoleSet.size===0) return;
@@ -4051,10 +4072,34 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             <div style={{fontSize:13,color:"#64748b",marginBottom:16,fontFamily:"'Montserrat',sans-serif"}}>{modCorsoMulti.matricole.size} operator{modCorsoMulti.matricole.size===1?"e":"i"} verrann{modCorsoMulti.matricole.size===1?"o":"o"} spostat{modCorsoMulti.matricole.size===1?"o":"i"} al corso e si staccano dalla produzione.</div>
             <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,fontFamily:"'Montserrat',sans-serif"}}>Nome corso / formazione</div>
             <input value={modCorsoMulti.nome} onChange={e=>setModCorsoMulti({...modCorsoMulti, nome:e.target.value})} placeholder="Es. Sicurezza, Formazione macchina..." style={{width:"100%",padding:"12px 14px",fontSize:15,border:"2px solid #06b6d4",borderRadius:10,marginBottom:16,fontFamily:"'Montserrat',sans-serif",background:"#fff",color:"#1e293b",boxSizing:"border-box"}}/>
+            {/* Toggle: sposta subito oppure pianifica a un orario */}
+            <button type="button" onClick={()=>setModCorsoMulti({...modCorsoMulti, pianifica:!modCorsoMulti.pianifica, oraInizio:modCorsoMulti.oraInizio||"10:00", oraFine:modCorsoMulti.oraFine||""})}
+              style={{width:"100%",marginBottom:14,padding:"10px",background:modCorsoMulti.pianifica?"#0891b2":"#ecfeff",color:modCorsoMulti.pianifica?"#fff":"#0891b2",border:"2px solid #06b6d4",borderRadius:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}>
+              ⏱ Pianifica corso {modCorsoMulti.pianifica?"(attivo)":""}
+            </button>
+            {modCorsoMulti.pianifica && (
+              <div style={{marginBottom:16,padding:"14px",background:"#f0fdff",border:"1px solid #67e8f9",borderRadius:12}}>
+                <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio corso</div>
+                <div style={{marginBottom:12}}>
+                  <TimePicker value={modCorsoMulti.oraInizio||"10:00"} color="#06b6d4" onChange={v=>setModCorsoMulti({...modCorsoMulti, oraInizio:v})}/>
+                </div>
+                <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine corso (opzionale)</div>
+                <div style={{marginBottom:6}}>
+                  <TimePicker value={modCorsoMulti.oraFine||"12:00"} color="#06b6d4" onChange={v=>setModCorsoMulti({...modCorsoMulti, oraFine:v})}/>
+                </div>
+                <div style={{fontSize:11,color:"#64748b",textAlign:"center",lineHeight:1.4}}>A fine corso: rientro in produzione se entro il turno, altrimenti checkout automatico.</div>
+              </div>
+            )}
             <div style={{display:"flex",gap:8}}>
-              <button style={{flex:1,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
-                mandaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO");
-              }}>✓ Sposta al corso</button>
+              {modCorsoMulti.pianifica ? (
+                <button style={{flex:1,padding:11,background:"#0891b2",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
+                  pianificaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO", modCorsoMulti.oraInizio||"10:00", modCorsoMulti.oraFine||"");
+                }}>✓ Pianifica corso</button>
+              ) : (
+                <button style={{flex:1,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
+                  mandaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO");
+                }}>✓ Sposta al corso</button>
+              )}
               <button style={{flex:1,padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoMulti(null)}>Annulla</button>
             </div>
           </div>
