@@ -971,37 +971,27 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obFinale})).catch(()=>{});
   },[obFinale, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
-  // Efficienza = (borse prodotte * TC) / minuti lavorati * 100
+  // Efficienza = borse prodotte / obiettivo ATTESO A QUEST'ORA * 100.
+  // Non misura più il ritmo sul tempo, ma quanto prodotto rispetto al target progressivo.
+  // A fine turno, se prodotte == obiettivo finale → 100%.
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
-    if(borseTot===0||tc<=0) return null;
-    // Minuti lavorati = somma minuti effettivi di tutti gli operatori finora
-    const sessLinea = sessioni.filter(s=>(s.lineaCorrente===lineaId||s.lineaInizio===lineaId)&&s.inizio);
+    if(tc<=0) return null;
+    // Obiettivo atteso a quest'ora: obiettivo orario (ob60) × ore trascorse dall'inizio turno
+    // (capate alla fine turno). A fine turno coincide con l'obiettivo finale.
     const now3 = new Date();
     const secNow = now3.getHours()*3600+now3.getMinutes()*60+now3.getSeconds();
-    let minLavorati = 0;
-    const matVisti = new Set();
-    // Orari "solo oggi" per allineare i minuti lavorati all'obiettivo (inizio posticipato)
-    const _orariOggiEff = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
-    const _oggiStrEff = new Date().toLocaleDateString('it-IT');
-    sessLinea.forEach(s=>{
-      const mat = s.matricola||s.nome||s.id; if(!mat||matVisti.has(mat)) return;
-      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
-      matVisti.add(mat);
-      const dI = parseData(s.inizio); if(!dI) return;
-      let secI = dI.getHours()*3600+dI.getMinutes()*60;
-      // INIZIO "solo oggi" posticipato: usa il MAGGIORE tra check-in reale e inizio pianificato odierno
-      if(!s._pianificato){
-        const oggiOpEff = _orariOggiEff[mat];
-        const inizioOggiEff = (oggiOpEff && oggiOpEff.data===_oggiStrEff && oggiOpEff.inizioOggi) ? oggiOpEff.inizioOggi : "";
-        if(inizioOggiEff){ const [hI,mI]=inizioOggiEff.split(":").map(Number); const secPian=(hI||0)*3600+(mI||0)*60; if(secPian>secI) secI=secPian; }
-      }
-      const attiva = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
-      const secF = attiva ? Math.min(secNow, secFineTurno) : (()=>{ const dF=parseData(s.fine); return dF?Math.min(dF.getHours()*3600+dF.getMinutes()*60,secFineTurno):secFineTurno; })();
-      minLavorati += Math.max(0,(secF-secI)/60);
-    });
-    if(minLavorati<=0) return null;
-    return Math.round((borseTot*tc)/minLavorati*100);
+    const secTrascorsi = Math.max(0, Math.min(secNow, secFineTurno) - _secInizioTurno);
+    const oreTrascorse = secTrascorsi/3600;
+    let obAtteso;
+    if(turnoTerminato){
+      // Turno finito: confronta col l'obiettivo finale effettivo
+      obAtteso = obFinaleEffettivo||0;
+    } else {
+      obAtteso = (ob60!=null) ? Math.round(ob60*oreTrascorse) : 0;
+    }
+    if(!obAtteso || obAtteso<=0) return null;
+    return Math.round((borseTot/obAtteso)*100);
   })();
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
 
