@@ -3241,7 +3241,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 return s.matricola===k || (s.nome && s.cognome && s.nome.toUpperCase()===op.nome.toUpperCase() && s.cognome.toUpperCase()===op.cognome.toUpperCase());
               });
               const haSessioneAttiva = mieSessioni.length>0 && mieSessioni.some(s=> !s.fine || s.fine==="" || s.fine===null || s.fine==="null");
-              if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
+              if(haSessioneAttiva){
+                // DEBUG temporaneo: mostra cosa vede l'app, per capire perché blocca.
+                const dettaglio = mieSessioni.map(s=>"["+(s.lineaCorrente||"?")+" fine:"+(s.fine||"APERTA")+" sid:"+(s.id||"").slice(0,8)+"]").join(" ");
+                errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva → vede "+mieSessioni.length+" sess: "+dettaglio);
+                return;
+              }
               const rampaDalTs = now().getTime(); // timestamp base, usato se rampaPerSku[sku] è true
               const skuDaUsare = skuMulti.length > 0 ? skuMulti : [""];
               const _rampeAttive = rampeSheets || window._rampeSheets || [];
