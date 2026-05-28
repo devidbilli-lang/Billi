@@ -808,7 +808,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // Conta operatori in riparazione separatamente
   const nRiparazione=sessAttiveUniche.filter(s=>isSkuSpeciale(s.skuCorrente||s.sku||"")).length;
   const nCorso=sessAttiveUniche.filter(s=>s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")).length;
-  const nOpProduzione=nOp-nRiparazione-nCorso;
+  const nPausa=sessAttiveUniche.filter(s=>s.pause&&s.pause.some(pz=>pz.tipo==="pausa")&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))).length;
+  const nOpProduzione=nOp-nRiparazione-nCorso-nPausa;
   const skuObj=skuList.find(s=>s&&s.sku===skuPiu);
   const tc=skuObj?.tc||0;
   // Fine turno = primo check-in della linea + (8h + straordinario)
@@ -905,6 +906,19 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
           const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
           const tsCorsoOut = fineCorsoStr ? (parseData(fineCorsoStr)?.getTime()||tsFineSessione) : tsFineSessione;
           const m = Math.round((tsCorsoOut - tsCorsoIn)/60000);
+          if(m>0) minOp -= m;
+        });
+      }
+      // Sottrai le PAUSE (stop/riattiva) di questa linea, consuntivo.
+      if(s.pause && s.pause.length>0 && s.lineaCorrente===lineaId){
+        s.pause.forEach(pz=>{
+          const dIn = parseData(pz.quando); if(!dIn) return;
+          const tsPin = dIn.getTime();
+          // Fine pausa: la ripresa reale; se ancora in pausa, fino ad adesso (non oltre fine sessione).
+          let tsPout;
+          if(pz.ripresa){ tsPout = parseData(pz.ripresa)?.getTime()||tsPin; }
+          else { tsPout = Math.min(tsFineSessione, Date.now()); }
+          const m = Math.round((tsPout - tsPin)/60000);
           if(m>0) minOp -= m;
         });
       }
@@ -1199,6 +1213,16 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
                     const eC=fineCorsoStr?(()=>{const dR=parseData(fineCorsoStr);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineEff;})():secFineEff;
                     minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60)/nSim;
+                  });
+                  // PAUSE: sottrai i minuti tra pausa e ripresa (consuntivo). Se la pausa è ancora
+                  // aperta (persona fuori adesso), sottrai fino all'ora attuale, non oltre.
+                  if(s.pause) s.pause.forEach(pz=>{
+                    const dP=parseData(pz.quando); if(!dP) return;
+                    const sP=dP.getHours()*3600+dP.getMinutes()*60;
+                    let eP;
+                    if(pz.ripresa){ const dR=parseData(pz.ripresa); eP=dR?dR.getHours()*3600+dR.getMinutes()*60:sP; }
+                    else { const ora=new Date(); eP=Math.min(secFineEff, ora.getHours()*3600+ora.getMinutes()*60); }
+                    minPerMat[mat].sottrai+=Math.max(0,(eP-sP)/60)/nSim;
                   });
                 });
                 let minTot=0;
@@ -4761,6 +4785,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const corsi = s.corsi||[];
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi";
+                const pause = s.pause||[];
+                const ultimaPausa = pause.length>0?pause[pause.length-1]:null;
+                const inPausa = !s.fine && ultimaPausa && ultimaPausa.tipo==="pausa";
                 return (
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:isPianificato?"#fef3c7":(!att2)?"#fee2e2":fineOggiValido?"#fff3ee":haFinePers?"#fdf4ff":att2&&inCorso?"#06b6d422":"#dcfce7"}}>
                     {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
@@ -4858,6 +4885,16 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           <>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
+                            <button title={inPausa?"Riprendi turno":"Metti in pausa"} style={{padding:"8px 12px",background:inPausa?"#dcfce7":"#ffffff",border:"1px solid "+(inPausa?"#22c55e":"#f9731666"),borderRadius:6,color:inPausa?"#22c55e":"#f97316",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={async()=>{
+                              const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
+                              const tipoEv = inPausa ? "RIPRESA" : "PAUSA";
+                              setLoading(true); setLoadingMsg((inPausa?"Ripresa turno ":"Pausa turno ")+s.nome+"...");
+                              for(const sess of sessioniOp){
+                                try{ await api.evento({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku,tipo:tipoEv,lineaDa:sess.lineaCorrente,lineaA:sess.lineaCorrente,skuDa:sess.skuCorrente||sess.sku,skuA:sess.skuCorrente||sess.sku}); }catch(e){}
+                              }
+                              setLoading(false);
+                              if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+                            }}>{inPausa?"▶":"❚❚"}</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ (()=>{
   const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
   const msg = sessioniOp.length>1?"Chiudere il turno di "+s.nome+" "+s.cognome+"? ("+sessioniOp.length+" articoli)":"Chiudere il turno di "+s.nome+" "+s.cognome+"?";
