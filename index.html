@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFR8VNUtPuBj8
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -3568,6 +3568,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modOrario, setModOrario] = React.useState(null);
   const [selezionati, setSelezionati] = React.useState(new Set()); // matricole selezionate
   const [modMultipla, setModMultipla] = React.useState(null); // {campo, valore}
+  const [modCorsoPian, setModCorsoPian] = React.useState(null); // {sess, nome, oraInizio, oraFine} per modificare corso pianificato
   // AGGIUNTA ARTICOLO IN LAVORAZIONE (multi-SKU): registra un nuovo CHECKIN sul SKU scelto
   // per gli operatori indicati, MANTENENDO il SKU che già lavorano (lavorazione simultanea).
   // sessionId univoco derivato per non collidere col dedup del worker (session_id+sku).
@@ -4137,6 +4138,36 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               )}
               <button style={{flex:1,padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoMulti(null)}>Annulla</button>
             </div>
+          </div>
+        </div>
+      )}
+      {modCorsoPian&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #67e8f9, 0 0 40px 12px #06b6d466",fontFamily:"'Montserrat',sans-serif"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#0891b2",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={20}/> Modifica corso</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:16}}>{modCorsoPian.sess.nome} {modCorsoPian.sess.cognome}</div>
+            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800}}>Nome corso</div>
+            <input value={modCorsoPian.nome} onChange={e=>setModCorsoPian({...modCorsoPian, nome:e.target.value})} placeholder="Es. Sicurezza, Formazione..." style={{width:"100%",padding:"12px 14px",fontSize:15,border:"2px solid #06b6d4",borderRadius:10,marginBottom:16,fontFamily:"'Montserrat',sans-serif",background:"#fff",color:"#1e293b",boxSizing:"border-box"}}/>
+            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio corso</div>
+            <div style={{marginBottom:12}}><TimePicker value={modCorsoPian.oraInizio} color="#06b6d4" onChange={v=>setModCorsoPian({...modCorsoPian, oraInizio:v})}/></div>
+            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine corso (opzionale)</div>
+            <div style={{marginBottom:16}}><TimePicker value={modCorsoPian.oraFine||"12:00"} color="#06b6d4" onChange={v=>setModCorsoPian({...modCorsoPian, oraFine:v})}/></div>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              <button style={{flex:2,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+                const mat = modCorsoPian.sess.matricola;
+                const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+                try{ await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([mat]),oraInizio:hmToIso(modCorsoPian.oraInizio),oraFine:modCorsoPian.oraFine?hmToIso(modCorsoPian.oraFine):"",nomeCorso:modCorsoPian.nome||"CORSO"}),{mode:"cors"}); }catch(e){}
+                setModCorsoPian(null);
+                if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+              }}>✓ Salva modifiche</button>
+              <button style={{flex:1,padding:11,background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+                const mat = modCorsoPian.sess.matricola;
+                try{ await fetch(nexusUrl("eliminaCorsoPianificato",{matricola:mat}),{mode:"cors"}); }catch(e){}
+                setModCorsoPian(null);
+                if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+              }}>Elimina</button>
+            </div>
+            <button style={{width:"100%",padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoPian(null)}>Annulla</button>
           </div>
         </div>
       )}
@@ -4719,15 +4750,16 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       {!isPianificato&&fineOggiValido&&<span style={{background:"#fff3ee",color:"#ff6937",border:"1px solid #ff6937",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:4}}>⏳ {fineOggiValido}</span>}
                       {!isPianificato&&!fineOggiValido&&haFinePers&&<span style={{background:"#e879f922",color:"#d946ef",border:"1px solid #d946ef44",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8}}>⏳ {orarioFinePers}</span>}
                       {(()=>{
-                        // Corso PIANIFICATO: mostra "C HH:MM→HH:MM" accanto al nome.
+                        // Corso PIANIFICATO: mostra "C HH:MM→HH:MM" accanto al nome, con matita per modificare.
                         const cp = (s.corsi||[]).find(c=>c._pianificato);
                         if(!cp) return null;
                         const fmtHM = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
                         const ini = fmtHM(cp.quando);
                         const fin = cp.rientro ? fmtHM(cp.rientro) : "";
                         return (
-                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:4}}>
+                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
                             <span style={{fontWeight:900}}>C</span> {ini}{fin?("→"+fin):""}
+                            {editOrario&&<span onClick={()=>setModCorsoPian({sess:s, nome:(cp.nomeCorso||"CORSO"), oraInizio:ini||"10:00", oraFine:fin||""})} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title="Modifica corso"><IconaMatita size={13}/></span>}
                           </span>
                         );
                       })()}
