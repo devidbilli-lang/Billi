@@ -3232,10 +3232,15 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             if(!linea&&!lineaCheckinSel){setErr("Seleziona una linea.");return;}
             var errori=[]; var registrati=[];
             listaOp.forEach(op=>{ const k=op.matricola||op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
-              const haSessioneAttiva = sessSheets.some(s=>{ const nomeMatch = s.nome.toUpperCase()===op.nome.toUpperCase()&&s.cognome.toUpperCase()===op.cognome.toUpperCase();
-                if(!nomeMatch) return false;
-                if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
-                const d = parseData(s.fine); return d===null||isNaN(d); });
+              // Controllo sessione attiva sui DATI REALI del worker (sessioni), non su sessSheets
+              // (mirror Google Sheets, che dopo un checkout può restare disallineato e bloccare
+              // erroneamente il re-check-in). È attiva solo una sessione SENZA fine.
+              const haSessioneAttiva = (sessioni||[]).some(s=>{
+                if(s._pianificato) return false;
+                const matchMat = s.matricola===k || (s.nome && s.cognome && s.nome.toUpperCase()===op.nome.toUpperCase() && s.cognome.toUpperCase()===op.cognome.toUpperCase());
+                if(!matchMat) return false;
+                return !s.fine || s.fine==="" || s.fine===null || s.fine==="null";
+              });
               if(haSessioneAttiva){errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");return;}
               const rampaDalTs = now().getTime(); // timestamp base, usato se rampaPerSku[sku] è true
               const skuDaUsare = skuMulti.length > 0 ? skuMulti : [""];
