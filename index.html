@@ -900,7 +900,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         s.corsi.forEach(c=>{
           const dIn = parseData(c.quando); if(!dIn) return;
           const tsCorsoIn = dIn.getTime();
-          const tsCorsoOut = c.rientro ? (parseData(c.rientro)?.getTime()||tsFineSessione) : tsFineSessione;
+          // Fine corso: rientro reale, oppure fine pianificata (corso in corso con fine prevista),
+          // altrimenti fine sessione se non si sa quando rientra.
+          const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
+          const tsCorsoOut = fineCorsoStr ? (parseData(fineCorsoStr)?.getTime()||tsFineSessione) : tsFineSessione;
           const m = Math.round((tsCorsoOut - tsCorsoIn)/60000);
           if(m>0) minOp -= m;
         });
@@ -1191,7 +1194,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   if(s.corsi) s.corsi.forEach(c=>{
                     const dC=parseData(c.quando); if(!dC) return;
                     const sC=dC.getHours()*3600+dC.getMinutes()*60;
-                    const eC=c.rientro?(()=>{const dR=parseData(c.rientro);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineEff;})():secFineEff;
+                    // Fine del corso: il rientro reale, oppure la fine pianificata (corso in corso
+                    // con fine prevista), oppure fine turno se non si sa quando rientra.
+                    const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
+                    const eC=fineCorsoStr?(()=>{const dR=parseData(fineCorsoStr);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineEff;})():secFineEff;
                     minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60)/nSim;
                   });
                 });
