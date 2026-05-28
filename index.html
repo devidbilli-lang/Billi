@@ -3616,8 +3616,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [selezionati, setSelezionati] = React.useState(new Set()); // matricole selezionate
   const [modMultipla, setModMultipla] = React.useState(null); // {campo, valore}
   const [modCorsoPian, setModCorsoPian] = React.useState(null); // {sess, nome, oraInizio, oraFine} per modificare corso pianificato
-  const [modCorsoReale, setModCorsoReale] = React.useState(null); // {sess, oraEntrata, oraUscita} per modificare orari corso reale in atto
-  const [modCorsoRealeMulti, setModCorsoRealeMulti] = React.useState(null); // {matricole:Set, oraEntrata, oraUscita} modifica orari corso per più persone
   // AGGIUNTA ARTICOLO IN LAVORAZIONE (multi-SKU): registra un nuovo CHECKIN sul SKU scelto
   // per gli operatori indicati, MANTENENDO il SKU che già lavorano (lavorazione simultanea).
   // sessionId univoco derivato per non collidere col dedup del worker (session_id+sku).
@@ -4175,8 +4173,42 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <div style={{fontSize:11,color:"#64748b",textAlign:"center",lineHeight:1.4}}>A fine corso: rientro in produzione se entro il turno, altrimenti checkout automatico.</div>
               </div>
             )}
+            {/* Toggle: modifica gli orari di un corso GIÀ in atto delle persone selezionate */}
+            <button type="button" onClick={()=>setModCorsoMulti({...modCorsoMulti, modificaOrari:!modCorsoMulti.modificaOrari, oraEntrataMod:modCorsoMulti.oraEntrataMod||"10:00", oraUscitaMod:modCorsoMulti.oraUscitaMod||""})}
+              style={{width:"100%",marginBottom:14,padding:"10px",background:modCorsoMulti.modificaOrari?"#0891b2":"#ecfeff",color:modCorsoMulti.modificaOrari?"#fff":"#0891b2",border:"2px solid #06b6d4",borderRadius:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              <IconaMatita size={15}/> Modifica orari corso in atto {modCorsoMulti.modificaOrari?"(attivo)":""}
+            </button>
+            {modCorsoMulti.modificaOrari && (
+              <div style={{marginBottom:16,padding:"14px",background:"#f0fdff",border:"1px solid #67e8f9",borderRadius:12}}>
+                <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di entrata in corso</div>
+                <div style={{marginBottom:12}}>
+                  <TimePicker value={modCorsoMulti.oraEntrataMod||"10:00"} color="#06b6d4" onChange={v=>setModCorsoMulti({...modCorsoMulti, oraEntrataMod:v})}/>
+                </div>
+                <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di uscita dal corso (opzionale)</div>
+                <div style={{marginBottom:6}}>
+                  <TimePicker value={modCorsoMulti.oraUscitaMod||"13:00"} color="#06b6d4" onChange={v=>setModCorsoMulti({...modCorsoMulti, oraUscitaMod:v})}/>
+                </div>
+                <div style={{fontSize:11,color:"#64748b",textAlign:"center",lineHeight:1.4}}>Se l'uscita è già passata, le persone rientrano in produzione (riga verde).</div>
+              </div>
+            )}
             <div style={{display:"flex",gap:8}}>
-              {modCorsoMulti.pianifica ? (
+              {modCorsoMulti.modificaOrari ? (
+                <button style={{flex:1,padding:11,background:"#0891b2",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+                  const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+                  setLoading(true); setLoadingMsg("Aggiornamento orari corso...");
+                  const matsSel = modCorsoMulti.matricole;
+                  const sessInCorso = sessioni.filter(s=>{
+                    if(s.fine) return false;
+                    if(!(matsSel.has(s.matricola)||matsSel.has(s.nome))) return false;
+                    return (s.corsi||[]).length>0;
+                  });
+                  for(const s of sessInCorso){
+                    try{ await fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:hmToIso(modCorsoMulti.oraEntrataMod||"10:00"),oraUscita:modCorsoMulti.oraUscitaMod?hmToIso(modCorsoMulti.oraUscitaMod):""}),{mode:"cors"}); }catch(e){}
+                  }
+                  setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
+                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+                }}>✓ Salva orari</button>
+              ) : modCorsoMulti.pianifica ? (
                 <button style={{flex:1,padding:11,background:"#0891b2",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
                   pianificaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO", modCorsoMulti.oraInizio||"10:00", modCorsoMulti.oraFine||"");
                 }}>✓ Pianifica corso</button>
@@ -4217,69 +4249,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               }}>Elimina</button>
             </div>
             <button style={{width:"100%",padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoPian(null)}>Annulla</button>
-          </div>
-        </div>
-      )}
-      {modCorsoReale&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #67e8f9, 0 0 40px 12px #06b6d466",fontFamily:"'Montserrat',sans-serif"}}>
-            <div style={{fontSize:18,fontWeight:800,color:"#0891b2",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={20}/> Modifica orari corso</div>
-            <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:16}}>{modCorsoReale.sess.nome} {modCorsoReale.sess.cognome}</div>
-            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di entrata in corso</div>
-            <div style={{marginBottom:12}}><TimePicker value={modCorsoReale.oraEntrata} color="#06b6d4" onChange={v=>setModCorsoReale({...modCorsoReale, oraEntrata:v})}/></div>
-            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di uscita dal corso (opzionale)</div>
-            <div style={{marginBottom:16}}><TimePicker value={modCorsoReale.oraUscita||"13:00"} color="#06b6d4" onChange={v=>setModCorsoReale({...modCorsoReale, oraUscita:v})}/></div>
-            <button style={{width:"100%",padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}} onClick={async()=>{
-              const sess = modCorsoReale.sess;
-              const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
-              try{
-                await fetch(nexusUrl("modificaOrarioCorso",{
-                  sessionId: sess.id,
-                  oraEntrata: hmToIso(modCorsoReale.oraEntrata),
-                  oraUscita: modCorsoReale.oraUscita?hmToIso(modCorsoReale.oraUscita):""
-                }),{mode:"cors"});
-              }catch(e){}
-              setModCorsoReale(null);
-              if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
-            }}>✓ Salva orari</button>
-            <button style={{width:"100%",padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoReale(null)}>Annulla</button>
-          </div>
-        </div>
-      )}
-      {modCorsoRealeMulti&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #67e8f9, 0 0 40px 12px #06b6d466",fontFamily:"'Montserrat',sans-serif"}}>
-            <div style={{fontSize:18,fontWeight:800,color:"#0891b2",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={20}/> Modifica orari corso</div>
-            <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:16}}>{modCorsoRealeMulti.matricole.size} operatori selezionati</div>
-            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di entrata in corso</div>
-            <div style={{marginBottom:12}}><TimePicker value={modCorsoRealeMulti.oraEntrata} color="#06b6d4" onChange={v=>setModCorsoRealeMulti({...modCorsoRealeMulti, oraEntrata:v})}/></div>
-            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Orario di uscita dal corso (opzionale)</div>
-            <div style={{marginBottom:16}}><TimePicker value={modCorsoRealeMulti.oraUscita||"13:00"} color="#06b6d4" onChange={v=>setModCorsoRealeMulti({...modCorsoRealeMulti, oraUscita:v})}/></div>
-            <button style={{width:"100%",padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}} onClick={async()=>{
-              const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
-              setLoading(true); setLoadingMsg("Aggiornamento orari corso...");
-              // Per ogni matricola selezionata, trova le sue sessioni APERTE che hanno un corso
-              // (in qualsiasi stato) e aggiornane gli orari. Così tutte tornano verdi se l'uscita
-              // è già passata (il worker crea il RIENTRO e rimuove i corsi pianificati residui).
-              const matsSel = modCorsoRealeMulti.matricole;
-              const sessInCorso = sessioni.filter(s=>{
-                if(s.fine) return false;
-                if(!(matsSel.has(s.matricola)||matsSel.has(s.nome))) return false;
-                return (s.corsi||[]).length>0;
-              });
-              for(const s of sessInCorso){
-                try{
-                  await fetch(nexusUrl("modificaOrarioCorso",{
-                    sessionId: s.id,
-                    oraEntrata: hmToIso(modCorsoRealeMulti.oraEntrata),
-                    oraUscita: modCorsoRealeMulti.oraUscita?hmToIso(modCorsoRealeMulti.oraUscita):""
-                  }),{mode:"cors"});
-                }catch(e){}
-              }
-              setLoading(false); setModCorsoRealeMulti(null); setSelezionati(new Set());
-              if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
-            }}>✓ Salva orari ({modCorsoRealeMulti.matricole.size})</button>
-            <button style={{width:"100%",padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoRealeMulti(null)}>Annulla</button>
           </div>
         </div>
       )}
@@ -4785,7 +4754,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Fine</button>
                   <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>📦 Articolo</button>
                   <button onClick={()=>setModCorsoMulti({matricole:new Set(selezionati), nome:""})} style={{background:"#fff",color:"#06b6d4",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>C Corso</button>
-                  <button onClick={()=>setModCorsoRealeMulti({matricole:new Set(selezionati), oraEntrata:"10:00", oraUscita:""})} style={{background:"#fff",color:"#0891b2",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={14}/> Orari corso</button>
                   <button onClick={()=>rientroCorsoMultiplo(new Set(selezionati))} style={{background:"#fff",color:"#10b981",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>▶ Rientro</button>
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
@@ -4950,10 +4918,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         {att2&&(
                           <>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
-                            {inCorso&&ultimoCorso&&<button title="Modifica orari corso" style={{padding:"8px 10px",background:"#ffffff",border:"1px solid #06b6d466",borderRadius:6,color:"#0891b2",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,display:"inline-flex",alignItems:"center"}} onClick={()=>{
-                              const fmtHM=(str)=>{const d=parseData(str);return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"";};
-                              setModCorsoReale({sess:s, oraEntrata:fmtHM(ultimoCorso.quando)||"10:00", oraUscita:ultimoCorso.rientro?fmtHM(ultimoCorso.rientro):""});
-                            }}><IconaMatita size={14}/></button>}
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
                             <button title={inPausa?"Riprendi turno":"Metti in pausa"} style={{padding:"8px 12px",background:inPausa?"#dcfce7":"#ffffff",border:"1px solid "+(inPausa?"#22c55e":"#f9731666"),borderRadius:6,color:inPausa?"#22c55e":"#f97316",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={async()=>{
                               const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
