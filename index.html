@@ -2699,7 +2699,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     fetch(nexusUrl('leggiOrariOperatori',{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data.orari){
         const inizio = {}; const fine = {}; const oggiMap = {};
-        Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; if(v.inizioOggi||v.fineOggi){ oggiMap[mat]={inizioOggi:v.inizioOggi||"", fineOggi:v.fineOggi||""}; } });
+        const _oggiStrSync = new Date().toLocaleDateString('it-IT');
+        Object.entries(j.data.orari).forEach(([mat,v])=>{ inizio[mat]=v.inizio; fine[mat]=v.fine; if(v.inizioOggi||v.fineOggi){ oggiMap[mat]={inizioOggi:v.inizioOggi||"", fineOggi:v.fineOggi||"", data:_oggiStrSync}; } });
         setOrariTurno(prev=>({...prev,...inizio}));
         setOrariFineTurno(prev=>({...prev,...fine}));
         setOrariOggi(oggiMap);
@@ -2708,13 +2709,58 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
       }
     }).catch(()=>{});
   },[]);
-  const salvaOggi = (matricola, inizioOggi, fineOggi) => {
-    setOrariOggi(prev=>({...prev,[matricola]:{inizioOggi,fineOggi}}));
-    fetch(nexusUrl('salvaOrarioOggi',{matricola,orarioInizioOggi:inizioOggi,orarioFineOggi:fineOggi}),{mode:'cors'}).catch(()=>{});
+  // Propaga un orario odierno (HH:MM) alle sessioni GIA' registrate oggi per quella persona.
+  // Riscrive il CHECKIN (inizio) e, se la sessione ha gia' un CHECKOUT, anche la fine.
+  // Serve perche' Turni&Operatori (anagrafica) e le Presenze (eventi reali) sono tabelle distinte:
+  // senza questo, correggere l'orario non si rifletterebbe sulle sessioni gia' esistenti.
+  const propagaOrarioASessioni = (matricola, inizioOggi, fineOggi) => {
     try {
-      const oggiStr = new Date().toLocaleDateString('it-IT');
+      const op = (operatori||[]).find(o=>o.matricola===matricola);
+      const chiave = op ? (op.nome.toUpperCase()+"-"+op.cognome.toUpperCase()) : null;
+      const oggi0 = new Date(); oggi0.setHours(0,0,0,0);
+      const sessOggi = (sessioni||[]).filter(s=>{
+        if(s._pianificato) return false;
+        const matchMat = s.matricola===matricola || (chiave && s.matricola===chiave);
+        if(!matchMat) return false;
+        const dI = parseData(s.inizio);
+        return dI && dI.getTime() >= oggi0.getTime();
+      });
+      if(sessOggi.length===0) return;
+      const hmToIso = (hm, base) => {
+        if(!hm) return null;
+        const [h,m] = hm.split(":").map(Number);
+        const d = base ? new Date(base) : new Date();
+        d.setHours(h||0, m||0, 0, 0);
+        return d.toISOString();
+      };
+      sessOggi.forEach(s=>{
+        const baseInizio = parseData(s.inizio) || new Date();
+        if(inizioOggi){
+          const isoIn = hmToIso(inizioOggi, baseInizio);
+          if(isoIn) fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"inizio",valore:isoIn}),{mode:'cors'}).catch(()=>{});
+        }
+        const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+        if(fineOggi && haCheckout){
+          const baseFine = parseData(s.fine) || baseInizio;
+          const isoFin = hmToIso(fineOggi, baseFine);
+          if(isoFin) fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"fine",valore:isoFin}),{mode:'cors'}).catch(()=>{});
+        }
+      });
+      // Invalida l'obiettivo congelato delle linee coinvolte cosi' si ricalcola sui nuovi orari
+      try{ localStorage.setItem("nexus_ult_modifica_orario", String(Date.now())); }catch(e){}
+      fetch(nexusUrl('invalidaObiettivoCongelato',{}),{mode:'cors'}).catch(()=>{});
+      if(typeof aggiornaSessioni==='function') setTimeout(aggiornaSessioni, 1500);
+    } catch(e){}
+  };
+  const salvaOggi = (matricola, inizioOggi, fineOggi) => {
+    const _oggiStrSave = new Date().toLocaleDateString('it-IT');
+    setOrariOggi(prev=>({...prev,[matricola]:{inizioOggi,fineOggi,data:_oggiStrSave}}));
+    fetch(nexusUrl('salvaOrarioOggi',{matricola,orarioInizioOggi:inizioOggi,orarioFineOggi:fineOggi}),{mode:'cors'}).catch(()=>{});
+    // Propaga l'orario alle sessioni gia' registrate oggi per questa persona.
+    propagaOrarioASessioni(matricola, inizioOggi, fineOggi);
+    try {
       const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
-      lo[matricola] = {inizioOggi, fineOggi, data:oggiStr};
+      lo[matricola] = {inizioOggi, fineOggi, data:_oggiStrSave};
       localStorage.setItem('nexus_orari_oggi', JSON.stringify(lo));
     } catch(e){}
   };
@@ -3306,6 +3352,27 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
   // Salvataggio SOLO OGGI: aggiorna D1 e localStorage subito.
   const salvaOggiOp = (matricola, inizioOggi, fineOggi) => {
     fetch(nexusUrl('salvaOrarioOggi',{matricola,orarioInizioOggi:inizioOggi,orarioFineOggi:fineOggi}),{mode:'cors'}).catch(()=>{});
+    // Propaga l'orario alle sessioni gia' registrate oggi (Presenze), come in CheckIn.
+    try {
+      const op = (operatori||[]).find(o=>o.matricola===matricola);
+      const chiave = op ? (op.nome.toUpperCase()+"-"+op.cognome.toUpperCase()) : null;
+      const oggi0 = new Date(); oggi0.setHours(0,0,0,0);
+      const hmToIso = (hm, base) => { if(!hm) return null; const [h,m]=hm.split(":").map(Number); const d=base?new Date(base):new Date(); d.setHours(h||0,m||0,0,0); return d.toISOString(); };
+      (sessioni||[]).filter(s=>{
+        if(s._pianificato) return false;
+        const matchMat = s.matricola===matricola || (chiave && s.matricola===chiave);
+        if(!matchMat) return false;
+        const dI = parseData(s.inizio);
+        return dI && dI.getTime() >= oggi0.getTime();
+      }).forEach(s=>{
+        const baseInizio = parseData(s.inizio) || new Date();
+        if(inizioOggi){ const isoIn=hmToIso(inizioOggi,baseInizio); if(isoIn) fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"inizio",valore:isoIn}),{mode:'cors'}).catch(()=>{}); }
+        const haCheckout = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+        if(fineOggi && haCheckout){ const baseFine=parseData(s.fine)||baseInizio; const isoFin=hmToIso(fineOggi,baseFine); if(isoFin) fetch(nexusUrl('modificaorario',{sessionId:s.id,campo:"fine",valore:isoFin}),{mode:'cors'}).catch(()=>{}); }
+      });
+      localStorage.setItem("nexus_ult_modifica_orario", String(Date.now()));
+      fetch(nexusUrl('invalidaObiettivoCongelato',{}),{mode:'cors'}).catch(()=>{});
+    } catch(e){}
     try {
       const lo = JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}');
       lo[matricola] = {inizioOggi, fineOggi, data:_oggiStr};
