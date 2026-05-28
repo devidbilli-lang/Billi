@@ -907,7 +907,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       }
       if(minOp>0) minTotali += minOp;
     }
-    const tot = minTotali>0 ? Math.ceil(minTotali/tc) : 0;
+    const tot = minTotali>0 ? Math.round(minTotali/tc) : 0;
     return tot>0?tot:null;
   })() : null;
   // OBIETTIVO EFFETTIVO: se esiste un valore congelato (turno chiuso), usa quello e non ricalcolare.
@@ -1197,7 +1197,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 });
                 let minTot=0;
                 Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
-                return minTot>0?Math.ceil(minTot/tcItem):null;
+                return minTot>0?Math.round(minTot/tcItem):null;
               })():null;
               // PUNTO 2 - RAMPA: se questo SKU su questa linea è in rampa, l'obiettivo del giorno
               // segue la curva teorica PERC_RAMPA invece dell'obiettivo a pieno regime.
@@ -2324,7 +2324,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         });
         let minTotali=0;
         Object.values(minPerMat).forEach(({base,sottrai})=>{ minTotali+=Math.max(0,base-sottrai); });
-        const obReale = minTotali>0?Math.ceil(minTotali/tc):null;
+        const obReale = minTotali>0?Math.round(minTotali/tc):null;
 
         // Obiettivo Teorico: matricole uniche × ore turno / TC
         const matricoleUniche = new Set();
@@ -2333,7 +2333,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           if(SKU_SPECIALI.some(x=>x.sku===(s.skuCorrente||s.sku||""))) return;
           matricoleUniche.add(mat);
         });
-        const obTeorico = matricoleUniche.size>0?Math.ceil(matricoleUniche.size*oreTotali*60/tc):null;
+        const obTeorico = matricoleUniche.size>0?Math.round(matricoleUniche.size*oreTotali*60/tc):null;
 
         setObRealeQ(obReale);
         setObTeoricoQ(obTeorico);
