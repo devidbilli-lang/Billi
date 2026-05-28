@@ -510,8 +510,11 @@ function CambioSkuInline({ sess, skuList, linee, onOk, onClose }) { const [nSku,
     </div>
   );
 }
-function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCorso] = useState("");
+function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCorso,setNomeCorso] = useState("");
   const [tipoUscita,setTipoUscita] = useState("sospendi");
+  const [pianifica,setPianifica] = useState(false);
+  const [oraInizio,setOraInizio] = useState("10:00");
+  const [oraFine,setOraFine] = useState("12:00");
   const la = getLinea(sess.lineaCorrente, linee);
   return (
     <div style={MS.ov}>
@@ -526,28 +529,52 @@ function ModalCorso({ sess, linee, onOk, onClose }) { const [nomeCorso,setNomeCo
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
             <span style={{...S.tag,background:"#ffffff",color:la.colore,border:"2px solid "+la.colore,marginLeft:8}}>{la.id}</span>
           </div>
-          {tipoUscita==="sospendi"&&(
+          {(tipoUscita==="sospendi"||pianifica)&&(
             <div style={{marginBottom:16}}>
               <label style={S.lbl}>Nome corso / formazione</label>
               <input style={{...S.inp,borderColor:"#06b6d4",borderWidth:2}} placeholder="es. Sicurezza sul lavoro..."
                 value={nomeCorso} onChange={e=>setNomeCorso(e.target.value)}/>
             </div>
           )}
-          <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Cosa succede alla produzione?</div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-            {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"],["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
-            ].map(([val,tit,desc,c])=>(
-              <button key={val} onClick={()=>setTipoUscita(val)}
-                style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
-                <span style={{fontWeight:700,color:tipoUscita===val?c:"#94a3b8",fontSize:13}}>{tit}</span>
-                <span style={{fontSize:11,color:"#64748b"}}>{desc}</span>
-              </button>
-            ))}
-          </div>
+          {/* Toggle pianificazione */}
+          {onPianifica&&(
+            <button type="button" onClick={()=>setPianifica(!pianifica)}
+              style={{width:"100%",marginBottom:14,padding:"10px",background:pianifica?"#0891b2":"#ecfeff",color:pianifica?"#fff":"#0891b2",border:"2px solid #06b6d4",borderRadius:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}>
+              ⏱ Pianifica corso {pianifica?"(attivo)":""}
+            </button>
+          )}
+          {pianifica ? (
+            <div style={{marginBottom:20,padding:"14px",background:"#f0fdff",border:"1px solid #67e8f9",borderRadius:12}}>
+              <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio corso</div>
+              <div style={{marginBottom:12}}><TimePicker value={oraInizio} color="#06b6d4" onChange={setOraInizio}/></div>
+              <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine corso (opzionale)</div>
+              <div style={{marginBottom:6}}><TimePicker value={oraFine} color="#06b6d4" onChange={setOraFine}/></div>
+              <div style={{fontSize:11,color:"#64748b",textAlign:"center",lineHeight:1.4}}>A fine corso: rientro in produzione se entro il turno, altrimenti checkout automatico.</div>
+            </div>
+          ) : (
+            <>
+              <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Cosa succede alla produzione?</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+                {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"],["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
+                ].map(([val,tit,desc,c])=>(
+                  <button key={val} onClick={()=>setTipoUscita(val)}
+                    style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
+                    <span style={{fontWeight:700,color:tipoUscita===val?c:"#94a3b8",fontSize:13}}>{tit}</span>
+                    <span style={{fontSize:11,color:"#64748b"}}>{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
-            <button style={{...MS.cf,background:"linear-gradient(135deg,#06b6d4,#0284c7)"}}
-              onClick={()=>onOk(tipoUscita, nomeCorso||"CORSO")}>Conferma</button>
+            {pianifica ? (
+              <button style={{...MS.cf,background:"linear-gradient(135deg,#0891b2,#0369a1)"}}
+                onClick={()=>onPianifica(oraInizio, oraFine, nomeCorso||"CORSO")}>✓ Pianifica</button>
+            ) : (
+              <button style={{...MS.cf,background:"linear-gradient(135deg,#06b6d4,#0284c7)"}}
+                onClick={()=>onOk(tipoUscita, nomeCorso||"CORSO")}>Conferma</button>
+            )}
           </div>
         </div>
       </div>
@@ -2970,6 +2997,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 }
               }
               setRis({tipo:"corso",sess:sf});setMode("result");
+            }} onPianifica={async(oraInizioHM,oraFineHM,nomeCorso)=>{
+              const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+              try{ await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([sf.matricola]),oraInizio:hmToIso(oraInizioHM),oraFine:oraFineHM?hmToIso(oraFineHM):"",nomeCorso:nomeCorso||"CORSO"}),{mode:"cors"}); }catch(e){}
+              if(aggiornaSessioni) setTimeout(aggiornaSessioni,1500);
+              setRis({tipo:"corso",sess:sf});setMode("result");
             }} onClose={reset}/>}
             {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
@@ -4473,6 +4505,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             else if(corsiAgg.length>0){ corsiAgg[corsiAgg.length-1]={...corsiAgg[corsiAgg.length-1],tipo:"rientrato",rientro:new Date().toLocaleString("it-IT")}; }
             return {...s, corsi:corsiAgg};
           }));
+          setModCorso(null);
+          setLoading(false);
+          if(onAggiornaSessioni) onAggiornaSessioni();
+        }}
+        onPianifica={async(oraInizioHM,oraFineHM,nomeCorso)=>{
+          const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+          setLoading(true); setLoadingMsg("Pianificazione corso...");
+          try{ await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([modCorso.matricola]),oraInizio:hmToIso(oraInizioHM),oraFine:oraFineHM?hmToIso(oraFineHM):"",nomeCorso:nomeCorso||"CORSO"}),{mode:"cors"}); }catch(e){}
           setModCorso(null);
           setLoading(false);
           if(onAggiornaSessioni) onAggiornaSessioni();
