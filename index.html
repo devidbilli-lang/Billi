@@ -5073,7 +5073,10 @@ function App() { const [view,setView]             = useState("login");
         const tuttiSess = [...j.data.sessioni, ...(j.data.pianificati||[])];
         setSessSheets(tuttiSess); window._sessSheets=tuttiSess;
         if(j.data.rampe){ setRampeSheets(j.data.rampe); window._rampeSheets=j.data.rampe; }
-        if(j.data.sessioni.length === 0){ setSess([]); setSessSheets([]); }
+        // Allinea SEMPRE lo stato `sess` ai dati reali del worker (solo le sessioni vere, non i
+        // pianificati). Prima si aggiornava solo quando erano zero, lasciando `sess` con dati
+        // vecchi del localStorage (es. una persona che risultava ancora "in turno" dopo il checkout).
+        setSess(j.data.sessioni);
         setDashSync("ok"); setUltimoSync2(new Date());
         } else setDashSync("errore"); } catch(e){ setDashSync("errore"); } },[]);
   useEffect(()=>{ caricaSessioni();
