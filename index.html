@@ -1281,6 +1281,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 } else {
                   if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
                 }
+                // Allinea al conteggio "realmente presenti": escludi chi è in CORSO o in PAUSA.
+                const _ultCor = (s.corsi||[])[((s.corsi||[]).length||0)-1];
+                if(_ultCor && _ultCor.tipo==="sospendi" && !_ultCor.rientro) return false;
+                const _ultPau = (s.pause||[])[((s.pause||[]).length||0)-1];
+                if(_ultPau && _ultPau.tipo==="pausa") return false;
                 return true;
               });
               const _skuPerOpItem = {};
@@ -1328,7 +1333,16 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   {/* Header articolo - nome completo viola */}
                   {(()=>{
                     // Divisione equa: per ogni operatore dividi per il numero di SKU su cui lavora
-                    const _opLinea = sessioni.filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!isSkuSpeciale(s.skuCorrente||s.sku||""));
+                    const _opLinea = sessioni.filter(s=>{
+                      if(s.lineaCorrente!==lineaId) return false;
+                      if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
+                      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
+                      const _ultCor = (s.corsi||[])[((s.corsi||[]).length||0)-1];
+                      if(_ultCor && _ultCor.tipo==="sospendi" && !_ultCor.rientro) return false;
+                      const _ultPau = (s.pause||[])[((s.pause||[]).length||0)-1];
+                      if(_ultPau && _ultPau.tipo==="pausa") return false;
+                      return true;
+                    });
                     const _skuPerOp = {};
                     _opLinea.forEach(s=>{ const m=s.matricola||s.nome; if(!m) return; if(!_skuPerOp[m]) _skuPerOp[m]=new Set(); _skuPerOp[m].add(s.skuCorrente||s.sku); });
                     // Conta quota virtuale per questo SKU
@@ -3215,6 +3229,11 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 </div>
               )}
               {opSelezionati.length>0&&(
+                <>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,marginBottom:2}}>
+                  <span style={{fontSize:12,color:"#047857",fontWeight:700}}>{opSelezionati.length} operator{opSelezionati.length===1?"e":"i"} selezionat{opSelezionati.length===1?"o":"i"}</span>
+                  <button type="button" onClick={()=>setOpSelezionati([])} style={{background:"transparent",border:"1px solid #ef444466",color:"#ef4444",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:4}}>× Rimuovi tutti</button>
+                </div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:6}}>
                   {opSelezionati.map(o=>{
                     const oggiO = orariOggi[o.matricola];
@@ -3239,6 +3258,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     );
                   })}
                 </div>
+                </>
               )}
             </div>
           </div>
@@ -4746,7 +4766,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           {fil.length===0?(<div style={{textAlign:"center",padding:60,color:"#64748b"}}>Nessuna sessione</div>):(
             <>
             {editOrario&&selezionati.size>0&&(
-              <div style={{background:"#7c3aed",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,justifyContent:"space-between",margin:"8px 24px",boxShadow:"0 4px 20px #7c3aed66"}}>
+              <div style={{background:"#7c3aed",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,justifyContent:"space-between",margin:"8px 24px",boxShadow:"0 4px 20px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
                 <span style={{color:"#fff",fontWeight:700,fontSize:13}}>{selezionati.size} selezionat{selezionati.size===1?"o":"i"}</span>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Inizio</button>
