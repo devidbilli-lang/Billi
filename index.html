@@ -1155,19 +1155,32 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 // Se turno attivo: solo sessioni senza CHECKOUT.
                 // Se turno terminato: tutte le sessioni di oggi (anche chiuse).
                 const oggi00 = new Date(); oggi00.setHours(0,0,0,0);
-                const filtraSess = (s)=>{
-                  if(s.lineaCorrente!==lineaId) return false;
-                  if((s.skuCorrente||s.sku)!==skuItem) return false;
+                // Una sessione "tocca" questo (linea, sku) se in qualche segmento (inizio, trasferimenti)
+                // la persona ha lavorato proprio qui. Non basta più filtrare sullo SKU corrente:
+                // dopo un trasferimento lo SKU corrente è cambiato, ma i minuti pre-trasferimento
+                // appartengono allo SKU di partenza.
+                const sessTocca = (s)=>{
                   if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
                   if(!s.inizio) return false;
-                  if(turnoTerminato){
-                    const d = parseData(s.inizio);
-                    if(!d || d.getTime() < oggi00.getTime()) return false;
-                  } else {
-                    if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
+                  // Durante il turno: includi anche le sessioni chiuse che hanno toccato questo
+                  // (linea, sku). Il calcolo dei minuti, segmentato, attribuisce esattamente
+                  // i minuti pre/post trasferimento al loro SKU. Senza questo, gli obiettivi degli
+                  // SKU "lasciati" perdono il contributo della persona dopo il suo checkout.
+                  // A turno terminato: includi tutte le sessioni di oggi.
+                  const d = parseData(s.inizio);
+                  if(!d || d.getTime() < oggi00.getTime()) return false;
+                  // Stato iniziale (linea, sku) della sessione
+                  let lc = s.lineaInizio, sc = s.sku;
+                  if(lc===lineaId && sc===skuItem) return true;
+                  // Scorri i trasferimenti: dopo ognuno la coppia cambia
+                  const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+                  for(const t of trasf){
+                    lc = t.a || lc; sc = t.skuA || sc;
+                    if(lc===lineaId && sc===skuItem) return true;
                   }
-                  return true;
+                  return false;
                 };
+                const filtraSess = sessTocca;
                 const sessioniSku = sessioni.filter(filtraSess);
                 // Conta SKU simultanei per ogni matricola (per divisione equa)
                 const nSimPerMatItem = {};
@@ -1209,7 +1222,29 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     // In turno con uscita pianificata anticipata: scontala già da ora
                     secFineEff = secFinePianItem;
                   }
-                  const minBase=Math.max(0,(secFineEff-secIng)/60);
+                  // Costruisci i segmenti per (linea, sku) della sessione e somma SOLO quelli
+                  // in cui la persona era proprio su lineaId+skuItem. Così i minuti pre/post
+                  // trasferimento non si "portano dietro" il vecchio SKU.
+                  const dInizioMs = dInizio.getTime();
+                  const trasfSeg = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+                  // Calcolo l'ora di fine sessione in ms (per costruire i segmenti)
+                  const giornoBase = new Date(dInizioMs); giornoBase.setSeconds(0,0); giornoBase.setMinutes(0); giornoBase.setHours(0);
+                  const tsFineEffMs = giornoBase.getTime() + secFineEff*1000;
+                  // Calcolo l'ora di ingresso effettivo (allineato a inizio pianificato se posticipato)
+                  let secIngEff = secIng;
+                  let segmenti = [];
+                  let cur = dInizioMs, curL = s.lineaInizio, curS = s.sku;
+                  for(const t of trasfSeg){
+                    segmenti.push({l:curL, sk:curS, dal:cur, al:t.ts});
+                    cur = t.ts; curL = t.a || curL; curS = t.skuA || curS;
+                  }
+                  segmenti.push({l:curL, sk:curS, dal:cur, al:tsFineEffMs});
+                  let minBaseMs = 0;
+                  for(const seg of segmenti){
+                    if(seg.l!==lineaId || seg.sk!==skuItem) continue;
+                    if(seg.al>seg.dal) minBaseMs += (seg.al - seg.dal);
+                  }
+                  const minBase = Math.max(0, minBaseMs/60000);
                   const nSim=nSimPerMatItem[mat]?nSimPerMatItem[mat].skus.size:1;
                   if(!minPerMat[mat]) minPerMat[mat]={base:minBase/nSim,sottrai:0};
                   if(s.corsi) s.corsi.forEach(c=>{
