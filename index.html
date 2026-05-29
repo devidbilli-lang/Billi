@@ -1429,7 +1429,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                           <span style={{fontSize:16,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/15</span>
                         </div>
                       ) : (
-                        <div style={{fontSize:fSep,color:"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,marginBottom:8,textAlign:"center"}}>Obiettivo Giornaliero</div>
+                        <div style={{fontSize:fSep,color:"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,marginBottom:8,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
                       )}
                       <div style={{display:"flex",alignItems:"baseline",gap:6}}>
                         <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
@@ -1450,7 +1450,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     {/* Obj Orario - grigio lunare. Nascosta in vista griglia (compatto). */}
                     {!compatto && (
                     <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
-                      <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800,textAlign:"center",width:"100%",lineHeight:1.15,textShadow:"0 0 6px #ffff0066,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed",marginBottom:8}}>Obiettivo Real Time</div>
+                      <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800,textAlign:"center",width:"100%",lineHeight:1.15,textShadow:"0 0 6px #ffff0066,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed",marginBottom:8,textTransform:"uppercase"}}>Obiettivo Real Time</div>
                       {inTurnoItem && <div style={{fontSize:fSep,color:"#ffff00",fontWeight:700,textAlign:"center",width:"100%",opacity:0.95}}>alle {prossimaOraLabelItem}</div>}
                       {!inTurnoItem && turnoTerminato && <div style={{fontSize:fSep,color:"#ffff00",fontWeight:700,textAlign:"center",width:"100%",opacity:0.95}}>FINALE</div>}
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
