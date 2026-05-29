@@ -3818,18 +3818,16 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     setLoading(true); setLoadingMsg("Spostamento al corso...");
     try {
       const matArr = Array.from(matricoleSet);
-      for(const mat of matArr){
+      await Promise.all(matArr.map(mat=>{
         const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
                      sessioni.find(s => s.matricola===mat && !s.fine);
-        if(!sAtt) continue;
-        try {
-          await fetch(nexusUrl("evento",{sessionId:sAtt.id, matricola:mat, nome:sAtt.nome||"", cognome:sAtt.cognome||"", sku:sAtt.skuCorrente||sAtt.sku||"", tipo:"CORSO", lineaDa:sAtt.lineaCorrente, lineaA:sAtt.lineaCorrente, skuDa:sAtt.skuCorrente||sAtt.sku||"", skuA:(nomeCorso||"CORSO")}),{mode:"cors"});
-        } catch(e){}
-      }
+        if(!sAtt) return Promise.resolve();
+        return fetch(nexusUrl("evento",{sessionId:sAtt.id, matricola:mat, nome:sAtt.nome||"", cognome:sAtt.cognome||"", sku:sAtt.skuCorrente||sAtt.sku||"", tipo:"CORSO", lineaDa:sAtt.lineaCorrente, lineaA:sAtt.lineaCorrente, skuDa:sAtt.skuCorrente||sAtt.sku||"", skuA:(nomeCorso||"CORSO")}),{mode:"cors"}).catch(e=>{});
+      }));
     } catch(e){
     } finally {
       setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
-      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
+      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 800);
     }
   };
   // Pianifica un corso per piu' operatori: il worker crea i pianificati CORSO (inizio) e
@@ -3859,17 +3857,15 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     setLoading(true); setLoadingMsg("Rientro dal corso...");
     try {
       const matArr = Array.from(matricoleSet);
-      for(const mat of matArr){
+      await Promise.all(matArr.map(mat=>{
         const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
                      sessioni.find(s => s.matricola===mat && !s.fine);
-        if(!sAtt) continue;
+        if(!sAtt) return Promise.resolve();
         // Riporta in produzione solo se è effettivamente al corso (corso 'sospendi' senza rientro)
         const alCorso = (sAtt.corsi||[]).some(c=>c.tipo==="sospendi");
-        if(!alCorso) continue;
-        try {
-          await fetch(nexusUrl("evento",{sessionId:sAtt.id, matricola:mat, nome:sAtt.nome||"", cognome:sAtt.cognome||"", sku:sAtt.skuCorrente||sAtt.sku||"", tipo:"RIENTRO", lineaDa:sAtt.lineaCorrente, lineaA:sAtt.lineaCorrente, skuDa:sAtt.skuCorrente||sAtt.sku||"", skuA:sAtt.skuCorrente||sAtt.sku||""}),{mode:"cors"});
-        } catch(e){}
-      }
+        if(!alCorso) return Promise.resolve();
+        return fetch(nexusUrl("evento",{sessionId:sAtt.id, matricola:mat, nome:sAtt.nome||"", cognome:sAtt.cognome||"", sku:sAtt.skuCorrente||sAtt.sku||"", tipo:"RIENTRO", lineaDa:sAtt.lineaCorrente, lineaA:sAtt.lineaCorrente, skuDa:sAtt.skuCorrente||sAtt.sku||"", skuA:sAtt.skuCorrente||sAtt.sku||""}),{mode:"cors"}).catch(e=>{});
+      }));
     } catch(e){
     } finally {
       setLoading(false); setSelezionati(new Set());
@@ -4346,11 +4342,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         <button type="button" title={"Rimuovi "+sk+" — chiude la sessione su quell'articolo"} onClick={async()=>{
                           if(!window.confirm("Rimuovere l'articolo "+sk+" da "+perSku[sk].length+" operator"+(perSku[sk].length===1?"e":"i")+"? La sessione su questo SKU verrà chiusa e i minuti smettono di contare.")) return;
                           setLoading(true); setLoadingMsg("Rimozione "+sk+"...");
-                          for(const s of perSku[sk]){
-                            try{ await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); }catch(e){}
-                          }
+                          await Promise.all(perSku[sk].map(s=>
+                            api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}).catch(e=>{})
+                          ));
                           setLoading(false);
-                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,600);
                         }} style={{background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"3px 12px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>−</button>
                       </div>
                     ))}
@@ -4430,11 +4426,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     if(!(matsSel.has(s.matricola)||matsSel.has(s.nome))) return false;
                     return (s.corsi||[]).length>0;
                   });
-                  for(const s of sessInCorso){
-                    try{ await fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:hmToIso(modCorsoMulti.oraEntrataMod||"10:00"),oraUscita:modCorsoMulti.oraUscitaMod?hmToIso(modCorsoMulti.oraUscitaMod):""}),{mode:"cors"}); }catch(e){}
-                  }
+                  await Promise.all(sessInCorso.map(s=>
+                    fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:hmToIso(modCorsoMulti.oraEntrataMod||"10:00"),oraUscita:modCorsoMulti.oraUscitaMod?hmToIso(modCorsoMulti.oraUscitaMod):""}),{mode:"cors"}).catch(e=>{})
+                  ));
                   setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
-                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,600);
                 }}>✓ Salva orari</button>
               ) : modCorsoMulti.pianifica ? (
                 <button style={{flex:1,padding:11,background:"#0891b2",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
@@ -4656,14 +4652,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     return s;
                   }).filter(Boolean);
                   const skuDestinazione = modTrasf.skuMultiDest||[];
-                  for(const s of ops){
-                    // 1. CHECKOUT di TUTTE le sessioni aperte sulla linea di partenza
+                  await Promise.all(ops.map(async(s)=>{
+                    // 1. CHECKOUT di TUTTE le sessioni aperte sulla linea di partenza (in parallelo)
                     const sessioniAperte = sessAggiornate.filter(ss=>
                       (ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome) &&
                       (!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null")
                     );
-                    for(const sess of sessioniAperte){
-                      // CHECKOUT per chiudere ogni sessione sulla linea di partenza
+                    await Promise.all(sessioniAperte.map(async(sess)=>{
                       await api.evento({
                         sessionId: sess.id,
                         matricola: sess.matricola||"",
@@ -4675,13 +4670,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         lineaA: "",
                         skuDa: sess.skuCorrente||sess.sku||"",
                         skuA: ""
-                      });
+                      }).catch(e=>{});
                       if(onTr) onTr(sess.id, modTrasf.lineaDest.id, sess.skuCorrente||sess.sku||"");
-                    }
-                    // 2. CHECKIN per ogni SKU sulla linea di destinazione
-                    for(const skuNew of skuDestinazione){
+                    }));
+                    // 2. CHECKIN per ogni SKU sulla linea di destinazione (in parallelo, dopo i checkout)
+                    await Promise.all(skuDestinazione.map(skuNew=>{
                       const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
-                      await api.evento({
+                      return api.evento({
                         sessionId: newId,
                         matricola: s.matricola||"",
                         nome: s.nome||"",
@@ -4692,9 +4687,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         lineaA: modTrasf.lineaDest.id,
                         skuDa: skuNew,
                         skuA: skuNew
-                      });
-                    }
-                  }
+                      }).catch(e=>{});
+                    }));
+                  }));
                   setModTrasf(null);
                   // Ricarica subito + di nuovo dopo 3 secondi per avere i nuovi CHECKIN
                   const nuoveMatricole = ops.map(o=>o.matricola||o.nome);
@@ -4994,16 +4989,17 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     // Raccogli tutti i session_id unici da eliminare
                     const sessionIds = new Set();
                     toDelete.forEach(s=>{ if(s.id) sessionIds.add(s.id); });
-                    for(const sid of sessionIds){
-                      try{ await fetch(nexusUrl("eliminasessione",{sessionId:sid}),{mode:"cors"}); }catch(e){}
-                    }
+                    await Promise.all([...sessionIds].map(sid=>
+                      fetch(nexusUrl("eliminasessione",{sessionId:sid}),{mode:"cors"}).catch(e=>{})
+                    ));
                     // Elimina anche eventuali pianificati residui per ciascuna matricola+linea selezionata
                     const matLinee = new Set();
                     toDelete.forEach(s=>{ matLinee.add((s.matricola||s.nome||"")+"|||"+(s.lineaCorrente||"")); });
-                    for(const ml of matLinee){
+                    await Promise.all([...matLinee].map(ml=>{
                       const [mat,lin] = ml.split("|||");
-                      if(mat){ try{ await fetch(nexusUrl("eliminaPianificati",{matricola:mat,lineaDa:lin||""}),{mode:"cors"}); }catch(e){} }
-                    }
+                      if(!mat) return Promise.resolve();
+                      return fetch(nexusUrl("eliminaPianificati",{matricola:mat,lineaDa:lin||""}),{mode:"cors"}).catch(e=>{});
+                    }));
                     setLoading(false); setSelezionati(new Set());
                     if(onAggiornaSessioni) onAggiornaSessioni();
                   }} style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>🗑 Elimina</button>
@@ -5161,11 +5157,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                               const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
                               const tipoEv = inPausa ? "RIPRESA" : "PAUSA";
                               setLoading(true); setLoadingMsg((inPausa?"Ripresa turno ":"Pausa turno ")+s.nome+"...");
-                              for(const sess of sessioniOp){
-                                try{ await api.evento({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku,tipo:tipoEv,lineaDa:sess.lineaCorrente,lineaA:sess.lineaCorrente,skuDa:sess.skuCorrente||sess.sku,skuA:sess.skuCorrente||sess.sku}); }catch(e){}
-                              }
+                              await Promise.all(sessioniOp.map(sess=>
+                                api.evento({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku,tipo:tipoEv,lineaDa:sess.lineaCorrente,lineaA:sess.lineaCorrente,skuDa:sess.skuCorrente||sess.sku,skuA:sess.skuCorrente||sess.sku}).catch(e=>{})
+                              ));
                               setLoading(false);
-                              if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+                              if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,600);
                             }}>{inPausa?"▶":"❚❚"}</button>
                             <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16}} onClick={()=>{ (()=>{
   const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
