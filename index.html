@@ -1114,22 +1114,43 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               sessRiferimento.filter(s=>s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
               .map(s=>s.skuCorrente||s.sku)
             )];
-            // Filtra fuori gli SKU "vuoti": nessun operatore della giornata E nessuna borsa
-            // prodotta E nessun KO/MIGL registrato. Sono spesso residui di trasferimenti.
+            // Filtra fuori gli SKU "vuoti": nessun operatore della giornata che abbia effettivamente
+            // lavorato qui (un segmento di sessione su lineaId+sku, non solo un "passaggio")
+            // E nessuna borsa prodotta E nessun KO/MIGL registrato.
             const _nomeLineaForKey = linee ? (linee.find(l=>l.id===lineaId)||{}).nome||lineaId : lineaId;
             const _oggi00Sku = new Date(); _oggi00Sku.setHours(0,0,0,0);
+            // Una sessione "ha lavorato" su (linea, sku) se uno dei suoi segmenti coincide
+            // con la coppia. Calcola anche i minuti effettivi spesi su quella coppia.
+            const minutiSessioneSu = (s, lid, sk)=>{
+              const d = parseData(s.inizio); if(!d || d.getTime() < _oggi00Sku.getTime()) return 0;
+              let lc = s.lineaInizio, sc = s.sku;
+              let cur = d.getTime();
+              let totMs = 0;
+              const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+              for(const t of trasf){
+                if(lc===lid && sc===sk && t.ts > cur) totMs += (t.ts - cur);
+                cur = t.ts; lc = t.a||lc; sc = t.skuA||sc;
+              }
+              const finMs = s.fine ? (parseData(s.fine)||new Date()).getTime() : Date.now();
+              if(lc===lid && sc===sk && finMs > cur) totMs += (finMs - cur);
+              return totMs/60000;
+            };
             const skuAttiviLinea = skuAttiviLineaRaw.filter(sk=>{
-              // Ha operatori che hanno toccato questo SKU oggi (anche se ora hanno fatto checkout)
-              const hasOp = sessioni.some(s=>{
-                if((s.lineaCorrente!==lineaId)&&(s.lineaInizio!==lineaId)) return false;
-                if((s.skuCorrente||s.sku)!==sk && (s.sku||"")!==sk) return false;
-                const d = parseData(s.inizio);
-                return d && d.getTime() >= _oggi00Sku.getTime();
-              });
-              // Ha qualità registrata su questo SKU (ok/ko/migl > 0)
+              // Qualità: se ci sono borse/KO/MIGL registrati, la card va sempre mostrata
               const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
-              const hasQ = (q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0;
-              return hasOp || hasQ;
+              if((q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0) return true;
+              // Minuti totali effettivi che almeno un operatore ha speso su (linea, sku)
+              let minTot = 0;
+              for(const s of sessioni){ minTot += minutiSessioneSu(s, lineaId, sk); if(minTot > 0) break; }
+              if(minTot <= 0) return false;
+              // L'obiettivo stimato sui minuti effettivi: se è < 1, la card è praticamente vuota
+              const skuObj = skuList.find(x=>x&&x.sku===sk);
+              const tcSku = skuObj?.tc || 0;
+              if(tcSku > 0){
+                const obStima = Math.floor(minTot / tcSku);
+                if(obStima < 1) return false;
+              }
+              return true;
             });
             if(skuAttiviLinea.length===0) return (
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#94a3b8",fontSize:14}}>
