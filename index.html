@@ -4654,7 +4654,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           </div>
         );
       })()}
-      {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee} onClose={()=>setModCambioSku(null)} onOk={(ns)=>{
+      {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee} onClose={()=>setModCambioSku(null)} onRimuoviArticolo={async(s)=>{
+          try{ await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); }catch(e){}
+          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+        }} onOk={(ns)=>{
           const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
           if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
           api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn});
