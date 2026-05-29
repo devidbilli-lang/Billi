@@ -3855,21 +3855,23 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const rientroCorsoMultiplo = async (matricoleSet) => {
     if(!matricoleSet || matricoleSet.size===0) return;
     setLoading(true); setLoadingMsg("Rientro dal corso...");
+    // Una sessione è "al corso" se l'ultimo evento corso è 'sospendi' e non ha rientro.
+    const isAlCorso = (s)=>{ const c=(s.corsi||[]); const u=c.length?c[c.length-1]:null; return u && u.tipo==="sospendi" && !u.rientro; };
     try {
       const matArr = Array.from(matricoleSet);
+      let nRientri = 0;
       await Promise.all(matArr.map(mat=>{
-        const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
-                     sessioni.find(s => s.matricola===mat && !s.fine);
-        if(!sAtt) return Promise.resolve();
-        // Riporta in produzione solo se è effettivamente al corso (corso 'sospendi' senza rientro)
-        const alCorso = (sAtt.corsi||[]).some(c=>c.tipo==="sospendi");
-        if(!alCorso) return Promise.resolve();
-        return fetch(nexusUrl("evento",{sessionId:sAtt.id, matricola:mat, nome:sAtt.nome||"", cognome:sAtt.cognome||"", sku:sAtt.skuCorrente||sAtt.sku||"", tipo:"RIENTRO", lineaDa:sAtt.lineaCorrente, lineaA:sAtt.lineaCorrente, skuDa:sAtt.skuCorrente||sAtt.sku||"", skuA:sAtt.skuCorrente||sAtt.sku||""}),{mode:"cors"}).catch(e=>{});
+        // Cerca TUTTE le sessioni aperte della matricola e prendi quella effettivamente al corso
+        const sessMat = sessioni.filter(s => (s.matricola===mat||s.nome===mat) && !s.fine && !s._pianificato);
+        const sAtt = sessMat.find(isAlCorso);
+        if(!sAtt) return Promise.resolve(); // nessuna sessione al corso per questa persona
+        nRientri++;
+        return fetch(nexusUrl("evento",{sessionId:sAtt.id, matricola:sAtt.matricola||mat, nome:sAtt.nome||"", cognome:sAtt.cognome||"", sku:sAtt.skuCorrente||sAtt.sku||"", tipo:"RIENTRO", lineaDa:sAtt.lineaCorrente, lineaA:sAtt.lineaCorrente, skuDa:sAtt.skuCorrente||sAtt.sku||"", skuA:sAtt.skuCorrente||sAtt.sku||""}),{mode:"cors"}).catch(e=>{});
       }));
     } catch(e){
     } finally {
       setLoading(false); setSelezionati(new Set());
-      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
+      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 800);
     }
   };
   const aggiungiArticoloLavorazione = async (matricoleSet, skuNuovo, lineaId) => {
