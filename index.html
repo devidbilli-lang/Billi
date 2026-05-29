@@ -858,24 +858,57 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     const _orariOggiL = (()=>{ try{ return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); }catch(e){ return {}; } })();
     const _oggiStrL = new Date().toLocaleDateString('it-IT');
     const hmToTs = (hm, refTs)=>{ const [h,m]=(hm||"").split(":").map(Number); const d=new Date(refTs); d.setHours(h||0,m||0,0,0); return d.getTime(); };
-    // Una sessione per matricola (la più recente). Le riparazioni (SKU speciale) sono escluse.
-    const perMat = {};
+    // RAGGRUPPAMENTO PER BLOCCHI TEMPORALI (sostituisce "una sessione per matricola").
+    // Col modello checkout+checkin, una persona può avere PIÙ sessioni separate:
+    //  - più articoli nello STESSO periodo (es. X e Z dalle 6 alle 14) → UNA sola permanenza,
+    //    NON va contata due volte;
+    //  - permanenze in periodi DISTINTI (es. A 6-10, poi torna su A 12-14 dopo essere stata su B)
+    //    → due permanenze reali, i minuti SI SOMMANO.
+    // Distinguo i due casi col TEMPO: sessioni che si sovrappongono nel tempo = stesso blocco;
+    // sessioni in intervalli disgiunti = blocchi diversi. Per ogni matricola costruisco i blocchi.
+    const _tsFineSess = (s)=>{
+      const ti = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||0);
+      const hc = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      return hc ? (parseData(s.fine)?.getTime()||ti) : (ti + oreTotali*3600*1000);
+    };
+    const perMatArr = {};
     sessioniLinea.forEach(s=>{
       const mat = s.matricola||s.nome||s.id;
       if(!mat) return;
-      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return; // riparazioni non contano per l'obiettivo
-      const esistente = perMat[mat];
-      if(!esistente){ perMat[mat] = s; return; }
-      // ANTI-DOPPIO-CONTEGGIO: se l'operatore ha sia una sessione pianificata sia una reale,
-      // tieni la REALE (la pianificata è solo una previsione che si è già avverata).
-      if(esistente._pianificato && !s._pianificato){ perMat[mat] = s; return; }
-      if(!esistente._pianificato && s._pianificato){ return; } // tieni la reale già presente
-      // Stesso tipo (entrambe reali o entrambe pianificate): tieni la più recente
-      if((s.tsInizio||0) > (esistente.tsInizio||0)) perMat[mat] = s;
+      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return; // riparazioni escluse
+      if(!perMatArr[mat]) perMatArr[mat]=[];
+      perMatArr[mat].push(s);
+    });
+    // Per ogni matricola, raggruppo in blocchi temporali e tengo un rappresentante per blocco.
+    const sessioniDaContare = [];
+    Object.keys(perMatArr).forEach(mat=>{
+      let lista = perMatArr[mat].slice();
+      // ANTI-DOPPIO-CONTEGGIO pianificata/reale: se per la stessa matricola esistono sia reali
+      // sia pianificate, scarto le pianificate (la reale è la previsione già avverata).
+      const haReali = lista.some(s=>!s._pianificato);
+      if(haReali) lista = lista.filter(s=>!s._pianificato);
+      // Ordino per inizio
+      lista.sort((a,b)=>((a.tsInizio||parseData(a.inizio)?.getTime()||0)-(b.tsInizio||parseData(b.inizio)?.getTime()||0)));
+      const blocchi = []; // ogni blocco: {dal, al, sessioni:[]}
+      lista.forEach(s=>{
+        const ti = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||0);
+        const tf = _tsFineSess(s);
+        // Cerco un blocco con cui si sovrappone nel tempo (overlap)
+        const b = blocchi.find(bk=> ti < bk.al && tf > bk.dal);
+        if(b){ b.dal=Math.min(b.dal,ti); b.al=Math.max(b.al,tf); b.sessioni.push(s); }
+        else { blocchi.push({dal:ti, al:tf, sessioni:[s]}); }
+      });
+      // Per ogni blocco scelgo un rappresentante: la sessione che tocca questa linea col
+      // segmento più lungo (così i segmenti per linea sono coerenti). Se nessuna tocca la
+      // linea direttamente, prendo la prima.
+      blocchi.forEach(b=>{
+        const rapp = b.sessioni.find(s=>s.lineaCorrente===lineaId||s.lineaInizio===lineaId||(s.trasferimenti||[]).some(t=>t.a===lineaId||t.da===lineaId)) || b.sessioni[0];
+        sessioniDaContare.push(rapp);
+      });
     });
     let minTotali = 0;
-    for(const mat of Object.keys(perMat)){
-      const s = perMat[mat];
+    for(const s of sessioniDaContare){
+      const mat = s.matricola||s.nome||s.id;
       let tsIn = s.tsInizio && s.tsInizio>0 ? s.tsInizio : (parseData(s.inizio)?.getTime()||null);
       if(!tsIn) continue;
       // INIZIO "solo oggi" posticipato: se l'operatore ha un orario di inizio pianificato per OGGI
@@ -1343,7 +1376,12 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   if(ts.getTime()<nSimPerMatItem[mat].tsMin) nSimPerMatItem[mat].tsMin=ts.getTime();
                 });
                 const minPerMat = {};
-                sessioniSku.forEach(s=>{
+                // Traccia i periodi già contati per ogni matricola, per non sommare due volte
+                // sessioni che si SOVRAPPONGONO nel tempo (multi-articolo o doppio check-in).
+                // Permanenze in periodi DISTINTI (A→B→A) invece si sommano correttamente.
+                const periodiContati = {};
+                const sessioniSkuOrd = sessioniSku.slice().sort((a,b)=>((parseData(a.inizio)?.getTime()||0)-(parseData(b.inizio)?.getTime()||0)));
+                sessioniSkuOrd.forEach(s=>{
                   const mat=s.matricola||s.nome; if(!mat) return;
                   const dInizio=parseData(s.inizio); if(!dInizio) return;
                   const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
@@ -1387,7 +1425,17 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   }
                   const minBase = Math.max(0, minBaseMs/60000);
                   const nSim=nSimPerMatItem[mat]?nSimPerMatItem[mat].skus.size:1;
-                  if(!minPerMat[mat]) minPerMat[mat]={base:minBase/nSim,sottrai:0};
+                  // Dedup temporale: se questo periodo si sovrappone a uno già contato per questa
+                  // matricola, NON ri-sommo (è la stessa permanenza vista da un'altra sessione).
+                  const tsInMs0 = dInizio.getTime();
+                  const tsFiMs0 = tsFineEffMs;
+                  if(!periodiContati[mat]) periodiContati[mat]=[];
+                  const sovrappone = periodiContati[mat].some(p=> tsInMs0 < p.al && tsFiMs0 > p.dal);
+                  if(sovrappone){ return; } // già conteggiato in questo periodo
+                  periodiContati[mat].push({dal:tsInMs0, al:tsFiMs0});
+                  // Accumula (somma) i minuti: permanenze in periodi distinti SI SOMMANO.
+                  if(!minPerMat[mat]) minPerMat[mat]={base:0,sottrai:0};
+                  minPerMat[mat].base += minBase/nSim;
                   if(s.corsi) s.corsi.forEach(c=>{
                     const dC=parseData(c.quando); if(!dC) return;
                     const sC=dC.getHours()*3600+dC.getMinutes()*60;
@@ -4087,11 +4135,29 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           <div style={{color:"#ffffff",fontSize:16,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{loadingMsg||"Operazione in corso..."}</div>
         </div>
       )}
-      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={(d,ns)=>{
-        api.evento({sessionId:mod.id,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:mod.skuCorrente||mod.sku||"",tipo:"TRASFERIMENTO",lineaDa:mod.lineaCorrente,lineaA:d.id,skuDa:mod.skuCorrente||mod.sku||"",skuA:ns||mod.skuCorrente||mod.sku||""});
-        if(onTr) onTr(mod.id,d,ns);
+      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={async(d,ns)=>{
+        const destId = d&&d.id ? d.id : d;
+        const skuNuovo = ns || mod.skuCorrente || mod.sku || "";
+        const lineaPartenza = mod.lineaCorrente||mod.lineaInizio||"";
+        const matKey = mod.matricola||mod.nome+"-"+mod.cognome;
         setMod(null);
-        if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+        // 1. CHECKOUT di TUTTE le sessioni aperte della persona sulla linea di PARTENZA
+        //    (chiude i minuti su ogni articolo che faceva lì).
+        const apertePartenza = sessioni.filter(ss=>{
+          const k = ss.matricola||ss.nome+"-"+ss.cognome;
+          if(k!==matKey) return false;
+          if(ss.fine&&ss.fine!==""&&ss.fine!==null&&ss.fine!=="null") return false;
+          if(ss._pianificato) return false;
+          const lc = ss.lineaCorrente||ss.lineaInizio||"";
+          return lc===lineaPartenza;
+        });
+        await Promise.all(apertePartenza.map(ss=>
+          api.evento({sessionId:ss.id,matricola:ss.matricola,nome:ss.nome,cognome:ss.cognome,sku:ss.skuCorrente||ss.sku||"",tipo:"CHECKOUT",lineaDa:ss.lineaCorrente,lineaA:"",skuDa:ss.skuCorrente||ss.sku||"",skuA:""}).catch(e=>{})
+        ));
+        // 2. CHECKIN nuovo sulla linea di DESTINAZIONE col nuovo articolo (riparte da zero).
+        const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
+        try{ await api.evento({sessionId:newId,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:skuNuovo,tipo:"CHECKIN",lineaDa:destId,lineaA:destId,skuDa:skuNuovo,skuA:skuNuovo}); }catch(e){}
+        if(onAggiornaSessioni) onAggiornaSessioni();
       }} onClose={()=>setMod(null)}/>}
       {popupRiepilogoOp&&(()=>{
         const mat = popupRiepilogoOp;
@@ -4680,11 +4746,19 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   }).filter(Boolean);
                   const skuDestinazione = modTrasf.skuMultiDest||[];
                   await Promise.all(ops.map(async(s)=>{
-                    // 1. CHECKOUT di TUTTE le sessioni aperte sulla linea di partenza (in parallelo)
-                    const sessioniAperte = sessAggiornate.filter(ss=>
-                      (ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome) &&
-                      (!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null")
-                    );
+                    // Linea di partenza = quella corrente della sessione di riferimento dell'operatore
+                    const lineaPartenza = s.lineaCorrente||s.lineaInizio||"";
+                    // 1. CHECKOUT di TUTTE le sessioni aperte di QUESTA persona sulla SUA linea di
+                    //    partenza (gestisce il multi-articolo: X, Z... vengono chiusi tutti).
+                    //    Non tocca eventuali sessioni su altre linee.
+                    const matKey = s.matricola||s.nome+"-"+s.cognome;
+                    const sessioniAperte = sessAggiornate.filter(ss=>{
+                      const k = ss.matricola||ss.nome+"-"+ss.cognome;
+                      if(k!==matKey) return false;
+                      if(ss.fine&&ss.fine!==""&&ss.fine!==null&&ss.fine!=="null") return false;
+                      const lc = ss.lineaCorrente||ss.lineaInizio||"";
+                      return lc===lineaPartenza; // solo sessioni sulla linea di partenza
+                    });
                     await Promise.all(sessioniAperte.map(async(sess)=>{
                       await api.evento({
                         sessionId: sess.id,
