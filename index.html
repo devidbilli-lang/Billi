@@ -4980,8 +4980,15 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       })()}
                       {(()=>{
                         const skuS = s.skuCorrente||s.sku||"";
-                        const rampaS = skuS ? (rampeSheets||[]).find(r=>r.sku===skuS) : null;
-                        const rDal = rampaS?.rampaDal || s.rampaDal;
+                        const lineaS = s.lineaCorrente||s.lineaInizio||"";
+                        if(!skuS) return null;
+                        // Cerca la rampa per sku+linea (la stessa coppia). Se non c'è una matching
+                        // per linea precisa, accetta anche un match solo per sku come fallback.
+                        const rampe = rampeSheets||[];
+                        let rampaS = rampe.find(r=>r.sku===skuS && (r.linea_id===lineaS||r.lineaId===lineaS));
+                        if(!rampaS) rampaS = rampe.find(r=>r.sku===skuS);
+                        // Il campo nel DB è `dal`; supporto anche legacy `rampaDal`.
+                        const rDal = (rampaS && (rampaS.dal||rampaS.rampaDal)) || s.rampaDal;
                         if(!rDal) return null;
                         const gg = giorniLavorativiJS(rDal);
                         if(gg>15) return null;
