@@ -1273,6 +1273,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // di oggi, altrimenti il conteggio crollerebbe a 0 appena tutti escono.
               const _oggi00 = new Date(); _oggi00.setHours(0,0,0,0);
               const _opLineaItem = sessioni.filter(s=>{
+                if(s._pianificato) return false;
                 if(s.lineaCorrente!==lineaId) return false;
                 if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
                 if(turnoTerminato){
@@ -1334,6 +1335,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   {(()=>{
                     // Divisione equa: per ogni operatore dividi per il numero di SKU su cui lavora
                     const _opLinea = sessioni.filter(s=>{
+                      if(s._pianificato) return false;
                       if(s.lineaCorrente!==lineaId) return false;
                       if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
                       if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
