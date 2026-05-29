@@ -5177,12 +5177,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     <td style={S.td}>
                       {s.nome} {s.cognome}
                       {haOrarioPian && (()=>{
-                        // Badge intervallo pianificato completo: ENTRATA–USCITA, con tipo (solo oggi / standard).
+                        // Badge intervallo pianificato completo: ENTRATA–USCITA.
                         // Colore: arancione se "solo oggi", giallo se "standard".
                         const col = haSoloOggi ? "#ff6937" : "#d97706";
                         const bg  = haSoloOggi ? "#ffedd5" : "#fef9c3";
                         const bord= haSoloOggi ? "#ff693766" : "#d9770655";
-                        const tipo= haSoloOggi ? "solo oggi" : "standard";
                         return (
                           <span style={{background:bg,color:col,border:"1px solid "+bord,borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:5,verticalAlign:"middle"}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{flexShrink:0}}>
@@ -5190,7 +5189,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                               <path d="M12 7v5l3 2" stroke={col} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                             {_inizioBadge}–{_fineBadge}
-                            <span style={{fontSize:10,fontWeight:700,opacity:0.8,textTransform:"uppercase",letterSpacing:0.5}}>· {tipo}</span>
                           </span>
                         );
                       })()}
