@@ -4767,10 +4767,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             <>
             {editOrario&&selezionati.size>0&&(
               <div style={{background:"#7c3aed",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,justifyContent:"space-between",margin:"8px 24px",boxShadow:"0 4px 20px #7c3aed66",fontFamily:"'Montserrat',sans-serif"}}>
-                <span style={{color:"#fff",fontWeight:700,fontSize:13}}>{selezionati.size} selezionat{selezionati.size===1?"o":"i"}</span>
+                <span style={{color:"#fff",fontWeight:700,fontSize:13,fontFamily:"'Montserrat',sans-serif"}}>{selezionati.size} selezionat{selezionati.size===1?"o":"i"}</span>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Inizio</button>
-                  <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}><IconaMatita size={14}/> Fine</button>
+                  <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={14}/> Inizio</button>
+                  <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={14}/> Fine</button>
                   <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>📦 Articolo</button>
                   <button onClick={()=>setModCorsoMulti({matricole:new Set(selezionati), nome:""})} style={{background:"#fff",color:"#06b6d4",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>C Corso</button>
                   <button onClick={()=>rientroCorsoMultiplo(new Set(selezionati))} style={{background:"#fff",color:"#10b981",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>▶ Rientro</button>
@@ -4794,8 +4794,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     }
                     setLoading(false); setSelezionati(new Set());
                     if(onAggiornaSessioni) onAggiornaSessioni();
-                  }} style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer"}}>🗑 Elimina</button>
-                  <button onClick={()=>setSelezionati(new Set())} style={{background:"transparent",color:"#fff",border:"1px solid #fff6",borderRadius:8,padding:"6px 10px",fontWeight:700,fontSize:12,cursor:"pointer"}}>✕</button>
+                  }} style={{background:"#ef4444",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>🗑 Elimina</button>
+                  <button onClick={()=>setSelezionati(new Set())} style={{background:"transparent",color:"#fff",border:"1px solid #fff6",borderRadius:8,padding:"6px 10px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                 </div>
               </div>
             )}
