@@ -472,27 +472,40 @@ function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.leng
     </div>
   );
 }
-function CambioSkuInline({ sess, skuList, linee, onOk, onClose, onRimuoviArticolo }) { const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
+function CambioSkuInline({ sess, skuList, linee, onOk, onClose, onRimuoviArticolo, tutteSessioniOp }) { const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
   const [cSku,setCSku]   = useState("");
   const [err,setErr]     = useState("");
+  // Tutti gli articoli aperti dell'operatore (se forniti); altrimenti solo quello corrente.
+  const _articoli = (tutteSessioniOp && tutteSessioniOp.length>0)
+    ? tutteSessioniOp
+    : [sess];
   return (
     <div style={MS.ov}>
-      <div style={{...MS.md, maxWidth:380}}>
+      <div style={{...MS.md, maxWidth:400}}>
         <div style={MS.mh}><span style={{...MS.mt,color:"#f59e0b"}}>📦 Cambio SKU</span><button style={MS.mx} onClick={onClose}>X</button></div>
         <div style={{padding:22}}>
           <div style={S.sc}>
             <div style={{fontSize:10,letterSpacing:2,color:"#f59e0b",textTransform:"uppercase",marginBottom:4}}>Operatore</div>
-            <div style={{fontWeight:700,fontSize:15,color:"#1e293b",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-              <code style={S.sku}>Attuale: {sess.skuCorrente||sess.sku||"-"}</code>
-              <span style={{color:"#64748b",fontSize:12}}>→ Linea: {getLinea(sess.lineaCorrente,linee).nome}</span>
-              {onRimuoviArticolo && <button type="button" title={"Rimuovi articolo "+(sess.skuCorrente||sess.sku||"")+" — chiude la sessione e i minuti smettono di contare"} onClick={()=>{
-                if(!window.confirm("Rimuovere l'articolo "+(sess.skuCorrente||sess.sku||"")+" da "+sess.nome+" "+sess.cognome+"? La sessione su questo SKU verrà chiusa e i minuti smettono di contare.")) return;
-                onRimuoviArticolo(sess); onClose();
-              }} style={{background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"2px 10px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>−</button>}
+            <div style={{fontWeight:700,fontSize:15,color:"#1e293b",marginBottom:8}}>{sess.nome} {sess.cognome}</div>
+            <div style={{fontSize:10,letterSpacing:1,color:"#64748b",textTransform:"uppercase",fontWeight:700,marginBottom:6}}>Articoli in lavorazione</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {_articoli.map((sa,idx)=>(
+                <div key={sa.id||idx} style={{display:"flex",gap:8,alignItems:"center",justifyContent:"space-between",background:"#fff",border:"1px solid #fed7aa",borderRadius:8,padding:"6px 10px"}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:2,minWidth:0}}>
+                    <code style={{...S.sku,whiteSpace:"normal",wordBreak:"break-all"}}>{sa.skuCorrente||sa.sku||"-"}</code>
+                    <span style={{color:"#64748b",fontSize:11}}>Linea: {getLinea(sa.lineaCorrente,linee).nome}</span>
+                  </div>
+                  {onRimuoviArticolo && <button type="button" title={"Rimuovi articolo "+(sa.skuCorrente||sa.sku||"")+" — chiude la sessione e i minuti smettono di contare"} onClick={()=>{
+                    if(!window.confirm("Rimuovere l'articolo "+(sa.skuCorrente||sa.sku||"")+" da "+sess.nome+" "+sess.cognome+"? La sessione su questo SKU verrà chiusa e i minuti smettono di contare.")) return;
+                    onRimuoviArticolo(sa);
+                    // Se era l'unico articolo, chiudi il modal; altrimenti resta aperto per gestire gli altri
+                    if(_articoli.length<=1) onClose();
+                  }} style={{background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"2px 12px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>−</button>}
+                </div>
+              ))}
             </div>
           </div>
-          <label style={S.lbl}>Nuovo SKU</label>
+          <label style={S.lbl}>Cambia SKU corrente ({sess.skuCorrente||sess.sku||"-"})</label>
           {skuList.length>0&&(
             <div style={{marginBottom:8}}>
               <input style={{...S.inp,borderColor:"#f59e0b",borderWidth:2}} placeholder="Cerca SKU o descrizione..."
@@ -4820,9 +4833,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           </div>
         );
       })()}
-      {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee} onClose={()=>setModCambioSku(null)} onRimuoviArticolo={async(s)=>{
+      {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee}
+        tutteSessioniOp={sessioni.filter(s=>(s.matricola===modCambioSku.matricola||s.nome===modCambioSku.nome)&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!s._pianificato&&!isSkuSpeciale(s.skuCorrente||s.sku||""))}
+        onClose={()=>setModCambioSku(null)} onRimuoviArticolo={async(s)=>{
           try{ await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); }catch(e){}
-          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
         }} onOk={(ns)=>{
           const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
           if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
