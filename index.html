@@ -1422,14 +1422,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                               <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
                                 <path d="M8 3L8 13M8 13L3 8M8 13L13 8" stroke="#ff6161" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                              <span style={{fontSize:fBig,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-(qData.ok||0)}</span>
+                              <span style={{fontSize:fMid,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-(qData.ok||0)}</span>
                             </>
                           ):(
                             <>
                               <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
                                 <path d="M8 13L8 3M8 3L3 8M8 3L13 8" stroke="#61ffa9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                              <span style={{fontSize:fBig,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{(qData.ok||0)-(borseAProssimaItem||0)}</span>
+                              <span style={{fontSize:fMid,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{(qData.ok||0)-(borseAProssimaItem||0)}</span>
                             </>
                           )}
                         </div>
