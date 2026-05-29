@@ -3188,10 +3188,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {err&&<div style={S.err}>{err}</div>}
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
-            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={async(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn});
-                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,ld,ns);
+                try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn}); }catch(e){}
+                if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,ld,ns);
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
             {mode==="rientro"&&sf&&(()=>{
               // Leggi direttamente da D1 per avere i corsi aggiornati
@@ -3235,10 +3235,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               if(aggiornaSessioni) setTimeout(aggiornaSessioni,1500);
               setRis({tipo:"corso",sess:sf});setMode("result");
             }} onClose={reset}/>}
-            {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+            {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={async(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
-                api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns});
-                if(aggiornaSessioni) setTimeout(aggiornaSessioni,3000); } else onTrasf(sf.id,sf.lineaCorrente,ns);
+                try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns}); }catch(e){}
+                if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,sf.lineaCorrente,ns);
               setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result"); }} onClose={reset}/>}
             <button style={{...S.bBk,marginTop:16,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
           </div>
@@ -5431,8 +5431,8 @@ function App() { const [view,setView]             = useState("login");
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     // Aggiorna anche sessSheets immediatamente per visualizzazione Dashboard
     setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
-    setTimeout(caricaSessioni,3000); };
-  const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,3000); };
+    setTimeout(caricaSessioni,1000); };
+  const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,1500); };
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
   const dashCfg = {ok:{c:"#22c55e",t:"● Live"},caricamento:{c:"#f59e0b",t:"⟳ Sync..."},errore:{c:"#ef4444",t:"● Errore"}}[dashSync]||{c:"#475569",t:""};
 
@@ -5541,7 +5541,7 @@ function App() { const [view,setView]             = useState("login");
         </div>
       )}
       {view==="checkin"&&(
-        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,3000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ sessioneLinea.pulisci(); setAccesso(null); setView("login"); }} rampeSheets={rampeSheets} onQualita={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }}/>
+        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,1000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ sessioneLinea.pulisci(); setAccesso(null); setView("login"); }} rampeSheets={rampeSheets} onQualita={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }}/>
       )}
       {view==="login"&&(
         <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); if(ruolo==="linea"&&linea) sessioneLinea.salva(linea.id); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>
