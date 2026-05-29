@@ -1114,11 +1114,20 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               sessRiferimento.filter(s=>s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
               .map(s=>s.skuCorrente||s.sku)
             )];
-            // Filtra fuori gli SKU "vuoti": nessun operatore attualmente presente E nessuna borsa
+            // Filtra fuori gli SKU "vuoti": nessun operatore della giornata E nessuna borsa
             // prodotta E nessun KO/MIGL registrato. Sono spesso residui di trasferimenti.
+            const _nomeLineaForKey = linee ? (linee.find(l=>l.id===lineaId)||{}).nome||lineaId : lineaId;
+            const _oggi00Sku = new Date(); _oggi00Sku.setHours(0,0,0,0);
             const skuAttiviLinea = skuAttiviLineaRaw.filter(sk=>{
-              const hasOp = sessioni.some(s=>(s.lineaCorrente===lineaId)&&((s.skuCorrente||s.sku)===sk)&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null"));
-              const q = qualitaPerSku[sk+"|"+lineaId] || qualitaPerSku[sk] || {};
+              // Ha operatori che hanno toccato questo SKU oggi (anche se ora hanno fatto checkout)
+              const hasOp = sessioni.some(s=>{
+                if((s.lineaCorrente!==lineaId)&&(s.lineaInizio!==lineaId)) return false;
+                if((s.skuCorrente||s.sku)!==sk && (s.sku||"")!==sk) return false;
+                const d = parseData(s.inizio);
+                return d && d.getTime() >= _oggi00Sku.getTime();
+              });
+              // Ha qualità registrata su questo SKU (ok/ko/migl > 0)
+              const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
               const hasQ = (q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0;
               return hasOp || hasQ;
             });
