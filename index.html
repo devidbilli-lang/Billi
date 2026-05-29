@@ -690,6 +690,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // Obiettivo CONGELATO: quando il turno della linea chiude (tutti in checkout) l'obiettivo si fissa
   // su D1 e non varia più. Una correzione manuale lo invalida (gestito altrove) → si ricalcola.
   const [obCongelato, setObCongelato] = React.useState(null); // numero o null
+  const [showNoteRiepilogo, setShowNoteRiepilogo] = React.useState(false); // modal riepilogo note KO/MIGL
   const caricaObCongelato = React.useCallback(()=>{
     fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{
       if(j.ok && j.data && j.data.obiettivi){
@@ -1071,8 +1072,19 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
 
           {/* KO + Migl affiancati - nascosti in vista griglia (compatto): in griglia i totali
               vanno nell'header della linea, accanto al nome. */}
-          {!compatto && (
-          <div style={{flex:1.5,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"row",justifyContent:"space-around",alignItems:"center"}}>
+          {!compatto && (()=>{
+            // Aggrega tutte le note KO/MIGL degli SKU di questa linea (dalla map qualitaPerSku)
+            const _noteKoTutte = [], _noteMiglTutte = [];
+            const _nomeL = linee ? (linee.find(l=>l.id===lineaId)||{}).nome||lineaId : lineaId;
+            Object.entries(qualitaPerSku||{}).forEach(([k,v])=>{
+              if(!v) return;
+              if(k.indexOf(lineaId+"_")!==0 && k.indexOf(_nomeL+"_")!==0) return;
+              (v.noteKo||[]).forEach(n=>{ if(n) _noteKoTutte.push(n); });
+              (v.noteMigl||[]).forEach(n=>{ if(n) _noteMiglTutte.push(n); });
+            });
+            const _haNote = _noteKoTutte.length>0 || _noteMiglTutte.length>0;
+            return (
+          <div style={{flex:1.5,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"row",justifyContent:"space-around",alignItems:"center",position:"relative"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               <svg width={compatto?22:44} height={compatto?22:44} viewBox="0 0 36 36" fill="none">
                 <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
@@ -1100,8 +1112,37 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 <div style={{fontSize:compatto?"clamp(18px,2.6vw,30px)":"clamp(36px,6vw,72px)",fontWeight:900,color:"#f59e0b",lineHeight:1,textAlign:"center"}}>{migl}</div>
               </div>
             </div>
+            {_haNote && (
+              <button onClick={()=>setShowNoteRiepilogo(true)} title="Riepilogo note KO e MIGL"
+                style={{position:"absolute",bottom:8,right:8,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px #7c3aed66"}}>
+                📝 Note ({_noteKoTutte.length+_noteMiglTutte.length})
+              </button>
+            )}
+            {showNoteRiepilogo && (
+              <div onClick={()=>setShowNoteRiepilogo(false)} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
+                <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:"24px",width:"90%",maxWidth:480,maxHeight:"80vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 10px 50px rgba(0,0,0,0.3)"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                    <span style={{fontSize:18,fontWeight:800,color:"#1e293b"}}>Riepilogo note</span>
+                    <button onClick={()=>setShowNoteRiepilogo(false)} style={{background:"#f1f5f9",border:"none",borderRadius:8,width:32,height:32,fontSize:16,cursor:"pointer",color:"#64748b",fontWeight:700}}>✕</button>
+                  </div>
+                  <div style={{marginBottom:16}}>
+                    <div style={{fontSize:13,fontWeight:800,color:"#ef4444",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>❌ KO ({_noteKoTutte.length})</div>
+                    {_noteKoTutte.length>0 ? _noteKoTutte.map((n,i)=>(
+                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,marginBottom:6,lineHeight:1.4}}>{n}</div>
+                    )) : <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>Nessuna nota KO</div>}
+                  </div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>⚠ Migliorabili ({_noteMiglTutte.length})</div>
+                    {_noteMiglTutte.length>0 ? _noteMiglTutte.map((n,i)=>(
+                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,marginBottom:6,lineHeight:1.4}}>{n}</div>
+                    )) : <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>Nessuna nota migliorabili</div>}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          )}
+            );
+          })()}
 
         </div>
 
@@ -3854,10 +3895,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             const skuQ = q.sku||"";
             const lineaQ = q.linea||"";
             const k = lineaQ+"_"+skuQ;
-            if(!map[k]) map[k]={ok:0,ko:0,migl:0,obReale:0,obTeorico:0};
+            if(!map[k]) map[k]={ok:0,ko:0,migl:0,obReale:0,obTeorico:0,noteKo:[],noteMigl:[]};
             map[k].ok += Number(q.ok)||0;
             map[k].ko += Number(q.ko)||0;
             map[k].migl += Number(q.migliorabili)||0;
+            // Accumula le note (possono esserci più registrazioni nel giorno per lo stesso SKU)
+            if(q.noteKo && String(q.noteKo).trim()) map[k].noteKo.push(String(q.noteKo).trim());
+            if(q.noteMigl && String(q.noteMigl).trim()) map[k].noteMigl.push(String(q.noteMigl).trim());
             // Obiettivo: prendi il massimo (le righe possono ripetersi, l'obiettivo è lo stesso per linea+sku+giorno)
             if(Number(q.obReale)>map[k].obReale) map[k].obReale = Number(q.obReale)||0;
             if(Number(q.obTeorico)>map[k].obTeorico) map[k].obTeorico = Number(q.obTeorico)||0;
