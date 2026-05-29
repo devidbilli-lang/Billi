@@ -482,7 +482,7 @@ function CambioSkuInline({ sess, skuList, linee, onOk, onClose, onRimuoviArticol
   return (
     <div style={MS.ov}>
       <div style={{...MS.md, maxWidth:400}}>
-        <div style={MS.mh}><span style={{...MS.mt,color:"#f59e0b"}}>📦 Cambio Articolo</span><button style={MS.mx} onClick={onClose}>X</button></div>
+        <div style={MS.mh}><span style={{...MS.mt,color:"#f59e0b"}}>Cambio Articolo</span><button style={MS.mx} onClick={onClose}>X</button></div>
         <div style={{padding:22}}>
           <div style={S.sc}>
             <div style={{fontSize:10,letterSpacing:2,color:"#f59e0b",textTransform:"uppercase",marginBottom:4}}>Operatore</div>
@@ -3126,7 +3126,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   if(modQualita) return null;
   if(mode==="result"&&ris){ const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
-    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"SKU Aggiornato!",i:"📦",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
+    const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"Articolo Aggiornato!",i:"✓",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
     return (
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
         <div style={{textAlign:"center",padding:40,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
@@ -4264,7 +4264,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           <div style={MS.ov} onClick={()=>setPopupSkuOp(null)}>
             <div style={{...MS.md,maxWidth:400}} onClick={e=>e.stopPropagation()}>
               <div style={MS.mh}>
-                <span style={{...MS.mt,color:"#7c3aed"}}>📦 Articoli</span>
+                <span style={{...MS.mt,color:"#7c3aed"}}>Articoli</span>
                 <button style={MS.mx} onClick={()=>setPopupSkuOp(null)}>✕</button>
               </div>
               <div style={{padding:"12px 20px 6px",fontSize:13,color:"#64748b",fontWeight:600}}>{op?op.nome+" "+op.cognome:""} — {lin}</div>
@@ -4345,7 +4345,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {editOrario&&modAddSku&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:440,boxShadow:"0 0 0 4px #fcd34d, 0 0 40px 12px #f59e0b66"}}>
-            <div style={{fontSize:16,fontWeight:800,color:"#d97706",marginBottom:6,display:"flex",alignItems:"center",gap:6}}>📦 Aggiungi articolo in lavorazione</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#d97706",marginBottom:6,display:"flex",alignItems:"center",gap:6}}>Aggiungi articolo in lavorazione</div>
             <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>L'articolo verrà aggiunto a {modAddSku.matricole.size} operator{modAddSku.matricole.size===1?"e":"i"}, in aggiunta a quello che già lavorano.</div>
             {/* Articoli attualmente in lavorazione dagli operatori selezionati: trattino rosso per rimuoverli */}
             {(()=>{
