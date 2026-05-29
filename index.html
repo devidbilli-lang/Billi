@@ -691,6 +691,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // su D1 e non varia più. Una correzione manuale lo invalida (gestito altrove) → si ricalcola.
   const [obCongelato, setObCongelato] = React.useState(null); // numero o null
   const [showNoteRiepilogo, setShowNoteRiepilogo] = React.useState(false); // modal riepilogo note KO/MIGL
+  const [noteDrag, setNoteDrag] = React.useState(null); // {x,y} offset trascinamento pulsante note (null = centro)
+  const noteDragRef = React.useRef(null);
   const caricaObCongelato = React.useCallback(()=>{
     fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{
       if(j.ok && j.data && j.data.obiettivi){
@@ -1112,12 +1114,38 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 <div style={{fontSize:compatto?"clamp(18px,2.6vw,30px)":"clamp(36px,6vw,72px)",fontWeight:900,color:"#f59e0b",lineHeight:1,textAlign:"center"}}>{migl}</div>
               </div>
             </div>
-            {_haNote && (
-              <button onClick={()=>setShowNoteRiepilogo(true)} title="Riepilogo note KO e MIGL"
-                style={{position:"absolute",bottom:8,right:8,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px #7c3aed66"}}>
-                📝 Note ({_noteKoTutte.length+_noteMiglTutte.length})
+            {_haNote && (()=>{
+              const startDrag=(clientX,clientY)=>{
+                const base = noteDrag || {x:0,y:0};
+                const orig = {x:clientX, y:clientY, bx:base.x, by:base.y};
+                let moved=false;
+                const onMove=(mx,my)=>{ const dx=mx-orig.x, dy=my-orig.y; if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true; setNoteDrag({x:orig.bx+dx, y:orig.by+dy}); };
+                const mm=(e)=>{ onMove(e.clientX,e.clientY); };
+                const tm=(e)=>{ if(e.touches[0]) onMove(e.touches[0].clientX,e.touches[0].clientY); };
+                const up=()=>{ document.removeEventListener("mousemove",mm); document.removeEventListener("mouseup",up); document.removeEventListener("touchmove",tm); document.removeEventListener("touchend",up); noteDragRef.current={moved}; };
+                document.addEventListener("mousemove",mm); document.addEventListener("mouseup",up);
+                document.addEventListener("touchmove",tm,{passive:false}); document.addEventListener("touchend",up);
+              };
+              return (
+              <button
+                onMouseDown={(e)=>{ e.preventDefault(); startDrag(e.clientX,e.clientY); }}
+                onTouchStart={(e)=>{ if(e.touches[0]) startDrag(e.touches[0].clientX,e.touches[0].clientY); }}
+                onClick={()=>{ if(!noteDragRef.current||!noteDragRef.current.moved) setShowNoteRiepilogo(true); noteDragRef.current=null; }}
+                title="Riepilogo note KO e MIGL — trascinabile"
+                style={{position:"absolute",left:"50%",top:"50%",transform:`translate(calc(-50% + ${(noteDrag?noteDrag.x:0)}px), calc(-50% + ${(noteDrag?noteDrag.y:0)}px))`,
+                  background:"rgba(124,58,237,0.18)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",
+                  color:"#5b21b6",border:"1.5px solid rgba(124,58,237,0.45)",borderRadius:12,padding:"8px 16px",
+                  fontSize:13,fontWeight:800,cursor:"grab",fontFamily:"'Montserrat',sans-serif",
+                  display:"inline-flex",alignItems:"center",gap:7,boxShadow:"0 4px 16px rgba(124,58,237,0.25)",
+                  userSelect:"none",touchAction:"none",zIndex:5,whiteSpace:"nowrap"}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 4.5C4 3.67 4.67 3 5.5 3H16l4 4v12.5c0 .83-.67 1.5-1.5 1.5h-13C4.67 21 4 20.33 4 19.5v-15Z" stroke="#5b21b6" strokeWidth="1.8" strokeLinejoin="round"/>
+                  <path d="M8 9h8M8 13h8M8 17h5" stroke="#5b21b6" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+                Note ({_noteKoTutte.length+_noteMiglTutte.length})
               </button>
-            )}
+              );
+            })()}
             {showNoteRiepilogo && (
               <div onClick={()=>setShowNoteRiepilogo(false)} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
                 <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:"24px",width:"90%",maxWidth:480,maxHeight:"80vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 10px 50px rgba(0,0,0,0.3)"}}>
