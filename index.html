@@ -693,6 +693,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const [showNoteRiepilogo, setShowNoteRiepilogo] = React.useState(false); // modal riepilogo note KO/MIGL
   const [noteDrag, setNoteDrag] = React.useState(null); // {x,y} offset trascinamento pulsante note (null = centro)
   const noteDragRef = React.useRef(null);
+  const noteCardRef = React.useRef(null); // contenitore card KO/MIGL (per vincolare il drag)
+  const noteBtnRef = React.useRef(null); // il pulsante note (per misurarne le dimensioni)
   const caricaObCongelato = React.useCallback(()=>{
     fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{
       if(j.ok && j.data && j.data.obiettivi){
@@ -1086,7 +1088,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             });
             const _haNote = _noteKoTutte.length>0 || _noteMiglTutte.length>0;
             return (
-          <div style={{flex:1.5,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"row",justifyContent:"space-around",alignItems:"center",position:"relative"}}>
+          <div ref={noteCardRef} style={{flex:1.5,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:"12px",display:"flex",flexDirection:"row",justifyContent:"space-around",alignItems:"center",position:"relative"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               <svg width={compatto?22:44} height={compatto?22:44} viewBox="0 0 36 36" fill="none">
                 <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
@@ -1119,15 +1121,26 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 const base = noteDrag || {x:0,y:0};
                 const orig = {x:clientX, y:clientY, bx:base.x, by:base.y};
                 let moved=false;
-                const onMove=(mx,my)=>{ const dx=mx-orig.x, dy=my-orig.y; if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true; setNoteDrag({x:orig.bx+dx, y:orig.by+dy}); };
+                // Limiti: il pulsante è centrato, può spostarsi al massimo di metà
+                // (larghezza card - larghezza pulsante) per lato, meno un padding.
+                const calcLimiti=()=>{
+                  const card=noteCardRef.current, btn=noteBtnRef.current;
+                  if(!card||!btn) return {mx:9999,my:9999};
+                  const cr=card.getBoundingClientRect(), br=btn.getBoundingClientRect();
+                  const pad=6;
+                  return { mx:Math.max(0,(cr.width-br.width)/2-pad), my:Math.max(0,(cr.height-br.height)/2-pad) };
+                };
+                const clamp=(v,m)=>Math.max(-m,Math.min(m,v));
+                const onMove=(mx,my)=>{ const dx=mx-orig.x, dy=my-orig.y; if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true; const L=calcLimiti(); setNoteDrag({x:clamp(orig.bx+dx,L.mx), y:clamp(orig.by+dy,L.my)}); };
                 const mm=(e)=>{ onMove(e.clientX,e.clientY); };
-                const tm=(e)=>{ if(e.touches[0]) onMove(e.touches[0].clientX,e.touches[0].clientY); };
+                const tm=(e)=>{ if(e.touches[0]){ e.preventDefault(); onMove(e.touches[0].clientX,e.touches[0].clientY); } };
                 const up=()=>{ document.removeEventListener("mousemove",mm); document.removeEventListener("mouseup",up); document.removeEventListener("touchmove",tm); document.removeEventListener("touchend",up); noteDragRef.current={moved}; };
                 document.addEventListener("mousemove",mm); document.addEventListener("mouseup",up);
                 document.addEventListener("touchmove",tm,{passive:false}); document.addEventListener("touchend",up);
               };
               return (
               <button
+                ref={noteBtnRef}
                 onMouseDown={(e)=>{ e.preventDefault(); startDrag(e.clientX,e.clientY); }}
                 onTouchStart={(e)=>{ if(e.touches[0]) startDrag(e.touches[0].clientX,e.touches[0].clientY); }}
                 onClick={()=>{ if(!noteDragRef.current||!noteDragRef.current.moved) setShowNoteRiepilogo(true); noteDragRef.current=null; }}
