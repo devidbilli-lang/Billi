@@ -1169,13 +1169,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   <div style={{marginBottom:16}}>
                     <div style={{fontSize:13,fontWeight:800,color:"#ef4444",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>❌ KO ({_noteKoTutte.length})</div>
                     {_noteKoTutte.length>0 ? _noteKoTutte.map((n,i)=>(
-                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,marginBottom:6,lineHeight:1.4}}>{n}</div>
+                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,marginBottom:6,lineHeight:1.4}}>
+                        {String(n).split(/(\(\s*\d+\s*pz\s*\))/gi).map((parte,j)=> /\(\s*\d+\s*pz\s*\)/i.test(parte)
+                          ? <span key={j} style={{fontWeight:800,color:"#ef4444"}}>{parte}</span>
+                          : <React.Fragment key={j}>{parte}</React.Fragment>)}
+                      </div>
                     )) : <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>Nessuna nota KO</div>}
                   </div>
                   <div>
                     <div style={{fontSize:13,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>⚠ Migliorabili ({_noteMiglTutte.length})</div>
                     {_noteMiglTutte.length>0 ? _noteMiglTutte.map((n,i)=>(
-                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,marginBottom:6,lineHeight:1.4}}>{n}</div>
+                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,marginBottom:6,lineHeight:1.4}}>
+                        {String(n).split(/(\(\s*\d+\s*pz\s*\))/gi).map((parte,j)=> /\(\s*\d+\s*pz\s*\)/i.test(parte)
+                          ? <span key={j} style={{fontWeight:800,color:"#f59e0b"}}>{parte}</span>
+                          : <React.Fragment key={j}>{parte}</React.Fragment>)}
+                      </div>
                     )) : <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>Nessuna nota migliorabili</div>}
                   </div>
                 </div>
