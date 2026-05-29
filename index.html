@@ -3769,8 +3769,8 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                   return (
                     <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
                       <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-                        <span style={{fontWeight:700,color:"#64748b",minWidth:62}}>Standard</span>
-                        <span style={{color:"#1e293b",fontWeight:600}}>06:00 – 14:00</span>
+                        <span style={{fontWeight:700,color:"#d97706",minWidth:62}}>Standard</span>
+                        <span style={{color:"#d97706",fontWeight:700,background:"#fef9c3",padding:"1px 8px",borderRadius:4}}>06:00 – 14:00</span>
                       </div>
                       <div style={{display:"flex",gap:6}}>
                         <button onClick={()=>setModOra({op, tipo:"standard", inizio:"06:00", fine:"14:00"})} style={{flex:1,padding:"5px 8px",fontSize:11,fontWeight:700,border:"1px solid #7c3aed",borderRadius:6,background:"#7c3aed11",color:"#7c3aed",cursor:"pointer",fontFamily:"inherit"}}>✎ Standard</button>
@@ -3782,13 +3782,13 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                 return (
                   <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-                      <span style={{fontWeight:700,color:"#64748b",minWidth:62}}>Standard</span>
-                      <span style={{color:"#1e293b",fontWeight:600}}>{(stdI||"06:00")} – {(stdF||"14:00")}</span>
+                      <span style={{fontWeight:700,color:"#d97706",minWidth:62}}>Standard</span>
+                      <span style={{color:"#d97706",fontWeight:700,background:"#fef9c3",padding:"1px 8px",borderRadius:4}}>{(stdI||"06:00")} – {(stdF||"14:00")}</span>
                     </div>
                     {haOggi&&(
                       <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-                        <span style={{fontWeight:700,color:"#d97706",minWidth:62}}>Solo oggi</span>
-                        <span style={{color:"#b45309",fontWeight:700,background:"#fef3c7",padding:"1px 8px",borderRadius:4}}>{(oggiI||stdI||"06:00")} – {(oggiF||stdF||"14:00")}</span>
+                        <span style={{fontWeight:700,color:"#ff6937",minWidth:62}}>Solo oggi</span>
+                        <span style={{color:"#ff6937",fontWeight:700,background:"#ffedd5",padding:"1px 8px",borderRadius:4}}>{(oggiI||stdI||"06:00")} – {(oggiF||stdF||"14:00")}</span>
                       </div>
                     )}
                     <div style={{display:"flex",gap:6,marginTop:2}}>
