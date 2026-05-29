@@ -5141,11 +5141,19 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const haFinePers = orarioFinePers && orarioFinePers !== '14:00';
                 // È "solo oggi" se ha un orario odierno valido (inizio o fine) per oggi.
                 const haSoloOggi = !!(inizioOggiValido || fineOggiValido);
+                // Lo STANDARD conta come "personalizzato" solo se DIVERSO dal default 06:00–14:00.
+                const _stdInizioPers = orarioInizioPers && orarioInizioPers !== "06:00";
+                const _stdFinePers = orarioFinePers && orarioFinePers !== "14:00";
+                const haStandardPers = !!(_stdInizioPers || _stdFinePers);
                 // Intervallo pianificato completo da mostrare nel badge (entrata–uscita).
                 // Priorità: solo-oggi se presente, altrimenti standard.
                 const _inizioBadge = inizioOggiValido || orarioInizioPers || (oraPrevistaFmt) || "06:00";
                 const _fineBadge = fineOggiValido || orarioFinePers || "14:00";
-                const haOrarioPian = !!(inizioOggiValido || fineOggiValido || orarioInizioPers || orarioFinePers || oraPrevistaFmt);
+                // Mostro il badge SOLO se l'orario è una variazione reale:
+                //  - "solo oggi" (sempre evidenziato, è una modifica esplicita per oggi), OPPURE
+                //  - standard diverso dal default 06:00–14:00, OPPURE
+                //  - un orario previsto specifico (pianificato in arrivo).
+                const haOrarioPian = !!(haSoloOggi || haStandardPers || oraPrevistaFmt);
                 const dur=(()=>{
   // Se l'operatore è arrivato per trasferimento, il timer parte dal momento del trasferimento
   let ini = parseData(s.inizio);
