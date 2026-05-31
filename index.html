@@ -43,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNWxEKFHfubtnJMfsGL9R9UA2AoSZWeYyx0qjvybbbURlPdnMYkNAkeitdV2AembqipA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLJ6USlH3jkOgggmRDKFfR-6lgk6VeXyX_cX5P6bHgVctY7E8oJTsLUjFnwEhPnNku4g/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -3674,6 +3674,7 @@ function TabAttivita({ repTipo="taglio" }) {
   const [tempo,setTempo] = useState("");
   const [tipologia,setTipologia] = useState(_isPrep ? "Rilavorazione" : ""); // Prep: sola opzione
   const [reparto,setReparto] = useState("");
+  const [nRichiesta,setNRichiesta] = useState(""); // solo Preparazione DG
   const [lista,setLista] = useState([]);
   const [caricando,setCaricando] = useState(false);
   const [salvando,setSalvando] = useState(false);
@@ -3705,10 +3706,11 @@ function TabAttivita({ repTipo="taglio" }) {
     if(!tempo||+tempo<=0){ setMsg("Inserisci un tempo valido (minuti)."); return; }
     if(!tipologia){ setMsg("Seleziona la tipologia."); return; }
     if(!_isPrep && !reparto){ setMsg("Seleziona il reparto."); return; }
+    if(_isPrep && !nRichiesta.trim()){ setMsg("Inserisci il N° Richiesta."); return; }
     setSalvando(true);
     try{
-      await fetch(nexusUrl("salvaAttivita",{repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto}));
-      setBrand(""); setTempo(""); setReparto("");
+      await fetch(nexusUrl("salvaAttivita",{repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():""}));
+      setBrand(""); setTempo(""); setReparto(""); setNRichiesta("");
       setTipologia(_isPrep ? "Rilavorazione" : "");
       setMsg("");
       setModalAperto(false);
@@ -3745,7 +3747,7 @@ function TabAttivita({ repTipo="taglio" }) {
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
               <thead>
-                <tr>{(_isPrep?["Data produzione","Brand","Tempo [min]","Tipologia",""]:["Data produzione","Brand","Tempo [min]","Tipologia","Reparto",""]).map((h,i,arr)=>(
+                <tr>{(_isPrep?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta",""]:["Data produzione","Brand","Tempo [min]","Tipologia","Reparto",""]).map((h,i,arr)=>(
                   <th key={i} style={{textAlign:i===0?"left":i===arr.length-1?"center":"left",padding:"8px 10px",borderBottom:"2px solid #e2e8f0",color:"#475569",fontWeight:800,fontSize:12,whiteSpace:"nowrap"}}>{h}</th>
                 ))}</tr>
               </thead>
@@ -3756,7 +3758,9 @@ function TabAttivita({ repTipo="taglio" }) {
                     <td style={{padding:"8px 10px"}}>{a.brand}</td>
                     <td style={{padding:"8px 10px",fontWeight:700,color:"#7c3aed"}}>{a.tempo}</td>
                     <td style={{padding:"8px 10px"}}>{a.tipologia}</td>
-                    {!_isPrep&&<td style={{padding:"8px 10px"}}>{a.reparto}</td>}
+                    {_isPrep
+                      ? <td style={{padding:"8px 10px",fontWeight:600}}>{a.nRichiesta||a.reparto||""}</td>
+                      : <td style={{padding:"8px 10px"}}>{a.reparto}</td>}
                     <td style={{padding:"8px 10px",textAlign:"center"}}>
                       <button onClick={()=>elimina(a.id)} title="Elimina attività" style={{background:"#fff",color:"#dc2626",border:"1.5px solid #dc2626",borderRadius:6,padding:"2px 10px",fontWeight:900,fontSize:14,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>−</button>
                     </td>
@@ -3834,6 +3838,12 @@ function TabAttivita({ repTipo="taglio" }) {
                     {TIPOLOGIE.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+                {_isPrep&&(
+                <div style={{gridColumn:"1 / -1"}}>
+                  <label style={lbl}>N° Richiesta</label>
+                  <input type="text" style={{...inp,width:"100%"}} placeholder="es. REQ-2026-001" value={nRichiesta} onChange={e=>setNRichiesta(e.target.value)}/>
+                </div>
+                )}
                 {!_isPrep&&(
                 <div>
                   <label style={lbl}>Reparto</label>
