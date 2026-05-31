@@ -43,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxn7iPMfq4Nvuj4pfdDGh6vYIpuGzPnKoxHZRQd7oEbQNeDAtD6lF_RakkP4rtb-ISCyw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNWxEKFHfubtnJMfsGL9R9UA2AoSZWeYyx0qjvybbbURlPdnMYkNAkeitdV2AembqipA/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -3666,12 +3666,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 // ─── TAB INSERIMENTO ATTIVITÀ (Taglio DG) ────────────────────────────────────
 // Registrazione attività separata dalle presenze: Data, Brand, Tempo[min], Tipologia, Reparto.
 // NON tocca minuti lavorati. Salva su D1 + foglio "Attività Taglio DG".
-function TabAttivita() {
+function TabAttivita({ repTipo="taglio" }) {
+  const _isPrep = repTipo === "prep";
   const oggiISO = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
   const [data,setData] = useState(oggiISO());
   const [brand,setBrand] = useState("");
   const [tempo,setTempo] = useState("");
-  const [tipologia,setTipologia] = useState("");
+  const [tipologia,setTipologia] = useState(_isPrep ? "Rilavorazione" : ""); // Prep: sola opzione
   const [reparto,setReparto] = useState("");
   const [lista,setLista] = useState([]);
   const [caricando,setCaricando] = useState(false);
@@ -3682,12 +3683,13 @@ function TabAttivita() {
   const fabDragRef = React.useRef(null);
 
   const BRANDS = ["Chanel","LV"];
-  const TIPOLOGIE = ["Rilavorazione","Collaudo"];
+  const TIPOLOGIE = _isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo"];
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
+  const _titoloRep = _isPrep ? "Attività Preparazione DG" : "Attività Taglio DG";
 
   const carica = ()=>{
     setCaricando(true);
-    fetch(nexusUrl("leggiAttivita",{})).then(r=>r.json()).then(j=>{
+    fetch(nexusUrl("leggiAttivita",{repTipo})).then(r=>r.json()).then(j=>{
       if(j&&j.ok&&j.data&&j.data.attivita) setLista(j.data.attivita);
       setCaricando(false);
     }).catch(()=>setCaricando(false));
@@ -3702,11 +3704,12 @@ function TabAttivita() {
     if(!brand){ setMsg("Seleziona il brand."); return; }
     if(!tempo||+tempo<=0){ setMsg("Inserisci un tempo valido (minuti)."); return; }
     if(!tipologia){ setMsg("Seleziona la tipologia."); return; }
-    if(!reparto){ setMsg("Seleziona il reparto."); return; }
+    if(!_isPrep && !reparto){ setMsg("Seleziona il reparto."); return; }
     setSalvando(true);
     try{
-      await fetch(nexusUrl("salvaAttivita",{data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto}));
-      setBrand(""); setTempo(""); setTipologia(""); setReparto("");
+      await fetch(nexusUrl("salvaAttivita",{repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto}));
+      setBrand(""); setTempo(""); setReparto("");
+      setTipologia(_isPrep ? "Rilavorazione" : "");
       setMsg("");
       setModalAperto(false);
       setTimeout(carica,600);
@@ -3716,7 +3719,7 @@ function TabAttivita() {
 
   const elimina = async (id)=>{
     if(!window.confirm("Eliminare questa attività registrata?")) return;
-    try{ await fetch(nexusUrl("eliminaAttivita",{id})); setLista(l=>l.filter(x=>x.id!==id)); }catch(e){}
+    try{ await fetch(nexusUrl("eliminaAttivita",{id,repTipo})); setLista(l=>l.filter(x=>x.id!==id)); }catch(e){}
   };
 
   const inp = {padding:"10px 12px",border:"1.5px solid #cbd5e1",borderRadius:8,fontSize:14,fontFamily:"'Montserrat',sans-serif",color:"#1e293b",outline:"none",background:"#fff"};
@@ -3727,7 +3730,7 @@ function TabAttivita() {
       {/* Intestazione */}
       <div style={{fontWeight:800,fontSize:20,color:"#1e293b",marginBottom:18,display:"flex",alignItems:"center",gap:10}}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7c3aed" strokeWidth="2"/><path d="M12 7v5l3 2" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        Attività Taglio DG
+        {_titoloRep}
       </div>
 
       {/* ELENCO ATTIVITÀ REGISTRATE */}
@@ -3742,8 +3745,8 @@ function TabAttivita() {
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
               <thead>
-                <tr>{["Data produzione","Brand","Tempo [min]","Tipologia","Reparto",""].map((h,i)=>(
-                  <th key={i} style={{textAlign:i===0?"left":i===5?"center":"left",padding:"8px 10px",borderBottom:"2px solid #e2e8f0",color:"#475569",fontWeight:800,fontSize:12,whiteSpace:"nowrap"}}>{h}</th>
+                <tr>{(_isPrep?["Data produzione","Brand","Tempo [min]","Tipologia",""]:["Data produzione","Brand","Tempo [min]","Tipologia","Reparto",""]).map((h,i,arr)=>(
+                  <th key={i} style={{textAlign:i===0?"left":i===arr.length-1?"center":"left",padding:"8px 10px",borderBottom:"2px solid #e2e8f0",color:"#475569",fontWeight:800,fontSize:12,whiteSpace:"nowrap"}}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
@@ -3753,7 +3756,7 @@ function TabAttivita() {
                     <td style={{padding:"8px 10px"}}>{a.brand}</td>
                     <td style={{padding:"8px 10px",fontWeight:700,color:"#7c3aed"}}>{a.tempo}</td>
                     <td style={{padding:"8px 10px"}}>{a.tipologia}</td>
-                    <td style={{padding:"8px 10px"}}>{a.reparto}</td>
+                    {!_isPrep&&<td style={{padding:"8px 10px"}}>{a.reparto}</td>}
                     <td style={{padding:"8px 10px",textAlign:"center"}}>
                       <button onClick={()=>elimina(a.id)} title="Elimina attività" style={{background:"#fff",color:"#dc2626",border:"1.5px solid #dc2626",borderRadius:6,padding:"2px 10px",fontWeight:900,fontSize:14,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>−</button>
                     </td>
@@ -3827,10 +3830,11 @@ function TabAttivita() {
                 <div>
                   <label style={lbl}>Tipologia</label>
                   <select style={{...inp,width:"100%",cursor:"pointer"}} value={tipologia} onChange={e=>setTipologia(e.target.value)}>
-                    <option value="">— scegli —</option>
+                    {!_isPrep&&<option value="">— scegli —</option>}
                     {TIPOLOGIE.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+                {!_isPrep&&(
                 <div>
                   <label style={lbl}>Reparto</label>
                   <select style={{...inp,width:"100%",cursor:"pointer"}} value={reparto} onChange={e=>setReparto(e.target.value)}>
@@ -3838,6 +3842,7 @@ function TabAttivita() {
                     {REPARTI.map(r=><option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
+                )}
               </div>
               {msg&&<div style={{fontSize:13,fontWeight:700,color:msg.includes("✓")?"#10b981":"#ef4444",marginBottom:12}}>{msg}</div>}
               <div style={{display:"flex",gap:10}}>
@@ -5242,7 +5247,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       <div style={{padding:"0 24px 16px",display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
         <button onClick={()=>{ const lt = lineaFiltro || linee[0]; if(lt) setModTrasf({lineaDest:lt}); }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #a855f755"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; }} style={{padding:"10px 22px",border:"2px solid #a855f7",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:"#a855f711",color:"#a855f7",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>↔ Trasferimento</button>
         {(()=>{
-          const _isTaglioDG = lineaFiltro && (((lineaFiltro.id||"").toUpperCase().includes("TAGLIO DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("TAGLIO DG")));
+          const _isTaglioDG = lineaFiltro && (
+            ((lineaFiltro.id||"").toUpperCase().includes("TAGLIO DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("TAGLIO DG")) ||
+            ((lineaFiltro.id||"").toUpperCase().includes("PREPARAZIONE DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("PREPARAZIONE DG"))
+          );
           const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)]];
           const _tabs = _isTaglioDG ? [["operatori","Turni&Operatori"],["sessioni","Sessioni"],["attivita","Inserimento Attività"]] : _tabsProd;
           return _tabs.map(([t,l])=>(
@@ -5531,7 +5539,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
       {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
-      {tab==="attivita"&&<TabAttivita/>}
+      {tab==="attivita"&&<TabAttivita repTipo={lineaFiltro&&(((lineaFiltro.id||"").toUpperCase().includes("PREPARAZIONE DG"))||((lineaFiltro.nome||"").toUpperCase().includes("PREPARAZIONE DG")))?"prep":"taglio"}/>}
       <div style={{height:40}}/>
     </div>
   );
