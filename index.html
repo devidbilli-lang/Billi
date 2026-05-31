@@ -3839,7 +3839,7 @@ function TabAttivita({ repTipo="taglio" }) {
                   </select>
                 </div>
                 {_isPrep&&(
-                <div style={{gridColumn:"1 / -1"}}>
+                <div>
                   <label style={lbl}>N° Richiesta</label>
                   <input type="text" style={{...inp,width:"100%"}} placeholder="es. REQ-2026-001" value={nRichiesta} onChange={e=>setNRichiesta(e.target.value)}/>
                 </div>
