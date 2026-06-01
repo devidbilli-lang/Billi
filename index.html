@@ -1497,7 +1497,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const oraTurnoFineItem=_secInizioTurno/3600+oreTotali;
               const ob60Item=obFinaleItemRampa!=null&&oreTotali>0?Math.round(obFinaleItemRampa/oreTotali):null;
               const prossimaOraItem=_secInizioTurno/3600+Math.ceil(orePassateItem);
-              const _borseCalcItem=ob60Item!=null?Math.max(0,Math.ceil(ob60Item*(prossimaOraItem-_secInizioTurno/3600))):null;
+              // Obiettivo ACCUMULATO atteso alla prossima ora intera del turno.
+              // Calcolo proporzionale DIRETTO dal giornaliero (NO ob60 arrotondato moltiplicato),
+              // così all'ULTIMA ora il valore coincide ESATTAMENTE con l'obiettivo giornaliero.
+              const _oreAllaProssimaItem = Math.min(oreTotali, prossimaOraItem - _secInizioTurno/3600);
+              const _borseCalcItem=(obFinaleItemRampa!=null&&oreTotali>0)?Math.round(obFinaleItemRampa*(_oreAllaProssimaItem/oreTotali)):null;
               const borseAProssimaItem=prossimaOraItem>=oraTurnoFineItem?(obFinaleItemRampa||_borseCalcItem):_borseCalcItem;
               const pHH2=Math.floor(prossimaOraItem)%24;
               const prossimaOraLabelItem=String(pHH2).padStart(2,"0")+":00";
@@ -1747,7 +1751,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const pMM = Math.round((prossimaOraDecimale % 1) * 60);
         const prossimaOraInt = prossimaOraDecimale;
         const prossimaOraLabel = String(pHH).padStart(2,"0")+":"+String(pMM).padStart(2,"0");
-        const borseAProssimaOra = Math.round(ob60*(prossimaOraDecimale-oraInizioDecimale));
+        // Obiettivo accumulato alla prossima ora: proporzione diretta del giornaliero,
+        // così all'ultima ora coincide esattamente con l'obiettivo finale (no arrotondamenti sommati).
+        const _oreAllaProssima = Math.min(oreTotali, prossimaOraDecimale - oraInizioDecimale);
+        const borseAProssimaOra = (obFinaleEffettivo!=null&&oreTotali>0) ? Math.round(obFinaleEffettivo*(_oreAllaProssima/oreTotali)) : Math.round(ob60*(prossimaOraDecimale-oraInizioDecimale));
 
         return (
           <div style={{marginTop:12,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
