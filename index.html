@@ -1032,24 +1032,151 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obFinale})).catch(()=>{});
   },[obFinale, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
+  // ── OBIETTIVO PER ARTICOLO CON RAMPA (funzione riutilizzabile) ──────────────────
+  // Calcola l'obiettivo giornaliero di un singolo articolo su questa linea, già SCALATO
+  // per la rampa se l'articolo è in rampa. Usata sia dalle card per-articolo sia dalla
+  // somma aggregata per l'efficienza (così i due valori restano coerenti).
+  const calcObItemConRampa = (skuItem)=>{
+    const skuObjI = skuList.find(x=>x&&x.sku===skuItem);
+    const tcItem = tcPerLinea(skuObjI);
+    if(!(tcItem>0)) return null;
+    const oggi00 = new Date(); oggi00.setHours(0,0,0,0);
+    const _dInizio = (s)=>{ if(s.inizio){ const d=parseData(s.inizio); if(d) return d; } if(s.tsInizio && s.tsInizio>0) return new Date(s.tsInizio); return null; };
+    const sessTocca = (s)=>{
+      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
+      const d = _dInizio(s);
+      if(!d || d.getTime() < oggi00.getTime()) return false;
+      let lc = s.lineaInizio || s.lineaCorrente, sc = s.sku || s.skuCorrente;
+      if(lc===lineaId && sc===skuItem) return true;
+      const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+      for(const t of trasf){ lc = t.a || lc; sc = t.skuA || sc; if(lc===lineaId && sc===skuItem) return true; }
+      return false;
+    };
+    const sessioniSku = sessioni.filter(sessTocca);
+    const nSimPerMatItem = {};
+    sessioni.filter(s=>{
+      if(s.lineaCorrente!==lineaId) return false;
+      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
+      if(turnoTerminato){ const d=_dInizio(s); if(!d || d.getTime() < oggi00.getTime()) return false; }
+      else { if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false; }
+      return true;
+    }).forEach(s=>{
+      const mat=s.matricola||s.nome; if(!mat) return;
+      const ts=_dInizio(s); if(!ts) return;
+      if(!nSimPerMatItem[mat]) nSimPerMatItem[mat]={skus:new Set(),tsMin:ts.getTime()};
+      nSimPerMatItem[mat].skus.add(s.skuCorrente||s.sku);
+      if(ts.getTime()<nSimPerMatItem[mat].tsMin) nSimPerMatItem[mat].tsMin=ts.getTime();
+    });
+    const minPerMat = {};
+    const periodiContati = {};
+    const sessioniSkuOrd = sessioniSku.slice().sort((a,b)=>((_dInizio(a)?.getTime()||0)-(_dInizio(b)?.getTime()||0)));
+    sessioniSkuOrd.forEach(s=>{
+      const mat=s.matricola||s.nome; if(!mat) return;
+      const dInizio=_dInizio(s); if(!dInizio) return;
+      const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
+      let secFineEff = secFineTurnoAssoluto;
+      const _finePianHM = s.orarioFineOggiPian || s.orarioFinePian || "";
+      let secFinePianItem = secFineTurnoAssoluto;
+      if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60; }
+      const haCheckoutItem = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      if(haCheckoutItem){
+        const dFine = parseData(s.fine);
+        const secCheckoutReale = dFine ? dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds() : secFineTurnoAssoluto;
+        const anticipoSec = secFinePianItem - secCheckoutReale;
+        secFineEff = (anticipoSec > 120) ? secCheckoutReale : secFinePianItem;
+      } else if(secFinePianItem < secFineTurnoAssoluto){ secFineEff = secFinePianItem; }
+      const dInizioMs = dInizio.getTime();
+      const trasfSeg = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+      const giornoBase = new Date(dInizioMs); giornoBase.setSeconds(0,0); giornoBase.setMinutes(0); giornoBase.setHours(0);
+      const tsFineEffMs = giornoBase.getTime() + secFineEff*1000;
+      let segmenti = [];
+      let cur = dInizioMs, curL = s.lineaInizio || s.lineaCorrente, curS = s.sku || s.skuCorrente;
+      for(const t of trasfSeg){ segmenti.push({l:curL, sk:curS, dal:cur, al:t.ts}); cur = t.ts; curL = t.a || curL; curS = t.skuA || curS; }
+      segmenti.push({l:curL, sk:curS, dal:cur, al:tsFineEffMs});
+      let minBaseMs = 0;
+      for(const seg of segmenti){ if(seg.l!==lineaId || seg.sk!==skuItem) continue; if(seg.al>seg.dal) minBaseMs += (seg.al - seg.dal); }
+      const minBase = Math.max(0, minBaseMs/60000);
+      const nSim=nSimPerMatItem[mat]?nSimPerMatItem[mat].skus.size:1;
+      const tsInMs0 = dInizio.getTime();
+      const tsFiMs0 = tsFineEffMs;
+      if(!periodiContati[mat]) periodiContati[mat]=[];
+      const sovrappone = periodiContati[mat].some(p=> tsInMs0 < p.al && tsFiMs0 > p.dal);
+      if(sovrappone){ return; }
+      periodiContati[mat].push({dal:tsInMs0, al:tsFiMs0});
+      if(!minPerMat[mat]) minPerMat[mat]={base:0,sottrai:0};
+      minPerMat[mat].base += minBase/nSim;
+      if(s.corsi) s.corsi.forEach(c=>{
+        const dC=parseData(c.quando); if(!dC) return;
+        const sC=dC.getHours()*3600+dC.getMinutes()*60;
+        const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
+        const eC=fineCorsoStr?(()=>{const dR=parseData(fineCorsoStr);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineEff;})():secFineEff;
+        minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60)/nSim;
+      });
+      if(s.pause) s.pause.forEach(pz=>{
+        const dP=parseData(pz.quando); if(!dP) return;
+        const sP=dP.getHours()*3600+dP.getMinutes()*60;
+        let eP;
+        if(pz.ripresa){ const dR=parseData(pz.ripresa); eP=dR?dR.getHours()*3600+dR.getMinutes()*60:sP; }
+        else { const ora=new Date(); eP=Math.min(secFineEff, ora.getHours()*3600+ora.getMinutes()*60); }
+        minPerMat[mat].sottrai+=Math.max(0,(eP-sP)/60)/nSim;
+      });
+    });
+    let minTot=0;
+    Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
+    const obPieno = minTot>0?Math.round(minTot/tcItem):null;
+    if(obPieno==null) return null;
+    // Applica rampa se l'articolo è in rampa
+    let rampaDalItem = null;
+    for(const s of sessioni){
+      if(s.lineaCorrente!==lineaId) continue;
+      if((s.skuCorrente||s.sku)!==skuItem) continue;
+      let rd = s.rampaDal||null;
+      if(!rd && (s.skuA||"").includes("__RAMPA__")){ const pp=(s.skuA||"").split("__RAMPA__"); const dd=new Date(pp[1]); if(!isNaN(dd)) rd=dd.getTime(); }
+      if(rd && (!rampaDalItem || rd>rampaDalItem)) rampaDalItem = rd;
+    }
+    const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem) : null;
+    const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<15;
+    return inRampaItem ? Math.ceil(obPieno * (PERC_RAMPA[Math.min(giornoRampaItem,15)-1]||0) / 100) : obPieno;
+  };
+  // Obiettivo di linea AGGREGATO con rampa: somma degli obiettivi (ridotti se in rampa) di tutti
+  // gli articoli attivi oggi sulla linea. Usato per misurare l'efficienza in modo equo durante le rampe.
+  const obFinaleConRampa = (()=>{
+    const skuSet = new Set();
+    const _oggi00b = new Date(); _oggi00b.setHours(0,0,0,0);
+    for(const s of sessioni){
+      if(s._pianificato) continue;
+      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
+      const sk = s.skuCorrente||s.sku||"";
+      if(!sk || isSkuSpeciale(sk)) continue;
+      skuSet.add(sk);
+    }
+    if(skuSet.size===0) return null;
+    let somma = 0; let almenoUno=false;
+    skuSet.forEach(sk=>{ const o = calcObItemConRampa(sk); if(o!=null){ somma += o; almenoUno=true; } });
+    return almenoUno ? somma : null;
+  })();
   // Efficienza = borse prodotte / obiettivo ATTESO A QUEST'ORA * 100.
   // Non misura più il ritmo sul tempo, ma quanto prodotto rispetto al target progressivo.
   // A fine turno, se prodotte == obiettivo finale → 100%.
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
     if(tc<=0) return null;
-    // Obiettivo atteso a quest'ora: obiettivo orario (ob60) × ore trascorse dall'inizio turno
-    // (capate alla fine turno). A fine turno coincide con l'obiettivo finale.
+    // Base di riferimento: obiettivo AGGREGATO con rampa (somma articoli, ridotti se in rampa).
+    // Fallback all'obiettivo pieno se per qualche motivo l'aggregato non è disponibile.
+    const baseObiettivo = (obFinaleConRampa!=null) ? obFinaleConRampa : obFinaleEffettivo;
+    if(baseObiettivo==null) return null;
+    const ob60Rampa = oreTotali>0 ? baseObiettivo/oreTotali : null;
+    // Obiettivo atteso a quest'ora: obiettivo orario × ore trascorse dall'inizio turno
+    // (capate alla fine turno). A fine turno coincide con l'obiettivo finale (rampa inclusa).
     const now3 = new Date();
     const secNow = now3.getHours()*3600+now3.getMinutes()*60+now3.getSeconds();
     const secTrascorsi = Math.max(0, Math.min(secNow, secFineTurno) - _secInizioTurno);
     const oreTrascorse = secTrascorsi/3600;
     let obAtteso;
     if(turnoTerminato){
-      // Turno finito: confronta col l'obiettivo finale effettivo
-      obAtteso = obFinaleEffettivo||0;
+      obAtteso = baseObiettivo||0;
     } else {
-      obAtteso = (ob60!=null) ? Math.round(ob60*oreTrascorse) : 0;
+      obAtteso = (ob60Rampa!=null) ? Math.round(ob60Rampa*oreTrascorse) : 0;
     }
     if(!obAtteso || obAtteso<=0) return null;
     return Math.round((borseTot/obAtteso)*100);
