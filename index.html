@@ -1259,20 +1259,27 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // con la coppia. Calcola anche i minuti effettivi spesi su quella coppia.
             const minutiSessioneSu = (s, lid, sk)=>{
               // Le sessioni normali hanno tsInizio (numero), non sempre 'inizio' (stringa ISO).
-              const tIn = (s.tsInizio && s.tsInizio>0) ? s.tsInizio : (parseData(s.inizio)?.getTime());
+              const tIn = (s.tsInizio && s.tsInizio>0) ? Number(s.tsInizio) : (parseData(s.inizio)?.getTime());
               if(!tIn || tIn < _oggi00Sku.getTime()) return 0;
-              // Punto di partenza: lineaInizio/sku se presenti, altrimenti i campi correnti
-              // (col modello checkout+checkin le sessioni normali hanno solo lineaCorrente/skuCorrente).
+              const finMs = s.fine ? ((parseData(s.fine)?.getTime())|| (s.tsFine?Number(s.tsFine):Date.now())) : Date.now();
+              const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+              // CASO SENZA trasferimenti interni (la stragrande maggioranza col modello checkout+checkin):
+              // l'articolo/linea effettivi sono quelli CORRENTI. Conta tutto il periodo se coincide.
+              if(trasf.length===0){
+                const lc = s.lineaCorrente || s.lineaInizio;
+                const sc = s.skuCorrente || s.sku;
+                if(lc===lid && sc===sk && finMs>tIn) return (finMs - tIn)/60000;
+                return 0;
+              }
+              // CASO CON trasferimenti: ricostruisci i segmenti dallo stato iniziale.
               let lc = s.lineaInizio || s.lineaCorrente;
               let sc = s.sku || s.skuCorrente;
               let cur = tIn;
               let totMs = 0;
-              const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
               for(const t of trasf){
                 if(lc===lid && sc===sk && t.ts > cur) totMs += (t.ts - cur);
                 cur = t.ts; lc = t.a||lc; sc = t.skuA||sc;
               }
-              const finMs = s.fine ? ((parseData(s.fine)?.getTime())||Date.now()) : Date.now();
               if(lc===lid && sc===sk && finMs > cur) totMs += (finMs - cur);
               return totMs/60000;
             };
