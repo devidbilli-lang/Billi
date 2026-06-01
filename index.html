@@ -3656,10 +3656,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <div style={{width:4,height:44,borderRadius:2,background:"#00d4aa",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#00d4aa",marginBottom:4}}>Inizio Turno</div><div style={{fontSize:15,color:"#00d4aa",fontWeight:500,opacity:0.85}}>Registra presenza + SKU</div></div>
             </button>
+            {!(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG"))&&(
             <button onClick={()=>{ onQualita&&onQualita(lineaFiltro||null); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#f1f4f8",border:"2px solid #3b82f6",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
               <div style={{width:4,height:44,borderRadius:2,background:"#3b82f6",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#3b82f6",marginBottom:4}}>Qualità</div><div style={{fontSize:15,color:"#3b82f6",fontWeight:500,opacity:0.85}}>Inserimento dati qualità</div></div>
             </button>
+            )}
             {(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG"))&&(
             <button onClick={()=>setModSecTurno(true)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:modSecondoTurno?"#fff7ed":"#f1f4f8",border:"2px solid #ff6937",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
               <div style={{width:4,height:44,borderRadius:2,background:"#ff6937",flexShrink:0}}/>
