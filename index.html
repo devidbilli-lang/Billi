@@ -5443,9 +5443,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <button onClick={()=>{ const attiveLinea = sessioni.filter(s=>s.lineaCorrente===l.id&&(!s.fine||s.fine===""||s.fine==null||s.fine==="null")&&!s._pianificato);
                   if(attiveLinea.length===0) return;
                   setModalConferma({
-                    titolo:"Fine tutti i turni",
+                    titolo:"Fine turno",
                     messaggio:"Chiudere il turno di "+attiveLinea.length+" operatori su "+l.id+" ("+l.nome+")?",
-                    colorBtn:"ef4444", testoBtn:"✕ Chiudi tutti",
+                    colorBtn:"ef4444", testoBtn:"✕ Chiudi turno",
                     onOk:()=>{ setModalConferma(null); setLoading(true); setLoadingMsg("Chiusura turni in corso..."); (async()=>{
   // Ricarica sessioni fresche da Sheets per non perdere nessuno
   let sessAggiornate = attiveLinea;
@@ -5496,7 +5496,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
 })(); }
                   });
                 }} style={{width:"100%",fontSize:11,fontWeight:700,padding:"6px 4px",background:"#ef444422",border:"1px solid #ef444466",borderRadius:6,color:"#ef4444",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",marginTop:4}}>
-                  ✕ Fine tutti
+                  ✕ Fine turno
                 </button>
               )}
             </div>
