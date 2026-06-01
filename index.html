@@ -1287,18 +1287,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // Qualità: se ci sono borse/KO/MIGL registrati, la card va sempre mostrata
               const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
               if((q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0) return true;
-              // Minuti totali effettivi che almeno un operatore ha speso su (linea, sku)
-              let minTot = 0;
-              for(const s of sessioni){ minTot += minutiSessioneSu(s, lineaId, sk); if(minTot > 0) break; }
-              if(minTot <= 0) return false;
-              // L'obiettivo stimato sui minuti effettivi: se è < 1, la card è praticamente vuota
-              const skuObj = skuList.find(x=>x&&x.sku===sk);
-              const tcSku = skuObj?.tc || 0;
-              if(tcSku > 0){
-                const obStima = Math.floor(minTot / tcSku);
-                if(obStima < 1) return false;
-              }
-              return true;
+              // Mostra la card se ALMENO UN operatore sta lavorando (o ha lavorato oggi) su
+              // questo (linea, articolo). Basta qualunque minuto > 0: la card deve comparire
+              // appena qualcuno ci lavora, anche se l'obiettivo stimato è ancora 0 (inizio turno).
+              for(const s of sessioni){ if(minutiSessioneSu(s, lineaId, sk) > 0) return true; }
+              return false;
             });
             if(skuAttiviLinea.length===0) return (
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#94a3b8",fontSize:14}}>
