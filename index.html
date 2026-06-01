@@ -3022,6 +3022,19 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   });
   // Orari ODIERNI (validi solo per oggi): {matricola:{inizioOggi, fineOggi}}
   const [orariOggi, setOrariOggi] = useState({});
+  // MODALITÀ 2° TURNO (solo Taglio DG): quando attiva, i nuovi check-in ricevono in automatico
+  // l'orario solo-oggi 14:00–22:00. Persistita per oggi in localStorage.
+  const [modSecondoTurno, setModSecondoTurno] = useState(()=>{
+    try { const v=JSON.parse(localStorage.getItem('nexus_secondo_turno')||'{}'); return v.data===new Date().toLocaleDateString('it-IT'); } catch(e){ return false; }
+  });
+  const attivaSecondoTurno = ()=>{
+    try { localStorage.setItem('nexus_secondo_turno', JSON.stringify({attivo:true, data:new Date().toLocaleDateString('it-IT')})); } catch(e){}
+    setModSecondoTurno(true);
+  };
+  const disattivaSecondoTurno = ()=>{
+    try { localStorage.removeItem('nexus_secondo_turno'); } catch(e){}
+    setModSecondoTurno(false);
+  };
   React.useEffect(()=>{
     fetch(nexusUrl('leggiOrariOperatori',{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data.orari){
@@ -3155,6 +3168,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [modQualita,setModQualita] = useState(false);
   const [modPwdQualita,setModPwdQualita] = useState(false);
   const [modLogout,setModLogout] = useState(false);
+  const [modSecTurno,setModSecTurno] = useState(false); // modal conferma "Avvia 2° turno"
+  const [secTurnoInCorso,setSecTurnoInCorso] = useState(false);
   const [pwdQualita,setPwdQualita] = useState("");
   const [errPwdQualita,setErrPwdQualita] = useState("");
   const [nome,setNome]           = useState("");
@@ -3594,6 +3609,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   } else {
                     // Orario passato/attuale, OPPURE rientro dopo uscita — registra subito
                     await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
+                    // MODALITÀ 2° TURNO (Taglio DG): applica in automatico l'orario solo-oggi 14:00–22:00
+                    // così questa sessione verrà chiusa dal checkout automatico alle 22:00, non alle 14:00.
+                    if(modSecondoTurno){ salvaOggi(s.matricola, "14:00", "22:00"); }
                     onSuccess(s);
                   }
                 }
@@ -3642,11 +3660,56 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <div style={{width:4,height:44,borderRadius:2,background:"#3b82f6",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#3b82f6",marginBottom:4}}>Qualità</div><div style={{fontSize:15,color:"#3b82f6",fontWeight:500,opacity:0.85}}>Inserimento dati qualità</div></div>
             </button>
+            {(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG"))&&(
+            <button onClick={()=>setModSecTurno(true)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:modSecondoTurno?"#fff7ed":"#f1f4f8",border:"2px solid #ff6937",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
+              <div style={{width:4,height:44,borderRadius:2,background:"#ff6937",flexShrink:0}}/>
+              <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#ff6937",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>Avvia 2° turno (14–22){modSecondoTurno&&<span style={{background:"#ff6937",color:"#fff",borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:800}}>ATTIVO</span>}</div><div style={{fontSize:15,color:"#ff6937",fontWeight:500,opacity:0.85}}>Chiude il 1° turno e attiva l'orario 14–22</div></div>
+            </button>
+            )}
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:10,padding:"16px 0 0"}}>
             <button style={{background:"#6d28d9",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"2px solid #a78bfa",boxShadow:"0 4px 16px rgba(109,40,217,0.4)",borderRadius:10,color:"#ffffff",fontSize:18,fontWeight:700,padding:"12px 32px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",letterSpacing:1,width:"100%"}} onClick={()=>onGoToDashboard&&onGoToDashboard()}>Dashboard</button>
 
           </div>
+          {modSecTurno&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #ff693766",textAlign:"center"}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#ff6937",marginBottom:10,fontFamily:"'Montserrat',sans-serif"}}>Avvia 2° turno (14–22)</div>
+            {!modSecondoTurno?(
+              <div style={{fontSize:14,color:"#475569",marginBottom:24,lineHeight:1.5,textAlign:"left"}}>
+                Premendo conferma:<br/>
+                • verranno <b>chiuse tutte le presenze aperte</b> del 1° turno su Taglio DG;<br/>
+                • si attiva la <b>modalità 2° turno</b>: i nuovi check-in riceveranno in automatico l'orario <b>14:00–22:00</b>.<br/><br/>
+                Dopodiché potrai registrare la squadra del pomeriggio da zero.
+              </div>
+            ):(
+              <div style={{fontSize:14,color:"#475569",marginBottom:24,lineHeight:1.5}}>
+                La modalità 2° turno è <b>già attiva</b>. Vuoi disattivarla? I nuovi check-in torneranno all'orario standard.
+              </div>
+            )}
+            <div style={{display:"flex",gap:10}}>
+              {!modSecondoTurno?(
+                <button disabled={secTurnoInCorso} onClick={async()=>{
+                  setSecTurnoInCorso(true);
+                  // 1) Chiudi tutte le sessioni APERTE di Taglio DG (1° turno)
+                  const _lf = lineaFiltro||{};
+                  const _isTaglio=(s)=>{ const l=s.lineaCorrente||""; const u=l.toUpperCase(); return u.includes("TAGLIO DG"); };
+                  const aperte=(sessioni||[]).filter(s=>_isTaglio(s) && !s.fine && !s._pianificato);
+                  await Promise.all(aperte.map(s=>api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}).catch(()=>{})));
+                  // 2) Attiva la modalità 2° turno (orario 14-22 sui prossimi check-in)
+                  attivaSecondoTurno();
+                  if(aggiornaSessioni) setTimeout(aggiornaSessioni,800);
+                  setSecTurnoInCorso(false);
+                  setModSecTurno(false);
+                }} style={{flex:1,padding:"12px",background:secTurnoInCorso?"#fdba74":"#ff6937",color:"#fff",border:"none",borderRadius:10,fontWeight:700,fontSize:15,cursor:secTurnoInCorso?"default":"pointer",fontFamily:"'Montserrat',sans-serif"}}>{secTurnoInCorso?"Avvio in corso...":"Conferma e avvia"}</button>
+              ):(
+                <button onClick={()=>{ disattivaSecondoTurno(); setModSecTurno(false); }} style={{flex:1,padding:"12px",background:"#ff6937",color:"#fff",border:"none",borderRadius:10,fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Disattiva 2° turno</button>
+              )}
+              <button onClick={()=>setModSecTurno(false)} style={{flex:1,padding:"12px",background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:10,fontWeight:700,fontSize:15,cursor:"pointer"}}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
           {modLogout&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:380,boxShadow:"0 0 0 4px #ff636366",textAlign:"center"}}>
