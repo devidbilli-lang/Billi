@@ -947,7 +947,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       }
       // Costruisci i segmenti per linea
       const segmenti = [];
-      let cursore = tsIn, lineaCorr = s.lineaInizio;
+      let cursore = tsIn, lineaCorr = s.lineaInizio || s.lineaCorrente;
       for(const t of trasf){ segmenti.push({linea:lineaCorr, dal:cursore, al:t.ts}); cursore=t.ts; lineaCorr=t.a; }
       segmenti.push({linea:lineaCorr, dal:cursore, al:tsFineSessione});
       // Somma i minuti dei segmenti su QUESTA linea
@@ -1259,7 +1259,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // con la coppia. Calcola anche i minuti effettivi spesi su quella coppia.
             const minutiSessioneSu = (s, lid, sk)=>{
               const d = parseData(s.inizio); if(!d || d.getTime() < _oggi00Sku.getTime()) return 0;
-              let lc = s.lineaInizio, sc = s.sku;
+              // Punto di partenza: lineaInizio/sku se presenti, altrimenti i campi correnti
+              // (col modello checkout+checkin le sessioni normali hanno solo lineaCorrente/skuCorrente).
+              let lc = s.lineaInizio || s.lineaCorrente;
+              let sc = s.sku || s.skuCorrente;
               let cur = d.getTime();
               let totMs = 0;
               const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
@@ -1344,7 +1347,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   const d = parseData(s.inizio);
                   if(!d || d.getTime() < oggi00.getTime()) return false;
                   // Stato iniziale (linea, sku) della sessione
-                  let lc = s.lineaInizio, sc = s.sku;
+                  let lc = s.lineaInizio || s.lineaCorrente, sc = s.sku || s.skuCorrente;
                   if(lc===lineaId && sc===skuItem) return true;
                   // Scorri i trasferimenti: dopo ognuno la coppia cambia
                   const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
@@ -1412,7 +1415,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   // Calcolo l'ora di ingresso effettivo (allineato a inizio pianificato se posticipato)
                   let secIngEff = secIng;
                   let segmenti = [];
-                  let cur = dInizioMs, curL = s.lineaInizio, curS = s.sku;
+                  let cur = dInizioMs, curL = s.lineaInizio || s.lineaCorrente, curS = s.sku || s.skuCorrente;
                   for(const t of trasfSeg){
                     segmenti.push({l:curL, sk:curS, dal:cur, al:t.ts});
                     cur = t.ts; curL = t.a || curL; curS = t.skuA || curS;
