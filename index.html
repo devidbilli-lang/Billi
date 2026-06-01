@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGooxDWAt1jWCG
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -3199,6 +3199,31 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [oraRef, setOraRef] = useState(now());
   useEffect(()=>{ if(lineaFiltro) setLineaCheckinSel(lineaFiltro); },[lineaFiltro]);
   useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
+  // PRE-SELEZIONE OPERATORI GIORNO PRECEDENTE (solo Taglio DG / Preparazione DG).
+  // Quando si entra nella registrazione presenza su questi reparti, pre-spunta automaticamente
+  // gli operatori dell'ultimo giorno lavorativo (1° e 2° turno) su quella linea.
+  const _preselFattaRef = React.useRef("");
+  useEffect(()=>{
+    if(mode!=="checkin") { _preselFattaRef.current=""; return; }
+    const _l = lineaCheckinSel || lineaFiltro || null;
+    const _ln = ((_l&&_l.id)||(_l&&_l.nome)||"").toString();
+    const _lu = _ln.toUpperCase();
+    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG");
+    if(!isReparto) return;
+    // Evita di ricaricare/sovrascrivere ripetutamente per la stessa linea nello stesso ingresso.
+    if(_preselFattaRef.current === _ln) return;
+    _preselFattaRef.current = _ln;
+    fetch(nexusUrl("leggiOperatoriPerLinea",{linea:_ln})).then(r=>r.json()).then(j=>{
+      if(j&&j.ok&&Array.isArray(j.data.operatori)&&j.data.operatori.length>0){
+        // Matcha con la lista operatori completa per avere oggetti con tutti i campi.
+        const matched = j.data.operatori.map(o=>{
+          const full = operatori.find(x=>x.matricola===o.matricola);
+          return full || {matricola:o.matricola, nome:o.nome, cognome:o.cognome};
+        });
+        setOpSelezionati(matched);
+      }
+    }).catch(()=>{});
+  },[mode, lineaCheckinSel, lineaFiltro, operatori]);
   const sessAtt = k => { const key = k.trim().toUpperCase();
     const isAttiva = s => { if(!s.fine||s.fine===""||s.fine===null||s.fine==="null") return true;
       const d = parseData(s.fine); return d===null||isNaN(d); };
