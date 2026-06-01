@@ -43,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLJ6USlH3jkOgggmRDKFfR-6lgk6VeXyX_cX5P6bHgVctY7E8oJTsLUjFnwEhPnNku4g/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyaf8xRI8ordOCJCSArpV7Z74EgK2qqT6AVTdsi_wqVnGTkWUwffP7WoLraDsCNHTSO-Q/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -694,6 +694,12 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
+  // Tempo ciclo per linea: RMA usa il tc della colonna G (tcRMA), tutte le altre la colonna E (tc).
+  const _isLineaRMA = ((lineaId||"").toUpperCase().includes("RMA"));
+  const tcPerLinea = (skuObj)=> {
+    if(!skuObj) return 0;
+    return _isLineaRMA ? (skuObj.tcRMA || skuObj.tc || 0) : (skuObj.tc || 0);
+  };
   const [tick, setTick] = React.useState(0);
   const _now = new Date(); // si ricalcola ad ogni tick
   const _hh = _now.getHours(); const _mm = _now.getMinutes(); const _ss = _now.getSeconds();
@@ -833,7 +839,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const nPausa=sessAttiveUniche.filter(s=>s.pause&&s.pause.some(pz=>pz.tipo==="pausa")&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))).length;
   const nOpProduzione=nOp-nRiparazione-nCorso-nPausa;
   const skuObj=skuList.find(s=>s&&s.sku===skuPiu);
-  const tc=skuObj?.tc||0;
+  const tc=tcPerLinea(skuObj);
   // Fine turno = primo check-in della linea + (8h + straordinario)
   const secFineTurno = secFineTurnoAssoluto;
 
@@ -1325,7 +1331,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               <div key={ci} style={{display:"flex",flexDirection:"row",flexWrap:compatto?"wrap":"nowrap",gap:compatto?6:8,flex:compatto?"0 0 auto":1,minHeight:0}}>
               {coppia.map(skuItem=>{
               const skuObjItem=skuList.find(x=>x&&x.sku===skuItem);
-              const tcItem=skuObjItem?.tc||0;
+              const tcItem=tcPerLinea(skuObjItem);
               // Obiettivo finale
               // Calcolo obiettivo: minuti effettivi divisi equamente per numero di articoli attivi
               // A turno terminato include anche le sessioni già chiuse.
@@ -2587,7 +2593,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         });
         const skuPiu = Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
         const skuObj = skuConSpecialiList.find(s=>s&&s.sku===skuPiu);
-        const tc = skuObj?.tc||0;
+        const tc = (((lineaId||"").toUpperCase().includes("RMA")) ? (skuObj?.tcRMA||skuObj?.tc||0) : (skuObj?.tc||0));
         if(tc<=0) return;
 
         // Obiettivo Reale: minuti effettivi / TC
