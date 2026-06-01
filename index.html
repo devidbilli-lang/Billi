@@ -1258,19 +1258,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // Una sessione "ha lavorato" su (linea, sku) se uno dei suoi segmenti coincide
             // con la coppia. Calcola anche i minuti effettivi spesi su quella coppia.
             const minutiSessioneSu = (s, lid, sk)=>{
-              const d = parseData(s.inizio); if(!d || d.getTime() < _oggi00Sku.getTime()) return 0;
+              // Le sessioni normali hanno tsInizio (numero), non sempre 'inizio' (stringa ISO).
+              const tIn = (s.tsInizio && s.tsInizio>0) ? s.tsInizio : (parseData(s.inizio)?.getTime());
+              if(!tIn || tIn < _oggi00Sku.getTime()) return 0;
               // Punto di partenza: lineaInizio/sku se presenti, altrimenti i campi correnti
               // (col modello checkout+checkin le sessioni normali hanno solo lineaCorrente/skuCorrente).
               let lc = s.lineaInizio || s.lineaCorrente;
               let sc = s.sku || s.skuCorrente;
-              let cur = d.getTime();
+              let cur = tIn;
               let totMs = 0;
               const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
               for(const t of trasf){
                 if(lc===lid && sc===sk && t.ts > cur) totMs += (t.ts - cur);
                 cur = t.ts; lc = t.a||lc; sc = t.skuA||sc;
               }
-              const finMs = s.fine ? (parseData(s.fine)||new Date()).getTime() : Date.now();
+              const finMs = s.fine ? ((parseData(s.fine)?.getTime())||Date.now()) : Date.now();
               if(lc===lid && sc===sk && finMs > cur) totMs += (finMs - cur);
               return totMs/60000;
             };
@@ -1336,15 +1338,16 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 // la persona ha lavorato proprio qui. Non basta più filtrare sullo SKU corrente:
                 // dopo un trasferimento lo SKU corrente è cambiato, ma i minuti pre-trasferimento
                 // appartengono allo SKU di partenza.
+                // Helper: oggetto Date di inizio sessione. Le sessioni normali hanno tsInizio
+                // (numero) ma non sempre 'inizio' (stringa ISO) → fallback su tsInizio.
+                const _dInizio = (s)=>{
+                  if(s.inizio){ const d=parseData(s.inizio); if(d) return d; }
+                  if(s.tsInizio && s.tsInizio>0) return new Date(s.tsInizio);
+                  return null;
+                };
                 const sessTocca = (s)=>{
                   if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
-                  if(!s.inizio) return false;
-                  // Durante il turno: includi anche le sessioni chiuse che hanno toccato questo
-                  // (linea, sku). Il calcolo dei minuti, segmentato, attribuisce esattamente
-                  // i minuti pre/post trasferimento al loro SKU. Senza questo, gli obiettivi degli
-                  // SKU "lasciati" perdono il contributo della persona dopo il suo checkout.
-                  // A turno terminato: includi tutte le sessioni di oggi.
-                  const d = parseData(s.inizio);
+                  const d = _dInizio(s);
                   if(!d || d.getTime() < oggi00.getTime()) return false;
                   // Stato iniziale (linea, sku) della sessione
                   let lc = s.lineaInizio || s.lineaCorrente, sc = s.sku || s.skuCorrente;
@@ -1365,7 +1368,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   if(s.lineaCorrente!==lineaId) return false;
                   if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
                   if(turnoTerminato){
-                    const d = parseData(s.inizio);
+                    const d = _dInizio(s);
                     if(!d || d.getTime() < oggi00.getTime()) return false;
                   } else {
                     if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
@@ -1373,7 +1376,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   return true;
                 }).forEach(s=>{
                   const mat=s.matricola||s.nome; if(!mat) return;
-                  const ts=parseData(s.inizio); if(!ts) return;
+                  const ts=_dInizio(s); if(!ts) return;
                   if(!nSimPerMatItem[mat]) nSimPerMatItem[mat]={skus:new Set(),tsMin:ts.getTime()};
                   nSimPerMatItem[mat].skus.add(s.skuCorrente||s.sku);
                   if(ts.getTime()<nSimPerMatItem[mat].tsMin) nSimPerMatItem[mat].tsMin=ts.getTime();
@@ -1383,10 +1386,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 // sessioni che si SOVRAPPONGONO nel tempo (multi-articolo o doppio check-in).
                 // Permanenze in periodi DISTINTI (A→B→A) invece si sommano correttamente.
                 const periodiContati = {};
-                const sessioniSkuOrd = sessioniSku.slice().sort((a,b)=>((parseData(a.inizio)?.getTime()||0)-(parseData(b.inizio)?.getTime()||0)));
+                const sessioniSkuOrd = sessioniSku.slice().sort((a,b)=>((_dInizio(a)?.getTime()||0)-(_dInizio(b)?.getTime()||0)));
                 sessioniSkuOrd.forEach(s=>{
                   const mat=s.matricola||s.nome; if(!mat) return;
-                  const dInizio=parseData(s.inizio); if(!dInizio) return;
+                  const dInizio=_dInizio(s); if(!dInizio) return;
                   const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
                   let secFineEff = secFineTurnoAssoluto;
                   // Orario di fine pianificato dell'operatore; se manca, usa la fine turno linea
