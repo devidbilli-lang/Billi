@@ -1504,7 +1504,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const _borseCalcItem=(obFinaleItemRampa!=null&&oreTotali>0)?Math.round(obFinaleItemRampa*(_oreAllaProssimaItem/oreTotali)):null;
               const borseAProssimaItem=prossimaOraItem>=oraTurnoFineItem?(obFinaleItemRampa||_borseCalcItem):_borseCalcItem;
               const pHH2=Math.floor(prossimaOraItem)%24;
-              const prossimaOraLabelItem=String(pHH2).padStart(2,"0")+":00";
+              const pMM2=Math.round((prossimaOraItem%1)*60);
+              const prossimaOraLabelItem=String(pHH2).padStart(2,"0")+":"+String(pMM2).padStart(2,"0");
               const inTurnoItem=prossimaOraItem<=oraTurnoFineItem&&prossimaOraItem>_secInizioTurno/3600;
               // Dati qualità per questo SKU specifico
               const _lNome = linee ? (linee.find(l=>l.id===lineaId)||{}).nome||lineaId : lineaId;
