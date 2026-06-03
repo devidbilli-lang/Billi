@@ -1513,17 +1513,17 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // nRighe=1 → grandi, nRighe=2 → medi, nRighe=3+ → compatti
             // In vista griglia (compatto) i valori sono ridotti ulteriormente.
             const fBig   = compatto ? (nRighe<=1?"clamp(20px,3vw,34px)":nRighe<=2?"clamp(16px,2.4vw,26px)":"clamp(13px,2vw,20px)")
-                                    : (nRighe<=1?"clamp(16px,13cqw,52px)":nRighe<=2?"clamp(14px,11cqw,40px)":"clamp(12px,9cqw,30px)");
+                                    : (nRighe<=1?"clamp(44px,7vw,88px)":nRighe<=2?"clamp(28px,4.5vw,56px)":"clamp(18px,3vw,36px)");
             const fMid   = compatto ? (nRighe<=1?"clamp(16px,2.4vw,26px)":nRighe<=2?"clamp(13px,2vw,20px)":"clamp(11px,1.6vw,16px)")
-                                    : (nRighe<=1?"clamp(14px,10cqw,40px)":nRighe<=2?"clamp(12px,8cqw,30px)":"clamp(10px,6.5cqw,22px)");
+                                    : (nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)");
             const fSep   = compatto ? (nRighe<=1?"clamp(10px,1.5vw,15px)":"clamp(8px,1.2vw,12px)")
-                                    : (nRighe<=1?"clamp(10px,4cqw,20px)":nRighe<=2?"clamp(9px,3cqw,15px)":"clamp(7px,2.4cqw,12px)");
-            const fSvg   = compatto ? (nRighe<=1?13:11) : (nRighe<=1?18:nRighe<=2?15:12);
+                                    : (nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)");
+            const fSvg   = compatto ? (nRighe<=1?13:11) : (nRighe<=1?24:nRighe<=2?18:14);
             const fKo    = compatto ? (nRighe<=1?"clamp(11px,1.5vw,16px)":nRighe<=2?"clamp(10px,1.3vw,14px)":"clamp(9px,1.1vw,12px)")
-                                    : (nRighe<=1?"clamp(14px,10cqw,38px)":nRighe<=2?"clamp(12px,8cqw,28px)":"clamp(10px,6.5cqw,20px)");
+                                    : (nRighe<=1?"clamp(32px,5vw,60px)":nRighe<=2?"clamp(20px,3.5vw,40px)":"clamp(14px,2.5vw,26px)");
             const hdrPad = compatto ? "4px 8px" : (nRighe<=1?"10px 16px":nRighe<=2?"7px 12px":"4px 8px");
             const hdrFs  = compatto ? (nRighe<=1?"clamp(10px,1.4vw,13px)":"clamp(9px,1.2vw,12px)")
-                                    : (nRighe<=1?"clamp(11px,3.5cqw,17px)":nRighe<=2?"clamp(10px,3cqw,15px)":"clamp(9px,2.5cqw,13px)");
+                                    : (nRighe<=1?"clamp(14px,2.2vw,20px)":nRighe<=2?"clamp(12px,1.8vw,16px)":"clamp(10px,1.4vw,13px)");
             const cardPad= compatto ? "3px 5px" : (nRighe<=1?"8px 12px":nRighe<=2?"5px 8px":"3px 5px");
 
             return coppie.map((coppia,ci)=>(
@@ -1746,7 +1746,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 );
               }
               return (
-                <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0,minWidth:0,...(compatto?{}:{containerType:"inline-size"})}}>
+                <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0,minWidth:0}}>
                   {/* Header articolo - nome completo viola */}
                   {(()=>{
                     // Divisione equa: per ogni operatore dividi per il numero di SKU su cui lavora
