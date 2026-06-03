@@ -1090,8 +1090,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     sessioni.filter(s=>{
       if(s.lineaCorrente!==lineaId) return false;
       if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
-      if(turnoTerminato){ const d=_dInizio(s); if(!d || d.getTime() < oggi00.getTime()) return false; }
-      else { if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false; }
+      // nSim = quanti articoli la persona lavora in parallelo OGGI. Conta tutte le sessioni
+      // del giorno (aperte O chiuse), filtrando solo per data: se escludessimo le chiuse,
+      // chiudere una persona multi-articolo farebbe crollare nSim e RADDOPPIARE i suoi minuti.
+      const d=_dInizio(s); if(!d || d.getTime() < oggi00.getTime()) return false;
       return true;
     }).forEach(s=>{
       const mat=s.matricola||s.nome; if(!mat) return;
@@ -1533,12 +1535,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 sessioni.filter(s=>{
                   if(s.lineaCorrente!==lineaId) return false;
                   if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
-                  if(turnoTerminato){
-                    const d = _dInizio(s);
-                    if(!d || d.getTime() < oggi00.getTime()) return false;
-                  } else {
-                    if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
-                  }
+                  // nSim = articoli lavorati in parallelo OGGI: conta tutte le sessioni del
+                  // giorno (aperte o chiuse), filtrando solo per data. Escludere le chiuse
+                  // farebbe crollare nSim alla chiusura e raddoppiare i minuti per articolo.
+                  const d = _dInizio(s);
+                  if(!d || d.getTime() < oggi00.getTime()) return false;
                   return true;
                 }).forEach(s=>{
                   const mat=s.matricola||s.nome; if(!mat) return;
