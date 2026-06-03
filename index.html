@@ -1862,15 +1862,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       const base = koDragMap[skuItem] || {x:0,y:0};
                       const orig = {x:clientX, y:clientY, bx:base.x, by:base.y};
                       let moved=false;
+                      const ANCORA_Y=0.30; // partenza: in alto (centro bottone al 30% dell'altezza card)
                       const calcLimiti=()=>{
                         const cardEl = btnEl && btnEl.offsetParent;
-                        if(!btnEl||!cardEl) return {mx:9999,my:9999};
+                        if(!btnEl||!cardEl) return {mx:9999,minY:-9999,maxY:9999};
                         const cr=cardEl.getBoundingClientRect(), br=btnEl.getBoundingClientRect();
                         const pad=6;
-                        return { mx:Math.max(0,(cr.width-br.width)/2-pad), my:Math.max(0,(cr.height-br.height)/2-pad) };
+                        const cY=ANCORA_Y*cr.height;
+                        return {
+                          mx:Math.max(0,(cr.width-br.width)/2-pad),
+                          minY:(pad+br.height/2)-cY,
+                          maxY:(cr.height-pad-br.height/2)-cY
+                        };
                       };
-                      const clamp=(v,m)=>Math.max(-m,Math.min(m,v));
-                      const onMove=(mx,my)=>{ const dx=mx-orig.x, dy=my-orig.y; if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true; const L=calcLimiti(); setKoDragMap(p=>({...p,[skuItem]:{x:clamp(orig.bx+dx,L.mx), y:clamp(orig.by+dy,L.my)}})); };
+                      const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+                      const onMove=(mx,my)=>{ const dx=mx-orig.x, dy=my-orig.y; if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true; const L=calcLimiti(); setKoDragMap(p=>({...p,[skuItem]:{x:clamp(orig.bx+dx,-L.mx,L.mx), y:clamp(orig.by+dy,L.minY,L.maxY)}})); };
                       const mm=(e)=>{ onMove(e.clientX,e.clientY); };
                       const tm=(e)=>{ if(e.touches[0]){ e.preventDefault(); onMove(e.touches[0].clientX,e.touches[0].clientY); } };
                       const up=()=>{ document.removeEventListener("mousemove",mm); document.removeEventListener("mouseup",up); document.removeEventListener("touchmove",tm); document.removeEventListener("touchend",up); koDragRef.current={sku:skuItem,moved}; };
@@ -1884,7 +1890,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       onTouchStart={(e)=>{ if(e.touches[0]) startDragKo(e.touches[0].clientX,e.touches[0].clientY,e.currentTarget); }}
                       onClick={()=>{ if(!koDragRef.current||!koDragRef.current.moved) setModalKoSku({sku:skuItem,ok:qData.ok||0,ko:qData.ko||0,migl:qData.migl||0,desc:skuObjItem?.descrizione||"",tc:tcItem}); koDragRef.current=null; }}
                       title="KO e Migliorabili - trascinami, tocca per il dettaglio"
-                      style={{position:"absolute",left:"50%",top:"50%",transform:`translate(calc(-50% + ${_kd.x}px), calc(-50% + ${_kd.y}px))`,
+                      style={{position:"absolute",left:"50%",top:"30%",transform:`translate(calc(-50% + ${_kd.x}px), calc(-50% + ${_kd.y}px))`,
                         background:"rgba(255,255,255,0.94)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",
                         border:"1.5px solid #e2e8f0",borderRadius:14,padding:"7px 13px",cursor:"grab",
                         fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:11,
