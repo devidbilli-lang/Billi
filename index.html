@@ -1292,14 +1292,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         <div style={{display:"flex",flexDirection:"column",gap:8,width:"28%"}}>
 
           {/* Operatori */}
-          <div style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:compatto?"8px":"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-            <div style={{fontSize:compatto?"clamp(13px,1.7vw,18px)":"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:compatto?2:6}}>Operatori</div>
+          <div style={{flex:compatto?"0 0 auto":1,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:compatto?"5px 6px":"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+            <div style={{fontSize:compatto?"clamp(9px,1.1vw,12px)":"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:compatto?1:6}}>Operatori</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
-              <div style={{fontSize:compatto?"clamp(40px,5.5vw,68px)":"clamp(56px,8vw,100px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
+              <div style={{fontSize:compatto?"clamp(22px,2.8vw,36px)":"clamp(56px,8vw,100px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
               {(nRiparazione>0||nCorso>0)&&(
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:8,padding:"6px 10px",fontSize:compatto?"clamp(13px,1.5vw,17px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nRiparazione} Riparazione</div>}
-                  {nCorso>0&&<div style={{background:"#06b6d4",color:"#ffffff",borderRadius:8,padding:"6px 10px",fontSize:compatto?"clamp(13px,1.5vw,17px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nCorso} Corso</div>}
+                  {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nRiparazione} Riparazione</div>}
+                  {nCorso>0&&<div style={{background:"#06b6d4",color:"#ffffff",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nCorso} Corso</div>}
                 </div>
               )}
             </div>
@@ -2042,6 +2042,13 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         <div style={{display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gridTemplateRows:`repeat(${nRighe}, 1fr)`,gap:12,height:"calc(100vh - 160px)",maxHeight:"calc(100vh - 160px)",overflow:"hidden",padding:"6px",boxSizing:"border-box"}}>
           {lineeGriglia.map(l=>{
             const d=perLinea[l.id]; if(!d) return null;
+            // Numero di articoli attivi sulla linea (SKU distinti): più card a destra =
+            // più altezza necessaria. Riduco lo zoom di conseguenza così entrano tutte nella
+            // cella ad altezza fissa, senza tagli (per linee con tanti articoli, es. molte SKU).
+            const _skuAttiviCard = new Set();
+            (sessioni||[]).forEach(s=>{ if(s._pianificato) return; if(s.lineaCorrente!==l.id && s.lineaInizio!==l.id) return; const _sk=s.skuCorrente||s.sku||""; if(_sk) _skuAttiviCard.add(_sk); });
+            const _nArtCard = _skuAttiviCard.size;
+            const _zoomCard = _nArtCard<=2 ? 0.5 : _nArtCard<=4 ? 0.44 : _nArtCard<=6 ? 0.37 : 0.32;
             return (
               <div key={l.id} style={{minHeight:0,background:"#fff",border:"4px solid "+(l.colore||"#7c3aed"),borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+(l.colore||"#7c3aed")+"99, 0 0 4px "+(l.colore||"#7c3aed")+", inset 0 0 8px "+(l.colore||"#7c3aed")+"22",display:"flex",flexDirection:"column"}}>
                 <div style={{padding:"5px 10px",borderBottom:"1px solid "+(l.colore||"#7c3aed")+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
@@ -2054,7 +2061,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   </div>
                 </div>
                 {/* compatto=true riduce font e nasconde card gialla; il contenuto è clippato all'altezza della card */}
-                <div style={{flex:1,overflow:"hidden",zoom:0.5,padding:"2px 2px"}}>
+                <div style={{flex:1,overflow:"hidden",zoom:_zoomCard,padding:"2px 2px"}}>
                   <ObiettivoProduzione
                     sessioni={sessioni||[]}
                     lineaId={l.id}
