@@ -43,11 +43,11 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCqqEMdTnfMSikhlmEOPAY6zOwFs5ys_2aFUjyyF1krQSbL_iyqNpBLysAurVcHz7Q0w/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXi62DcSRXDLrg-puDbBGpvaHPndh19k9cmN2iqzVOuxOCE_ztfpJv8t8VVolI7ihF4Q/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -4578,6 +4578,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modCorso,setModCorso]       = useState(null);
   const [modCambioSku,setModCambioSku] = useState(null);
   const [modNoteLinea,setModNoteLinea] = useState(null);
+  const [noteRiepilogoList,setNoteRiepilogoList] = useState([]);
+  const caricaNoteRiepilogo = async ()=>{
+    try{
+      const r = await fetch(nexusUrl("leggiNoteLinee",{}),{mode:"cors"});
+      const j = await r.json();
+      setNoteRiepilogoList((j&&j.ok&&j.data&&Array.isArray(j.data.note))?j.data.note:[]);
+    }catch(e){ setNoteRiepilogoList([]); }
+  };
   const [popupSkuOp,setPopupSkuOp] = useState(null);
   const [popupRiepilogoOp,setPopupRiepilogoOp] = useState(null); // matricola per il modal Riepilogo giornata
   const [editSegmento,setEditSegmento] = useState(null); // {meta, valore:'HH:MM', giorno:'YYYY-MM-DD'}
@@ -5389,6 +5397,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <button style={MS.mx} onClick={()=>setModNoteLinea(null)}>✕</button>
               </div>
               <div style={{padding:22}}>
+                <div style={{marginBottom:14}}>
+                  <label style={{...S.lbl,color:"#f59e0b"}}>Data</label>
+                  <div style={{marginTop:4}}><DatePicker value={modNoteLinea.data} onChange={v=>setModNoteLinea({...modNoteLinea,data:v})}/></div>
+                </div>
                 {!lineaFiltro && lineeSel.length>1 && (
                   <div style={{marginBottom:14}}>
                     <label style={{...S.lbl,color:"#f59e0b"}}>Linea</label>
@@ -5449,11 +5461,41 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       if(noteValide.length===0){ alert("Inserisci almeno una nota."); return; }
                       const notaUnita = noteValide.join(" / ");
                       try {
-                        await fetchConRetry(nexusUrl("notariepilogo",{linea:modNoteLinea.linea.id,sku:modNoteLinea.sku,nota:notaUnita}), 5, 1000);
-                        alert("✓ Nota salvata nel Riepilogo!");
-                        setModNoteLinea(null);
+                        await fetchConRetry(nexusUrl("notariepilogo",{data:modNoteLinea.data,linea:modNoteLinea.linea.id,sku:modNoteLinea.sku,nota:notaUnita}), 5, 1000);
+                        caricaNoteRiepilogo();
+                        setModNoteLinea({...modNoteLinea, note:[""], nota:undefined});
+                        alert("✓ Nota salvata!");
                       } catch(e){ alert("Errore salvataggio."); }
                     }}>Salva nel Riepilogo</button>
+                </div>
+                <div style={{marginTop:18,borderTop:"1px solid #f1f5f9",paddingTop:14}}>
+                  <div style={{...S.lbl,color:"#64748b",marginBottom:8}}>Note inserite ({noteRiepilogoList.length})</div>
+                  {noteRiepilogoList.length===0 ? (
+                    <div style={{color:"#94a3b8",fontSize:13,padding:"4px 0"}}>Nessuna nota registrata.</div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:240,overflowY:"auto"}}>
+                      {noteRiepilogoList.map((n,i)=>{
+                        const _dataIT = (n.data&&/^\d{4}-\d{2}-\d{2}$/.test(n.data)) ? n.data.split("-").reverse().join("/") : (n.data||"");
+                        const _col = (linee.find(l=>l.id===n.linea)||{}).colore || "#f59e0b";
+                        return (
+                          <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 10px",background:"#fafafa",border:"1px solid #eee",borderRadius:8}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:2}}>
+                                <span style={{fontSize:12,color:"#64748b",fontWeight:700}}>{_dataIT}</span>
+                                <span style={{fontSize:12,fontWeight:800,color:_col}}>{n.linea}</span>
+                                {n.sku && <span style={{fontSize:11,color:"#94a3b8"}}>{n.sku}</span>}
+                              </div>
+                              <div style={{fontSize:13,color:"#334155",wordBreak:"break-word"}}>{n.nota}</div>
+                            </div>
+                            <button title="Elimina nota" onClick={async()=>{
+                              if(!window.confirm("Eliminare questa nota?")) return;
+                              try{ await fetchConRetry(nexusUrl("eliminaNotaRiepilogo",{data:n.data,linea:n.linea,sku:n.sku}),5,1000); caricaNoteRiepilogo(); }catch(e){ alert("Errore eliminazione."); }
+                            }} style={{width:30,height:30,flexShrink:0,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,color:"#ef4444",fontSize:15,fontWeight:900,cursor:"pointer",lineHeight:1}}>✕</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -5601,7 +5643,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           return _tabs.map(([t,l])=>(
           <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #7c3aed55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=tab===t?"0 0 10px 2px #7c3aed44":"none"; }} style={{padding:"10px 22px",border:"2px solid #7c3aed",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.55)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",color:"#000000",boxShadow:tab===t?"0 0 10px 2px #7c3aed44":"none",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>{l}</button>
         )); })()}
-        <button onClick={()=>{ const ln = lineaFiltro || linee[0]; if(ln) setModNoteLinea({linea:ln, nota:""}); }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #f59e0b55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; }} style={{padding:"10px 22px",border:"2px solid #f59e0b",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:"#f59e0b11",color:"#f59e0b",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>📝 Note</button>
+        <button onClick={()=>{ const ln = lineaFiltro || linee[0]; if(ln){ const _d=new Date(); const _oggiISO=_d.getFullYear()+"-"+String(_d.getMonth()+1).padStart(2,"0")+"-"+String(_d.getDate()).padStart(2,"0"); setModNoteLinea({linea:ln, nota:"", data:_oggiISO}); caricaNoteRiepilogo(); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #f59e0b55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; }} style={{padding:"10px 22px",border:"2px solid #f59e0b",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:"#f59e0b11",color:"#f59e0b",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>📝 Note</button>
       </div>
       )}
       {tab==="sessioni"&&(
