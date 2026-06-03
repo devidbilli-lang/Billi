@@ -1996,12 +1996,11 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
     </div>
   );
   const { perLinea } = dati;
-  // "Entra in Produzione" è la vista d'insieme della produzione SKU: escludi le linee
-  // speciali (Taglio DG, Preparazione DG) che non producono articoli.
-  const lineeProd = linee.filter(l=>{ const _u=(l.id||"").toUpperCase(); return _u.indexOf("TAGLIO DG")===-1 && _u.indexOf("PREPARAZIONE DG")===-1; });
-  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? lineeProd.filter(l=>l.id===lineaSel) : lineeProd);
+  // "Entra in Produzione": vista d'insieme con TUTTE le linee, incluse le speciali
+  // (Taglio DG, Preparazione DG).
+  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee);
   // In vista griglia il filtro singola linea non ha senso: mostra tutte
-  const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : lineeProd;
+  const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee;
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
@@ -2009,7 +2008,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         {isAdmin && !lineaFiltro && !vistaGriglia && (
           <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{flex:1,padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}>
             <option value="">Tutte le linee</option>
-            {lineeProd.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
+            {linee.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
           </select>
         )}
         {/* Toggle vista singola / griglia */}
@@ -5755,7 +5754,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 //  - "solo oggi" (sempre evidenziato, è una modifica esplicita per oggi), OPPURE
                 //  - standard diverso dal default 06:00–14:00, OPPURE
                 //  - un orario previsto specifico (pianificato in arrivo).
-                const haOrarioPian = !!(haSoloOggi || haStandardPers || oraPrevistaFmt);
+                // Se l'intervallo da mostrare è ESATTAMENTE lo standard 06:00–14:00 (anche quando
+                // impostato come "solo oggi"), non è una variazione reale: niente badge accanto al
+                // nome, la riga resta una normale riga standard.
+                const _badgeEStandard = (_inizioBadge==="06:00" && _fineBadge==="14:00");
+                const haOrarioPian = !!((haSoloOggi || haStandardPers || oraPrevistaFmt) && !_badgeEStandard);
                 const dur=(()=>{
   // Se l'operatore è arrivato per trasferimento, il timer parte dal momento del trasferimento
   let ini = parseData(s.inizio);
