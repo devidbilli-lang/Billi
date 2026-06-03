@@ -723,6 +723,42 @@ const SKU_SPECIALI = [
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 
+// ── INIZIO REALE DI UNA SESSIONE ──────────────────────────────────────────────
+// Le sessioni di un articolo AGGIUNTO a metà giornata (id "ADD_<mat>_<sku>_<ts>")
+// nascono con inizio = inizio turno (06:xx), ma in realtà sono iniziate all'ORA in cui
+// l'articolo è stato aggiunto (il <ts> finale dell'id, in ms). Questo serve a distinguere
+// articoli lavorati IN PARALLELO (stesso inizio) da quelli lavorati IN SEQUENZA (uno dopo
+// l'altro), che NON vanno divisi tra loro. Per le sessioni normali si usa tsInizio/inizio.
+function tsInizioRealeSessione(s){
+  const id = (s && s.id) ? String(s.id) : "";
+  if(id.indexOf("ADD_")===0){
+    const m = id.match(/_(\d{10,})$/);
+    if(m){ const t = Number(m[1]); if(t>0) return t; }
+  }
+  if(s && s.tsInizio && s.tsInizio>0) return Number(s.tsInizio);
+  const d = parseData(s && s.inizio); return d ? d.getTime() : null;
+}
+// ── RIPARTIZIONE MINUTI PER PERIODO ───────────────────────────────────────────
+// Ripartisce l'intervallo [dalMs, alMs] (un segmento di lavoro su un articolo) contando,
+// istante per istante, quanti articoli della stessa persona sono REALMENTE attivi in
+// parallelo (dagli intervalli reali). Restituisce i MILLISECONDI attribuiti all'articolo:
+//  - articoli simultanei  → ogni segmento diviso per il n° di articoli in quel momento;
+//  - articoli sequenziali → ciascuno conta il proprio periodo per intero (divisore 1).
+function ripartisciMsPerPeriodo(dalMs, alMs, intervalli){
+  if(!(alMs>dalMs)) return 0;
+  const punti = new Set([dalMs, alMs]);
+  for(const iv of intervalli){ if(!(iv.al>iv.dal)) continue; if(iv.dal>dalMs&&iv.dal<alMs) punti.add(iv.dal); if(iv.al>dalMs&&iv.al<alMs) punti.add(iv.al); }
+  const ord = [...punti].sort((a,b)=>a-b);
+  let totMs = 0;
+  for(let i=0;i<ord.length-1;i++){
+    const a=ord[i], b=ord[i+1], mid=(a+b)/2;
+    let k=0; for(const iv of intervalli){ if(iv.al>iv.dal && iv.dal<=mid && mid<iv.al) k++; }
+    if(k<1) k=1;
+    totMs += (b-a)/k;
+  }
+  return totMs;
+}
+
 function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
@@ -1086,74 +1122,77 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       return false;
     };
     const sessioniSku = sessioni.filter(sessTocca);
-    const nSimPerMatItem = {};
-    sessioni.filter(s=>{
-      if(s.lineaCorrente!==lineaId) return false;
-      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
-      // nSim = quanti articoli la persona lavora in parallelo OGGI. Conta tutte le sessioni
-      // del giorno (aperte O chiuse), filtrando solo per data: se escludessimo le chiuse,
-      // chiudere una persona multi-articolo farebbe crollare nSim e RADDOPPIARE i suoi minuti.
-      const d=_dInizio(s); if(!d || d.getTime() < oggi00.getTime()) return false;
-      return true;
-    }).forEach(s=>{
-      const mat=s.matricola||s.nome; if(!mat) return;
-      const ts=_dInizio(s); if(!ts) return;
-      if(!nSimPerMatItem[mat]) nSimPerMatItem[mat]={skus:new Set(),tsMin:ts.getTime()};
-      nSimPerMatItem[mat].skus.add(s.skuCorrente||s.sku);
-      if(ts.getTime()<nSimPerMatItem[mat].tsMin) nSimPerMatItem[mat].tsMin=ts.getTime();
-    });
-    const minPerMat = {};
-    const periodiContati = {};
-    const sessioniSkuOrd = sessioniSku.slice().sort((a,b)=>((_dInizio(a)?.getTime()||0)-(_dInizio(b)?.getTime()||0)));
-    sessioniSkuOrd.forEach(s=>{
-      const mat=s.matricola||s.nome; if(!mat) return;
-      const dInizio=_dInizio(s); if(!dInizio) return;
-      const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
+    // Fine effettiva (ms) di una sessione: checkout reale se uscita anticipata >2min,
+    // altrimenti fine pianificata/turno. Parte dall'INIZIO REALE (articoli aggiunti a metà
+    // giornata = ora di aggiunta, non inizio turno).
+    const _fineEffMs = (s)=>{
+      const dIni = tsInizioRealeSessione(s); if(!dIni) return null;
+      const giornoBase = new Date(dIni); giornoBase.setHours(0,0,0,0);
       let secFineEff = secFineTurnoAssoluto;
       const _finePianHM = s.orarioFineOggiPian || s.orarioFinePian || "";
       let secFinePianItem = secFineTurnoAssoluto;
       if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60; }
-      const haCheckoutItem = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
-      if(haCheckoutItem){
-        const dFine = parseData(s.fine);
-        const secCheckoutReale = dFine ? dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds() : secFineTurnoAssoluto;
-        const anticipoSec = secFinePianItem - secCheckoutReale;
-        secFineEff = (anticipoSec > 120) ? secCheckoutReale : secFinePianItem;
+      const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      if(haCk){
+        const dF = parseData(s.fine);
+        const secCk = dF ? dF.getHours()*3600+dF.getMinutes()*60+dF.getSeconds() : secFineTurnoAssoluto;
+        const anticipoSec = secFinePianItem - secCk;
+        secFineEff = (anticipoSec > 120) ? secCk : secFinePianItem;
       } else if(secFinePianItem < secFineTurnoAssoluto){ secFineEff = secFinePianItem; }
-      const dInizioMs = dInizio.getTime();
-      const trasfSeg = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
-      const giornoBase = new Date(dInizioMs); giornoBase.setSeconds(0,0); giornoBase.setMinutes(0); giornoBase.setHours(0);
-      const tsFineEffMs = giornoBase.getTime() + secFineEff*1000;
-      let segmenti = [];
-      let cur = dInizioMs, curL = s.lineaInizio || s.lineaCorrente, curS = s.sku || s.skuCorrente;
-      for(const t of trasfSeg){ segmenti.push({l:curL, sk:curS, dal:cur, al:t.ts}); cur = t.ts; curL = t.a || curL; curS = t.skuA || curS; }
-      segmenti.push({l:curL, sk:curS, dal:cur, al:tsFineEffMs});
-      let minBaseMs = 0;
-      for(const seg of segmenti){ if(seg.l!==lineaId || seg.sk!==skuItem) continue; if(seg.al>seg.dal) minBaseMs += (seg.al - seg.dal); }
-      const minBase = Math.max(0, minBaseMs/60000);
-      const nSim=nSimPerMatItem[mat]?nSimPerMatItem[mat].skus.size:1;
-      const tsInMs0 = dInizio.getTime();
-      const tsFiMs0 = tsFineEffMs;
-      if(!periodiContati[mat]) periodiContati[mat]=[];
-      const sovrappone = periodiContati[mat].some(p=> tsInMs0 < p.al && tsFiMs0 > p.dal);
-      if(sovrappone){ return; }
-      periodiContati[mat].push({dal:tsInMs0, al:tsFiMs0});
+      return giornoBase.getTime() + secFineEff*1000;
+    };
+    // Segmenti reali [dal,al] su QUESTA linea di una sessione (gestendo i trasferimenti),
+    // dall'inizio reale alla fine effettiva. soloSku=null → qualunque articolo (per i paralleli);
+    // soloSku=skuItem → solo i segmenti su quell'articolo (per i minuti).
+    const _segmentiLineaSku = (s, soloSku)=>{
+      const dIni = tsInizioRealeSessione(s); if(!dIni) return [];
+      const fin = _fineEffMs(s); if(fin==null) return [];
+      const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+      let cur=dIni, curL=s.lineaInizio||s.lineaCorrente, curS=s.sku||s.skuCorrente;
+      const out=[];
+      for(const t of trasf){ if(curL===lineaId && (soloSku==null||curS===soloSku) && t.ts>cur) out.push({dal:cur, al:Math.min(t.ts,fin)}); cur=t.ts; curL=t.a||curL; curS=t.skuA||curS; }
+      if(curL===lineaId && (soloSku==null||curS===soloSku) && fin>cur) out.push({dal:cur, al:fin});
+      return out;
+    };
+    // Intervalli reali di TUTTE le sessioni di oggi su questa linea, per matricola: dicono
+    // quanti articoli sono attivi in parallelo in ogni istante (a prescindere dall'articolo).
+    const intervalliPerMat = {};
+    sessioni.forEach(s=>{
+      if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
+      const dIni = tsInizioRealeSessione(s); if(!dIni) return;
+      const g0 = new Date(dIni); g0.setHours(0,0,0,0);
+      if(g0.getTime() < oggi00.getTime()) return;
+      const mat = s.matricola||s.nome; if(!mat) return;
+      const segs = _segmentiLineaSku(s, null);
+      if(segs.length===0) return;
+      if(!intervalliPerMat[mat]) intervalliPerMat[mat]=[];
+      for(const sg of segs) intervalliPerMat[mat].push(sg);
+    });
+    const minPerMat = {};
+    sessioniSku.forEach(s=>{
+      const mat=s.matricola||s.nome; if(!mat) return;
+      const segs = _segmentiLineaSku(s, skuItem);
+      if(segs.length===0) return;
       if(!minPerMat[mat]) minPerMat[mat]={base:0,sottrai:0};
-      minPerMat[mat].base += minBase/nSim;
+      const fin = _fineEffMs(s);
+      // Minuti ripartiti per periodo: articoli simultanei divisi, sequenziali interi.
+      for(const seg of segs){ minPerMat[mat].base += ripartisciMsPerPeriodo(seg.dal, seg.al, intervalliPerMat[mat])/60000; }
+      // Corsi/pause: sottratti, ripartiti per il n° di articoli attivi al loro orario.
+      const _attiviA = (ms)=>{ let k=0; for(const iv of (intervalliPerMat[mat]||[])){ if(iv.al>iv.dal&&iv.dal<=ms&&ms<iv.al) k++; } return k<1?1:k; };
       if(s.corsi) s.corsi.forEach(c=>{
         const dC=parseData(c.quando); if(!dC) return;
-        const sC=dC.getHours()*3600+dC.getMinutes()*60;
         const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
-        const eC=fineCorsoStr?(()=>{const dR=parseData(fineCorsoStr);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineEff;})():secFineEff;
-        minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60)/nSim;
+        const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
+        const cIn=dC.getTime(), cOut=dCe?dCe.getTime():(fin||cIn);
+        if(cOut>cIn) minPerMat[mat].sottrai += ((cOut-cIn)/60000)/_attiviA(cIn);
       });
       if(s.pause) s.pause.forEach(pz=>{
         const dP=parseData(pz.quando); if(!dP) return;
-        const sP=dP.getHours()*3600+dP.getMinutes()*60;
-        let eP;
-        if(pz.ripresa){ const dR=parseData(pz.ripresa); eP=dR?dR.getHours()*3600+dR.getMinutes()*60:sP; }
-        else { const ora=new Date(); eP=Math.min(secFineEff, ora.getHours()*3600+ora.getMinutes()*60); }
-        minPerMat[mat].sottrai+=Math.max(0,(eP-sP)/60)/nSim;
+        let pOut;
+        if(pz.ripresa){ const dR=parseData(pz.ripresa); pOut=dR?dR.getTime():dP.getTime(); }
+        else { pOut=Math.min(fin!=null?fin:Date.now(), Date.now()); }
+        const pIn=dP.getTime();
+        if(pOut>pIn) minPerMat[mat].sottrai += ((pOut-pIn)/60000)/_attiviA(pIn);
       });
     });
     let minTot=0;
@@ -1535,102 +1574,73 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 const filtraSess = sessTocca;
                 const sessioniSku = sessioni.filter(filtraSess);
                 // Conta SKU simultanei per ogni matricola (per divisione equa)
-                const nSimPerMatItem = {};
-                sessioni.filter(s=>{
-                  if(s.lineaCorrente!==lineaId) return false;
-                  if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
-                  // nSim = articoli lavorati in parallelo OGGI: conta tutte le sessioni del
-                  // giorno (aperte o chiuse), filtrando solo per data. Escludere le chiuse
-                  // farebbe crollare nSim alla chiusura e raddoppiare i minuti per articolo.
-                  const d = _dInizio(s);
-                  if(!d || d.getTime() < oggi00.getTime()) return false;
-                  return true;
-                }).forEach(s=>{
-                  const mat=s.matricola||s.nome; if(!mat) return;
-                  const ts=_dInizio(s); if(!ts) return;
-                  if(!nSimPerMatItem[mat]) nSimPerMatItem[mat]={skus:new Set(),tsMin:ts.getTime()};
-                  nSimPerMatItem[mat].skus.add(s.skuCorrente||s.sku);
-                  if(ts.getTime()<nSimPerMatItem[mat].tsMin) nSimPerMatItem[mat].tsMin=ts.getTime();
+                // Fine effettiva (ms) di una sessione, dall'INIZIO REALE (articoli aggiunti a
+                // meta giornata = ora di aggiunta), checkout reale se uscita anticipata >2min.
+                const _fineEffMs = (s)=>{
+                  const dIni = tsInizioRealeSessione(s); if(!dIni) return null;
+                  const giornoBase = new Date(dIni); giornoBase.setHours(0,0,0,0);
+                  let sFin = secFineTurnoAssoluto;
+                  const _fp = s.orarioFineOggiPian || s.orarioFinePian || "";
+                  let sPian = secFineTurnoAssoluto;
+                  if(_fp && _fp.indexOf(":")>-1){ const [ph,pm]=_fp.split(":").map(Number); sPian = (ph||0)*3600+(pm||0)*60; }
+                  const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+                  if(haCk){
+                    const dF = parseData(s.fine);
+                    const sCk = dF ? dF.getHours()*3600+dF.getMinutes()*60+dF.getSeconds() : secFineTurnoAssoluto;
+                    sFin = ((sPian - sCk) > 120) ? sCk : sPian;
+                  } else if(sPian < secFineTurnoAssoluto){ sFin = sPian; }
+                  return giornoBase.getTime() + sFin*1000;
+                };
+                // Segmenti reali [dal,al] su questa linea (gestendo i trasferimenti), dall'inizio
+                // reale alla fine effettiva. soloSku=null -> qualunque articolo; =skuItem -> solo quello.
+                const _segmentiLineaSku = (s, soloSku)=>{
+                  const dIni = tsInizioRealeSessione(s); if(!dIni) return [];
+                  const fin = _fineEffMs(s); if(fin==null) return [];
+                  const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+                  let cur=dIni, curL=s.lineaInizio||s.lineaCorrente, curS=s.sku||s.skuCorrente;
+                  const out=[];
+                  for(const t of trasf){ if(curL===lineaId && (soloSku==null||curS===soloSku) && t.ts>cur) out.push({dal:cur, al:Math.min(t.ts,fin)}); cur=t.ts; curL=t.a||curL; curS=t.skuA||curS; }
+                  if(curL===lineaId && (soloSku==null||curS===soloSku) && fin>cur) out.push({dal:cur, al:fin});
+                  return out;
+                };
+                // Intervalli reali di TUTTE le sessioni di oggi su questa linea, per matricola:
+                // quanti articoli sono attivi in parallelo in ogni istante.
+                const intervalliPerMat = {};
+                sessioni.forEach(s=>{
+                  if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
+                  const dIni = tsInizioRealeSessione(s); if(!dIni) return;
+                  const g0 = new Date(dIni); g0.setHours(0,0,0,0);
+                  if(g0.getTime() < oggi00.getTime()) return;
+                  const mat = s.matricola||s.nome; if(!mat) return;
+                  const segs = _segmentiLineaSku(s, null);
+                  if(segs.length===0) return;
+                  if(!intervalliPerMat[mat]) intervalliPerMat[mat]=[];
+                  for(const sg of segs) intervalliPerMat[mat].push(sg);
                 });
                 const minPerMat = {};
-                // Traccia i periodi già contati per ogni matricola, per non sommare due volte
-                // sessioni che si SOVRAPPONGONO nel tempo (multi-articolo o doppio check-in).
-                // Permanenze in periodi DISTINTI (A→B→A) invece si sommano correttamente.
-                const periodiContati = {};
-                const sessioniSkuOrd = sessioniSku.slice().sort((a,b)=>((_dInizio(a)?.getTime()||0)-(_dInizio(b)?.getTime()||0)));
-                sessioniSkuOrd.forEach(s=>{
+                sessioniSku.forEach(s=>{
                   const mat=s.matricola||s.nome; if(!mat) return;
-                  const dInizio=_dInizio(s); if(!dInizio) return;
-                  const secIng=dInizio.getHours()*3600+dInizio.getMinutes()*60+dInizio.getSeconds();
-                  let secFineEff = secFineTurnoAssoluto;
-                  // Orario di fine pianificato dell'operatore; se manca, usa la fine turno linea
-                  // (standard di default per tutti) come riferimento.
-                  const _finePianHM = s.orarioFineOggiPian || s.orarioFinePian || "";
-                  let secFinePianItem = secFineTurnoAssoluto;
-                  if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60; }
-                  const haCheckoutItem = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
-                  if(haCheckoutItem){
-                    const dFine = parseData(s.fine);
-                    const secCheckoutReale = dFine ? dFine.getHours()*3600+dFine.getMinutes()*60+dFine.getSeconds() : secFineTurnoAssoluto;
-                    const anticipoSec = secFinePianItem - secCheckoutReale;
-                    secFineEff = (anticipoSec > 120) ? secCheckoutReale : secFinePianItem;
-                  } else if(secFinePianItem < secFineTurnoAssoluto){
-                    // In turno con uscita pianificata anticipata: scontala già da ora
-                    secFineEff = secFinePianItem;
-                  }
-                  // Costruisci i segmenti per (linea, sku) della sessione e somma SOLO quelli
-                  // in cui la persona era proprio su lineaId+skuItem. Così i minuti pre/post
-                  // trasferimento non si "portano dietro" il vecchio SKU.
-                  const dInizioMs = dInizio.getTime();
-                  const trasfSeg = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
-                  // Calcolo l'ora di fine sessione in ms (per costruire i segmenti)
-                  const giornoBase = new Date(dInizioMs); giornoBase.setSeconds(0,0); giornoBase.setMinutes(0); giornoBase.setHours(0);
-                  const tsFineEffMs = giornoBase.getTime() + secFineEff*1000;
-                  // Calcolo l'ora di ingresso effettivo (allineato a inizio pianificato se posticipato)
-                  let secIngEff = secIng;
-                  let segmenti = [];
-                  let cur = dInizioMs, curL = s.lineaInizio || s.lineaCorrente, curS = s.sku || s.skuCorrente;
-                  for(const t of trasfSeg){
-                    segmenti.push({l:curL, sk:curS, dal:cur, al:t.ts});
-                    cur = t.ts; curL = t.a || curL; curS = t.skuA || curS;
-                  }
-                  segmenti.push({l:curL, sk:curS, dal:cur, al:tsFineEffMs});
-                  let minBaseMs = 0;
-                  for(const seg of segmenti){
-                    if(seg.l!==lineaId || seg.sk!==skuItem) continue;
-                    if(seg.al>seg.dal) minBaseMs += (seg.al - seg.dal);
-                  }
-                  const minBase = Math.max(0, minBaseMs/60000);
-                  const nSim=nSimPerMatItem[mat]?nSimPerMatItem[mat].skus.size:1;
-                  // Dedup temporale: se questo periodo si sovrappone a uno già contato per questa
-                  // matricola, NON ri-sommo (è la stessa permanenza vista da un'altra sessione).
-                  const tsInMs0 = dInizio.getTime();
-                  const tsFiMs0 = tsFineEffMs;
-                  if(!periodiContati[mat]) periodiContati[mat]=[];
-                  const sovrappone = periodiContati[mat].some(p=> tsInMs0 < p.al && tsFiMs0 > p.dal);
-                  if(sovrappone){ return; } // già conteggiato in questo periodo
-                  periodiContati[mat].push({dal:tsInMs0, al:tsFiMs0});
-                  // Accumula (somma) i minuti: permanenze in periodi distinti SI SOMMANO.
+                  const segs = _segmentiLineaSku(s, skuItem);
+                  if(segs.length===0) return;
                   if(!minPerMat[mat]) minPerMat[mat]={base:0,sottrai:0};
-                  minPerMat[mat].base += minBase/nSim;
+                  const fin = _fineEffMs(s);
+                  // Minuti ripartiti per periodo: articoli simultanei divisi, sequenziali interi.
+                  for(const seg of segs){ minPerMat[mat].base += ripartisciMsPerPeriodo(seg.dal, seg.al, intervalliPerMat[mat])/60000; }
+                  const _attiviA = (ms)=>{ let k=0; for(const iv of (intervalliPerMat[mat]||[])){ if(iv.al>iv.dal&&iv.dal<=ms&&ms<iv.al) k++; } return k<1?1:k; };
                   if(s.corsi) s.corsi.forEach(c=>{
                     const dC=parseData(c.quando); if(!dC) return;
-                    const sC=dC.getHours()*3600+dC.getMinutes()*60;
-                    // Fine del corso: il rientro reale, oppure la fine pianificata (corso in corso
-                    // con fine prevista), oppure fine turno se non si sa quando rientra.
                     const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
-                    const eC=fineCorsoStr?(()=>{const dR=parseData(fineCorsoStr);return dR?dR.getHours()*3600+dR.getMinutes()*60:secFineEff;})():secFineEff;
-                    minPerMat[mat].sottrai+=Math.max(0,(eC-sC)/60)/nSim;
+                    const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
+                    const cIn=dC.getTime(), cOut=dCe?dCe.getTime():(fin||cIn);
+                    if(cOut>cIn) minPerMat[mat].sottrai += ((cOut-cIn)/60000)/_attiviA(cIn);
                   });
-                  // PAUSE: sottrai i minuti tra pausa e ripresa (consuntivo). Se la pausa è ancora
-                  // aperta (persona fuori adesso), sottrai fino all'ora attuale, non oltre.
                   if(s.pause) s.pause.forEach(pz=>{
                     const dP=parseData(pz.quando); if(!dP) return;
-                    const sP=dP.getHours()*3600+dP.getMinutes()*60;
-                    let eP;
-                    if(pz.ripresa){ const dR=parseData(pz.ripresa); eP=dR?dR.getHours()*3600+dR.getMinutes()*60:sP; }
-                    else { const ora=new Date(); eP=Math.min(secFineEff, ora.getHours()*3600+ora.getMinutes()*60); }
-                    minPerMat[mat].sottrai+=Math.max(0,(eP-sP)/60)/nSim;
+                    let pOut;
+                    if(pz.ripresa){ const dR=parseData(pz.ripresa); pOut=dR?dR.getTime():dP.getTime(); }
+                    else { pOut=Math.min(fin!=null?fin:Date.now(), Date.now()); }
+                    const pIn=dP.getTime();
+                    if(pOut>pIn) minPerMat[mat].sottrai += ((pOut-pIn)/60000)/_attiviA(pIn);
                   });
                 });
                 let minTot=0;
