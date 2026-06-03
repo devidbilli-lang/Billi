@@ -1990,12 +1990,24 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
 
 function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
   const [lineaSel, setLineaSel] = React.useState("");
+  // Larghezza del dispositivo, per adattare il layout (telefono / tablet / monitor-TV).
+  const [vpW, setVpW] = React.useState(typeof window!=="undefined" ? window.innerWidth : 1280);
+  React.useEffect(()=>{
+    const _onR = ()=>setVpW(window.innerWidth);
+    window.addEventListener("resize", _onR);
+    return ()=>window.removeEventListener("resize", _onR);
+  },[]);
   if (!dati) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:300}}>
       <LogoSpinner size={120}/>
     </div>
   );
   const { perLinea } = dati;
+  // Adattamento al dispositivo: colonne della griglia e fattore di scala della vista a lista.
+  // Telefono < 640px, tablet < 1024px, desktop < 1440px, monitor/TV ≥ 1440px.
+  const _grandeSchermo = vpW >= 1024;
+  const _colDisp = vpW < 640 ? 1 : vpW < 1024 ? 2 : vpW < 1440 ? 3 : 4;
+  const _scalaLista = vpW < 640 ? 0.62 : vpW < 1024 ? 0.78 : vpW < 1440 ? 0.9 : 1;
   // "Entra in Produzione": vista d'insieme con TUTTE le linee, incluse le speciali
   // (Taglio DG, Preparazione DG).
   const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee);
@@ -2036,10 +2048,15 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
       {/* VISTA GRIGLIA: 3 colonne, ogni card rimpicciolita con zoom */}
       {vistaGriglia ? (() => {
         const nCard = lineeGriglia.filter(l=>perLinea[l.id]).length;
-        const nCol = 4;
+        const nCol = Math.max(1, Math.min(_colDisp, nCard));
         const nRighe = Math.ceil(nCard / nCol) || 1;
+        // Monitor/TV: tutto in una schermata ad altezza fissa (niente scroll). Telefono/tablet:
+        // meno colonne e scroll verticale, con celle di altezza fissa abbastanza grande da leggere.
+        const _gridStyle = _grandeSchermo
+          ? {display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gridTemplateRows:`repeat(${nRighe}, 1fr)`,gap:12,height:"calc(100vh - 160px)",maxHeight:"calc(100vh - 160px)",overflow:"hidden",padding:"6px",boxSizing:"border-box"}
+          : {display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gap:12,gridAutoRows:vpW<640?"72vh":"56vh",padding:"6px",boxSizing:"border-box"};
         return (
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gridTemplateRows:`repeat(${nRighe}, 1fr)`,gap:12,height:"calc(100vh - 160px)",maxHeight:"calc(100vh - 160px)",overflow:"hidden",padding:"6px",boxSizing:"border-box"}}>
+        <div style={_gridStyle}>
           {lineeGriglia.map(l=>{
             const d=perLinea[l.id]; if(!d) return null;
             // Numero di articoli attivi sulla linea (SKU distinti): più card a destra =
@@ -2048,7 +2065,11 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
             const _skuAttiviCard = new Set();
             (sessioni||[]).forEach(s=>{ if(s._pianificato) return; if(s.lineaCorrente!==l.id && s.lineaInizio!==l.id) return; const _sk=s.skuCorrente||s.sku||""; if(_sk) _skuAttiviCard.add(_sk); });
             const _nArtCard = _skuAttiviCard.size;
-            const _zoomCard = _nArtCard<=2 ? 0.5 : _nArtCard<=4 ? 0.44 : _nArtCard<=6 ? 0.37 : 0.32;
+            // Su monitor (4 colonne strette) lo zoom è basso; su telefono/tablet le celle sono più
+            // larghe, quindi il contenuto va ingrandito per riempirle. Più articoli = più zoom-out.
+            const _zoomCard = _grandeSchermo
+              ? (_nArtCard<=2 ? 0.5 : _nArtCard<=4 ? 0.44 : _nArtCard<=6 ? 0.37 : 0.32)
+              : (_nArtCard<=2 ? 0.95 : _nArtCard<=4 ? 0.8 : _nArtCard<=6 ? 0.68 : 0.58);
             return (
               <div key={l.id} style={{minHeight:0,background:"#fff",border:"4px solid "+(l.colore||"#7c3aed"),borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+(l.colore||"#7c3aed")+"99, 0 0 4px "+(l.colore||"#7c3aed")+", inset 0 0 8px "+(l.colore||"#7c3aed")+"22",display:"flex",flexDirection:"column"}}>
                 <div style={{padding:"5px 10px",borderBottom:"1px solid "+(l.colore||"#7c3aed")+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
@@ -2082,11 +2103,11 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         </div>
         );
       })() : (
-      <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div style={{display:"flex",flexDirection:"column",gap:20,zoom:_scalaLista}}>
         {lineeVis.map(l=>{
           const d=perLinea[l.id]; if(!d) return null;
           return (
-            <div key={l.id} style={{background:"#fff",borderTop:"5px solid "+(l.colore||"#7c3aed"),borderRadius:0,overflow:"visible",boxShadow:"none",display:"flex",flexDirection:"column",minHeight:"calc(100vh - 120px)"}}>
+            <div key={l.id} style={{background:"#fff",borderTop:"5px solid "+(l.colore||"#7c3aed"),borderRadius:0,overflow:"visible",boxShadow:"none",display:"flex",flexDirection:"column"}}>
               <div style={{padding:"16px 24px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:14,height:14,borderRadius:"50%",background:l.colore||"#7c3aed",flexShrink:0}}/>
                 <div style={{fontSize:18,fontWeight:800,color:"#1e293b"}}>{l.id}</div>
