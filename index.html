@@ -2619,109 +2619,48 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
     </div>
   );
 }
-function TabNote({ lineaFiltro, linee, skuList, sessioni }) {
+function TabNote({ lineaFiltro, linee, skuList }) {
   const [noteList, setNoteList] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [salvando, setSalvando] = React.useState(false);
-  const _oggiISO = (()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); })();
-  const [fData, setFData] = React.useState(_oggiISO);
-  const [fLinea, setFLinea] = React.useState((lineaFiltro&&lineaFiltro.id) || (linee[0]&&linee[0].id) || "");
-  const [fSku, setFSku] = React.useState("");
-  const [fRighe, setFRighe] = React.useState([""]);
   const carica = React.useCallback(async ()=>{
     try{ const r=await fetch(nexusUrl("leggiNoteLinee",{}),{mode:"cors"}); const j=await r.json(); setNoteList((j&&j.ok&&j.data&&Array.isArray(j.data.note))?j.data.note:[]); }catch(e){}
     setLoading(false);
   },[]);
   React.useEffect(()=>{ carica(); const t=setInterval(carica,60000); return ()=>clearInterval(t); },[carica]);
-  React.useEffect(()=>{ if(lineaFiltro&&lineaFiltro.id) setFLinea(lineaFiltro.id); },[lineaFiltro]);
-  const skuLinea = [...new Set((sessioni||[]).filter(s=>s.lineaCorrente===fLinea).map(s=>s.skuCorrente||s.sku).filter(Boolean))];
-  const salva = async ()=>{
-    if(!fSku){ alert("Seleziona un articolo."); return; }
-    const noteValide = fRighe.map(x=>(x||"").trim()).filter(Boolean);
-    if(noteValide.length===0){ alert("Inserisci almeno una nota."); return; }
-    setSalvando(true);
-    try{
-      await fetchConRetry(nexusUrl("notariepilogo",{data:fData,linea:fLinea,sku:fSku,nota:noteValide.join(" / ")}),5,1000);
-      setFRighe([""]); setFSku("");
-      setTimeout(carica,1000);
-    }catch(e){ alert("Errore salvataggio."); }
-    setSalvando(false);
-  };
   const elimina = async (n)=>{
     if(!window.confirm("Eliminare questa nota?")) return;
     try{ await fetchConRetry(nexusUrl("eliminaNotaRiepilogo",{data:n.data,linea:n.linea,sku:n.sku}),5,1000); setTimeout(carica,800); }catch(e){ alert("Errore eliminazione."); }
   };
   const righe = lineaFiltro ? noteList.filter(n=>n.linea===lineaFiltro.id) : noteList;
+  if (loading) return <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>;
+  if (righe.length===0) return <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessuna nota registrata.</div>;
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:18}}>
-        <div style={{...S.lbl,color:"#f59e0b",marginBottom:12,fontSize:13}}>Nuova nota — mancato raggiungimento obiettivo</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"flex-start"}}>
-          <div style={{minWidth:150}}>
-            <label style={{...S.lbl,color:"#64748b"}}>Data</label>
-            <div style={{marginTop:4}}><DatePicker value={fData} onChange={setFData}/></div>
-          </div>
-          <div style={{minWidth:160}}>
-            <label style={{...S.lbl,color:"#64748b"}}>Linea</label>
-            <select value={fLinea} onChange={e=>{ setFLinea(e.target.value); setFSku(""); }} disabled={!!lineaFiltro} style={{...S.inp,cursor:lineaFiltro?"default":"pointer",marginTop:4}}>
-              {(lineaFiltro?linee.filter(l=>l.id===lineaFiltro.id):linee).map(l=><option key={l.id} value={l.id}>{l.id}</option>)}
-            </select>
-          </div>
-          <div style={{minWidth:220,flex:1}}>
-            <label style={{...S.lbl,color:"#64748b"}}>Articolo</label>
-            <select value={fSku} onChange={e=>setFSku(e.target.value)} style={{...S.inp,cursor:"pointer",marginTop:4}}>
-              <option value="">-- Seleziona articolo --</option>
-              {skuLinea.map(s=>{ const o=skuList.find(x=>x&&x.sku===s); return <option key={s} value={s}>{s}{o?" — "+o.descrizione:""}</option>; })}
-            </select>
-          </div>
-        </div>
-        <div style={{marginTop:12}}>
-          <label style={{...S.lbl,color:"#64748b"}}>Note</label>
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
-            {fRighe.map((r,i)=>(
-              <div key={i} style={{display:"flex",gap:6,alignItems:"center"}}>
-                <input style={{...S.inp,flex:1,fontSize:14}} placeholder={"Nota "+(i+1)+"..."} value={r} onChange={e=>{ const n=[...fRighe]; n[i]=e.target.value; setFRighe(n); }}/>
-                {fRighe.length>1 && <button onClick={()=>{ const n=fRighe.filter((_,j)=>j!==i); setFRighe(n.length?n:[""]); }} style={{width:34,height:34,flexShrink:0,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,color:"#ef4444",fontSize:18,fontWeight:900,cursor:"pointer",lineHeight:1}}>−</button>}
-              </div>
-            ))}
-            <button onClick={()=>setFRighe([...fRighe,""])} style={{alignSelf:"flex-start",display:"flex",alignItems:"center",gap:6,padding:"6px 14px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,color:"#92400e",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}><span style={{fontSize:16,fontWeight:900}}>+</span> Aggiungi nota</button>
-          </div>
-        </div>
-        <div style={{marginTop:14}}>
-          <button disabled={salvando} onClick={salva} style={{padding:"12px 28px",background:"linear-gradient(135deg,#f59e0b,#d97706)",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:15,cursor:salvando?"default":"pointer",fontFamily:"'Montserrat',sans-serif",opacity:salvando?0.6:1}}>{salvando?"Salvataggio...":"Salva nota"}</button>
-        </div>
-      </div>
-      {loading ? <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>
-       : righe.length===0 ? <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessuna nota registrata.</div>
-       : (
-        <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead>
-              <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["📝 Note","#f59e0b"],["","" ]].map(([h,c],hi,arr)=>(
-                <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody>
-              {righe.map((n,i)=>{
-                const lObj = linee.find(l=>l.id===n.linea)||{colore:"#94a3b8"};
-                const skuObj = skuList.find(s=>s&&s.sku===n.sku);
-                const dataFmt = (n.data&&/^\d{4}-\d{2}-\d{2}$/.test(n.data)) ? n.data.split("-").reverse().join("/") : (()=>{ try{ const d=new Date(n.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); }catch(e){} return n.data||""; })();
-                return (
-                  <tr key={i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
-                    <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",whiteSpace:"nowrap"}}>{dataFmt}</td>
-                    <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:"#ffffff",color:lObj.colore,border:"2px solid "+lObj.colore,padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>{n.linea}</span></td>
-                    <td style={{padding:"10px 14px",textAlign:"center",fontSize:13,color:"#334155"}}>{n.sku}{skuObj?<span style={{color:"#94a3b8",fontSize:11}}> — {skuObj.descrizione}</span>:""}</td>
-                    <td style={{padding:"10px 14px",fontSize:13,color:"#334155",textAlign:"left",wordBreak:"break-word"}}>{n.nota}</td>
-                    <td style={{padding:"10px 14px",textAlign:"center"}}>
-                      <button title="Elimina nota" onClick={()=>elimina(n)} style={{width:32,height:32,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,color:"#ef4444",fontSize:15,fontWeight:900,cursor:"pointer",lineHeight:1}}>✕</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-       )}
+    <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+        <thead>
+          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Note","#f59e0b"],["","" ]].map(([h,c],hi,arr)=>(
+            <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody>
+          {righe.map((n,i)=>{
+            const lObj = linee.find(l=>l.id===n.linea)||{colore:"#94a3b8"};
+            const skuObj = skuList.find(s=>s&&s.sku===n.sku);
+            const dataFmt = (n.data&&/^\d{4}-\d{2}-\d{2}$/.test(n.data)) ? n.data.split("-").reverse().join("/") : (()=>{ try{ const d=new Date(n.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); }catch(e){} return n.data||""; })();
+            return (
+              <tr key={i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
+                <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",whiteSpace:"nowrap"}}>{dataFmt}</td>
+                <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:"#ffffff",color:lObj.colore,border:"2px solid "+lObj.colore,padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>{n.linea}</span></td>
+                <td style={{padding:"10px 14px",textAlign:"center",fontSize:13,color:"#334155"}}>{n.sku}{skuObj?<span style={{color:"#94a3b8",fontSize:11}}> — {skuObj.descrizione}</span>:""}</td>
+                <td style={{padding:"10px 14px",fontSize:13,color:"#334155",textAlign:"left",wordBreak:"break-word"}}>{n.nota}</td>
+                <td style={{padding:"10px 14px",textAlign:"center"}}>
+                  <button title="Elimina nota" onClick={()=>elimina(n)} style={{width:32,height:32,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,color:"#ef4444",fontSize:15,fontWeight:900,cursor:"pointer",lineHeight:1}}>✕</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -4684,6 +4623,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [,setTk]          = useState(0);
   const [modCorso,setModCorso]       = useState(null);
   const [modCambioSku,setModCambioSku] = useState(null);
+  const [modNoteLinea,setModNoteLinea] = useState(null);
   const [popupSkuOp,setPopupSkuOp] = useState(null);
   const [popupRiepilogoOp,setPopupRiepilogoOp] = useState(null); // matricola per il modal Riepilogo giornata
   const [editSegmento,setEditSegmento] = useState(null); // {meta, valore:'HH:MM', giorno:'YYYY-MM-DD'}
@@ -5484,6 +5424,79 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           </div>
         );
       })()}
+      {modNoteLinea&&(()=>{
+        const skuLinea = [...new Set(sessioni.filter(s=>s.lineaCorrente===modNoteLinea.linea.id).map(s=>s.skuCorrente||s.sku).filter(Boolean))];
+        const lineeSel = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee;
+        return (
+          <div style={MS.ov}>
+            <div style={{...MS.md,maxWidth:420,background:"#ffffff",border:"1px solid #e2e8f0"}}>
+              <div style={MS.mh}>
+                <span style={{...MS.mt,color:"#f59e0b"}}>📝 Note Linea — {modNoteLinea.linea.id}</span>
+                <button style={MS.mx} onClick={()=>setModNoteLinea(null)}>✕</button>
+              </div>
+              <div style={{padding:22}}>
+                <div style={{marginBottom:14}}>
+                  <label style={{...S.lbl,color:"#f59e0b"}}>Data</label>
+                  <div style={{marginTop:4}}><DatePicker value={modNoteLinea.data} onChange={v=>setModNoteLinea({...modNoteLinea,data:v})}/></div>
+                </div>
+                {!lineaFiltro && lineeSel.length>1 && (
+                  <div style={{marginBottom:14}}>
+                    <label style={{...S.lbl,color:"#f59e0b"}}>Linea</label>
+                    <select value={modNoteLinea.linea.id} onChange={e=>{ const nl=linee.find(l=>l.id===e.target.value); if(nl) setModNoteLinea({...modNoteLinea,linea:nl,sku:""}); }} style={{...S.inp,cursor:"pointer"}}>
+                      {lineeSel.map(l=><option key={l.id} value={l.id}>{l.id}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div style={{marginBottom:14,padding:"8px 12px",background:modNoteLinea.linea.colore+"18",border:"1px solid "+modNoteLinea.linea.colore,borderRadius:8}}>
+                  <span style={{color:modNoteLinea.linea.colore,fontWeight:700,fontSize:14}}>{modNoteLinea.linea.id}</span>
+                </div>
+                <div style={{marginBottom:14}}>
+                  <label style={{...S.lbl,color:"#f59e0b"}}>SKU Articolo</label>
+                  <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
+                    <option value="">-- Seleziona articolo --</option>
+                    {skuLinea.map(s=>{ const skuObj = skuList.find(x=>x&&x.sku===s); return <option key={s} value={s}>{s}{skuObj?" — "+skuObj.descrizione:""}</option>; })}
+                  </select>
+                </div>
+                <div style={{marginBottom:14}}>
+                  <label style={{...S.lbl,color:"#f59e0b"}}>Note (mancato raggiungimento obiettivo)</label>
+                  {(() => {
+                    const noteArr = Array.isArray(modNoteLinea.note) ? modNoteLinea.note : ((modNoteLinea.nota||"").split("\n").filter(x=>x!==undefined));
+                    const righe = noteArr.length>0 ? noteArr : [""];
+                    const setRighe = (nuove) => setModNoteLinea({...modNoteLinea, note:nuove, nota:undefined});
+                    return (
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        {righe.map((r,i)=>(
+                          <div key={i} style={{display:"flex",gap:6,alignItems:"center"}}>
+                            <input style={{...S.inp,flex:1,fontSize:14}} placeholder={"Nota "+(i+1)+"..."} value={r} onChange={e=>{ const n=[...righe]; n[i]=e.target.value; setRighe(n); }}/>
+                            {righe.length>1 && (<button onClick={()=>{ const n=righe.filter((_,j)=>j!==i); setRighe(n.length?n:[""]); }} style={{width:34,height:34,flexShrink:0,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,color:"#ef4444",fontSize:18,fontWeight:900,cursor:"pointer",lineHeight:1}}>−</button>)}
+                          </div>
+                        ))}
+                        <button onClick={()=>setRighe([...righe,""])} style={{alignSelf:"flex-start",display:"flex",alignItems:"center",gap:6,padding:"6px 14px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,color:"#92400e",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}><span style={{fontSize:16,fontWeight:900}}>+</span> Aggiungi nota</button>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <button style={{...MS.an,flex:1,textAlign:"center"}} onClick={()=>setModNoteLinea(null)}>Chiudi</button>
+                  <button style={{flex:2,padding:14,background:"linear-gradient(135deg,#f59e0b,#d97706)",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}
+                    onClick={async()=>{
+                      if(!modNoteLinea.sku){ alert("Seleziona un articolo."); return; }
+                      const noteArr = Array.isArray(modNoteLinea.note) ? modNoteLinea.note : ((modNoteLinea.nota||"").split("\n"));
+                      const noteValide = noteArr.map(x=>(x||"").trim()).filter(Boolean);
+                      if(noteValide.length===0){ alert("Inserisci almeno una nota."); return; }
+                      const notaUnita = noteValide.join(" / ");
+                      try {
+                        await fetchConRetry(nexusUrl("notariepilogo",{data:modNoteLinea.data,linea:modNoteLinea.linea.id,sku:modNoteLinea.sku,nota:notaUnita}), 5, 1000);
+                        alert("✓ Nota salvata!");
+                        setModNoteLinea(null);
+                      } catch(e){ alert("Errore salvataggio."); }
+                    }}>Salva</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee}
         tutteSessioniOp={sessioni.filter(s=>(s.matricola===modCambioSku.matricola||s.nome===modCambioSku.nome)&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!s._pianificato&&!isSkuSpeciale(s.skuCorrente||s.sku||""))}
         onClose={()=>setModCambioSku(null)} onRimuoviArticolo={async(s)=>{
@@ -5620,11 +5633,12 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             ((lineaFiltro.id||"").toUpperCase().includes("PREPARAZIONE DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("PREPARAZIONE DG"))
           );
           const _isRMALinea = lineaFiltro && (((lineaFiltro.id||"").toUpperCase().includes("RMA")) || ((lineaFiltro.nome||"").toUpperCase().includes("RMA")));
-          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)],["note","📝 Note"]];
+          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)],["note","Note"]];
           const _tabs = _isTaglioDG ? [["operatori","Turni&Operatori"],["sessioni","Sessioni"],["attivita","Inserimento Attività"]] : _tabsProd;
           return _tabs.map(([t,l])=>(
           <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #7c3aed55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=tab===t?"0 0 10px 2px #7c3aed44":"none"; }} style={{padding:"10px 22px",border:"2px solid #7c3aed",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.55)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",color:"#000000",boxShadow:tab===t?"0 0 10px 2px #7c3aed44":"none",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>{l}</button>
         )); })()}
+        <button onClick={()=>{ const ln = lineaFiltro || linee[0]; if(ln){ const _d=new Date(); const _oggiISO=_d.getFullYear()+"-"+String(_d.getMonth()+1).padStart(2,"0")+"-"+String(_d.getDate()).padStart(2,"0"); setModNoteLinea({linea:ln, nota:"", data:_oggiISO}); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #f59e0b55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; }} style={{padding:"10px 22px",border:"2px solid #f59e0b",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:"#f59e0b11",color:"#f59e0b",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>📝 Note</button>
       </div>
       )}
       {tab==="sessioni"&&(
