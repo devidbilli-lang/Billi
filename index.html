@@ -2646,7 +2646,7 @@ function TabNote({ lineaFiltro, linee, skuList }) {
           {righe.map((n,i)=>{
             const lObj = linee.find(l=>l.id===n.linea)||{colore:"#94a3b8"};
             const skuObj = skuList.find(s=>s&&s.sku===n.sku);
-            const dataFmt = (n.data&&/^\d{4}-\d{2}-\d{2}$/.test(n.data)) ? n.data.split("-").reverse().join("/") : (()=>{ try{ const d=new Date(n.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); }catch(e){} return n.data||""; })();
+            const dataFmt = (()=>{ const _s=(n.data||"").toString().trim(); let _m; if(_m=_s.match(/^(\d{4})-(\d{2})-(\d{2})/)) return _m[3]+"/"+_m[2]+"/"+_m[1]; if(_m=_s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)) return _m[1].padStart(2,"0")+"/"+_m[2].padStart(2,"0")+"/"+_m[3]; if(_m=_s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)) return _m[1].padStart(2,"0")+"/"+_m[2].padStart(2,"0")+"/"+_m[3]; try{ const _d=new Date(_s); if(!isNaN(_d)) return _d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); }catch(e){} return _s; })();
             return (
               <tr key={i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
                 <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",whiteSpace:"nowrap"}}>{dataFmt}</td>
