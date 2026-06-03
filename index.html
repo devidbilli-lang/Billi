@@ -43,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB-IzXQRT1SD6ZsgphUxOf5BqxNhv-ZJIAJdbsSuBL1UBUq4ICgDl7cq7eZ6yL_RQ2/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCqqEMdTnfMSikhlmEOPAY6zOwFs5ys_2aFUjyyF1krQSbL_iyqNpBLysAurVcHz7Q0w/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -3948,6 +3948,7 @@ function TabAttivita({ repTipo="taglio" }) {
   const [reparto,setReparto] = useState("");
   const [nRichiesta,setNRichiesta] = useState(""); // solo Preparazione DG
   const [pellame,setPellame] = useState(""); // solo Taglio DG
+  const [articolo,setArticolo] = useState(""); // solo RMA, facoltativo, per Campioni/Prototipi
   const [lista,setLista] = useState([]);
   const [caricando,setCaricando] = useState(false);
   const [salvando,setSalvando] = useState(false);
@@ -3957,7 +3958,9 @@ function TabAttivita({ repTipo="taglio" }) {
   const fabDragRef = React.useRef(null);
 
   const BRANDS = ["Chanel","LV"];
-  const TIPOLOGIE = _isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo"];
+  // RMA: Rilavorazione + Campioni/Prototipi. Preparazione DG: solo Rilavorazione. Taglio DG: Rilavorazione+Collaudo.
+  const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi"] : (_isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo"]);
+  const _mostraArticolo = _isRMA && tipologia === "Campioni/Prototipi"; // campo Articolo solo RMA + Campioni/Prototipi
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
   const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO"];
   const _titoloRep = _isRMA ? "Attività RMA" : (_isPrep ? "Attività Preparazione DG" : "Attività Taglio DG");
@@ -3984,8 +3987,8 @@ function TabAttivita({ repTipo="taglio" }) {
     if(_isPrep && !nRichiesta.trim()){ setMsg("Inserisci il N° Richiesta."); return; }
     setSalvando(true);
     try{
-      await fetch(nexusUrl("salvaAttivita",{repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():"",pellame:_isPrep?"":pellame}));
-      setBrand(""); setTempo(""); setReparto(""); setNRichiesta(""); setPellame("");
+      await fetch(nexusUrl("salvaAttivita",{repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():"",pellame:_isPrep?"":pellame,articolo:_mostraArticolo?articolo.trim():""}));
+      setBrand(""); setTempo(""); setReparto(""); setNRichiesta(""); setPellame(""); setArticolo("");
       setTipologia(_isPrep ? "Rilavorazione" : "");
       setMsg("");
       setModalAperto(false);
@@ -4022,7 +4025,7 @@ function TabAttivita({ repTipo="taglio" }) {
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
               <thead>
-                <tr>{(_isPrep?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta",""]:["Data produzione","Brand","Tempo [min]","Tipologia","Reparto","Pellame",""]).map((h,i,arr)=>(
+                <tr>{(_isRMA?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta","Articolo",""]:_isPrep?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta",""]:["Data produzione","Brand","Tempo [min]","Tipologia","Reparto","Pellame",""]).map((h,i,arr)=>(
                   <th key={i} style={{textAlign:i===0?"left":i===arr.length-1?"center":"left",padding:"8px 10px",borderBottom:"2px solid #e2e8f0",color:"#475569",fontWeight:800,fontSize:12,whiteSpace:"nowrap"}}>{h}</th>
                 ))}</tr>
               </thead>
@@ -4036,6 +4039,7 @@ function TabAttivita({ repTipo="taglio" }) {
                     {_isPrep
                       ? <td style={{padding:"8px 10px",fontWeight:600}}>{a.nRichiesta||a.reparto||""}</td>
                       : <td style={{padding:"8px 10px"}}>{a.reparto}</td>}
+                    {_isRMA&&<td style={{padding:"8px 10px"}}>{a.articolo||""}</td>}
                     {!_isPrep&&<td style={{padding:"8px 10px"}}>{a.pellame||""}</td>}
                     <td style={{padding:"8px 10px",textAlign:"center"}}>
                       <button onClick={()=>elimina(a.id)} title="Elimina attività" style={{background:"#fff",color:"#dc2626",border:"1.5px solid #dc2626",borderRadius:6,padding:"2px 10px",fontWeight:900,fontSize:14,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>−</button>
@@ -4118,6 +4122,12 @@ function TabAttivita({ repTipo="taglio" }) {
                 <div>
                   <label style={lbl}>N° Richiesta</label>
                   <input type="text" style={{...inp,width:"100%"}} placeholder="es. REQ-2026-001" value={nRichiesta} onChange={e=>setNRichiesta(e.target.value)}/>
+                </div>
+                )}
+                {_mostraArticolo&&(
+                <div>
+                  <label style={lbl}>Articolo <span style={{color:"#94a3b8",fontWeight:600,textTransform:"none",letterSpacing:0}}>(facoltativo)</span></label>
+                  <input type="text" style={{...inp,width:"100%"}} placeholder="es. AS1234.B56789.U0001" value={articolo} onChange={e=>setArticolo(e.target.value)}/>
                 </div>
                 )}
                 {!_isPrep&&(
