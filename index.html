@@ -61,6 +61,39 @@ const LINEE_DEFAULT = [
 const now     = () => new Date();
 const fmt     = d => d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 const fmtFull = d => d.toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+// Calcola la data di Pasqua (calendario gregoriano) per un dato anno. Restituisce un oggetto Date.
+function calcolaPasquaJS(anno) {
+  var a = anno % 19;
+  var b = Math.floor(anno / 100);
+  var c = anno % 100;
+  var d = Math.floor(b / 4);
+  var e = b % 4;
+  var f = Math.floor((b + 8) / 25);
+  var g = Math.floor((b - f + 1) / 3);
+  var h = (19 * a + b - d - g + 15) % 30;
+  var i = Math.floor(c / 4);
+  var k = c % 4;
+  var l = (32 + 2 * e + 2 * i - h - k) % 7;
+  var m = Math.floor((a + 11 * h + 22 * l) / 451);
+  var mese = Math.floor((h + l - 7 * m + 114) / 31);
+  var giorno = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(anno, mese - 1, giorno);
+}
+// Verifica se una data è una festività nazionale italiana (fisse + Pasqua + Pasquetta).
+function isFestivitaJS(data) {
+  var g = data.getDate();
+  var m = data.getMonth() + 1;
+  var anno = data.getFullYear();
+  var fisse = [[1,1],[6,1],[25,4],[1,5],[2,6],[15,8],[1,11],[8,12],[25,12],[26,12]];
+  for (var i = 0; i < fisse.length; i++) {
+    if (g === fisse[i][0] && m === fisse[i][1]) return true;
+  }
+  var pasqua = calcolaPasquaJS(anno); pasqua.setHours(0,0,0,0);
+  var pasquetta = new Date(pasqua); pasquetta.setDate(pasquetta.getDate() + 1);
+  var dData = new Date(data); dData.setHours(0,0,0,0);
+  if (dData.getTime() === pasqua.getTime() || dData.getTime() === pasquetta.getTime()) return true;
+  return false;
+}
 function giorniLavorativiJS(tsInizio) {
   if(!tsInizio) return 1;
   var cur = new Date(tsInizio); cur.setHours(0,0,0,0);
@@ -68,7 +101,7 @@ function giorniLavorativiJS(tsInizio) {
   var gg = 0;
   while(cur.getTime() <= oggi.getTime()) {
     var dow = cur.getDay();
-    if(dow !== 0 && dow !== 6) gg++;
+    if(dow !== 0 && dow !== 6 && !isFestivitaJS(cur)) gg++;
     cur.setDate(cur.getDate()+1);
   }
   return Math.min(15, Math.max(1, gg));
@@ -2060,7 +2093,7 @@ function aggiungiGiorniLavorativi(dataInizio, giorni) {
   while (aggiunti < giorni) {
     d.setDate(d.getDate() + 1);
     var gg = d.getDay();
-    if (gg !== 0 && gg !== 6) aggiunti++; // salta sab e dom
+    if (gg !== 0 && gg !== 6 && !isFestivitaJS(d)) aggiunti++; // salta sab, dom e festività
   }
   return d;
 }
