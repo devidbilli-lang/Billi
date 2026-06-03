@@ -1063,49 +1063,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     const tot = minTotali>0 ? Math.round(minTotali/tc) : 0;
     return tot>0?tot:null;
   })() : null;
-  // OBIETTIVO EFFETTIVO: se esiste un valore congelato (turno chiuso), usa quello e non ricalcolare.
-  // Altrimenti usa il calcolo dinamico obFinale.
-  const obFinaleEffettivo = (obCongelato!=null) ? obCongelato : obFinale;
-  // CONGELAMENTO: quando il turno è chiuso (tutti in checkout) e non c'è ancora un valore congelato,
-  // salva l'obiettivo corrente su D1 così resta fisso.
-  // FRENO ANTI-RICONGELAMENTO: dopo una correzione manuale di orario (scritta in localStorage come
-  // timestamp), per qualche secondo NON ricongeliamo, così obFinale ha il tempo di ricalcolarsi sui
-  // dati freschi e ricongeliamo il valore CORRETTO invece di ri-bloccare quello vecchio.
-  React.useEffect(()=>{
-    if(turnoTerminato && obCongelato==null && obFinale!=null && obFinale>0){
-      let _ultModifica = 0;
-      try{ _ultModifica = Number(localStorage.getItem("nexus_ult_modifica_orario")||"0"); }catch(e){}
-      const _trascorsi = Date.now() - _ultModifica;
-      if(_ultModifica>0 && _trascorsi < 8000){
-        // Modifica recente: rimanda il ricongelamento di qualche secondo per dar tempo al ricalcolo.
-        const _t = setTimeout(()=>{ setObCongelato(c=>c); }, 8000 - _trascorsi + 200);
-        return ()=>clearTimeout(_t);
-      }
-      fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obFinale}))
-        .then(r=>r.json()).then(()=>{ setObCongelato(obFinale); }).catch(()=>{});
-    }
-  },[turnoTerminato, obCongelato, obFinale, lineaId, tick]);
-  // SALVATAGGIO CONTINUO (Opzione A): durante il turno l'app è sempre aperta sui tablet di linea,
-  // mentre a fine turno spesso è chiusa ovunque → il congelamento "solo a turno chiuso" poteva
-  // mancare. Qui salviamo l'obiettivo corrente su D1 ad OGNI variazione (anche a turno in corso),
-  // così l'ultimo valore noto è sempre fotografato sul server prima del reset notturno, senza
-  // dipendere da chi tiene l'app aperta a fine turno. Salviamo solo quando il valore CAMBIA
-  // (via ref) per non martellare il worker, e solo se NON è già congelato (turno chiuso).
-  const _ultimoObSalvatoRef = React.useRef(null);
-  React.useEffect(()=>{
-    if(obCongelato!=null) return;            // già congelato: non sovrascrivere
-    if(turnoTerminato) return;               // a turno chiuso ci pensa l'effetto sopra
-    if(obFinale==null || obFinale<=0) return;
-    if(_ultimoObSalvatoRef.current === obFinale) return; // invariato: niente da fare
-    _ultimoObSalvatoRef.current = obFinale;
-    fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obFinale})).catch(()=>{});
-  },[obFinale, turnoTerminato, obCongelato, lineaId]);
-  const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
+  // [ obFinaleEffettivo, il congelamento e ob60 sono stati SPOSTATI subito dopo la definizione
+  //   di obFinaleConRampa / obAttesoRealTime, perché ora l'obiettivo mostrato e congelato è la
+  //   SOMMA PER ARTICOLO (ognuno con la sua finestra), non più il vecchio obFinale aggregato. ]
   // ── OBIETTIVO PER ARTICOLO CON RAMPA (funzione riutilizzabile) ──────────────────
   // Calcola l'obiettivo giornaliero di un singolo articolo su questa linea, già SCALATO
   // per la rampa se l'articolo è in rampa. Usata sia dalle card per-articolo sia dalla
   // somma aggregata per l'efficienza (così i due valori restano coerenti).
-  const calcObItemConRampa = (skuItem)=>{
+  const calcObItemConRampa = (skuItem, finoAMs)=>{
     const skuObjI = skuList.find(x=>x&&x.sku===skuItem);
     const tcItem = tcPerLinea(skuObjI);
     if(!(tcItem>0)) return null;
@@ -1139,7 +1104,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const anticipoSec = secFinePianItem - secCk;
         secFineEff = (anticipoSec > 120) ? secCk : secFinePianItem;
       } else if(secFinePianItem < secFineTurnoAssoluto){ secFineEff = secFinePianItem; }
-      return giornoBase.getTime() + secFineEff*1000;
+      const _fineOrig = giornoBase.getTime() + secFineEff*1000;
+      // Per il calcolo REAL-TIME (finoAMs = adesso) la finestra dell'articolo è troncata
+      // all'istante corrente, così l'atteso cresce solo man mano che passa il tempo SUL pezzo.
+      return (finoAMs!=null && finoAMs < _fineOrig) ? finoAMs : _fineOrig;
     };
     // Segmenti reali [dal,al] su QUESTA linea di una sessione (gestendo i trasferimenti),
     // dall'inizio reale alla fine effettiva. soloSku=null → qualunque articolo (per i paralleli);
@@ -1214,9 +1182,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   };
   // Obiettivo di linea AGGREGATO con rampa: somma degli obiettivi (ridotti se in rampa) di tutti
   // gli articoli attivi oggi sulla linea. Usato per misurare l'efficienza in modo equo durante le rampe.
-  const obFinaleConRampa = (()=>{
+  // Somma degli obiettivi per ARTICOLO, ognuno calcolato sulla PROPRIA finestra (dall'ora di
+  // aggiunta dell'articolo) e col PROPRIO tempo ciclo. finoAMs=null → giornaliero (fino a fine
+  // turno); finoAMs=adesso → atteso finora (ogni articolo troncato all'istante corrente).
+  const sommaObiettiviArticoli = (finoAMs)=>{
     const skuSet = new Set();
-    const _oggi00b = new Date(); _oggi00b.setHours(0,0,0,0);
     for(const s of sessioni){
       if(s._pianificato) continue;
       if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
@@ -1226,34 +1196,58 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     }
     if(skuSet.size===0) return null;
     let somma = 0; let almenoUno=false;
-    skuSet.forEach(sk=>{ const o = calcObItemConRampa(sk); if(o!=null){ somma += o; almenoUno=true; } });
+    skuSet.forEach(sk=>{ const o = calcObItemConRampa(sk, finoAMs); if(o!=null){ somma += o; almenoUno=true; } });
     return almenoUno ? somma : null;
-  })();
+  };
+  // Obiettivo GIORNALIERO aggregato (somma articoli fino a fine turno, rampe incluse).
+  const obFinaleConRampa = sommaObiettiviArticoli(null);
+  // Obiettivo ATTESO A QUEST'ORA (real-time): somma articoli fino ad ADESSO. Un articolo
+  // aggiunto a metà turno pesa solo dal momento in cui è entrato in lavorazione, non dall'inizio.
+  const obAttesoRealTime = sommaObiettiviArticoli(Date.now());
+  // OBIETTIVO GIORNALIERO da MOSTRARE/CONGELARE: la somma per articolo (con la finestra di
+  // ciascuno). Fallback al vecchio aggregato obFinale solo se la somma non è disponibile.
+  const obDaCongelare = (obFinaleConRampa!=null) ? obFinaleConRampa : obFinale;
+  // OBIETTIVO EFFETTIVO: se esiste un valore congelato (turno chiuso), usa quello e non ricalcolare.
+  const obFinaleEffettivo = (obCongelato!=null) ? obCongelato : obDaCongelare;
+  // CONGELAMENTO a turno chiuso (con freno anti-ricongelamento dopo una correzione di orario:
+  // per qualche secondo non ricongeliamo, così l'obiettivo si ricalcola sui dati freschi).
+  React.useEffect(()=>{
+    if(turnoTerminato && obCongelato==null && obDaCongelare!=null && obDaCongelare>0){
+      let _ultModifica = 0;
+      try{ _ultModifica = Number(localStorage.getItem("nexus_ult_modifica_orario")||"0"); }catch(e){}
+      const _trascorsi = Date.now() - _ultModifica;
+      if(_ultModifica>0 && _trascorsi < 8000){
+        const _t = setTimeout(()=>{ setObCongelato(c=>c); }, 8000 - _trascorsi + 200);
+        return ()=>clearTimeout(_t);
+      }
+      fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare}))
+        .then(r=>r.json()).then(()=>{ setObCongelato(obDaCongelare); }).catch(()=>{});
+    }
+  },[turnoTerminato, obCongelato, obDaCongelare, lineaId, tick]);
+  // SALVATAGGIO CONTINUO: fotografa l'obiettivo su D1 ad ogni variazione (anche a turno in corso),
+  // così l'ultimo valore è sempre salvato prima del reset notturno anche se l'app viene chiusa.
+  const _ultimoObSalvatoRef = React.useRef(null);
+  React.useEffect(()=>{
+    if(obCongelato!=null) return;
+    if(turnoTerminato) return;
+    if(obDaCongelare==null || obDaCongelare<=0) return;
+    if(_ultimoObSalvatoRef.current === obDaCongelare) return;
+    _ultimoObSalvatoRef.current = obDaCongelare;
+    fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare})).catch(()=>{});
+  },[obDaCongelare, turnoTerminato, obCongelato, lineaId]);
+  const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
   // Efficienza = borse prodotte / obiettivo ATTESO A QUEST'ORA * 100.
   // Non misura più il ritmo sul tempo, ma quanto prodotto rispetto al target progressivo.
   // A fine turno, se prodotte == obiettivo finale → 100%.
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
     if(tc<=0) return null;
-    // Base di riferimento: obiettivo AGGREGATO con rampa (somma articoli, ridotti se in rampa).
-    // Fallback all'obiettivo pieno se per qualche motivo l'aggregato non è disponibile.
-    const baseObiettivo = (obFinaleConRampa!=null) ? obFinaleConRampa : obFinaleEffettivo;
-    if(baseObiettivo==null) return null;
-    const ob60Rampa = oreTotali>0 ? baseObiettivo/oreTotali : null;
-    // Obiettivo atteso a quest'ora: obiettivo orario × ore trascorse dall'inizio turno
-    // (capate alla fine turno). A fine turno coincide con l'obiettivo finale (rampa inclusa).
-    const now3 = new Date();
-    const secNow = now3.getHours()*3600+now3.getMinutes()*60+now3.getSeconds();
-    const secTrascorsi = Math.max(0, Math.min(secNow, secFineTurno) - _secInizioTurno);
-    const oreTrascorse = secTrascorsi/3600;
-    let obAtteso;
-    if(turnoTerminato){
-      obAtteso = baseObiettivo||0;
-    } else {
-      obAtteso = (ob60Rampa!=null) ? Math.round(ob60Rampa*oreTrascorse) : 0;
-    }
-    if(!obAtteso || obAtteso<=0) return null;
-    return Math.round((borseTot/obAtteso)*100);
+    // Confronto con l'obiettivo ATTESO A QUEST'ORA = somma per articolo, ognuno scalato sulla
+    // propria finestra (un articolo aggiunto a metà turno conta solo dal momento dell'aggiunta).
+    // A turno chiuso il riferimento è l'obiettivo giornaliero finale (eventualmente congelato).
+    const baseAtteso = turnoTerminato ? obFinaleEffettivo : obAttesoRealTime;
+    if(baseAtteso==null || baseAtteso<=0) return null;
+    return Math.round((borseTot/baseAtteso)*100);
   })();
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
 
@@ -1662,21 +1656,22 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<15;
               // obFinaleItem pieno regime salvato a parte per riferimento
               const obPienoRegimeItem = obFinaleItem;
-              // Se in rampa, scala l'obiettivo secondo la curva del giorno corrente
-              const obFinaleItemRampa = (inRampaItem && obFinaleItem!=null)
-                ? Math.ceil(obFinaleItem * (PERC_RAMPA[Math.min(giornoRampaItem,15)-1]||0) / 100)
-                : obFinaleItem;
+              // GIORNALIERO dell'articolo = stessa funzione usata per il totale di linea, così
+              // il totale è ESATTAMENTE la somma delle carte. La rampa è già applicata all'interno.
+              const obFinaleItemRampa = calcObItemConRampa(skuItem, null);
               // Obiettivo orario
               const secOra2=_now.getHours()*3600+_now.getMinutes()*60+_now.getSeconds();
               const orePassateItem=Math.max(0,(secOra2-_secInizioTurno)/3600);
               const oraTurnoFineItem=_secInizioTurno/3600+oreTotali;
               const ob60Item=obFinaleItemRampa!=null&&oreTotali>0?Math.round(obFinaleItemRampa/oreTotali):null;
               const prossimaOraItem=_secInizioTurno/3600+Math.ceil(orePassateItem);
-              // Obiettivo ACCUMULATO atteso alla prossima ora intera del turno.
-              // Calcolo proporzionale DIRETTO dal giornaliero (NO ob60 arrotondato moltiplicato),
-              // così all'ULTIMA ora il valore coincide ESATTAMENTE con l'obiettivo giornaliero.
-              const _oreAllaProssimaItem = Math.min(oreTotali, prossimaOraItem - _secInizioTurno/3600);
-              const _borseCalcItem=(obFinaleItemRampa!=null&&oreTotali>0)?Math.round(obFinaleItemRampa*(_oreAllaProssimaItem/oreTotali)):null;
+              // Obiettivo ACCUMULATO atteso alla prossima ora intera, calcolato sulla FINESTRA
+              // dell'articolo (dall'ora di aggiunta): un articolo entrato a metà turno accumula
+              // solo dal suo ingresso, non dall'inizio turno. Stessa funzione del giornaliero, così
+              // all'ULTIMA ora coincide ESATTAMENTE con l'obiettivo giornaliero dell'articolo.
+              const _oggiBaseItem=new Date(); _oggiBaseItem.setHours(0,0,0,0);
+              const _prossimaOraMsItem=_oggiBaseItem.getTime()+prossimaOraItem*3600*1000;
+              const _borseCalcItem=calcObItemConRampa(skuItem,_prossimaOraMsItem);
               const borseAProssimaItem=prossimaOraItem>=oraTurnoFineItem?(obFinaleItemRampa||_borseCalcItem):_borseCalcItem;
               const pHH2=Math.floor(prossimaOraItem)%24;
               const pMM2=Math.round((prossimaOraItem%1)*60);
@@ -1911,7 +1906,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const minDaInizio = secDaInizio / 60;
         const percTempo = Math.min(100, secDaInizio/secTotali*100);
         const oreTrascorse = minDaInizio / 60;
-        const obiettivoOraAttuale = ob60 * oreTrascorse;
+        // Atteso a quest'ora = somma per articolo fino ad ADESSO (ognuno sulla propria finestra),
+        // non più media oraria × ore dall'inizio turno. Fallback alla media se non disponibile.
+        const obiettivoOraAttuale = (obAttesoRealTime!=null) ? obAttesoRealTime : (ob60 * oreTrascorse);
         const deltaB = borse - obiettivoOraAttuale;
         const ritardo = deltaB < 0;
         const pctRitardo = obiettivoOraAttuale > 0 ? Math.abs(deltaB) / ob60 * 100 : 0;
@@ -1930,7 +1927,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         // Obiettivo accumulato alla prossima ora: proporzione diretta del giornaliero,
         // così all'ultima ora coincide esattamente con l'obiettivo finale (no arrotondamenti sommati).
         const _oreAllaProssima = Math.min(oreTotali, prossimaOraDecimale - oraInizioDecimale);
-        const borseAProssimaOra = (obFinaleEffettivo!=null&&oreTotali>0) ? Math.round(obFinaleEffettivo*(_oreAllaProssima/oreTotali)) : Math.round(ob60*(prossimaOraDecimale-oraInizioDecimale));
+        // Atteso accumulato alla prossima ora intera = somma per articolo a quell'ora (ognuno
+        // sulla sua finestra). All'ultima ora coincide col giornaliero (= somma carte). Fallback
+        // alla proporzione del giornaliero se la somma non è disponibile.
+        const _oggiBaseProx=new Date(); _oggiBaseProx.setHours(0,0,0,0);
+        const _prossimaOraMsProx=_oggiBaseProx.getTime()+prossimaOraDecimale*3600*1000;
+        const borseAProssimaOra = (prossimaOraInt>=oraTurnoFine)
+          ? (obFinaleEffettivo||0)
+          : (sommaObiettiviArticoli(_prossimaOraMsProx) ?? (obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo*(_oreAllaProssima/oreTotali)) : 0));
 
         return (
           <div style={{marginTop:12,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
