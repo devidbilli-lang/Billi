@@ -2308,11 +2308,32 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               // nOp finale: usa override personalizzato se impostato, altrimenti il numero reale (media)
               const nOp = nOpOverride[sku] !== undefined ? nOpOverride[sku] : nOpReale;
               const isOverride = nOpOverride[sku] !== undefined && nOpOverride[sku] !== nOpReale;
-              const minTurno = nOp * 8 * 60; // minuti totali turno
-              // Obiettivo teorico a pieno regime (giorno 15)
+              const minTurno = nOp * 8 * 60; // minuti totali turno (previsione, dalla casella)
+              // Obiettivo teorico a pieno regime (giorno 15) con gli operatori PREVISTI (casella)
               const obMax = tc > 0 ? Math.floor(minTurno / tc) : 0;
-              // Curva teorica per ogni giorno
-              const curvaOb = PERC.map(p => obMax > 0 ? Math.round(obMax * p / 100) : 0);
+              // Giorno corrente della rampa (oggi). I giorni < gOggiCalc sono passati (consuntivo),
+              // da gOggiCalc in poi sono previsione (usano nOp della casella).
+              const gOggiCalc = Math.min((g||1), 15);
+              // Operatori da usare per il giorno d della rampa:
+              //  - giorno PASSATO (d < oggi): operatori REALI di quel giorno specifico (da operatoriPerGiorno)
+              //  - oggi e FUTURO (d >= oggi): operatori PREVISTI (nOp dalla casella)
+              const nOpDelGiorno = (d)=>{
+                if(d < gOggiCalc && rampa && rampa.dal){
+                  const dataG = aggiungiGiorniLavorativi(rampa.dal, d-1);
+                  const fmtG = `${String(dataG.getDate()).padStart(2,'0')}/${String(dataG.getMonth()+1).padStart(2,'0')}/${dataG.getFullYear()}`;
+                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && stessoGiornoData(r.data, fmtG));
+                  if(riga && riga.nOperatori > 0) return riga.nOperatori;
+                  return nOp; // se manca il dato storico del giorno, ripiega sulla previsione
+                }
+                return nOp; // oggi e futuro: previsione dalla casella
+              };
+              // Curva teorica: per ogni giorno l'obiettivo dipende dagli operatori di QUEL giorno.
+              const curvaOb = PERC.map((p, i) => {
+                const d = i+1;
+                const nOpG = nOpDelGiorno(d);
+                const obMaxG = tc > 0 ? Math.floor(nOpG * 8 * 60 / tc) : 0;
+                return obMaxG > 0 ? Math.round(obMaxG * p / 100) : 0;
+              });
               if(obMax === 0) return (
                 <div style={{marginTop:12,background:"#fef3c7",border:"1px solid #ff693766",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#92400e"}}>
                   ⚠️ Impossibile mostrare il grafico: tempo ciclo (TC) non definito per l'articolo <strong>{sku}</strong>. Verifica l'anagrafica articoli.
@@ -2322,7 +2343,10 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               const W = 280, H = 110, PL = 28, PR = 8, PT = 14, PB = 18;
               const iW = W-PL-PR, iH = H-PT-PB;
               const xStep = iW / 14;
-              const yMax = obMax * 1.05;
+              // L'asse Y si scala sul massimo tra l'obiettivo previsto e i valori effettivi della
+              // curva (un giorno passato con piu operatori puo superare obMax): cosi nulla viene tagliato.
+              const yRef = Math.max(obMax, ...curvaOb.filter(v=>typeof v==="number"));
+              const yMax = (yRef>0?yRef:obMax) * 1.05;
               const px = i => PL + i * xStep;
               const py = v => PT + iH - (v / yMax * iH);
               // Linea teorica
