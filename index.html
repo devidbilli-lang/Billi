@@ -3873,14 +3873,23 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     return nomeMatch && x.fine && x.fine!=="" && x.fine!==null && x.fine!=="null";
                   });
                   if(diffMs > 10 * 60 * 1000 && !giaUscitaOggi) {
+                    // MODALITÀ 2° TURNO: salva PRIMA (e ASPETTA) l'orario 14:00–22:00 anche per i
+                    // check-in PIANIFICATI. Il server li eseguirà con eseguiTickMinuto, che NON
+                    // salva l'orario: senza questo, il turno verrebbe chiuso al default delle 14:00.
+                    if(modSecondoTurno){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:"14:00",orarioFineOggi:"22:00"}),{mode:'cors'}); }catch(e){} }
                     // Orario futuro (>10 min) e persona NON ancora uscita oggi — pianifica il check-in
                     await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
                     // Non chiamare onSuccess — verrà registrato in automatico
                   } else {
+                    // MODALITÀ 2° TURNO (Taglio DG): salva PRIMA (e ASPETTA) l'orario solo-oggi
+                    // 14:00–22:00 in orari_operatori, così quando la sessione viene creata il
+                    // checkout automatico (cron lato server) la chiude alle 22:00 e NON al default
+                    // delle 14:00. Salvarlo dopo (non atteso) lasciava una finestra in cui il cron
+                    // trovava ancora le 14:00 e chiudeva subito il turno.
+                    if(modSecondoTurno){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:"14:00",orarioFineOggi:"22:00"}),{mode:'cors'}); }catch(e){} }
                     // Orario passato/attuale, OPPURE rientro dopo uscita — registra subito
                     await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
-                    // MODALITÀ 2° TURNO (Taglio DG): applica in automatico l'orario solo-oggi 14:00–22:00
-                    // così questa sessione verrà chiusa dal checkout automatico alle 22:00, non alle 14:00.
+                    // Aggiorna anche stato React/localStorage e propaga l'orario alla sessione appena creata.
                     if(modSecondoTurno){ salvaOggi(s.matricola, "14:00", "22:00"); }
                     onSuccess(s);
                   }
