@@ -3871,6 +3871,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 // Orari odierni (solo per oggi) hanno precedenza sullo standard
                 const _orariOggi = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); } catch(e){ return {}; } })();
                 const _oggiStr = oraAttuale.toLocaleDateString('it-IT');
+                // 2° TURNO: l'orario parte da ADESSO (momento della registrazione) e dura 8 ore
+                // esatte, invece di un 14:00–22:00 fisso. Così il turno è sempre 8h dal check-in
+                // reale, a prescindere dall'ora di attivazione. Se la fine sfora la mezzanotte la
+                // cappiamo alle 23:59 (il worker calcola la fine nello stesso giorno).
+                const _fin2T = new Date(oraAttuale.getTime() + 8*60*60*1000);
+                const _inizio2T = String(oraAttuale.getHours()).padStart(2,"0")+":"+String(oraAttuale.getMinutes()).padStart(2,"0");
+                const _fine2T = (_fin2T.getDate()!==oraAttuale.getDate()) ? "23:59" : (String(_fin2T.getHours()).padStart(2,"0")+":"+String(_fin2T.getMinutes()).padStart(2,"0"));
                 for (const s of registrati) {
                   // Controlla orario inizio turno per questa matricola (odierno se valido, altrimenti standard)
                   const oggiOp = _orariOggi[s.matricola];
@@ -3886,24 +3893,24 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     return nomeMatch && x.fine && x.fine!=="" && x.fine!==null && x.fine!=="null";
                   });
                   if(diffMs > 10 * 60 * 1000 && !giaUscitaOggi) {
-                    // MODALITÀ 2° TURNO: salva PRIMA (e ASPETTA) l'orario 14:00–22:00 anche per i
+                    // MODALITÀ 2° TURNO: salva PRIMA (e ASPETTA) l'orario (adesso → +8h) anche per i
                     // check-in PIANIFICATI. Il server li eseguirà con eseguiTickMinuto, che NON
                     // salva l'orario: senza questo, il turno verrebbe chiuso al default delle 14:00.
-                    if(modSecondoTurno){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:"14:00",orarioFineOggi:"22:00"}),{mode:'cors'}); }catch(e){} }
+                    if(modSecondoTurno){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),{mode:'cors'}); }catch(e){} }
                     // Orario futuro (>10 min) e persona NON ancora uscita oggi — pianifica il check-in
                     await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
                     // Non chiamare onSuccess — verrà registrato in automatico
                   } else {
                     // MODALITÀ 2° TURNO (Taglio DG): salva PRIMA (e ASPETTA) l'orario solo-oggi
-                    // 14:00–22:00 in orari_operatori, così quando la sessione viene creata il
-                    // checkout automatico (cron lato server) la chiude alle 22:00 e NON al default
+                    // (adesso → +8h) in orari_operatori, così quando la sessione viene creata il
+                    // checkout automatico (cron lato server) la chiude 8 ore dopo e NON al default
                     // delle 14:00. Salvarlo dopo (non atteso) lasciava una finestra in cui il cron
                     // trovava ancora le 14:00 e chiudeva subito il turno.
-                    if(modSecondoTurno){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:"14:00",orarioFineOggi:"22:00"}),{mode:'cors'}); }catch(e){} }
+                    if(modSecondoTurno){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),{mode:'cors'}); }catch(e){} }
                     // Orario passato/attuale, OPPURE rientro dopo uscita — registra subito
                     await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
                     // Aggiorna anche stato React/localStorage e propaga l'orario alla sessione appena creata.
-                    if(modSecondoTurno){ salvaOggi(s.matricola, "14:00", "22:00"); }
+                    if(modSecondoTurno){ salvaOggi(s.matricola, _inizio2T, _fine2T); }
                     onSuccess(s);
                   }
                 }
@@ -3957,7 +3964,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG"))&&(
             <button onClick={()=>setModSecTurno(true)} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:modSecondoTurno?"#fff7ed":"#f1f4f8",border:"2px solid #ff6937",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
               <div style={{width:4,height:44,borderRadius:2,background:"#ff6937",flexShrink:0}}/>
-              <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#ff6937",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>Avvia 2° turno (14–22){modSecondoTurno&&<span style={{background:"#ff6937",color:"#fff",borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:800}}>ATTIVO</span>}</div><div style={{fontSize:15,color:"#ff6937",fontWeight:500,opacity:0.85}}>Chiude il 1° turno e attiva l'orario 14–22</div></div>
+              <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#ff6937",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>Avvia 2° turno (8h){modSecondoTurno&&<span style={{background:"#ff6937",color:"#fff",borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:800}}>ATTIVO</span>}</div><div style={{fontSize:15,color:"#ff6937",fontWeight:500,opacity:0.85}}>Chiude il 1° turno; i nuovi check-in durano 8h</div></div>
             </button>
             )}
           </div>
@@ -3968,12 +3975,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           {modSecTurno&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#fff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #ff693766",textAlign:"center"}}>
-            <div style={{fontSize:18,fontWeight:800,color:"#ff6937",marginBottom:10,fontFamily:"'Montserrat',sans-serif"}}>Avvia 2° turno (14–22)</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#ff6937",marginBottom:10,fontFamily:"'Montserrat',sans-serif"}}>Avvia 2° turno (8h)</div>
             {!modSecondoTurno?(
               <div style={{fontSize:14,color:"#475569",marginBottom:24,lineHeight:1.5,textAlign:"left"}}>
                 Premendo conferma:<br/>
                 • verranno <b>chiuse tutte le presenze aperte</b> del 1° turno su Taglio DG;<br/>
-                • si attiva la <b>modalità 2° turno</b>: i nuovi check-in riceveranno in automatico l'orario <b>14:00–22:00</b>.<br/><br/>
+                • si attiva la <b>modalità 2° turno</b>: i nuovi check-in dureranno <b>8 ore esatte</b> dal momento della registrazione.<br/><br/>
                 Dopodiché potrai registrare la squadra del pomeriggio da zero.
               </div>
             ):(
