@@ -1443,7 +1443,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         </div>
 
         {/* COLONNA DESTRA - 2 articoli per riga */}
-        <div style={{flex:1,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
+        <div style={{flex:1,display:"flex",flexDirection:"column",gap:8,minHeight:0,minWidth:0}}>
           {(()=>{
             // A turno attivo: solo SKU con sessioni attive ora.
             // A turno terminato: SKU lavorati nella giornata (anche con CHECKOUT).
@@ -1527,7 +1527,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             const cardPad= compatto ? "3px 5px" : (nRighe<=1?"8px 12px":nRighe<=2?"5px 8px":"3px 5px");
 
             return coppie.map((coppia,ci)=>(
-              <div key={ci} style={{display:"flex",flexDirection:"row",flexWrap:compatto?"wrap":"nowrap",gap:compatto?6:8,flex:compatto?"0 0 auto":1,minHeight:0}}>
+              <div key={ci} style={{display:"flex",flexDirection:"row",flexWrap:compatto?"wrap":"nowrap",gap:compatto?6:8,flex:compatto?"0 0 auto":1,minHeight:0,minWidth:0}}>
               {coppia.map(skuItem=>{
               const skuObjItem=skuList.find(x=>x&&x.sku===skuItem);
               const tcItem=tcPerLinea(skuObjItem);
@@ -1746,7 +1746,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 );
               }
               return (
-                <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
+                <div key={skuItem} style={{flex:1,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0,minWidth:0}}>
                   {/* Header articolo - nome completo viola */}
                   {(()=>{
                     // Divisione equa: per ogni operatore dividi per il numero di SKU su cui lavora
