@@ -1414,8 +1414,12 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
           {(()=>{
             // A turno attivo: solo SKU con sessioni attive ora.
             // A turno terminato: SKU lavorati nella giornata (anche con CHECKOUT).
+            // Articoli da mostrare: si parte da TUTTE le sessioni di oggi (anche chiuse), non solo
+            // dalle attive. Così un articolo lavorato e poi chiuso in giornata (es. cambio articolo
+            // a metà turno) resta visibile per registrare/correggere le borse. Il filtro sotto
+            // (borse o minuti effettivi > 0) garantisce che compaiano solo articoli con attività reale.
             const skuAttiviLineaRaw=[...new Set(
-              sessRiferimento.filter(s=>s.skuCorrente&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
+              sessGiornata.filter(s=>(s.skuCorrente||s.sku)&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
               .map(s=>s.skuCorrente||s.sku)
             )];
             // Filtra fuori gli SKU "vuoti": nessun operatore della giornata che abbia effettivamente
