@@ -1517,9 +1517,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // nRighe=1 → grandi, nRighe=2 → medi, nRighe=3+ → compatti
             // In vista griglia (compatto) i valori sono ridotti ulteriormente.
             const fBig   = compatto ? (nRighe<=1?"clamp(20px,3vw,34px)":nRighe<=2?"clamp(16px,2.4vw,26px)":"clamp(13px,2vw,20px)")
-                                    : (nRighe<=1?"clamp(44px,7vw,88px)":nRighe<=2?"clamp(28px,4.5vw,56px)":"clamp(18px,3vw,36px)");
+                                    : (nRighe<=1?"clamp(48px,7.8vw,104px)":nRighe<=2?"clamp(32px,5vw,66px)":"clamp(20px,3.4vw,42px)");
             const fMid   = compatto ? (nRighe<=1?"clamp(16px,2.4vw,26px)":nRighe<=2?"clamp(13px,2vw,20px)":"clamp(11px,1.6vw,16px)")
-                                    : (nRighe<=1?"clamp(32px,5.5vw,66px)":nRighe<=2?"clamp(20px,3.5vw,42px)":"clamp(14px,2.5vw,28px)");
+                                    : (nRighe<=1?"clamp(36px,6vw,80px)":nRighe<=2?"clamp(24px,4vw,50px)":"clamp(16px,2.8vw,32px)");
             const fSep   = compatto ? (nRighe<=1?"clamp(10px,1.5vw,15px)":"clamp(8px,1.2vw,12px)")
                                     : (nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)");
             const fSvg   = compatto ? (nRighe<=1?13:11) : (nRighe<=1?24:nRighe<=2?18:14);
@@ -1791,65 +1791,88 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   {/* 3 card interne - in vista compatta: obiettivo sopra, KO/MIGL sotto */}
                   <div style={{display:"flex",flexDirection:compatto?"column":"row",gap:6,padding:cardPad,alignItems:"stretch",flex:1}}>
 
-                    {/* Obiettivo: borse / finale affiancati */}
+                    {/* Obiettivo Giornaliero: in vista normale titolo allineato in alto + valore al centro */}
                     {(()=>{
                       const borseItem = qData.ok||0;
-                      return (
-                    <div style={{flex:1,background:"#ffffff",border:"2px solid "+(inRampaItem?"#ff6937":"#7c3aed"),boxShadow:"0 0 10px 3px "+(inRampaItem?"#ff693744":"#7c3aed44"),borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
-                      {inRampaItem ? (
-                        <div style={{display:"inline-flex",alignItems:"center",gap:7,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 14px"}}>
-                          <IconaRampa size={18} color="#ff6937"/>
-                          <span style={{fontSize:16,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/15</span>
-                        </div>
-                      ) : (
-                        <div style={{fontSize:fSep,color:"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,marginBottom:8,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
-                      )}
-                      <div style={{display:"flex",alignItems:"baseline",gap:6}}>
-                        <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
-                        <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
-                        <span style={{fontSize:fMid,fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
-                        {/* KO + MIGL piccoli accanto all'obiettivo SOLO in vista compatta (griglia multi-linea) */}
-                        {compatto && (
-                          <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
-                            <span style={{fontSize:fSep,fontWeight:700,color:"#ef4444",lineHeight:1}}>KO {qData.ko||0}</span>
-                            <span style={{fontSize:fSep,fontWeight:700,color:"#f59e0b",lineHeight:1}}>MIGL {qData.migl||0}</span>
+                      if(compatto){
+                        return (
+                        <div style={{flex:1,background:"#ffffff",border:"2px solid "+(inRampaItem?"#ff6937":"#7c3aed"),boxShadow:"0 0 10px 3px "+(inRampaItem?"#ff693744":"#7c3aed44"),borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
+                          {inRampaItem ? (
+                            <div style={{display:"inline-flex",alignItems:"center",gap:7,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 14px"}}>
+                              <IconaRampa size={18} color="#ff6937"/>
+                              <span style={{fontSize:16,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/15</span>
+                            </div>
+                          ) : (
+                            <div style={{fontSize:fSep,color:"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,marginBottom:8,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
+                          )}
+                          <div style={{display:"flex",alignItems:"baseline",gap:6}}>
+                            <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
+                            <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
+                            <span style={{fontSize:fMid,fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
+                            <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
+                              <span style={{fontSize:fSep,fontWeight:700,color:"#ef4444",lineHeight:1}}>KO {qData.ko||0}</span>
+                              <span style={{fontSize:fSep,fontWeight:700,color:"#f59e0b",lineHeight:1}}>MIGL {qData.migl||0}</span>
+                            </div>
                           </div>
+                        </div>
+                        );
+                      }
+                      return (
+                    <div style={{flex:1,background:"#ffffff",border:"2px solid "+(inRampaItem?"#ff6937":"#7c3aed"),boxShadow:"0 0 10px 3px "+(inRampaItem?"#ff693744":"#7c3aed44"),borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",gap:4}}>
+                      <div style={{fontSize:fSep,color:inRampaItem?"#ff6937":"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
+                      <div style={{minHeight:"2em",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {inRampaItem && (
+                          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:"2px solid #ff6937",borderRadius:8,padding:"3px 12px"}}>
+                            <IconaRampa size={16} color="#ff6937"/>
+                            <span style={{fontSize:15,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/15</span>
+                          </span>
                         )}
+                      </div>
+                      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                          <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
+                          <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
+                          <span style={{fontSize:fMid,fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
+                        </div>
                       </div>
                     </div>
                       );
                     })()}
 
-                    {/* Obj Orario - grigio lunare. Nascosta in vista griglia (compatto). */}
+                    {/* Obj Real Time - grigio lunare. Solo vista non compatta. Titolo allineato in alto. */}
                     {!compatto && (
-                    <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
-                      <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800,textAlign:"center",width:"100%",lineHeight:1.15,textShadow:"0 0 6px #ffff0066,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed",marginBottom:8,textTransform:"uppercase"}}>Obiettivo Real Time</div>
-                      {inTurnoItem && <div style={{fontSize:fSep,color:"#ffff00",fontWeight:700,textAlign:"center",width:"100%",opacity:0.95}}>alle {prossimaOraLabelItem}</div>}
-                      {!inTurnoItem && turnoTerminato && <div style={{fontSize:fSep,color:"#ffff00",fontWeight:700,textAlign:"center",width:"100%",opacity:0.95}}>FINALE</div>}
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <span style={{fontSize:fBig,fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:(turnoTerminato?(obFinaleItemRampa||0):"—")}</span>
-                        {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
-                        {!inTurnoItem&&turnoTerminato&&(obFinaleItemRampa||0)>0&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161"}`}}/>}
+                    <div style={{flex:1,background:"linear-gradient(135deg,#9aa5b4,#b0bcc8)",border:"2px solid #ffff00",boxShadow:"0 0 10px 3px #ffff0044",borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",gap:4}}>
+                      <div style={{fontSize:fSep,color:"#ffff00",fontWeight:800,textAlign:"center",width:"100%",lineHeight:1.15,textShadow:"0 0 6px #ffff0066,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed",textTransform:"uppercase"}}>Obiettivo Real Time</div>
+                      <div style={{minHeight:"2em",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {inTurnoItem && <span style={{fontSize:fSep,color:"#ffff00",fontWeight:700,opacity:0.95}}>alle {prossimaOraLabelItem}</span>}
+                        {!inTurnoItem && turnoTerminato && <span style={{fontSize:fSep,color:"#ffff00",fontWeight:700,opacity:0.95}}>FINALE</span>}
                       </div>
-                      {inTurnoItem&&(qData.ok||0)!==(borseAProssimaItem||0)&&(
-                        <div style={{display:"flex",alignItems:"center",gap:3,marginTop:2}}>
-                          {(qData.ok||0)<(borseAProssimaItem||0)?(
-                            <>
-                              <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
-                                <path d="M8 3L8 13M8 13L3 8M8 13L13 8" stroke="#ff6161" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                              <span style={{fontSize:fMid,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-(qData.ok||0)}</span>
-                            </>
-                          ):(
-                            <>
-                              <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
-                                <path d="M8 13L8 3M8 3L3 8M8 3L13 8" stroke="#61ffa9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                              <span style={{fontSize:fMid,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{(qData.ok||0)-(borseAProssimaItem||0)}</span>
-                            </>
-                          )}
+                      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:fBig,fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:(turnoTerminato?(obFinaleItemRampa||0):"\u2014")}</span>
+                          {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
+                          {!inTurnoItem&&turnoTerminato&&(obFinaleItemRampa||0)>0&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161"}`}}/>}
                         </div>
-                      )}
+                        {inTurnoItem&&(qData.ok||0)!==(borseAProssimaItem||0)&&(
+                          <div style={{display:"flex",alignItems:"center",gap:3}}>
+                            {(qData.ok||0)<(borseAProssimaItem||0)?(
+                              <>
+                                <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
+                                  <path d="M8 3L8 13M8 13L3 8M8 13L13 8" stroke="#ff6161" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                <span style={{fontSize:fMid,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-(qData.ok||0)}</span>
+                              </>
+                            ):(
+                              <>
+                                <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
+                                  <path d="M8 13L8 3M8 3L3 8M8 3L13 8" stroke="#61ffa9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                <span style={{fontSize:fMid,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{(qData.ok||0)-(borseAProssimaItem||0)}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     )}
 
@@ -1892,29 +1915,29 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       title="KO e Migliorabili - trascinami, tocca per il dettaglio"
                       style={{position:"absolute",left:"50%",top:"30%",transform:`translate(calc(-50% + ${_kd.x}px), calc(-50% + ${_kd.y}px))`,
                         background:"rgba(255,255,255,0.94)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",
-                        border:"1.5px solid #e2e8f0",borderRadius:14,padding:"7px 13px",cursor:"grab",
-                        fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:11,
+                        border:"2px solid #e2e8f0",borderRadius:18,padding:"11px 20px",cursor:"grab",
+                        fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:16,
                         boxShadow:"0 6px 20px rgba(0,0,0,0.22)",userSelect:"none",touchAction:"none",zIndex:6,whiteSpace:"nowrap"}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                        <svg width="22" height="22" viewBox="0 0 36 36" fill="none">
+                      <span style={{display:"inline-flex",alignItems:"center",gap:7}}>
+                        <svg width="38" height="38" viewBox="0 0 36 36" fill="none">
                           <circle cx="18" cy="18" r="17" stroke="#ef4444" strokeWidth="2"/>
-                          <circle cx="13" cy="14" r="2" fill="#ef4444"/>
-                          <circle cx="23" cy="14" r="2" fill="#ef4444"/>
+                          <circle cx="13" cy="14" r="2.4" fill="#ef4444"/>
+                          <circle cx="23" cy="14" r="2.4" fill="#ef4444"/>
                           <path d="M11 25 Q18 19 25 25" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" fill="none"/>
                           <line x1="11" y1="10" x2="15" y2="13" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
                           <line x1="25" y1="10" x2="21" y2="13" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
                         </svg>
-                        <span style={{fontSize:20,fontWeight:900,color:"#ef4444",lineHeight:1}}>{qData.ko||0}</span>
+                        <span style={{fontSize:32,fontWeight:900,color:"#ef4444",lineHeight:1}}>{qData.ko||0}</span>
                       </span>
-                      <span style={{width:1.5,height:20,background:"#e2e8f0"}}/>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                        <svg width="22" height="22" viewBox="0 0 36 36" fill="none">
+                      <span style={{width:2,height:34,background:"#e2e8f0"}}/>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:7}}>
+                        <svg width="38" height="38" viewBox="0 0 36 36" fill="none">
                           <circle cx="18" cy="18" r="17" stroke="#f59e0b" strokeWidth="2"/>
-                          <circle cx="13" cy="14" r="2" fill="#f59e0b"/>
-                          <circle cx="23" cy="14" r="2" fill="#f59e0b"/>
+                          <circle cx="13" cy="14" r="2.4" fill="#f59e0b"/>
+                          <circle cx="23" cy="14" r="2.4" fill="#f59e0b"/>
                           <line x1="12" y1="24" x2="24" y2="24" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
                         </svg>
-                        <span style={{fontSize:20,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{qData.migl||0}</span>
+                        <span style={{fontSize:32,fontWeight:900,color:"#f59e0b",lineHeight:1}}>{qData.migl||0}</span>
                       </span>
                     </button>
                     );
