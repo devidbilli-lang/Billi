@@ -4250,6 +4250,7 @@ function TabAttivita({ repTipo="taglio" }) {
   // RMA: Rilavorazione + Campioni/Prototipi. Preparazione DG: solo Rilavorazione. Taglio DG: Rilavorazione+Collaudo+Cartelloni.
   const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi"] : (_isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo","Cartelloni"]);
   const _mostraArticolo = _isRMA && tipologia === "Campioni/Prototipi"; // campo Articolo solo RMA + Campioni/Prototipi
+  const _mostraPellame = !_isPrep && tipologia !== "Cartelloni"; // pellame solo Taglio DG e NON per Cartelloni
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
   const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO"];
   const _titoloRep = _isRMA ? "Attività RMA" : (_isPrep ? "Attività Preparazione DG" : "Attività Taglio DG");
@@ -4272,11 +4273,11 @@ function TabAttivita({ repTipo="taglio" }) {
     if(!tempo||+tempo<=0){ setMsg("Inserisci un tempo valido (minuti)."); return; }
     if(!tipologia){ setMsg("Seleziona la tipologia."); return; }
     if(!_isPrep && !reparto){ setMsg("Seleziona il reparto."); return; }
-    if(!_isPrep && !pellame){ setMsg("Seleziona il tipo di pellame."); return; }
+    if(_mostraPellame && !pellame){ setMsg("Seleziona il tipo di pellame."); return; }
     if(_isPrep && !nRichiesta.trim()){ setMsg("Inserisci il N° Richiesta."); return; }
     setSalvando(true);
     try{
-      await fetch(nexusUrl("salvaAttivita",{repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():"",pellame:_isPrep?"":pellame,articolo:_mostraArticolo?articolo.trim():""}));
+      await fetch(nexusUrl("salvaAttivita",{repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():"",pellame:_mostraPellame?pellame:"",articolo:_mostraArticolo?articolo.trim():""}));
       setBrand(""); setTempo(""); setReparto(""); setNRichiesta(""); setPellame(""); setArticolo("");
       setTipologia(_isPrep ? "Rilavorazione" : "");
       setMsg("");
@@ -4428,7 +4429,7 @@ function TabAttivita({ repTipo="taglio" }) {
                   </select>
                 </div>
                 )}
-                {!_isPrep&&(
+                {_mostraPellame&&(
                 <div>
                   <label style={lbl}>Tipo di pellame</label>
                   <select style={{...inp,width:"100%",cursor:"pointer"}} value={pellame} onChange={e=>setPellame(e.target.value)}>
