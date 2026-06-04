@@ -842,12 +842,15 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     // turno "finito" alle 14:00 e chiuderebbe gli operatori del pomeriggio.
   const [_secTurnoAttivo, set_SecTurnoAttivo] = React.useState(null);
   React.useEffect(()=>{
+    // Il flag 2° turno serve SOLO a Taglio DG: per le altre linee non interroghiamo il server.
+    // Così, con molte card di produzione aperte, non si moltiplicano le richieste (una per card).
+    if(!String(lineaId||"").toUpperCase().includes("TAGLIO DG")) return;
     let _v=true;
     const _l=()=>{ fetch(nexusUrl('leggiSecondoTurno',{})).then(r=>r.json()).then(j=>{ if(_v&&j&&j.ok&&j.data) set_SecTurnoAttivo(j.data.attivo===true); }).catch(()=>{}); };
     _l();
     const _iv=setInterval(_l,60000);
     return ()=>{_v=false;clearInterval(_iv);};
-  },[]);
+  },[lineaId]);
     // Checkout automatico quando il turno finisce
   const [turnoChiuso, setTurnoChiuso] = React.useState(false);
   React.useEffect(()=>{
