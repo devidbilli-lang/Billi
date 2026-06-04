@@ -4082,11 +4082,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             if(registrati.length>0){
               try{ const kSel="pt_sel_"+(lineaFiltro?lineaFiltro.id:"admin"); localStorage.setItem(kSel, JSON.stringify(listaOp)); }catch(e){}
               (async () => {
-                // Stato 2° turno: lo rileggo SINCRONO dal server al momento del click, così
-                // anche se questo dispositivo non ha ancora fatto il polling periodico (es. il
-                // tablet su cui si è appena passati) sa se deve assegnare le 8h. Fallback: stato locale.
-                let _secondoTurnoEff = modSecondoTurno;
-                try { const _rst = await fetch(nexusUrl('leggiSecondoTurno',{})).then(r=>r.json()); if(_rst && _rst.ok && _rst.data){ _secondoTurnoEff = _rst.data.attivo===true; } } catch(e){}
+                // Lo stato 2° turno è già tenuto aggiornato dall'effetto di polling (all'avvio
+                // della schermata e ogni 60s), quindi NON serve una fetch bloccante a ogni
+                // registrazione: usiamo lo stato locale e la registrazione resta veloce.
+                const _secondoTurnoEff = modSecondoTurno;
                 // Leggi orari turno da localStorage
                 // Leggi orari da localStorage (già sincronizzati con D1 all'avvio)
                 const _orariTurno = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; } })();
@@ -4130,11 +4129,16 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     // checkout automatico (cron lato server) la chiude 8 ore dopo e NON al default
                     // delle 14:00. Salvarlo dopo (non atteso) lasciava una finestra in cui il cron
                     // trovava ancora le 14:00 e chiudeva subito il turno.
-                    if(_secondoTurnoEff){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),{mode:'cors'}); }catch(e){} }
-                    // Orario passato/attuale, OPPURE rientro dopo uscita — registra subito
-                    await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")});
-                    // Aggiorna anche stato React/localStorage e propaga l'orario alla sessione appena creata.
-                    if(_secondoTurnoEff){ salvaOggi(s.matricola, _inizio2T, _fine2T); }
+                    if(_secondoTurnoEff){
+                      try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),{mode:'cors'}); }catch(e){}
+                      // Allineo solo il localStorage (serve al calcolo della prossima registrazione e
+                      // alla UI). NIENTE propagaOrarioASessioni/aggiornaSessioni qui: il check-in è già
+                      // all'ora attuale (=_inizio2T) e ricaricare tutte le sessioni a ogni operatore era
+                      // la causa principale della lentezza.
+                      try{ const _lo=JSON.parse(localStorage.getItem('nexus_orari_oggi')||'{}'); _lo[s.matricola]={inizioOggi:_inizio2T,fineOggi:_fine2T,data:_oggiStr}; localStorage.setItem('nexus_orari_oggi',JSON.stringify(_lo)); }catch(e){}
+                    }
+                    // Orario passato/attuale o rientro: registra subito. onSuccess (=add) fa già
+                    // setSess + api.evento, quindi UNA sola chiamata di check-in (non più la doppia).
                     onSuccess(s);
                   }
                 }
