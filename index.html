@@ -1513,13 +1513,17 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // Font e padding dinamici in base al numero di RIGHE (coppie)
             const nSku = skuAttiviLinea.length;
             const nRighe = Math.ceil(nSku/2);
+            // Un solo articolo: la card occupa tutta la riga → c'è molto più spazio per i valori.
+            const _unArt = !compatto && nSku<=1;
             // 2 articoli per riga
             // nRighe=1 → grandi, nRighe=2 → medi, nRighe=3+ → compatti
             // In vista griglia (compatto) i valori sono ridotti ulteriormente.
             const fBig   = compatto ? (nRighe<=1?"clamp(20px,3vw,34px)":nRighe<=2?"clamp(16px,2.4vw,26px)":"clamp(13px,2vw,20px)")
-                                    : (nRighe<=1?"clamp(48px,7.8vw,104px)":nRighe<=2?"clamp(32px,5vw,66px)":"clamp(20px,3.4vw,42px)");
+                                    : _unArt ? "clamp(60px,10vw,160px)"
+                                    : (nRighe<=1?"clamp(52px,8.5vw,120px)":nRighe<=2?"clamp(36px,5.6vw,78px)":"clamp(22px,3.8vw,48px)");
             const fMid   = compatto ? (nRighe<=1?"clamp(16px,2.4vw,26px)":nRighe<=2?"clamp(13px,2vw,20px)":"clamp(11px,1.6vw,16px)")
-                                    : (nRighe<=1?"clamp(36px,6vw,80px)":nRighe<=2?"clamp(24px,4vw,50px)":"clamp(16px,2.8vw,32px)");
+                                    : _unArt ? "clamp(46px,8vw,124px)"
+                                    : (nRighe<=1?"clamp(40px,6.6vw,92px)":nRighe<=2?"clamp(27px,4.4vw,58px)":"clamp(18px,3.1vw,36px)");
             const fSep   = compatto ? (nRighe<=1?"clamp(10px,1.5vw,15px)":"clamp(8px,1.2vw,12px)")
                                     : (nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)");
             const fSvg   = compatto ? (nRighe<=1?13:11) : (nRighe<=1?24:nRighe<=2?18:14);
