@@ -43,11 +43,11 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz907AOZ0LetdSxeFLc0fjqY2uggNTc4dwRTMXyTyndm2RWvQpTrHC9aNeIgqdYZydzKg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVpNJTFz1CdAJpKQgChORkn-U83KiNUi3jL6Nka3UiLFqWEeB2msjANFzwIOfUC15zNQ/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -2864,6 +2864,53 @@ function TabNote({ lineaFiltro, linee, skuList }) {
               </tr>
             );
           })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TabTrasferimenti({ linee=[], onRiepilogo }) {
+  const [lista, setLista] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const carica = React.useCallback(async ()=>{
+    try{ const r=await fetch(nexusUrl("leggiTrasferimenti",{}),{mode:"cors"}); const j=await r.json(); setLista((j&&j.ok&&j.data&&Array.isArray(j.data.trasferimenti))?j.data.trasferimenti:[]); }catch(e){}
+    setLoading(false);
+  },[]);
+  React.useEffect(()=>{ carica(); const t=setInterval(carica,60000); return ()=>clearInterval(t); },[carica]);
+  const elimina = async (t)=>{
+    if(!window.confirm("Eliminare questo trasferimento dallo storico?")) return;
+    try{ await fetchConRetry(nexusUrl("eliminaTrasferimento",{id:t.id}),5,1000); setTimeout(carica,800); }catch(e){ alert("Errore eliminazione."); }
+  };
+  const fmtData = (s)=>{ const _s=(s||"").toString().trim(); let _m; if(_m=_s.match(/^(\d{4})-(\d{2})-(\d{2})/)) return _m[3]+"/"+_m[2]+"/"+_m[1]; if(_m=_s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)) return _m[1].padStart(2,"0")+"/"+_m[2].padStart(2,"0")+"/"+_m[3]; try{ const _d=new Date(_s); if(!isNaN(_d)) return _d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); }catch(e){} return _s; };
+  const badge = (lineaId)=>{ const lObj=linee.find(l=>l.id===lineaId)||{colore:"#94a3b8"}; return <span style={{background:"#ffffff",color:lObj.colore,border:"2px solid "+lObj.colore,padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>{lineaId||"—"}</span>; };
+  if (loading) return <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>;
+  if (lista.length===0) return <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessun trasferimento registrato.</div>;
+  return (
+    <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+        <thead>
+          <tr>{[["Data","#475569"],["Ora","#475569"],["Operatore","#475569"],["Da → A","#a855f7"],["Articoli","#475569"],["Riepilogo",""],["",""]].map(([h,c],hi,arr)=>(
+            <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody>
+          {lista.map((t,i)=>(
+            <tr key={t.id||i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
+              <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",whiteSpace:"nowrap"}}>{fmtData(t.data)}</td>
+              <td style={{padding:"10px 14px",fontSize:13,color:"#64748b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",whiteSpace:"nowrap"}}>{t.ora||"—"}</td>
+              <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontWeight:700,textAlign:"center",whiteSpace:"nowrap"}}>{((t.nome||"")+" "+(t.cognome||"")).replace(/\s+/g," ").trim()||t.matricola||"—"}</td>
+              <td style={{padding:"10px 14px",textAlign:"center",whiteSpace:"nowrap"}}><span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}>{badge(t.lineaDa)}<span style={{color:"#a855f7",fontWeight:900,fontSize:15}}>→</span>{badge(t.lineaA)}</span></td>
+              <td style={{padding:"10px 14px",fontSize:13,color:"#334155",textAlign:"left",wordBreak:"break-word"}}>{t.articoli||"—"}</td>
+              <td style={{padding:"10px 14px",textAlign:"center"}}>
+                <button onClick={()=>onRiepilogo&&onRiepilogo(t.matricola||t.nome)}
+                  style={{background:"#eff6ff",border:"2px solid #2563eb",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:800,color:"#2563eb"}}>Riepilogo <span style={{fontSize:10}}>▼</span></button>
+              </td>
+              <td style={{padding:"10px 14px",textAlign:"center"}}>
+                <button title="Elimina dallo storico" onClick={()=>elimina(t)} style={{width:32,height:32,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,color:"#ef4444",fontSize:15,fontWeight:900,cursor:"pointer",lineHeight:1}}>✕</button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -5688,6 +5735,20 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         skuA: skuNew
                       }).catch(e=>{});
                     }));
+                    // 3. Registra il trasferimento nello storico (D1 + foglio Google).
+                    //    Scritto qui, nel momento esatto dello spostamento: il CHECKOUT non
+                    //    salva la destinazione, quindi non sarebbe ricostruibile dagli eventi.
+                    try {
+                      const _now = new Date();
+                      const _dataTr = _now.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
+                      const _oraTr = String(_now.getHours()).padStart(2,"0")+":"+String(_now.getMinutes()).padStart(2,"0");
+                      await fetch(nexusUrl("salvaTrasferimento",{
+                        data:_dataTr, ora:_oraTr,
+                        matricola:s.matricola||"", nome:s.nome||"", cognome:s.cognome||"",
+                        lineaDa:lineaPartenza, lineaA:modTrasf.lineaDest.id,
+                        articoli:(skuDestinazione||[]).join(", ")
+                      }),{mode:"cors"});
+                    } catch(e){}
                   }));
                   setModTrasf(null);
                   // Ricarica subito + di nuovo dopo 3 secondi per avere i nuovi CHECKIN
@@ -5944,7 +6005,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             ((lineaFiltro.id||"").toUpperCase().includes("PREPARAZIONE DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("PREPARAZIONE DG"))
           );
           const _isRMALinea = lineaFiltro && (((lineaFiltro.id||"").toUpperCase().includes("RMA")) || ((lineaFiltro.nome||"").toUpperCase().includes("RMA")));
-          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)],...(isAdmin?[["note","Note"]]:[])];
+          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)],...(isAdmin?[["trasferimenti","Trasferimenti"],["note","Note"]]:[])];
           const _tabs = _isTaglioDG ? [["operatori","Turni&Operatori"],["sessioni","Sessioni"],["attivita","Inserimento Attività"]] : _tabsProd;
           return _tabs.map(([t,l])=>(
           <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #7c3aed55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=tab===t?"0 0 10px 2px #7c3aed44":"none"; }} style={{padding:"10px 22px",border:"2px solid #7c3aed",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.55)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",color:"#000000",boxShadow:tab===t?"0 0 10px 2px #7c3aed44":"none",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>{l}</button>
@@ -6238,6 +6299,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
       {tab==="attivita"&&<TabAttivita repTipo={(()=>{ const _id=(lineaFiltro&&lineaFiltro.id||"").toUpperCase(); const _nm=(lineaFiltro&&lineaFiltro.nome||"").toUpperCase(); if(_id.includes("RMA")||_nm.includes("RMA")) return "rma"; if(_id.includes("PREPARAZIONE DG")||_nm.includes("PREPARAZIONE DG")) return "prep"; return "taglio"; })()}/>}
       {tab==="note"&&<TabNote lineaFiltro={lineaFiltro} linee={linee} skuList={skuList} sessioni={sessioni}/>}
+      {tab==="trasferimenti"&&<TabTrasferimenti linee={linee} onRiepilogo={setPopupRiepilogoOp}/>}
       <div style={{height:40}}/>
     </div>
   );
