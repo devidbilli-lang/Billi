@@ -3624,6 +3624,15 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [modLogout,setModLogout] = useState(false);
   const [modSecTurno,setModSecTurno] = useState(false); // modal conferma "Avvia 2° turno"
   const [secTurnoInCorso,setSecTurnoInCorso] = useState(false);
+  // Correzione orario di inizio del 2° turno (gli operatori attaccano alle 14 ma vengono
+  // registrati più tardi). Inizio default 14:00, fine calcolata a +8h ma modificabile.
+  const [inizioSecTurno,setInizioSecTurno] = useState("14:00");
+  const [fineSecTurno,setFineSecTurno] = useState("22:00");
+  const [applicaSTInCorso,setApplicaSTInCorso] = useState(false);
+  // Quando cambio l'inizio, ricalcolo la fine a +8h (l'utente può poi ritoccarla a mano).
+  const _calcFine8h = (hhmm)=>{
+    try { const [h,m]=hhmm.split(":").map(Number); if(isNaN(h)||isNaN(m)) return fineSecTurno; const tot=(h*60+m)+8*60; if(tot>=24*60) return "23:59"; const hf=Math.floor(tot/60), mf=tot%60; return String(hf).padStart(2,"0")+":"+String(mf).padStart(2,"0"); } catch(e){ return fineSecTurno; }
+  };
   const [pwdQualita,setPwdQualita] = useState("");
   const [errPwdQualita,setErrPwdQualita] = useState("");
   const [nome,setNome]           = useState("");
@@ -4185,8 +4194,40 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 Dopodiché potrai registrare la squadra del pomeriggio da zero.
               </div>
             ):(
-              <div style={{fontSize:14,color:"#475569",marginBottom:24,lineHeight:1.5}}>
-                La modalità 2° turno è <b>già attiva</b>. Vuoi disattivarla? I nuovi check-in torneranno all'orario standard.
+              <div style={{marginBottom:24}}>
+                <div style={{fontSize:14,color:"#475569",lineHeight:1.5,marginBottom:16,textAlign:"left"}}>
+                  La modalità 2° turno è <b>già attiva</b>.
+                </div>
+                <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:10,padding:"14px 16px",textAlign:"left"}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#ff6937",marginBottom:8}}>Correggi l'orario di inizio</div>
+                  <div style={{fontSize:13,color:"#64748b",marginBottom:14,lineHeight:1.4}}>Se hanno attaccato prima di quando li hai registrati, imposta qui l'orario reale: verrà applicato a <b>tutti</b> gli operatori del 2° turno (la fine si calcola a +8h, modificabile).</div>
+                  <div style={{display:"flex",gap:12,marginBottom:14}}>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:12,color:"#64748b",display:"block",marginBottom:4}}>Inizio</label>
+                      <input type="time" value={inizioSecTurno} onChange={e=>{ setInizioSecTurno(e.target.value); setFineSecTurno(_calcFine8h(e.target.value)); }} style={{width:"100%",padding:"8px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:15,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"}} />
+                    </div>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:12,color:"#64748b",display:"block",marginBottom:4}}>Fine (+8h)</label>
+                      <input type="time" value={fineSecTurno} onChange={e=>setFineSecTurno(e.target.value)} style={{width:"100%",padding:"8px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:15,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"}} />
+                    </div>
+                  </div>
+                  <button disabled={applicaSTInCorso} onClick={async()=>{
+                    setApplicaSTInCorso(true);
+                    const _isTaglioA=(s)=>{ const u=(s.lineaCorrente||"").toUpperCase(); return u.includes("TAGLIO DG"); };
+                    const _oggi0=new Date(); _oggi0.setHours(0,0,0,0);
+                    const _aperteOggi=(sessioni||[]).filter(s=>{ if(s._pianificato) return false; if(!_isTaglioA(s)) return false; const _ap=!s.fine||s.fine===""||s.fine===null||s.fine==="null"; if(!_ap) return false; const _dI=parseData(s.inizio); return _dI && _dI.getTime()>=_oggi0.getTime(); });
+                    const _matricole=[...new Set(_aperteOggi.map(s=>s.matricola).filter(Boolean))];
+                    for(const _mat of _matricole){
+                      setOrariOggi(prev=>({...prev,[_mat]:{inizioOggi:inizioSecTurno,fineOggi:fineSecTurno,data:new Date().toLocaleDateString('it-IT')}}));
+                      try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:_mat,orarioInizioOggi:inizioSecTurno,orarioFineOggi:fineSecTurno}),{mode:'cors'}); }catch(e){}
+                      try{ await propagaOrarioASessioni(_mat, inizioSecTurno, fineSecTurno); }catch(e){}
+                    }
+                    try{ await fetch(nexusUrl('invalidaObiettivoCongelato',{}),{mode:'cors'}); }catch(e){}
+                    if(aggiornaSessioni) setTimeout(aggiornaSessioni,800);
+                    setApplicaSTInCorso(false);
+                    setModSecTurno(false);
+                  }} style={{width:"100%",padding:"11px",background:applicaSTInCorso?"#fdba74":"#ff6937",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:14,cursor:applicaSTInCorso?"default":"pointer",fontFamily:"'Montserrat',sans-serif"}}>{applicaSTInCorso?"Applico...":"Applica a tutti gli operatori del 2° turno"}</button>
+                </div>
               </div>
             )}
             <div style={{display:"flex",gap:10}}>
