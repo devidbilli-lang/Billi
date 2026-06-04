@@ -5578,18 +5578,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 {(modTrasf.opSelezionati||[]).length>0&&(
                   <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
                     onClick={()=>{
-                      // PRESELEZIONE: con un singolo operatore, spunta di default gli articoli che sta
-                      // GIÀ lavorando (sessioni attive), così il trasferimento li porta tutti con sé e
-                      // non se ne perde nessuno nei giri A→B→A. Restano togglabili a mano.
-                      // Con più operatori la lista resta vuota: la selezione è unica e condivisa da tutti,
-                      // quindi preselezionare l'unione rischierebbe di assegnare a uno gli articoli di un altro.
-                      const _ops=modTrasf.opSelezionati||[];
-                      let _pre=[];
-                      if(_ops.length===1){
-                        const _validi=new Set(skuList.filter(x=>!x.speciale).map(x=>x.sku));
-                        _pre=[...new Set(tuttiAttiviRaw.filter(ss=>(ss.matricola||ss.nome)===_ops[0]).map(ss=>ss.skuCorrente||ss.sku).filter(sk=>sk&&_validi.has(sk)))];
-                      }
-                      setModTrasf({...modTrasf,step:"sku",skuNuovo:_pre[0]||"",cercaSku:"",skuMultiDest:_pre});
+                      // NESSUNA preselezione: la linea di destinazione lavora articoli SUOI, quindi
+                      // l'operatore NON si porta dietro gli articoli della linea di partenza (creavano un
+                      // obiettivo FALSO sulla destinazione, per un articolo che lì non si lavora mai).
+                      // Si parte con la lista vuota e si spuntano a mano gli articoli della nuova linea.
+                      setModTrasf({...modTrasf,step:"sku",skuNuovo:"",cercaSku:"",skuMultiDest:[]});
                     }}>
                     Avanti → ({(modTrasf.opSelezionati||[]).length} operatori)
                   </button>
