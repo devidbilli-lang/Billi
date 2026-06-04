@@ -5096,6 +5096,18 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         }}
                         style={{marginLeft:"auto",background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"2px 12px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>−</button>
                     )}
+                    {editOrario && !ss._pianificato && (
+                      <button type="button" title={"Elimina l'articolo "+(ss.skuCorrente||ss.sku||"")+" da questa linea: rimuove la sessione e azzera l'obiettivo residuo"}
+                        onClick={async()=>{
+                          if(!window.confirm("Eliminare l'articolo "+(ss.skuCorrente||ss.sku||"")+" da "+(op?(op.nome+" "+op.cognome):"questo operatore")+" su "+lin+"?\n\nVengono rimossi i dati di questa sessione e l'obiettivo residuo rimasto in memoria. Operazione non reversibile.")) return;
+                          try{ await fetchConRetry(nexusUrl("eliminasessione",{sessionId:ss.id}), 4, 800); }catch(e){}
+                          try{ fetch(nexusUrl("invalidaObiettivoCongelato",{})).catch(()=>{}); }catch(e){}
+                          const rimasti = skuOp.filter(x=>(x.id||x.sessionId)!==(ss.id||ss.sessionId));
+                          if(rimasti.length===0) setPopupSkuOp(null);
+                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
+                        }}
+                        style={{marginLeft:0,background:"#fff",color:"#ef4444",border:"2px solid #ef4444",borderRadius:6,padding:"3px 9px",fontWeight:700,fontSize:14,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>🗑</button>
+                    )}
                   </div>
                 );})}
               </div>
