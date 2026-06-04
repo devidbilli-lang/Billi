@@ -4247,8 +4247,8 @@ function TabAttivita({ repTipo="taglio" }) {
   const fabDragRef = React.useRef(null);
 
   const BRANDS = ["Chanel","LV"];
-  // RMA: Rilavorazione + Campioni/Prototipi. Preparazione DG: solo Rilavorazione. Taglio DG: Rilavorazione+Collaudo.
-  const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi"] : (_isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo"]);
+  // RMA: Rilavorazione + Campioni/Prototipi. Preparazione DG: solo Rilavorazione. Taglio DG: Rilavorazione+Collaudo+Cartelloni.
+  const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi"] : (_isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo","Cartelloni"]);
   const _mostraArticolo = _isRMA && tipologia === "Campioni/Prototipi"; // campo Articolo solo RMA + Campioni/Prototipi
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
   const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO"];
