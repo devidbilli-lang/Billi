@@ -836,11 +836,25 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
 
+    // Stato 2° turno (condiviso dal server). Per Taglio DG in 2° turno la chiusura
+    // automatica lato frontend va SOSPESA: la gestisce il cron col suo orario 8h.
+    // Senza questo, il primo check-in del giorno (1° turno, 06:00) farebbe risultare il
+    // turno "finito" alle 14:00 e chiuderebbe gli operatori del pomeriggio.
+  const [_secTurnoAttivo, set_SecTurnoAttivo] = React.useState(null);
+  React.useEffect(()=>{
+    let _v=true;
+    const _l=()=>{ fetch(nexusUrl('leggiSecondoTurno',{})).then(r=>r.json()).then(j=>{ if(_v&&j&&j.ok&&j.data) set_SecTurnoAttivo(j.data.attivo===true); }).catch(()=>{}); };
+    _l();
+    const _iv=setInterval(_l,60000);
+    return ()=>{_v=false;clearInterval(_iv);};
+  },[]);
     // Checkout automatico quando il turno finisce
   const [turnoChiuso, setTurnoChiuso] = React.useState(false);
   React.useEffect(()=>{
     if(turnoChiuso) return;
     if(!_primoCheckinTs) return;
+    // Taglio DG in 2° turno (o stato non ancora noto = null): non chiudo qui, ci pensa il cron.
+    if(String(lineaId||"").toUpperCase().includes("TAGLIO DG") && _secTurnoAttivo!==false) return;
     const secOraAttuale = new Date().getHours()*3600+new Date().getMinutes()*60+new Date().getSeconds();
     if(secOraAttuale < secFineTurnoAssoluto) return;
     // Turno scaduto → chiudi tutti gli operatori attivi
@@ -863,7 +877,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         for(const {s} of falliti){ await checkoutOp(s); }
       }
     })();
-  },[tick, turnoChiuso, secFineTurnoAssoluto, _primoCheckinTs]);
+  },[tick, turnoChiuso, secFineTurnoAssoluto, _primoCheckinTs, _secTurnoAttivo]);
   // Calcola primo check-in reale della linea
   const _primoCheckinTs = (()=>{
     const ts = sessioni
