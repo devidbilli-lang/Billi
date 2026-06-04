@@ -1496,10 +1496,17 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // Qualità: se ci sono borse/KO/MIGL registrati, la card va sempre mostrata
               const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
               if((q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0) return true;
-              // Mostra la card se ALMENO UN operatore sta lavorando (o ha lavorato oggi) su
-              // questo (linea, articolo). Basta qualunque minuto > 0: la card deve comparire
-              // appena qualcuno ci lavora, anche se l'obiettivo stimato è ancora 0 (inizio turno).
-              for(const s of sessioni){ if(minutiSessioneSu(s, lineaId, sk) > 0) return true; }
+              // Mostra la card SOLO se c'è almeno un operatore ATTIVO ora su questo (linea, articolo):
+              // una sessione APERTA con linea/articolo correnti = lineaId/sk. Gli articoli con sole
+              // sessioni CHIUSE (trasferiti/finiti → 0 operatori dedicati) non compaiono più, così i
+              // residui dei trasferimenti spariscono da soli. Quelli con borse/KO restano (regola sopra).
+              for(const s of sessioni){
+                const _ap = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
+                if(!_ap) continue;
+                const _lc = s.lineaCorrente||s.lineaInizio;
+                const _sc = s.skuCorrente||s.sku;
+                if(_lc===lineaId && _sc===sk) return true;
+              }
               return false;
             });
             if(skuAttiviLinea.length===0) return (
