@@ -759,6 +759,21 @@ function ripartisciMsPerPeriodo(dalMs, alMs, intervalli){
   return totMs;
 }
 
+// Aggrega le note difetti (array di stringhe tipo "Difetto (Npz) | Altro (Mpz)") sommando le
+// quantità per tipologia. Ritorna [[difetto, totale], ...] ordinato per quantità decrescente.
+// I pezzi senza "(Npz)" (difetto senza quantità) vengono inclusi con totale 0.
+function aggregaDifetti(note){
+  const agg = {};
+  (note||[]).forEach(n=>{
+    String(n||"").split("|").forEach(pezzo=>{
+      const t = pezzo.trim(); if(!t) return;
+      const m = t.match(/^(.+?)\s*\(\s*(\d+)\s*pz\s*\)\s*$/i);
+      if(m){ const d=m[1].trim(); if(d) agg[d]=(agg[d]||0)+(Number(m[2])||0); }
+      else { if(!(t in agg)) agg[t]=0; }
+    });
+  });
+  return Object.entries(agg).sort((a,b)=>b[1]-a[1]);
+}
 function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
@@ -1418,24 +1433,26 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     <button onClick={()=>setShowNoteRiepilogo(false)} style={{background:"#f1f5f9",border:"none",borderRadius:8,width:32,height:32,fontSize:16,cursor:"pointer",color:"#64748b",fontWeight:700}}>✕</button>
                   </div>
                   <div style={{marginBottom:16}}>
-                    <div style={{fontSize:13,fontWeight:800,color:"#ef4444",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>❌ KO ({_noteKoTutte.length})</div>
-                    {_noteKoTutte.length>0 ? _noteKoTutte.map((n,i)=>(
-                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,marginBottom:6,lineHeight:1.4}}>
-                        {String(n).split(/(\(\s*\d+\s*pz\s*\))/gi).map((parte,j)=> /\(\s*\d+\s*pz\s*\)/i.test(parte)
-                          ? <span key={j} style={{fontWeight:800,color:"#ef4444"}}>{parte}</span>
-                          : <React.Fragment key={j}>{parte}</React.Fragment>)}
+                    {(()=>{ const _agg=aggregaDifetti(_noteKoTutte); const _tk=_agg.reduce((s,kv)=>s+kv[1],0); return (<>
+                    <div style={{fontSize:13,fontWeight:800,color:"#ef4444",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>❌ KO{_tk>0?" ("+_tk+" pz)":""}</div>
+                    {_agg.length>0 ? _agg.map((kv,i)=>(
+                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,marginBottom:6,lineHeight:1.4,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+                        <span>{kv[0]}</span>
+                        <span style={{fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>{kv[1]>0?kv[1]+" pz":"—"}</span>
                       </div>
                     )) : <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>Nessuna nota KO</div>}
+                    </>); })()}
                   </div>
                   <div>
-                    <div style={{fontSize:13,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>⚠ Migliorabili ({_noteMiglTutte.length})</div>
-                    {_noteMiglTutte.length>0 ? _noteMiglTutte.map((n,i)=>(
-                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,marginBottom:6,lineHeight:1.4}}>
-                        {String(n).split(/(\(\s*\d+\s*pz\s*\))/gi).map((parte,j)=> /\(\s*\d+\s*pz\s*\)/i.test(parte)
-                          ? <span key={j} style={{fontWeight:800,color:"#f59e0b"}}>{parte}</span>
-                          : <React.Fragment key={j}>{parte}</React.Fragment>)}
+                    {(()=>{ const _agg=aggregaDifetti(_noteMiglTutte); const _tm=_agg.reduce((s,kv)=>s+kv[1],0); return (<>
+                    <div style={{fontSize:13,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>⚠ Migliorabili{_tm>0?" ("+_tm+" pz)":""}</div>
+                    {_agg.length>0 ? _agg.map((kv,i)=>(
+                      <div key={i} style={{fontSize:13,color:"#1e293b",padding:"8px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,marginBottom:6,lineHeight:1.4,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+                        <span>{kv[0]}</span>
+                        <span style={{fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>{kv[1]>0?kv[1]+" pz":"—"}</span>
                       </div>
                     )) : <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>Nessuna nota migliorabili</div>}
+                    </>); })()}
                   </div>
                 </div>
               </div>
@@ -2090,6 +2107,33 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #e2e8f0",textAlign:"center",fontSize:13,fontWeight:700,color:"#475569"}}>
               Totale lavorato: <span style={{color:"#1e293b",fontWeight:900}}>{_tot}</span>
             </div>
+            {(()=>{
+              const _nomeL = linee ? (linee.find(l=>l.id===lineaId)||{}).nome||lineaId : lineaId;
+              const _q = qualitaPerSku[lineaId+"_"+modalKoSku.sku] || qualitaPerSku[_nomeL+"_"+modalKoSku.sku] || {};
+              const _aggKo = aggregaDifetti(_q.noteKo);
+              const _aggMi = aggregaDifetti(_q.noteMigl);
+              if(_aggKo.length===0 && _aggMi.length===0) return null;
+              return (
+              <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #e2e8f0"}}>
+                {_aggKo.length>0 && (<div style={{marginBottom:_aggMi.length>0?14:0}}>
+                  <div style={{fontSize:12,fontWeight:800,color:"#ef4444",letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Difetti KO</div>
+                  {_aggKo.map((kv,i)=>(
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,fontSize:13,color:"#1e293b",padding:"6px 10px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,marginBottom:5}}>
+                      <span>{kv[0]}</span><span style={{fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>{kv[1]>0?kv[1]+" pz":"—"}</span>
+                    </div>
+                  ))}
+                </div>)}
+                {_aggMi.length>0 && (<div>
+                  <div style={{fontSize:12,fontWeight:800,color:"#f59e0b",letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Difetti migliorabili</div>
+                  {_aggMi.map((kv,i)=>(
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,fontSize:13,color:"#1e293b",padding:"6px 10px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,marginBottom:5}}>
+                      <span>{kv[0]}</span><span style={{fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>{kv[1]>0?kv[1]+" pz":"—"}</span>
+                    </div>
+                  ))}
+                </div>)}
+              </div>
+              );
+            })()}
           </div>
         </div>
         );
