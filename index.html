@@ -4920,7 +4920,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [popupSkuOp,setPopupSkuOp] = useState(null);
   const [popupRiepilogoOp,setPopupRiepilogoOp] = useState(null); // matricola per il modal Riepilogo giornata
   const [editSegmento,setEditSegmento] = useState(null); // {meta, valore:'HH:MM', giorno:'YYYY-MM-DD'}
-  const salvaOrarioSegmento = async (meta, hhmm, giornoISO) => {
+  const salvaOrarioSegmento = async (meta, hhmm, giornoISO, metaAdiacente) => {
     if(!meta) return;
     // Costruisci la data lato client e invia in ISO (come fa modificaorario, che funziona)
     const [yy,mm,dd] = (giornoISO||"").split("-").map(Number);
@@ -4929,6 +4929,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     const valore = nd.toISOString();
     try {
       await fetchConRetry(nexusUrl("modificaOrarioSegmento",{sessionId:meta.sessionId,tipoSeg:meta.tipoSeg,valore,tsRif:meta.tsRif||""}), 4, 800);
+      // CONTIGUITÀ: se questo confine è un punto di passaggio tra due segmenti consecutivi,
+      // sposto allo STESSO istante anche il confine adiacente (la fine del segmento precedente o
+      // l'inizio del successivo). Così la fine di un segmento coincide sempre con l'inizio del
+      // successivo — niente buchi, niente sovrapposizioni — anche correggendo gli orari a mano.
+      if(metaAdiacente && !(metaAdiacente.sessionId===meta.sessionId && metaAdiacente.tipoSeg===meta.tipoSeg && String(metaAdiacente.tsRif)===String(meta.tsRif))){
+        try{ await fetchConRetry(nexusUrl("modificaOrarioSegmento",{sessionId:metaAdiacente.sessionId,tipoSeg:metaAdiacente.tipoSeg,valore,tsRif:metaAdiacente.tsRif||""}), 4, 800); }catch(e){}
+      }
       // Invalida l'obiettivo congelato: la correzione manuale deve ricalcolarlo
       fetch(nexusUrl("invalidaObiettivoCongelato",{})).catch(()=>{});
       setEditSegmento(null);
@@ -5126,7 +5133,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   const col = coloreLinea(seg.linea);
                   const editIni = editSegmento && seg.inizioMeta && editSegmento.meta && editSegmento.meta.sessionId===seg.inizioMeta.sessionId && editSegmento.meta.tipoSeg===seg.inizioMeta.tipoSeg && editSegmento.meta.tsRif===seg.inizioMeta.tsRif;
                   const editFin = editSegmento && seg.fineMeta && editSegmento.meta && editSegmento.meta.sessionId===seg.fineMeta.sessionId && editSegmento.meta.tipoSeg===seg.fineMeta.tipoSeg && editSegmento.meta.tsRif===seg.fineMeta.tsRif;
-                  const apriEdit = (meta, ts)=>{ if(!meta) return; const d=new Date(ts); const o=new Date(); const giorno=`${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`; const hhmm=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); setEditSegmento({meta, valore:hhmm, giorno}); };
+                  const apriEdit = (meta, ts, metaAdiacente)=>{ if(!meta) return; const d=new Date(ts); const o=new Date(); const giorno=`${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}-${String(o.getDate()).padStart(2,"0")}`; const hhmm=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); setEditSegmento({meta, metaAdiacente:metaAdiacente||null, valore:hhmm, giorno}); };
                   return (
                     <React.Fragment key={i}>
                     <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 8px",borderBottom:i<segmenti.length-1?"1px solid #ede9fe":"none",flexWrap:"wrap"}}>
@@ -5136,16 +5143,16 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
                           <input type="time" value={editSegmento.valore} onChange={e=>setEditSegmento({...editSegmento,valore:e.target.value})}
                             style={{fontSize:13,fontWeight:700,padding:"3px 6px",border:"2px solid "+col,borderRadius:6,fontFamily:"'Montserrat',sans-serif",color:col}}/>
-                          <button onClick={()=>salvaOrarioSegmento(editSegmento.meta, editSegmento.valore, editSegmento.giorno)}
+                          <button onClick={()=>salvaOrarioSegmento(editSegmento.meta, editSegmento.valore, editSegmento.giorno, editSegmento.metaAdiacente)}
                             style={{background:col,color:"#fff",border:"none",borderRadius:4,padding:"3px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
                           <button onClick={()=>setEditSegmento(null)}
                             style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:4,padding:"3px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
                         </span>
                       ) : (
                         <span style={{display:"inline-flex",alignItems:"center",background:"#ffffff",border:"2px solid "+col,borderRadius:8,padding:"3px 10px",fontSize:12,fontWeight:700,color:col}}>
-                          <span onClick={()=>apriEdit(seg.inizioMeta, seg.dal)} style={{cursor:seg.inizioMeta?"pointer":"default",textDecoration:seg.inizioMeta?"underline dotted":"none"}}>{fmtOra(seg.dal)}</span>
+                          <span onClick={()=>apriEdit(seg.inizioMeta, seg.dal, (i>0 && segmenti[i-1] && segmenti[i-1].fineMeta && Math.abs((segmenti[i-1].al||0)-(seg.dal||0))<60000) ? segmenti[i-1].fineMeta : null)} style={{cursor:seg.inizioMeta?"pointer":"default",textDecoration:seg.inizioMeta?"underline dotted":"none"}}>{fmtOra(seg.dal)}</span>
                           <span style={{margin:"0 4px"}}>→</span>
-                          {seg.al ? <span onClick={()=>apriEdit(seg.fineMeta, seg.al)} style={{cursor:seg.fineMeta?"pointer":"default",textDecoration:seg.fineMeta?"underline dotted":"none"}}>{fmtOra(seg.al)}</span> : <span>in corso</span>}
+                          {seg.al ? <span onClick={()=>apriEdit(seg.fineMeta, seg.al, (i<segmenti.length-1 && segmenti[i+1] && segmenti[i+1].inizioMeta && Math.abs((segmenti[i+1].dal||0)-(seg.al||0))<60000) ? segmenti[i+1].inizioMeta : null)} style={{cursor:seg.fineMeta?"pointer":"default",textDecoration:seg.fineMeta?"underline dotted":"none"}}>{fmtOra(seg.al)}</span> : <span>in corso</span>}
                         </span>
                       )}
                       <span style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",background:"#ffffff",border:"2px solid "+col,borderRadius:8,padding:"3px 10px",fontSize:13,fontWeight:800,color:col}}>{h>0?h+"h ":""}{m}m</span>
@@ -5166,18 +5173,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <span style={{fontSize:13,fontWeight:700,color:"#2563eb"}}>Totale</span>
                 <span style={{fontSize:16,fontWeight:800,color:"#2563eb"}}>{totH>0?totH+"h ":""}{totM}m</span>
               </div>
-              {uscite.length>0&&(
-                <div style={{padding:"0 16px 12px"}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"#64748b",marginBottom:6}}>Uscite e rientri nella giornata</div>
-                  {uscite.map((u,ui)=>(
-                    <div key={ui} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:12}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fef2f2",border:"1px solid #ef4444",borderRadius:6,padding:"2px 10px",fontWeight:700,color:"#ef4444"}}>✕ Uscito {fmtOra(u.uscita)}</span>
-                      <span style={{color:"#94a3b8"}}>→</span>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#f0fdf4",border:"1px solid #22c55e",borderRadius:6,padding:"2px 10px",fontWeight:700,color:"#16a34a"}}>▶ Rientrato {fmtOra(u.rientro)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Sezione "Uscite e rientri" rimossa su richiesta: i passaggi tra articoli sono già
+                  rappresentati dalla sequenza dei segmenti qui sopra. */}
               <div style={{padding:"0 16px 16px"}}>
                 <button onClick={()=>setPopupRiepilogoOp(null)} style={{...MS.cf,width:"100%",padding:12,fontSize:15,background:"#2563eb",color:"#ffffff"}}>Chiudi</button>
               </div>
