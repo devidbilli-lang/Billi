@@ -1524,6 +1524,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             const fMid   = compatto ? (nRighe<=1?"clamp(16px,2.4vw,26px)":nRighe<=2?"clamp(13px,2vw,20px)":"clamp(11px,1.6vw,16px)")
                                     : _unArt ? "clamp(46px,8vw,124px)"
                                     : (nRighe<=1?"clamp(40px,6.6vw,92px)":nRighe<=2?"clamp(27px,4.4vw,58px)":"clamp(18px,3.1vw,36px)");
+            const fSlash = compatto ? "clamp(9px,1.4vw,14px)"
+                                    : _unArt ? "clamp(38px,6.5vw,100px)"
+                                    : (nRighe<=1?"clamp(30px,5vw,72px)":nRighe<=2?"clamp(20px,3.3vw,46px)":"clamp(14px,2.3vw,30px)");
             const fSep   = compatto ? (nRighe<=1?"clamp(10px,1.5vw,15px)":"clamp(8px,1.2vw,12px)")
                                     : (nRighe<=1?"clamp(16px,2.5vw,28px)":nRighe<=2?"clamp(12px,2vw,20px)":"clamp(9px,1.5vw,14px)");
             const fSvg   = compatto ? (nRighe<=1?13:11) : (nRighe<=1?24:nRighe<=2?18:14);
@@ -1835,7 +1838,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
                         <div style={{display:"flex",alignItems:"baseline",gap:8}}>
                           <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
-                          <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
+                          <span style={{fontSize:fSlash,fontWeight:300,color:"#94a3b8"}}>/</span>
                           <span style={{fontSize:fMid,fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
                         </div>
                       </div>
