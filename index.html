@@ -835,6 +835,36 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   };
   const oreTotali = 8 + (oreExtra||0);
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
+  // RMA: minuti totali delle attività di oggi (rilavorazioni, campioni). Entrano nel "tempo
+  // prodotto" dell'efficienza solo per la linea RMA. Polling ogni 60s come le altre letture.
+  const _isRMALinea = ((lineaId||"")+"").toUpperCase().includes("RMA");
+  const [minutiAttivitaRMA, setMinutiAttivitaRMA] = React.useState(0);
+  React.useEffect(()=>{
+    if(!_isRMALinea){ setMinutiAttivitaRMA(0); return; }
+    let stop=false;
+    // Confronto data robusto: l'attività conta solo se la sua DATA PRODUZIONE è oggi (gestisce
+    // sia ISO YYYY-MM-DD sia gg/mm/aaaa). Un'attività datata in un altro giorno NON entra
+    // nell'efficienza di oggi — i minuti vanno alla produzione del loro giorno.
+    const _isOggi=(s)=>{
+      const str=(s||"").toString().trim(); if(!str) return false;
+      let y,m,d,mm;
+      if(mm=str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)){ y=+mm[1]; m=+mm[2]; d=+mm[3]; }
+      else if(mm=str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)){ d=+mm[1]; m=+mm[2]; y=+mm[3]; }
+      else { const dt=new Date(str); if(isNaN(dt)) return false; y=dt.getFullYear(); m=dt.getMonth()+1; d=dt.getDate(); }
+      const t=new Date();
+      return y===t.getFullYear() && m===(t.getMonth()+1) && d===t.getDate();
+    };
+    const carica=()=>{
+      fetch(nexusUrl("leggiAttivita",{repTipo:"rma"})).then(r=>r.json()).then(j=>{
+        if(stop) return;
+        const arr = (j&&j.ok&&j.data&&Array.isArray(j.data.attivita))?j.data.attivita:[];
+        let tot=0;
+        for(const a of arr){ if(_isOggi(a.data)) tot += Number(a.tempo)||0; }
+        setMinutiAttivitaRMA(tot);
+      }).catch(()=>{});
+    };
+    carica(); const t=setInterval(carica,60000); return ()=>{stop=true;clearInterval(t);};
+  },[_isRMALinea, lineaId]);
 
     // Stato 2° turno (condiviso dal server). Per Taglio DG in 2° turno la chiusura
     // automatica lato frontend va SOSPESA: la gestisce il cron col suo orario 8h.
@@ -1106,7 +1136,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // Calcola l'obiettivo giornaliero di un singolo articolo su questa linea, già SCALATO
   // per la rampa se l'articolo è in rampa. Usata sia dalle card per-articolo sia dalla
   // somma aggregata per l'efficienza (così i due valori restano coerenti).
-  const calcObItemConRampa = (skuItem, finoAMs)=>{
+  const calcObItemConRampa = (skuItem, finoAMs, _sink)=>{
     const skuObjI = skuList.find(x=>x&&x.sku===skuItem);
     const tcItem = tcPerLinea(skuObjI);
     if(!(tcItem>0)) return null;
@@ -1201,6 +1231,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     });
     let minTot=0;
     Object.values(minPerMat).forEach(({base,sottrai})=>{ minTot+=Math.max(0,base-sottrai); });
+    if(_sink) _sink.v=(_sink.v||0)+minTot;
     const obPieno = minTot>0?Math.round(minTot/tcItem):null;
     if(obPieno==null) return null;
     // Applica rampa se l'articolo è in rampa
@@ -1234,6 +1265,22 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     let somma = 0; let almenoUno=false;
     skuSet.forEach(sk=>{ const o = calcObItemConRampa(sk, finoAMs); if(o!=null){ somma += o; almenoUno=true; } });
     return almenoUno ? somma : null;
+  };
+  // Minuti di permanenza totali degli operatori sulla linea (= tempo disponibile), sommando i
+  // minTot di ogni articolo (già al netto di corsi/pause e ripartiti per i paralleli). Usato
+  // dall'efficienza RMA come denominatore. finoAMs=adesso → fin qui; null → fino a fine turno.
+  const sommaMinutiDisponibili = (finoAMs)=>{
+    const skuSet = new Set();
+    for(const s of sessioni){
+      if(s._pianificato) continue;
+      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
+      const sk = s.skuCorrente||s.sku||"";
+      if(!sk || isSkuSpeciale(sk)) continue;
+      skuSet.add(sk);
+    }
+    let tot = 0;
+    skuSet.forEach(sk=>{ const _s={}; calcObItemConRampa(sk, finoAMs, _s); if(_s.v) tot += _s.v; });
+    return tot;
   };
   // Obiettivo GIORNALIERO aggregato (somma articoli fino a fine turno, rampe incluse).
   const obFinaleConRampa = sommaObiettiviArticoli(null);
@@ -1277,11 +1324,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // A fine turno, se prodotte == obiettivo finale → 100%.
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
-    if(tc<=0) return null;
     // Confronto con l'obiettivo ATTESO A QUEST'ORA = somma per articolo, ognuno scalato sulla
     // propria finestra (un articolo aggiunto a metà turno conta solo dal momento dell'aggiunta).
     // A turno chiuso il riferimento è l'obiettivo giornaliero finale (eventualmente congelato).
     const baseAtteso = turnoTerminato ? obFinaleEffettivo : obAttesoRealTime;
+    // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
+    // tempo prodotto. L'efficienza standard borse/obiettivo equivale a tempoProdottoBorse/tempoDisp,
+    // quindi sommiamo i minuti delle attività rapportati allo stesso tempo disponibile. Gestisce
+    // anche il caso senza borse (solo attività): quota borse = 0.
+    if(_isRMALinea){
+      const minDisp = sommaMinutiDisponibili(turnoTerminato ? null : Date.now());
+      if(minDisp<=0) return null;
+      const quotaBorse = (baseAtteso!=null && baseAtteso>0) ? (borseTot/baseAtteso) : 0;
+      return Math.round(quotaBorse*100 + (minutiAttivitaRMA/minDisp)*100);
+    }
+    if(tc<=0) return null;
     if(baseAtteso==null || baseAtteso<=0) return null;
     return Math.round((borseTot/baseAtteso)*100);
   })();
@@ -2043,11 +2100,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
           : (sommaObiettiviArticoli(_prossimaOraMsProx) ?? (obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo*(_oreAllaProssima/oreTotali)) : 0));
 
         return (
-          <div style={{marginTop:12,padding:"0 4px",flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+          <div style={{marginTop:6,padding:"0 4px",flex:"0 0 auto",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
             {/* Barra tempo */}
-            <div style={{marginTop:12}}>
+            <div style={{marginTop:4}}>
 
-              <div style={{position:"relative",height:"clamp(80px,12vw,120px)",background:"#ffffff",borderRadius:40,border:"2px solid #e2e8f0"}}>
+              <div style={{position:"relative",height:"clamp(56px,8vw,100px)",background:"#ffffff",borderRadius:40,border:"2px solid #e2e8f0"}}>
                 {/* Barra colorata */}
                 <div style={{position:"absolute",top:0,left:0,height:"100%",width:percTempo.toFixed(3)+"%",background:"linear-gradient(90deg,#4c1d95,#7c3aed,#a78bfa)",borderRadius:40,transition:"width 1s linear",boxShadow:"0 0 14px 4px #7c3aed88"}}/>
                 {/* Timer countdown al centro */}
@@ -2063,7 +2120,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   const hR=Math.floor(secRim/3600), mR=Math.floor((secRim%3600)/60), sR=secRim%60;
                   return (
                     <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
-                      <span style={{fontSize:"clamp(36px,5vw,64px)",fontWeight:900,color:textColor,fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
+                      <span style={{fontSize:"clamp(28px,4vw,52px)",fontWeight:900,color:textColor,fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>
                         {String(hR).padStart(2,"0")}:{String(mR).padStart(2,"0")}:{String(sR).padStart(2,"0")}
                       </span>
                     </div>
