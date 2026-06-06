@@ -2233,7 +2233,7 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
 
   // sku -> {brand, tc, descrizione}
   const skuInfo = React.useMemo(()=>{
-    const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]={brand:s.brand||"", tc:Number(s.tc)||0, descrizione:s.descrizione||""}; });
+    const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]={brand:s.brand||"", tc:Number(s.tc)||0, tcRMA:Number(s.tcRMA)||0, descrizione:s.descrizione||""}; });
     return m;
   }, [skuList]);
 
@@ -2272,11 +2272,11 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
     if(!righe) return [];
     const out=[];
     righe.forEach(r=>{
-      const info=skuInfo[String(r.sku||"").toUpperCase()]||{brand:"", tc:0, descrizione:""};
+      const info=skuInfo[String(r.sku||"").toUpperCase()]||{brand:"", tc:0, tcRMA:0, descrizione:""};
       if(brand!=="__tutti__" && (info.brand||"")!==brand) return;
       out.push({
-        linea:r.linea||"", sku:r.sku||"", descrizione:info.descrizione||"", brand:info.brand||"", tc:info.tc||0,
-        borse:Number(r.borse_ok)||0, ob:Number(r.ob_reale)||0, minLav:Number(r.minuti_lav)||0,
+        linea:r.linea||"", sku:r.sku||"", descrizione:info.descrizione||"", brand:info.brand||"", tc:info.tc||0, tcRMA:info.tcRMA||0,
+        borse:Number(r.borse_ok)||0, ob:Number(r.ob_reale)||0, minLav:Number(r.minuti_lav)||0, minLavRampa:Number(r.min_lav_rampa)||0,
         ko:Number(r.ko)||0, migl:Number(r.migl)||0
       });
     });
@@ -2294,11 +2294,18 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
     return Object.keys(g).map(lid=>{
       const arts=g[lid];
       let borse=0, ob=0, minLav=0, minProd=0, ko=0, migl=0;
-      arts.forEach(a=>{ borse+=a.borse; ob+=a.ob; minLav+=a.minLav; minProd+=a.borse*(a.tc||0); ko+=a.ko; migl+=a.migl; });
+      // L'obiettivo di linea è la SOMMA degli obiettivi per articolo (minuti pesati per la rampa / TC),
+      // non l'ob_reale ripetuto: così non si moltiplica per il numero di SKU. RMA usa il proprio tcRMA.
+      const isRMA = String(nomeLinea(lid)||lid||"").toUpperCase().includes("RMA");
+      arts.forEach(a=>{
+        borse+=a.borse; minLav+=a.minLav; minProd+=a.borse*(a.tc||0); ko+=a.ko; migl+=a.migl;
+        const tcEff = isRMA ? (a.tcRMA||a.tc||0) : (a.tc||0);
+        if(tcEff>0) ob += Math.ceil((a.minLavRampa||0)/tcEff);
+      });
       return {
         lid, nome:nomeLinea(lid), colore:coloreLinea(lid), arts,
         borse, ob, minLav, ko, migl, nOp:operatori[lid]||0,
-        efficacia: ob>0 ? Math.round(borse/ob*100) : 0,
+        efficacia: ob>0 ? Math.round(borse/ob*100) : null,
         efficienza: minLav>0 ? Math.round(minProd/minLav*100) : 0
       };
     }).sort((a,b)=> String(a.nome).localeCompare(String(b.nome)));
@@ -2312,7 +2319,7 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
         <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
         {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={colore} strokeWidth="16" strokeLinecap="round" strokeDasharray={(pct/100)*Math.PI*90+" "+(Math.PI*90)} style={{filter:"drop-shadow(0 0 6px "+colore+")"}}/>}
         {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={colore} strokeWidth="16" strokeLinecap="round" style={{filter:"drop-shadow(0 0 6px "+colore+")"}}/>}
-        <text x="100" y="92" textAnchor="middle" fontSize="44" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+        <text x="100" y="92" textAnchor="middle" fontSize="44" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct==null?"–":pct+"%"}</text>
       </svg>
     </div>
   );
