@@ -43,11 +43,11 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVpNJTFz1CdAJpKQgChORkn-U83KiNUi3jL6Nka3UiLFqWEeB2msjANFzwIOfUC15zNQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1Ekly_pwdtfKCYvq-iHmFxs6EUFr2Vl_I7Qm7eXNUHT8guczV3-diZmrpMJHoyB-NQA/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -2212,6 +2212,132 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         </div>
         );
       })()}
+    </div>
+  );
+}
+
+// ── TAB RIEPILOGO ─────────────────────────────────────────────────────────────
+// Card stile "Entra in produzione" con due archetti: EFFICACIA (borse OK / obiettivo)
+// ed EFFICIENZA (minuti prodotti = borse*tc / minuti lavorati lordi). Filtri: giorno o
+// settimana + brand (preso dall'anagrafica articoli, campo brand del Registro TC).
+// I dati arrivano dall'azione worker "riepilogoStorico" (storico_qualita + storico_presenze).
+function TabRiepilogo({ skuList=[], linee=[] }) {
+  const oggiISO = (()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); })();
+  const [modo, setModo] = React.useState("giorno");   // "giorno" | "settimana"
+  const [data, setData] = React.useState(oggiISO);
+  const [brand, setBrand] = React.useState("__tutti__");
+  const [righe, setRighe] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [errore, setErrore] = React.useState("");
+
+  // sku -> {brand, tc, descrizione}
+  const skuInfo = React.useMemo(()=>{
+    const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]={brand:s.brand||"", tc:Number(s.tc)||0, descrizione:s.descrizione||""}; });
+    return m;
+  }, [skuList]);
+
+  // brand disponibili
+  const brands = React.useMemo(()=>{
+    const set=new Set(); (skuList||[]).forEach(s=>{ if(s&&s.brand&&String(s.brand).trim()) set.add(String(s.brand).trim()); });
+    return [...set].sort();
+  }, [skuList]);
+
+  // intervallo [dal, al] in ms dalla data + modo
+  const intervallo = ()=>{
+    const p=(data||oggiISO).split("-").map(Number);
+    const base=new Date(p[0],(p[1]||1)-1,p[2]||1,0,0,0,0);
+    if(modo==="giorno"){ const dal=base.getTime(); return {dal, al:dal+86400000-1}; }
+    const gg=base.getDay(); const offLun=(gg===0?-6:1-gg);
+    const lun=new Date(base); lun.setDate(base.getDate()+offLun); lun.setHours(0,0,0,0);
+    const dal=lun.getTime(); return {dal, al:dal+7*86400000-1};
+  };
+
+  const carica = async ()=>{
+    setLoading(true); setErrore(""); setRighe(null);
+    const {dal, al}=intervallo();
+    try{
+      const r=await fetch(nexusUrl("riepilogoStorico",{dal:String(dal), al:String(al)}),{mode:"cors"});
+      const j=await r.json();
+      const arr=(j&&j.ok&&j.data&&Array.isArray(j.data.righe))?j.data.righe:[];
+      setRighe(arr);
+    }catch(e){ setErrore("Errore nel caricamento dei dati."); setRighe([]); }
+    setLoading(false);
+  };
+  React.useEffect(()=>{ carica(); /* eslint-disable-next-line */ }, [modo, data]);
+
+  // card: filtra per brand, calcola efficacia/efficienza
+  const datiCard = React.useMemo(()=>{
+    if(!righe) return [];
+    const out=[];
+    righe.forEach(r=>{
+      const info=skuInfo[String(r.sku||"").toUpperCase()]||{brand:"", tc:0, descrizione:""};
+      if(brand!=="__tutti__" && (info.brand||"")!==brand) return;
+      const borse=Number(r.borse_ok)||0, ob=Number(r.ob_reale)||0, minLav=Number(r.minuti_lav)||0;
+      const minProd=borse*(info.tc||0);
+      out.push({
+        linea:r.linea||"", sku:r.sku||"", descrizione:info.descrizione||"", brand:info.brand||"",
+        borse, ob, minLav, minProd,
+        efficacia: ob>0 ? Math.round(borse/ob*100) : null,
+        efficienza: minLav>0 ? Math.round(minProd/minLav*100) : null
+      });
+    });
+    return out;
+  }, [righe, brand, skuInfo]);
+
+  const perLinea = React.useMemo(()=>{ const g={}; datiCard.forEach(c=>{ (g[c.linea]=g[c.linea]||[]).push(c); }); return g; }, [datiCard]);
+  const lineaObj = (id)=> (linee||[]).find(x=>String(x.id)===String(id)||String(x.nome)===String(id));
+  const coloreLinea = (id)=>{ const l=lineaObj(id); return (l&&l.colore)||"#7c3aed"; };
+  const nomeLinea = (id)=>{ const l=lineaObj(id); return (l&&l.nome)||id||"—"; };
+
+  return (
+    <div style={{margin:"0 24px", fontFamily:"'Montserrat',sans-serif"}}>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",justifyContent:"center",marginBottom:22}}>
+        <div style={{display:"inline-flex",background:"#f1f5f9",borderRadius:10,padding:3}}>
+          <button onClick={()=>setModo("giorno")} style={{padding:"8px 16px",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700,fontFamily:"'Montserrat',sans-serif",fontSize:13,background:modo==="giorno"?"#7c3aed":"transparent",color:modo==="giorno"?"#fff":"#7c3aed"}}>Giorno</button>
+          <button onClick={()=>setModo("settimana")} style={{padding:"8px 16px",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700,fontFamily:"'Montserrat',sans-serif",fontSize:13,background:modo==="settimana"?"#7c3aed":"transparent",color:modo==="settimana"?"#fff":"#7c3aed"}}>Settimana</button>
+        </div>
+        <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{padding:"9px 12px",border:"2px solid #7c3aed",borderRadius:10,fontFamily:"'Montserrat',sans-serif",fontSize:14,color:"#1e293b"}}/>
+        <select value={brand} onChange={e=>setBrand(e.target.value)} style={{padding:"9px 12px",border:"2px solid #7c3aed",borderRadius:10,fontFamily:"'Montserrat',sans-serif",fontSize:14,color:"#1e293b",background:"#fff"}}>
+          <option value="__tutti__">Tutti i brand</option>
+          {brands.map(b=> <option key={b} value={b}>{b}</option>)}
+        </select>
+        {modo==="settimana" && <span style={{fontSize:12,color:"#94a3b8",alignSelf:"center"}}>(settimana lun–dom della data scelta)</span>}
+      </div>
+
+      {loading && <div style={{textAlign:"center",color:"#7c3aed",fontWeight:700,padding:40}}>Caricamento…</div>}
+      {errore && <div style={{textAlign:"center",color:"#ef4444",fontWeight:700,padding:20}}>{errore}</div>}
+      {!loading && righe && datiCard.length===0 && <div style={{textAlign:"center",color:"#94a3b8",fontWeight:600,padding:40}}>Nessun dato per il periodo e il brand selezionati.</div>}
+
+      {!loading && Object.keys(perLinea).map(lid=>(
+        <div key={lid} style={{marginBottom:28}}>
+          <div style={{borderLeft:"5px solid "+coloreLinea(lid),paddingLeft:12,marginBottom:12}}>
+            <span style={{fontSize:18,fontWeight:800,color:"#1e293b"}}>{nomeLinea(lid)}</span>
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:16}}>
+            {perLinea[lid].map((c,idx)=>(
+              <div key={c.sku+idx} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,padding:"18px 20px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",flex:"1 1 320px",minWidth:300,maxWidth:430}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8,marginBottom:4}}>
+                  <span style={{fontSize:15,fontWeight:800,color:"#1e293b"}}>{c.sku}</span>
+                  {c.brand && <span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{c.brand}</span>}
+                </div>
+                {c.descrizione && <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{c.descrizione}</div>}
+                <div style={{display:"flex",justifyContent:"space-around",gap:8,marginBottom:12}}>
+                  <GaugeEfficienza valore={c.efficacia} label="Efficacia" size={120}/>
+                  <GaugeEfficienza valore={c.efficienza} label="Efficienza" size={120}/>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#475569",borderTop:"1px solid #f1f5f9",paddingTop:10}}>
+                  <span>Borse OK: <b style={{color:"#1e293b"}}>{c.borse}</b></span>
+                  <span>Obiettivo: <b style={{color:"#1e293b"}}>{c.ob}</b></span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#94a3b8",marginTop:4}}>
+                  <span>Min. prodotti: {Math.round(c.minProd)}</span>
+                  <span>Min. lavorati: {c.minLav}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -5550,16 +5676,25 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               <button style={{flex:2,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
                 const mat = modCorsoPian.sess.matricola;
                 const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
-                try{ await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([mat]),oraInizio:hmToIso(modCorsoPian.oraInizio),oraFine:modCorsoPian.oraFine?hmToIso(modCorsoPian.oraFine):"",nomeCorso:modCorsoPian.nome||"CORSO"}),{mode:"cors"}); }catch(e){}
+                try{
+                  if(modCorsoPian.inAtto){
+                    // Corso GIÀ in esecuzione: modifico gli orari reali (entrata/uscita). Se la fine è
+                    // nel futuro il worker tiene il rientro come pianificato (la riga resta al corso/ciano)
+                    // e lo esegue all'ora prevista — rientro, oppure checkout se oltre il fine turno.
+                    await fetch(nexusUrl("modificaOrarioCorso",{sessionId:modCorsoPian.sess.id,oraEntrata:hmToIso(modCorsoPian.oraInizio),oraUscita:modCorsoPian.oraFine?hmToIso(modCorsoPian.oraFine):""}),{mode:"cors"});
+                  } else {
+                    await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([mat]),oraInizio:hmToIso(modCorsoPian.oraInizio),oraFine:modCorsoPian.oraFine?hmToIso(modCorsoPian.oraFine):"",nomeCorso:modCorsoPian.nome||"CORSO"}),{mode:"cors"});
+                  }
+                }catch(e){}
                 setModCorsoPian(null);
                 if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
               }}>✓ Salva modifiche</button>
-              <button style={{flex:1,padding:11,background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+              {!modCorsoPian.inAtto && <button style={{flex:1,padding:11,background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
                 const mat = modCorsoPian.sess.matricola;
                 try{ await fetch(nexusUrl("eliminaCorsoPianificato",{matricola:mat}),{mode:"cors"}); }catch(e){}
                 setModCorsoPian(null);
                 if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
-              }}>Elimina</button>
+              }}>Elimina</button>}
             </div>
             <button style={{width:"100%",padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoPian(null)}>Annulla</button>
           </div>
@@ -6062,7 +6197,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             ((lineaFiltro.id||"").toUpperCase().includes("PREPARAZIONE DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("PREPARAZIONE DG"))
           );
           const _isRMALinea = lineaFiltro && (((lineaFiltro.id||"").toUpperCase().includes("RMA")) || ((lineaFiltro.nome||"").toUpperCase().includes("RMA")));
-          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),...(isAdmin?[["note","Note"],["trasferimenti","Trasferimenti"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)]];
+          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),...(isAdmin?[["note","Note"],["trasferimenti","Trasferimenti"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)],...(isAdmin?[["riepilogo","Riepilogo"]]:[])];
           const _tabs = _isTaglioDG ? [["operatori","Turni&Operatori"],["sessioni","Sessioni"],["attivita","Inserimento Attività"]] : _tabsProd;
           return _tabs.map(([t,l])=>(
           <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #7c3aed55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=tab===t?"0 0 10px 2px #7c3aed44":"none"; }} style={{padding:"10px 22px",border:"2px solid #7c3aed",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.55)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",color:"#000000",boxShadow:tab===t?"0 0 10px 2px #7c3aed44":"none",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>{l}</button>
@@ -6233,6 +6368,21 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           </span>
                         );
                       })()}
+                      {(()=>{
+                        // Corso REALE in esecuzione (non pianificato): badge "C HH:MM→HH:MM" con matita
+                        // per modificare gli orari ANCHE mentre il corso è in atto. La fine mostrata è
+                        // quella prevista (fineCorsoPrevista) se impostata, altrimenti il corso è aperto.
+                        if(!inCorso || !ultimoCorso) return null;
+                        const fmtHM = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
+                        const ini = fmtHM(ultimoCorso.quando);
+                        const fin = ultimoCorso.fineCorsoPrevista ? fmtHM(ultimoCorso.fineCorsoPrevista) : "";
+                        return (
+                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
+                            <span style={{fontWeight:900}}>C</span> {ini}{fin?("→"+fin):""}
+                            {editOrario&&<span onClick={()=>setModCorsoPian({sess:s, nome:(ultimoCorso.nomeCorso||"CORSO"), oraInizio:ini||"10:00", oraFine:fin||"", inAtto:true})} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title="Modifica orari corso in atto"><IconaMatita size={13}/></span>}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
@@ -6357,6 +6507,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {tab==="attivita"&&<TabAttivita repTipo={(()=>{ const _id=(lineaFiltro&&lineaFiltro.id||"").toUpperCase(); const _nm=(lineaFiltro&&lineaFiltro.nome||"").toUpperCase(); if(_id.includes("RMA")||_nm.includes("RMA")) return "rma"; if(_id.includes("PREPARAZIONE DG")||_nm.includes("PREPARAZIONE DG")) return "prep"; return "taglio"; })()}/>}
       {tab==="note"&&<TabNote lineaFiltro={lineaFiltro} linee={linee} skuList={skuList} sessioni={sessioni}/>}
       {tab==="trasferimenti"&&<TabTrasferimenti linee={linee} onRiepilogo={setPopupRiepilogoOp}/>}
+      {tab==="riepilogo"&&<TabRiepilogo skuList={skuList} linee={linee}/>}
       <div style={{height:40}}/>
     </div>
   );
