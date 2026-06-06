@@ -2218,7 +2218,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
 
 // ── TAB RIEPILOGO ─────────────────────────────────────────────────────────────
 // Card stile "Entra in produzione" con due archetti: EFFICACIA (borse OK / obiettivo)
-// ed EFFICIENZA (minuti prodotti = borse*tc / minuti lavorati lordi). Filtri: giorno o
+// ed EFFICIENZA (minuti prodotti = borse*tc / minuti lavorati netti). Filtri: giorno o
 // settimana + brand (preso dall'anagrafica articoli, campo brand del Registro TC).
 // I dati arrivano dall'azione worker "riepilogoStorico" (storico_qualita + storico_presenze).
 function TabRiepilogo({ skuList=[], linee=[] }) {
@@ -2227,6 +2227,7 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
   const [data, setData] = React.useState(oggiISO);
   const [brand, setBrand] = React.useState("__tutti__");
   const [righe, setRighe] = React.useState(null);
+  const [operatori, setOperatori] = React.useState({});   // linea -> n° operatori
   const [loading, setLoading] = React.useState(false);
   const [errore, setErrore] = React.useState("");
 
@@ -2253,44 +2254,72 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
   };
 
   const carica = async ()=>{
-    setLoading(true); setErrore(""); setRighe(null);
+    setLoading(true); setErrore(""); setRighe(null); setOperatori({});
     const {dal, al}=intervallo();
     try{
       const r=await fetch(nexusUrl("riepilogoStorico",{dal:String(dal), al:String(al)}),{mode:"cors"});
       const j=await r.json();
-      const arr=(j&&j.ok&&j.data&&Array.isArray(j.data.righe))?j.data.righe:[];
-      setRighe(arr);
+      const d=(j&&j.ok&&j.data)?j.data:{};
+      setRighe(Array.isArray(d.righe)?d.righe:[]);
+      setOperatori(d.operatori||{});
     }catch(e){ setErrore("Errore nel caricamento dei dati."); setRighe([]); }
     setLoading(false);
   };
   React.useEffect(()=>{ carica(); /* eslint-disable-next-line */ }, [modo, data]);
 
-  // card: filtra per brand, calcola efficacia/efficienza
+  // righe filtrate per brand, arricchite con brand/tc/ko/migl
   const datiCard = React.useMemo(()=>{
     if(!righe) return [];
     const out=[];
     righe.forEach(r=>{
       const info=skuInfo[String(r.sku||"").toUpperCase()]||{brand:"", tc:0, descrizione:""};
       if(brand!=="__tutti__" && (info.brand||"")!==brand) return;
-      const borse=Number(r.borse_ok)||0, ob=Number(r.ob_reale)||0, minLav=Number(r.minuti_lav)||0;
-      const minProd=borse*(info.tc||0);
       out.push({
-        linea:r.linea||"", sku:r.sku||"", descrizione:info.descrizione||"", brand:info.brand||"",
-        borse, ob, minLav, minProd,
-        efficacia: ob>0 ? Math.round(borse/ob*100) : null,
-        efficienza: minLav>0 ? Math.round(minProd/minLav*100) : null
+        linea:r.linea||"", sku:r.sku||"", descrizione:info.descrizione||"", brand:info.brand||"", tc:info.tc||0,
+        borse:Number(r.borse_ok)||0, ob:Number(r.ob_reale)||0, minLav:Number(r.minuti_lav)||0,
+        ko:Number(r.ko)||0, migl:Number(r.migl)||0
       });
     });
     return out;
   }, [righe, brand, skuInfo]);
 
-  const perLinea = React.useMemo(()=>{ const g={}; datiCard.forEach(c=>{ (g[c.linea]=g[c.linea]||[]).push(c); }); return g; }, [datiCard]);
   const lineaObj = (id)=> (linee||[]).find(x=>String(x.id)===String(id)||String(x.nome)===String(id));
   const coloreLinea = (id)=>{ const l=lineaObj(id); return (l&&l.colore)||"#7c3aed"; };
   const nomeLinea = (id)=>{ const l=lineaObj(id); return (l&&l.nome)||id||"—"; };
 
+  // raggruppa per linea + calcola totali e indici di linea
+  const cardLinee = React.useMemo(()=>{
+    const g={};
+    datiCard.forEach(c=>{ (g[c.linea]=g[c.linea]||[]).push(c); });
+    return Object.keys(g).map(lid=>{
+      const arts=g[lid];
+      let borse=0, ob=0, minLav=0, minProd=0, ko=0, migl=0;
+      arts.forEach(a=>{ borse+=a.borse; ob+=a.ob; minLav+=a.minLav; minProd+=a.borse*(a.tc||0); ko+=a.ko; migl+=a.migl; });
+      return {
+        lid, nome:nomeLinea(lid), colore:coloreLinea(lid), arts,
+        borse, ob, minLav, ko, migl, nOp:operatori[lid]||0,
+        efficacia: ob>0 ? Math.round(borse/ob*100) : 0,
+        efficienza: minLav>0 ? Math.round(minProd/minLav*100) : 0
+      };
+    }).sort((a,b)=> String(a.nome).localeCompare(String(b.nome)));
+  }, [datiCard, operatori, linee]);
+
+  // archetto identico a quello della produzione (semicerchio), colorato col colore della linea
+  const Arco = ({pct, label, colore})=>(
+    <div style={{flex:1,minWidth:0,background:"#fff",border:"2px solid "+colore,boxShadow:"0 0 12px 3px "+colore+"44, inset 0 0 6px "+colore+"22",borderRadius:12,padding:"7px 4px 3px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <div style={{fontSize:"clamp(9px,1.1vw,12px)",color:"#111827",fontWeight:800,letterSpacing:0.5,marginBottom:2,whiteSpace:"nowrap"}}>{label}</div>
+      <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
+        <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
+        {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={colore} strokeWidth="16" strokeLinecap="round" strokeDasharray={(pct/100)*Math.PI*90+" "+(Math.PI*90)} style={{filter:"drop-shadow(0 0 6px "+colore+")"}}/>}
+        {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={colore} strokeWidth="16" strokeLinecap="round" style={{filter:"drop-shadow(0 0 6px "+colore+")"}}/>}
+        <text x="100" y="92" textAnchor="middle" fontSize="44" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+      </svg>
+    </div>
+  );
+
   return (
     <div style={{margin:"0 24px", fontFamily:"'Montserrat',sans-serif"}}>
+      {/* filtri: giorno/settimana, data, brand */}
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",justifyContent:"center",marginBottom:22}}>
         <div style={{display:"inline-flex",background:"#f1f5f9",borderRadius:10,padding:3}}>
           <button onClick={()=>setModo("giorno")} style={{padding:"8px 16px",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700,fontFamily:"'Montserrat',sans-serif",fontSize:13,background:modo==="giorno"?"#7c3aed":"transparent",color:modo==="giorno"?"#fff":"#7c3aed"}}>Giorno</button>
@@ -2306,38 +2335,66 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
 
       {loading && <div style={{textAlign:"center",color:"#7c3aed",fontWeight:700,padding:40}}>Caricamento…</div>}
       {errore && <div style={{textAlign:"center",color:"#ef4444",fontWeight:700,padding:20}}>{errore}</div>}
-      {!loading && righe && datiCard.length===0 && <div style={{textAlign:"center",color:"#94a3b8",fontWeight:600,padding:40}}>Nessun dato per il periodo e il brand selezionati.</div>}
+      {!loading && righe && cardLinee.length===0 && <div style={{textAlign:"center",color:"#94a3b8",fontWeight:600,padding:40}}>Nessun dato per il periodo e il brand selezionati.</div>}
 
-      {!loading && Object.keys(perLinea).map(lid=>(
-        <div key={lid} style={{marginBottom:28}}>
-          <div style={{borderLeft:"5px solid "+coloreLinea(lid),paddingLeft:12,marginBottom:12}}>
-            <span style={{fontSize:18,fontWeight:800,color:"#1e293b"}}>{nomeLinea(lid)}</span>
-          </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:16}}>
-            {perLinea[lid].map((c,idx)=>(
-              <div key={c.sku+idx} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,padding:"18px 20px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",flex:"1 1 320px",minWidth:300,maxWidth:430}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8,marginBottom:4}}>
-                  <span style={{fontSize:15,fontWeight:800,color:"#1e293b"}}>{c.sku}</span>
-                  {c.brand && <span style={{fontSize:11,color:"#e879f9",background:"#e879f918",border:"1px solid #e879f966",borderRadius:4,padding:"2px 8px",fontWeight:700}}>{c.brand}</span>}
-                </div>
-                {c.descrizione && <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{c.descrizione}</div>}
-                <div style={{display:"flex",justifyContent:"space-around",gap:8,marginBottom:12}}>
-                  <GaugeEfficienza valore={c.efficacia} label="Efficacia" size={120}/>
-                  <GaugeEfficienza valore={c.efficienza} label="Efficienza" size={120}/>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#475569",borderTop:"1px solid #f1f5f9",paddingTop:10}}>
-                  <span>Borse OK: <b style={{color:"#1e293b"}}>{c.borse}</b></span>
-                  <span>Obiettivo: <b style={{color:"#1e293b"}}>{c.ob}</b></span>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#94a3b8",marginTop:4}}>
-                  <span>Min. prodotti: {Math.round(c.minProd)}</span>
-                  <span>Min. lavorati: {c.minLav}</span>
+      {/* griglia card-linea — replica fedele di "Entra in Produzione" con due archetti */}
+      {!loading && cardLinee.length>0 && (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(360px, 1fr))",gap:14,padding:"0 6px",alignItems:"start"}}>
+          {cardLinee.map(L=>(
+            <div key={L.lid} style={{background:"#fff",border:"4px solid "+L.colore,borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+L.colore+"99, 0 0 4px "+L.colore+", inset 0 0 8px "+L.colore+"22",display:"flex",flexDirection:"column"}}>
+              {/* header: pallino + nome linea + KO/MIGL totali */}
+              <div style={{padding:"6px 10px",borderBottom:"1px solid "+L.colore+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                <div style={{width:9,height:9,borderRadius:"50%",background:L.colore,flexShrink:0}}/>
+                <div style={{fontSize:13,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{L.nome}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                  <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {L.ko}</span>
+                  <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {L.migl}</span>
                 </div>
               </div>
-            ))}
-          </div>
+              {/* body: colonna sinistra (operatori + 2 archetti) | colonna destra (articoli) */}
+              <div style={{display:"flex",gap:8,alignItems:"stretch",padding:8}}>
+                {/* colonna sinistra */}
+                <div style={{display:"flex",flexDirection:"column",gap:8,width:"42%",minWidth:0}}>
+                  {/* operatori */}
+                  <div style={{background:"#fff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed44, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"5px 6px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
+                    <div style={{fontSize:"clamp(9px,1.1vw,12px)",color:"#111827",fontWeight:800,letterSpacing:0.5,marginBottom:1}}>Operatori</div>
+                    <div style={{fontSize:"clamp(24px,3.2vw,40px)",fontWeight:900,color:"#111827",lineHeight:1}}>{L.nOp}</div>
+                  </div>
+                  {/* zona archetti divisa a metà: Efficienza | Efficacia */}
+                  <div style={{display:"flex",gap:6,alignItems:"stretch"}}>
+                    <Arco pct={L.efficienza} label="Efficienza" colore={L.colore}/>
+                    <Arco pct={L.efficacia} label="Efficacia" colore={L.colore}/>
+                  </div>
+                </div>
+                {/* colonna destra: box articoli */}
+                <div style={{flex:1,minWidth:0,display:"flex",flexWrap:"wrap",alignContent:"flex-start",gap:6}}>
+                  {L.arts.length===0 && <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"#cbd5e1",fontWeight:600,fontSize:12,minHeight:80}}>Nessun articolo</div>}
+                  {L.arts.map((a,idx)=>(
+                    <div key={a.sku+idx} style={{flex:"1 1 45%",minWidth:0,background:"#fff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:3,textAlign:"center"}}>
+                      {/* SKU + brand */}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,width:"100%"}}>
+                        <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:900,color:"#6d28d9",letterSpacing:0.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:"1 1 auto",minWidth:0,textAlign:"left"}}>{a.sku}</span>
+                        {a.brand && <span style={{fontSize:"clamp(8px,0.95vw,10px)",color:"#e879f9",fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>{a.brand}</span>}
+                      </div>
+                      {/* borse / obiettivo */}
+                      <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:4}}>
+                        <span style={{fontSize:"clamp(28px,4.2vw,52px)",fontWeight:900,color:"#111827",lineHeight:1}}>{a.borse}</span>
+                        <span style={{fontSize:"clamp(18px,2.6vw,32px)",fontWeight:300,color:"#94a3b8",lineHeight:1}}>/</span>
+                        <span style={{fontSize:"clamp(22px,3.1vw,40px)",fontWeight:900,color:"#6d28d9",lineHeight:1}}>{a.ob}</span>
+                      </div>
+                      {/* KO / MGL */}
+                      <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ef4444"}}>KO {a.ko}</span>
+                        <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#f59e0b"}}>MGL {a.migl}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
