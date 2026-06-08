@@ -2382,9 +2382,11 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   const _scalaLista = vpW < 640 ? 0.62 : vpW < 1024 ? 0.78 : vpW < 1440 ? 0.9 : 1;
   // "Entra in Produzione": vista d'insieme con TUTTE le linee, incluse le speciali
   // (Taglio DG, Preparazione DG).
-  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee);
+  // Esclude i reparti (RMA, Preparazione DG, Taglio DG) dalle card di "Entra in Produzione".
+  const _noReparto = (l)=>{ const u=((((l&&l.id)||"")+" "+((l&&l.nome)||"")).toUpperCase()); return !(u.includes("RMA")||u.includes("PREPARAZIONE DG")||u.includes("TAGLIO DG")); };
+  const lineeVis = (lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee)).filter(_noReparto);
   // In vista griglia il filtro singola linea non ha senso: mostra tutte
-  const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee;
+  const lineeGriglia = (lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).filter(_noReparto);
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
@@ -2392,7 +2394,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         {isAdmin && !lineaFiltro && !vistaGriglia && (
           <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{flex:1,padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}>
             <option value="">Tutte le linee</option>
-            {linee.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
+            {linee.filter(_noReparto).map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
           </select>
         )}
         {/* Toggle vista singola / griglia */}
