@@ -774,7 +774,7 @@ function aggregaDifetti(note){
   });
   return Object.entries(agg).sort((a,b)=>b[1]-a[1]);
 }
-function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiLav=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
@@ -1357,10 +1357,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   },[obDaCongelare, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
   // EFFICIENZA = minuti prodotti / minuti lavorati REALI × 100. Misura il RITMO sul tempo davvero
-  // lavorato. minuti prodotti = Σ per articolo (borse OK × TC articolo); minuti lavorati = quelli del
-  // worker/Riepilogo (minutiLavReali: check-in→check-out, corso/pausa sospendono). NON è borse/obiettivo
-  // (efficacia) e NON coincide con essa: i minuti lavorati reali sono indipendenti dall'obiettivo
-  // (es. linea Veronica: 49×119,6 / 10557 ≈ 55%, non 60%).
+  // lavorato. minuti prodotti = Σ per articolo (borse OK × TC articolo); minuti lavorati = quelli
+  // calcolati dal WORKER (azione produzione, stessa logica del Riepilogo/colonna G: presenza per
+  // operatore con corso/pausa scalati, dedup per operatore, segmenti aperti chiusi ad adesso),
+  // arrivano come prop minutiLav. NON è borse/obiettivo (efficacia) e NON è l'obiettivo×TC: i minuti
+  // lavorati reali sono indipendenti dall'obiettivo (es. Veronica: 49×119,6 / 10557 ≈ 55%, non 60%).
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
     // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
@@ -1372,8 +1373,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const quotaBorse = (baseAtteso!=null && baseAtteso>0) ? (borseTot/baseAtteso) : 0;
       return Math.round(quotaBorse*100 + (minutiAttivitaRMA/minDisp)*100);
     }
-    // Minuti realmente lavorati sulla linea (stessi del Riepilogo/worker), NON l'obiettivo×TC.
-    const minLav = minutiLavReali();
+    // Minuti realmente lavorati sulla linea = quelli calcolati dal WORKER (azione produzione,
+    // stessa logica del Riepilogo/colonna G), passati come prop. Fallback al ricalcolo locale solo
+    // se il worker non li fornisce ancora (es. worker non ancora ridistribuito).
+    const minLav = minutiLav>0 ? minutiLav : minutiLavReali();
     if(minLav<=0) return null;
     // Minuti prodotti = somma, per ogni articolo attivo oggi sulla linea, di (borse OK × TC articolo).
     const _lNome = (linee.find(l=>l.id===lineaId)||{}).nome||lineaId;
@@ -2520,6 +2523,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     borseKO={d.borseKO||0}
                     borseMigl={d.borseMigl||0}
                     maxOpOggi={d.maxOpOggi||0}
+                    minutiLav={d.minutiLav||0}
                     coloreLinea={l.colore||"#7c3aed"}
                     qualitaPerSku={qualitaPerSku||{}}
                     linee={linee||[]}
@@ -2551,6 +2555,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   borseKO={d.borseKO||0}
                   borseMigl={d.borseMigl||0}
                   maxOpOggi={d.maxOpOggi||0}
+                  minutiLav={d.minutiLav||0}
                   coloreLinea={l.colore||"#7c3aed"}
                   qualitaPerSku={qualitaPerSku||{}}
                   linee={linee||[]}
