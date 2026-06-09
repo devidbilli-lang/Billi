@@ -632,11 +632,14 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
   );
 }
 function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDest]   = useState(null);
-  const [chSku,setChSku] = useState(false);
   const [nSku,setNSku]   = useState("");
   const [cSku,setCSku]   = useState("");
   const [cLinea,setCLinea] = useState("");
-  const conferma = () => { onOk(dest, chSku&&nSku?nSku:null); };
+  const destObj = dest ? linee.find(l=>l.id===dest) : null;
+  const _ud = destObj ? ((destObj.id||"")+" "+(destObj.nome||"")).toUpperCase() : "";
+  const destReparto = !!destObj && (_ud.includes("RMA")||_ud.includes("PREPARAZIONE DG")||_ud.includes("TAGLIO DG"));
+  const articoloMancante = !!dest && !destReparto && !nSku;
+  const conferma = () => { if(!dest||articoloMancante) return; onOk(dest, destReparto?null:nSku); };
   return (
     <div style={MS.ov}>
       <div style={MS.md}>
@@ -658,22 +661,27 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
               </button>
             ))}
           </div>
-          <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
-            <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94a3b8"}}>
-              <input type="checkbox" checked={chSku} onChange={e=>setChSku(e.target.checked)} style={{accentColor:"#00d4aa",width:16,height:16}}/>
-              Cambia anche SKU
-            </label>
-            {chSku&&(
-              <div style={{marginTop:10}}>
-                <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca articolo..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
-                <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");}}/>
-                <input style={{...S.inp,marginTop:8}} placeholder="Articolo selezionato" value={nSku} onChange={e=>setNSku(e.target.value.toUpperCase())}/>
-              </div>
-            )}
-          </div>
+          {!destReparto&&(
+            <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
+              <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Articolo sulla linea di destinazione</div>
+              <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca articolo..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+              <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");}}/>
+              <input style={{...S.inp,marginTop:8}} placeholder="Articolo selezionato" value={nSku} onChange={e=>setNSku(e.target.value.toUpperCase())}/>
+              {articoloMancante&&(
+                <div style={{marginTop:8,padding:"6px 10px",background:"#fef3c7",border:"1px solid #f59e0b66",borderRadius:6,fontSize:12,color:"#b45309",fontWeight:700}}>
+                  ⚠ Seleziona l'articolo per continuare
+                </div>
+              )}
+            </div>
+          )}
+          {destReparto&&(
+            <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#15803d",fontWeight:700}}>
+              Reparto: nessun articolo da selezionare
+            </div>
+          )}
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
-            <button style={{...MS.cf,opacity:dest?1:0.4}} disabled={!dest} onClick={conferma}>Conferma</button>
+            <button style={{...MS.cf,opacity:(dest&&!articoloMancante)?1:0.4}} disabled={!dest||articoloMancante} onClick={conferma}>Conferma</button>
           </div>
         </div>
       </div>
@@ -5952,12 +5960,16 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     ✓ {(modTrasf.skuMultiDest||[]).length} articol{(modTrasf.skuMultiDest||[]).length===1?"o":"i"} selezionat{(modTrasf.skuMultiDest||[]).length===1?"o":"i"}
                   </div>
                 )}
-                {(modTrasf.skuMultiDest||[]).length>0&&(
-                  <button style={{width:"100%",padding:11,background:"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
-                    onClick={()=>setModTrasf({...modTrasf,step:"pwd",pwd:"",errPwd:""})}>
-                    Avanti → Conferma password
-                  </button>
+                {(modTrasf.skuMultiDest||[]).length===0&&(
+                  <div style={{marginBottom:8,padding:"8px 10px",background:"#fef3c7",border:"1px solid #f59e0b66",borderRadius:6,fontSize:12,color:"#b45309",fontWeight:700}}>
+                    ⚠ Seleziona almeno un articolo per continuare
+                  </div>
                 )}
+                <button disabled={(modTrasf.skuMultiDest||[]).length===0}
+                  style={{width:"100%",padding:11,background:(modTrasf.skuMultiDest||[]).length===0?"#cbd5e1":"#a855f7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:(modTrasf.skuMultiDest||[]).length===0?"not-allowed":"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8,opacity:(modTrasf.skuMultiDest||[]).length===0?0.6:1}}
+                  onClick={()=>{ if((modTrasf.skuMultiDest||[]).length===0) return; setModTrasf({...modTrasf,step:"pwd",pwd:"",errPwd:""}); }}>
+                  Avanti → Conferma password
+                </button>
                 <button style={{width:"100%",padding:10,background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}
                   onClick={()=>setModTrasf({...modTrasf,step:"selOp"})}>← Indietro</button>
               </>)}
