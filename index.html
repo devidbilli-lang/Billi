@@ -1221,7 +1221,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const dC=parseData(c.quando); if(!dC) return;
         const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
         const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
-        const cIn=dC.getTime(), cOut=dCe?dCe.getTime():(fin||cIn);
+        const cIn=dC.getTime(); let cOut=dCe?dCe.getTime():(fin||cIn);
+        if(fin!=null && cOut>fin) cOut=fin; // limita alla finestra: un corso pianificato nel futuro non va sottratto dall'atteso real-time
         if(cOut>cIn) minPerMat[mat].sottrai += ((cOut-cIn)/60000)/_attiviA(cIn);
       });
       if(s.pause) s.pause.forEach(pz=>{
@@ -1230,6 +1231,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         if(pz.ripresa){ const dR=parseData(pz.ripresa); pOut=dR?dR.getTime():dP.getTime(); }
         else { pOut=Math.min(fin!=null?fin:Date.now(), Date.now()); }
         const pIn=dP.getTime();
+        if(fin!=null && pOut>fin) pOut=fin;
         if(pOut>pIn) minPerMat[mat].sottrai += ((pOut-pIn)/60000)/_attiviA(pIn);
       });
     });
