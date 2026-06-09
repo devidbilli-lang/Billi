@@ -658,6 +658,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
               </button>
             ))}
           </div>
+          {!(dest && isRepartoLinea(dest, linee)) && (
           <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
             <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94a3b8"}}>
               <input type="checkbox" checked={chSku} onChange={e=>setChSku(e.target.checked)} style={{accentColor:"#00d4aa",width:16,height:16}}/>
@@ -671,6 +672,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
               </div>
             )}
           </div>
+          )}
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
             <button style={{...MS.cf,opacity:dest?1:0.4}} disabled={!dest} onClick={conferma}>Conferma</button>
@@ -722,6 +724,8 @@ const SKU_SPECIALI = [
 ];
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
+// Linee "reparto" (RMA, Preparazione DG, Taglio DG): non lavorano per SKU.
+function isRepartoLinea(idLinea, linee){ const l=(linee||[]).find(x=>x&&x.id===idLinea); const u=((idLinea||"")+" "+((l&&l.nome)||"")).toUpperCase(); return u.includes("RMA")||u.includes("PREPARAZIONE DG")||u.includes("TAGLIO DG"); }
 
 // ── INIZIO REALE DI UNA SESSIONE ──────────────────────────────────────────────
 // Le sessioni di un articolo AGGIUNTO a metà giornata (id "ADD_<mat>_<sku>_<ts>")
@@ -4027,7 +4031,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
             {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={async(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=isRepartoLinea(ld,linee)?"":(ns||sp);
                 try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn}); }catch(e){}
                 if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,ld,ns);
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
@@ -5274,7 +5278,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       )}
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={async(d,ns)=>{
         const destId = d&&d.id ? d.id : d;
-        const skuNuovo = ns || mod.skuCorrente || mod.sku || "";
+        const skuNuovo = isRepartoLinea(destId,linee) ? "" : (ns || mod.skuCorrente || mod.sku || "");
         const lineaPartenza = mod.lineaCorrente||mod.lineaInizio||"";
         const matKey = mod.matricola||mod.nome+"-"+mod.cognome;
         setMod(null);
@@ -6732,9 +6736,9 @@ function App() { const [view,setView]             = useState("login");
   const coFromSheets = s => { if(!s||!s.id) return;
     api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); };
   const tr = (id,dest,nSku) => {
-    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
+    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=isRepartoLinea(dest,linee)?"":(nSku||sp); api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     // Aggiorna anche sessSheets immediatamente per visualizzazione Dashboard
-    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
+    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=isRepartoLinea(dest,linee)?"":(nSku||sp); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
     setTimeout(caricaSessioni,1000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,1500); };
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
