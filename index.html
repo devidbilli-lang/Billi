@@ -2382,9 +2382,14 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   const _scalaLista = vpW < 640 ? 0.62 : vpW < 1024 ? 0.78 : vpW < 1440 ? 0.9 : 1;
   // "Entra in Produzione": vista d'insieme con TUTTE le linee, incluse le speciali
   // (Taglio DG, Preparazione DG).
-  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee);
-  // In vista griglia il filtro singola linea non ha senso: mostra tutte
-  const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee;
+  // I reparti (Preparazione DG / Taglio DG / RMA) lavorano solo a minuti: niente loro card nella
+  // panoramica "Entra in Produzione" (vista singola e griglia). Restano accessibili entrando
+  // direttamente sulla loro linea (lineaFiltro), dove non c'è il toggle singola/griglia.
+  const _isRepartoProd = (l) => { const u=(((l&&l.id)||"")+" "+((l&&l.nome)||"")).toUpperCase(); return u.includes("RMA")||u.includes("PREPARAZIONE DG")||u.includes("TAGLIO DG"); };
+  const _lineeNoRep = (linee||[]).filter(l=>!_isRepartoProd(l));
+  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? _lineeNoRep.filter(l=>l.id===lineaSel) : _lineeNoRep);
+  // In vista griglia il filtro singola linea non ha senso: mostra tutte (reparti esclusi)
+  const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : _lineeNoRep;
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
@@ -2392,7 +2397,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         {isAdmin && !lineaFiltro && !vistaGriglia && (
           <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{flex:1,padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}>
             <option value="">Tutte le linee</option>
-            {linee.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
+            {_lineeNoRep.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
           </select>
         )}
         {/* Toggle vista singola / griglia */}
@@ -6475,7 +6480,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const rDal = (rampaS && (rampaS.dal||rampaS.rampaDal)) || s.rampaDal;
                         if(!rDal) return null;
                         const gg = giorniLavorativiJS(rDal);
-                        if(gg>15) return null;
+                        // Rampa completata = arrivati al giorno 15 (100% = pieno regime, come
+                        // inRampaItem nelle card produzione, che è gg<15): niente più badge.
+                        if(gg>=15) return null;
                         return (
                           <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"6px 14px"}}>
                             <IconaRampa size={14} color="#ff6937"/>
