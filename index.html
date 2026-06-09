@@ -658,7 +658,6 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
               </button>
             ))}
           </div>
-          {!(dest && isRepartoLinea(dest, linee)) && (
           <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
             <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94a3b8"}}>
               <input type="checkbox" checked={chSku} onChange={e=>setChSku(e.target.checked)} style={{accentColor:"#00d4aa",width:16,height:16}}/>
@@ -672,7 +671,6 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
               </div>
             )}
           </div>
-          )}
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
             <button style={{...MS.cf,opacity:dest?1:0.4}} disabled={!dest} onClick={conferma}>Conferma</button>
@@ -724,8 +722,6 @@ const SKU_SPECIALI = [
 ];
 function isSkuSpeciale(sku) { return SKU_SPECIALI.some(s=>s.sku===(sku||"").toUpperCase()); }
 function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
-// Linee "reparto" (RMA, Preparazione DG, Taglio DG): non lavorano per SKU.
-function isRepartoLinea(idLinea, linee){ const l=(linee||[]).find(x=>x&&x.id===idLinea); const u=((idLinea||"")+" "+((l&&l.nome)||"")).toUpperCase(); return u.includes("RMA")||u.includes("PREPARAZIONE DG")||u.includes("TAGLIO DG"); }
 
 // ── INIZIO REALE DI UNA SESSIONE ──────────────────────────────────────────────
 // Le sessioni di un articolo AGGIUNTO a metà giornata (id "ADD_<mat>_<sku>_<ts>")
@@ -1221,8 +1217,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const dC=parseData(c.quando); if(!dC) return;
         const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
         const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
-        const cIn=dC.getTime(); let cOut=dCe?dCe.getTime():(fin||cIn);
-        if(fin!=null && cOut>fin) cOut=fin; // limita alla finestra: un corso pianificato nel futuro non va sottratto dall'atteso real-time
+        const cIn=dC.getTime(), cOut=dCe?dCe.getTime():(fin||cIn);
         if(cOut>cIn) minPerMat[mat].sottrai += ((cOut-cIn)/60000)/_attiviA(cIn);
       });
       if(s.pause) s.pause.forEach(pz=>{
@@ -1231,7 +1226,6 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         if(pz.ripresa){ const dR=parseData(pz.ripresa); pOut=dR?dR.getTime():dP.getTime(); }
         else { pOut=Math.min(fin!=null?fin:Date.now(), Date.now()); }
         const pIn=dP.getTime();
-        if(fin!=null && pOut>fin) pOut=fin;
         if(pOut>pIn) minPerMat[mat].sottrai += ((pOut-pIn)/60000)/_attiviA(pIn);
       });
     });
@@ -2388,11 +2382,9 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   const _scalaLista = vpW < 640 ? 0.62 : vpW < 1024 ? 0.78 : vpW < 1440 ? 0.9 : 1;
   // "Entra in Produzione": vista d'insieme con TUTTE le linee, incluse le speciali
   // (Taglio DG, Preparazione DG).
-  // Esclude i reparti (RMA, Preparazione DG, Taglio DG) dalle card di "Entra in Produzione".
-  const _noReparto = (l)=>{ const u=((((l&&l.id)||"")+" "+((l&&l.nome)||"")).toUpperCase()); return !(u.includes("RMA")||u.includes("PREPARAZIONE DG")||u.includes("TAGLIO DG")); };
-  const lineeVis = (lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee)).filter(_noReparto);
+  const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? linee.filter(l=>l.id===lineaSel) : linee);
   // In vista griglia il filtro singola linea non ha senso: mostra tutte
-  const lineeGriglia = (lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).filter(_noReparto);
+  const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee;
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
@@ -2400,7 +2392,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         {isAdmin && !lineaFiltro && !vistaGriglia && (
           <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{flex:1,padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}>
             <option value="">Tutte le linee</option>
-            {linee.filter(_noReparto).map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
+            {linee.map(l=><option key={l.id} value={l.id}>{l.id} — {l.nome}</option>)}
           </select>
         )}
         {/* Toggle vista singola / griglia */}
@@ -3944,7 +3936,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     const _l = lineaCheckinSel || lineaFiltro || null;
     const _ln = ((_l&&_l.id)||(_l&&_l.nome)||"").toString();
     const _lu = _ln.toUpperCase();
-    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG") || _lu.includes("RMA");
+    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG");
     if(!isReparto) return;
     // Evita di ricaricare/sovrascrivere ripetutamente per la stessa linea nello stesso ingresso.
     if(_preselFattaRef.current === _ln) return;
@@ -4033,7 +4025,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
             {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={async(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=isRepartoLinea(ld,linee)?"":(ns||sp);
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
                 try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn}); }catch(e){}
                 if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,ld,ns);
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
@@ -4140,7 +4132,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
           </div>
 
-          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isPrepDG = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG") || _n.includes("RMA")); if(_isPrepDG) return null; return (
+          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isPrepDG = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG")); if(_isPrepDG) return null; return (
           <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
             <div style={{width:4,background:"#f59e0b",borderRadius:2,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
@@ -4300,7 +4292,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             const lineaEffettiva = lineaCheckinSel || linea;
             const isLineSenzaSKU = skuList.filter(s=>!s.speciale).length === 0;
             const _nLin = ((lineaEffettiva&&lineaEffettiva.id)||"").toUpperCase()+" "+((lineaEffettiva&&lineaEffettiva.nome)||"").toUpperCase();
-            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG") || _nLin.includes("RMA"));
+            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG"));
             if(skuMulti.length===0 && !isLineSenzaSKU && !isPrepDG){setErr("Seleziona almeno un articolo.");return;}
             if(!linea&&!lineaCheckinSel){setErr("Seleziona una linea.");return;}
             var errori=[]; var registrati=[];
@@ -4442,7 +4434,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <div style={{width:4,height:44,borderRadius:2,background:"#00d4aa",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#00d4aa",marginBottom:4}}>Inizio Turno</div><div style={{fontSize:15,color:"#00d4aa",fontWeight:500,opacity:0.85}}>Registra presenza + SKU</div></div>
             </button>
-            {!(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("RMA")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("RMA"))&&(
+            {!(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("PREPARAZIONE DG"))&&(
             <button onClick={()=>{ onQualita&&onQualita(lineaFiltro||null); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#f1f4f8",border:"2px solid #3b82f6",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
               <div style={{width:4,height:44,borderRadius:2,background:"#3b82f6",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#3b82f6",marginBottom:4}}>Qualità</div><div style={{fontSize:15,color:"#3b82f6",fontWeight:500,opacity:0.85}}>Inserimento dati qualità</div></div>
@@ -5206,9 +5198,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       if(onAggiornaSessioni) onAggiornaSessioni();
     } catch(e){ /* silenzioso */ }
   };
-  // Svuota l'SKU di una sessione MANTENENDOLA aperta (per i reparti senza articolo).
-  // È un TRASFERIMENTO sulla stessa linea con skuA vuoto: la sessione resta aperta, i minuti continuano.
-  const _svuotaSkuEvento = (s)=> api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:"",tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.skuCorrente||s.sku||"",skuA:""});
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
     // Costruisce mappa: matricola -> Set di linee su cui ha sessione ATTIVA
   const matricoleAttivePerLinea = {};
@@ -5283,7 +5272,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       )}
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={async(d,ns)=>{
         const destId = d&&d.id ? d.id : d;
-        const skuNuovo = isRepartoLinea(destId,linee) ? "" : (ns || mod.skuCorrente || mod.sku || "");
+        const skuNuovo = ns || mod.skuCorrente || mod.sku || "";
         const lineaPartenza = mod.lineaCorrente||mod.lineaInizio||"";
         const matKey = mod.matricola||mod.nome+"-"+mod.cognome;
         setMod(null);
@@ -5491,15 +5480,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
                         }}
                         style={{marginLeft:"auto",background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"2px 12px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>−</button>
-                    )}
-                    {ss._attiva && !ss._pianificato && editOrario && isRepartoLinea(ss.lineaCorrente,linee) && (ss.skuCorrente||ss.sku) && (
-                      <button type="button" title={"Svuota l'articolo "+(ss.skuCorrente||ss.sku||"")+" — la sessione resta APERTA (reparto senza SKU)"}
-                        onClick={async()=>{
-                          if(!window.confirm("Svuotare l'articolo "+(ss.skuCorrente||ss.sku||"")+" da "+(op?op.nome+" "+op.cognome:"questo operatore")+"?\n\nLa sessione resta APERTA e i minuti continuano a contare. (Per i reparti senza SKU.)")) return;
-                          try{ await _svuotaSkuEvento(ss); }catch(e){}
-                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
-                        }}
-                        style={{marginLeft:0,background:"#fff",color:"#0891b2",border:"2px solid #0891b2",borderRadius:6,padding:"3px 10px",fontWeight:800,fontSize:12,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>Svuota SKU</button>
                     )}
                     {editOrario && !ss._pianificato && (
                       <button type="button" title={"Elimina l'articolo "+(ss.skuCorrente||ss.sku||"")+" da questa linea: rimuove la sessione e azzera l'obiettivo residuo"}
@@ -6235,8 +6215,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             ((lineaFiltro.id||"").toUpperCase().includes("PREPARAZIONE DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("PREPARAZIONE DG"))
           );
           const _isRMALinea = lineaFiltro && (((lineaFiltro.id||"").toUpperCase().includes("RMA")) || ((lineaFiltro.nome||"").toUpperCase().includes("RMA")));
-          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),...(isAdmin?[["note","Note"],["trasferimenti","Trasferimenti"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)]];
-          const _tabs = (_isTaglioDG || _isRMALinea) ? [["operatori","Turni&Operatori"],["sessioni","Sessioni"],["attivita","Inserimento Attività"]] : _tabsProd;
+          const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),["qualita","Qualità"],...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),...(isAdmin?[["note","Note"],["trasferimenti","Trasferimenti"]]:[]),["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAD0AAABACAYAAACp3n/2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAALR0lEQVR42t1bfVBU1xU/59733i7LIiCrdtEFcRdCgMHy4aQBpywjWNtJQvxYG2NbM9FgSXaS1MyoMZINWh0zYRw7cdpMa/pHp7ZGZiTJ0KQ2scrENoakmkwEG0sElaoESmG14O77OP3D95hVUXbXRcA7c4aZ3WHf/d17zu+c87v3ocfj4Q0NDeqJEydmvvzyy1vOnTv3cDAYtKmqCgCAEDKICIgI7tYgIhIEATjnl2bNmnV06dKlu9auXft3AGAAoN3Rj9fU1Nzvcrk6RFEkAJiQxjmnWbNmDa1ateoZzjn4fD4WNeC2tjZ7dnb2ef3Hg4ioISKFY4wxYoypjDEFEeWxMMaYzBhTAUABALLb7bR69epKAACPx8OjAr1gwYJX9R2W73Q3EHFMd5sxpgCAlp2d/TkRiXr4YaSYhdOnT1fJskyIyMKNV0Sk5ORkKC4uvhIXF3fi8uXLHYODg4FAICCJohjPGOOICIioERFpmgaqqt7EB5Ikjfosxhi7cOHCoo6OjngiYgCAPT09c2tra+cAwFc+n4/V1dVFRjSZmZlR7RLnXEtKSgo6nc5Ot9v91oYNG9YQUYbFYrlxgYAxBowx0BcibGOMAeccNm7cWG21Wkl3cWXKlCma1+v1AACUlZUJEe90tFygqir29/eL/f396V9//XX6J598snzv3r3gdDpPpKen/6WgoODwli1bjjHGBjRtmGgl3R01ffFuO5xOJ29vb1f6+vrOiaI4TOoAgLIsx0U7d3YnrK/vCAGAOjQ0pHR1dcGXX35ZcPDgwQ1vvPHGn7Ozs7944IEHflldXf3DCxcuTBMEIQgAgRD+UG5nBQUFCgCocXFxUmhoEBEoihJ1yhLuMI8auZwbiwAAmizLWk9PD+vp6UlHxJq2traa9957r/e+++7768yZMw/s3Lnzg7y8vL5w860gCKT/dkwGi3ExATrZCIjIdCJT/H6/2tXVZWttbV3+0Ucf7XvooYdaq6urn+Gca1GnnYkC+lYLAABcz+3q0NCQ2tnZ+a133nlnd01NzU8aGhrU0YAHg8GYVoLC3VpdIhoOA8aY2t3djYcOHfo5Eb2NiJeJCHV+mLw7PcoCcETE3t5ex9atW50AQK+88grerecL4wQaAAAGBwfp8OHDEbMwIgLnfHLtdOj8Q/LvLUcgELgupo3+YLKCjniHAUBVFIVxzk33PGhEJCIis9lsysrKaktPT/8cANDtdmuTIqajAKwGg0FMTk5m8+fP3/Luu+9uQ8SgPv97E7SqqtaMjIzLDz744Ko333yzERENFlPq6uruLffOyckhAIC5c+e2r1mzpnLPnj2NRCQhorpu3bpKj8fz25UrV34HESNTUqJtLWNgWnx8PC1cuHAuAIQ7aU5E+Oijj26bMWMGcc7J4XD07t+/PzESQWFSEFl1dbWo53fB7Xb/8cMPP9zU3d2tqqqq+P1+S2trqymcVnXS7LQhEuzfvz+jsLCwhXNOAGDoZuRwOLqIKCGk1J28O23U6s3Nzcrzzz9fsWnTppbjx4/PU1VVQUSB9GrFbDZ3AsD/jM5Or+9HNGNhJyR7+3w+hoiaJEnq448/vnnfvn1bL126BIioEpGg4yXGGKSkpHyOiFo4qUtnejbhQJeVlQl1dXUKEZlLS0t3NzY2rh4YGNAQEYgotOBGxhhYLBZrUVFR6eDgIA8EAurQ0BAoinItn+l/AYDS0tKwtra2a9myZWcnVEwb8XvgwAFnXl7e3yRJMrT4W0rOnHMym80kSRKJokiCIBDn/CYzmUzkdDr9GzZsqBpX0BaLhcrLy+eGEtaOHTu+53K5/q3PRw5zXmoYJgMAOZ3OtgkDGgCwpqZmYVpaWkCfjxzLOenKjZaRkaHcrZim0QoHIsLCwsId586dExFR1k8wYp4RNE3jY52ytBDA6mhzSkpKahUEAYkIYql+3u08zRISEtBqtSqMMX67qgkR2euvv15TWlr6vtlsFolIZYyNWmWFHCQSY+x2B40aAKiIKI8VaA0RKSsr68zatWu//8ILL+Tm5uY2CoKA+nc3/YPH44G8vLwrLS0tPygvL38tMTGRa5oGeg4ezWWHjYhuMk3TUFVVJooiT01NfTvmMa3nU7JarVhZWfnT+vr6D/TJ/WjOnDlnOzo6bLoefh3yhoYG0hVRPHjw4Ponnnii7dChQ78+e/asqBclfCSesNvt38yYMYMrisI1TSMigpBjJENPI1EUNavV2tTU1LQu5uyt7wzZbLahXbt2zSgrKxNycnIkImL5+fl/Mph5BPZmIeWngIiwc+fO0vz8fOPs/EY2lznntGLFinoiSiIiGxEl38YSGWNj1nBoAKAmJCTIq1evztcBSYgIDofj8GigbxQ4Ojs77RUVFS0Wi4UAQDEW1Uhp8+bNa4rAETkR4VjlaYUxRgUFBU1ENEUURXjuueeWJCcnB3Uy0cIAPXzTgIhMixcv/lVSUhLpnKAiogoA5HK5viIis8/nYyPFc6jdjdZSkySJXC7XmYyMjPenTZumhbp/OKBDW07OOXg8nh/b7XYZrp2PBxFRS01N9R8/fnxaJK3lWFdkKtz6ekZYoEOGBACwdetWt8vlOqunM0pISFBefPHFaQZvTQgRQXdFJWSHIwZ98uRJSU9zHADgs88+SysuLj5os9n6CgsLG4jINGk0snBj+qmnnnpk2bJlfyCi4RQriiLs3bs3OeSEBCdKRRaToSiK1tzcvKKkpOTwyZMnXQAAsizjypUr/yvLcmjevndAm81mvHr1qnrs2LH5S5YsafF6vc8aLh02eU1CsR8YY5yIgqdPn06+cuXKLxITEy9u27at4ciRIwJcu6Nyb4E2mUxG18URUfb7/ay3t3d8bheNl0rKGON613Tvgg4R+CZFPx2zmI7lRZtJ594xAT2WskysRsyvVGmaNqpoN8auy3w+Hzty5Ahzu93XfXfx4kXm8/nozJkzN3mkIAhRr4Kgquq4AUZEkGV5qK6uTgMArbm5eSRhEZ588skr17knYxQXFxd1uhWI6BsAmB6OTDsG6QdSU1NdPp9PCQQCzGQyaSEegJxzlCTJ3NTU9PTg4CDgtYsnSEQYDAbPAwBMnz498h0vLi5+S1cNlbvccJB+WV6z2WxqSkrKjWZ8Tsa7JXpu1hwOxxWjh45qo+rr60tmzpxJhjw6Qgs4EUzVu8AA55zcbvdriBj9OxyMMaiqqlqru0lo8y/rvfBYA5IBIDiKyQCgcM6pqKjoH0QUp6fbqMORISJ4vd6KgoKCA7Nnz/7PlClTyFAmdDKRbyEExOTVI1EUb2smk4nsdjuVlJT8rr29fXpE0tBIBBpSpGiCIMD58+env/TSS98+derUgoGBgYf7+/vv7+vrg6tXrw5zjHEicScPNhqJysrK39tsth59Ltfp1owxkiQJLl68eKqiouKL9evXfxoMBo1533ni1uOD3cCufM+ePcUrVqzYWFRU9EFaWppff4FkpDCI1Au0+Ph4qqqqmh2JV97pQo/IfESEy5cvZw0NDRjap0qSBB9//HHq7t27Szo7O5d2d3d/99KlS6l+vz+0IVCuOUFYXkBmsxlzcnKKExISvujp6WG6YjricLvdmp7Px75+CLkhMOwFnHMgogSfz1dRUVGxPTc399OpU6deNZlM12nftyJD46w4JSWFNm/eHMk9svHpZfUwuC5VWCwW2L59e9bixYt/lpub2+hwOAbi4+NvOgAwrizrb9KpmZmZF4jIClG+STeeCyDcUBPD0aNHUx977LFHysvLf5OZmfmvqVOnkn5/ZNjsdjt5vd5nQ1XPSTdCwoDfEAZxtbW15YsWLdpSXFzclpOTo+bm5v7T6/U+bTKZxsWt/w8q/+5s0wIgsQAAAABJRU5ErkJggg==" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)],...(isAdmin?[["riepilogo","Riepilogo"]]:[])];
+          const _tabs = _isTaglioDG ? [["operatori","Turni&Operatori"],["sessioni","Sessioni"],["attivita","Inserimento Attività"]] : _tabsProd;
           return _tabs.map(([t,l])=>(
           <button key={t} onClick={()=>{ setTab(t); if(t==="produzione"){ fetchConRetry(nexusUrl("produzione",{}),3,1000).then(r=>r.json()).then(j=>{ if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }; }).catch(()=>{}); } }} onMouseEnter={e=>{ e.currentTarget.style.transform="scale(1.08)"; e.currentTarget.style.boxShadow="0 4px 16px 3px #7c3aed55"; }} onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=tab===t?"0 0 10px 2px #7c3aed44":"none"; }} style={{padding:"10px 22px",border:"2px solid #7c3aed",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:tab===t?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.55)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",color:"#000000",boxShadow:tab===t?"0 0 10px 2px #7c3aed44":"none",transition:"transform 0.18s ease, box-shadow 0.18s ease"}}>{l}</button>
         )); })()}
@@ -6268,21 +6248,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 <span style={{color:"#fff",fontWeight:700,fontSize:13,fontFamily:"'Montserrat',sans-serif"}}>{selezionati.size} selezionat{selezionati.size===1?"o":"i"}</span>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <button onClick={()=>setModMultipla({campo:"inizio"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={14}/> Inizio</button>
-                  {isAdmin&&<button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={14}/> Fine</button>}
+                  <button onClick={()=>setModMultipla({campo:"fine"})} style={{background:"#fff",color:"#7c3aed",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}><IconaMatita size={14}/> Fine</button>
                   <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>Articolo</button>
                   <button onClick={()=>setModCorsoMulti({matricole:new Set(selezionati), nome:""})} style={{background:"#fff",color:"#06b6d4",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>C Corso</button>
                   <button onClick={()=>rientroCorsoMultiplo(new Set(selezionati))} style={{background:"#fff",color:"#10b981",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>▶ Rientro</button>
-                  {[...selezionati].some(mat=>sessioni.some(s=>(s.matricola||s.nome)===mat && (!s.fine||s.fine===""||s.fine===null||s.fine==="null") && !s._pianificato && isRepartoLinea(s.lineaCorrente,linee) && (s.skuCorrente||s.sku))) && (
-                  <button onClick={async()=>{
-                    const target = sessioni.filter(s=> selezionati.has(s.matricola||s.nome) && (!s.fine||s.fine===""||s.fine===null||s.fine==="null") && !s._pianificato && isRepartoLinea(s.lineaCorrente,linee) && (s.skuCorrente||s.sku));
-                    if(target.length===0) return;
-                    if(!window.confirm("Svuotare l'articolo di "+target.length+" session"+(target.length===1?"e":"i")+" nei reparti?\n\nLe sessioni restano APERTE e i minuti continuano a contare.")) return;
-                    setLoading(true); setLoadingMsg("Svuotamento articolo...");
-                    await Promise.all(target.map(s=>_svuotaSkuEvento(s).catch(e=>{})));
-                    setLoading(false); setSelezionati(new Set());
-                    if(onAggiornaSessioni) onAggiornaSessioni();
-                  }} style={{background:"#fff",color:"#0891b2",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>Svuota articolo</button>
-                  )}
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
                     setLoading(true); setLoadingMsg("Eliminazione...");
@@ -6497,7 +6466,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         {s.fine?<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>{fmtSafe(s.fine)}</span>:<span style={{color:"#00d4aa",fontSize:11,fontWeight:700}}>IN TURNO</span>}
-                        {editOrario&&isAdmin&&<button onClick={()=>{ const oggi=new Date(); const data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; setModOrario({sess:s,campo:"fine",hh:"14",mm:"00",data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={14}/></button>}
+                        {editOrario&&<button onClick={()=>{ const oggi=new Date(); const data=`${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,"0")}-${String(oggi.getDate()).padStart(2,"0")}`; setModOrario({sess:s,campo:"fine",hh:"14",mm:"00",data}); }} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:12,padding:"2px",color:"#94a3b8"}}><IconaMatita size={14}/></button>}
                        </div>
                        {isAdmin&&<button onClick={()=>setPopupRiepilogoOp(s.matricola||s.nome)}
                          style={{marginTop:4,background:"#eff6ff",border:"2px solid #2563eb",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:800,color:"#2563eb"}}>Riepilogo <span style={{fontSize:10}}>▼</span></button>}
@@ -6761,9 +6730,9 @@ function App() { const [view,setView]             = useState("login");
   const coFromSheets = s => { if(!s||!s.id) return;
     api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); };
   const tr = (id,dest,nSku) => {
-    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=isRepartoLinea(dest,linee)?"":(nSku||sp); api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
+    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     // Aggiorna anche sessSheets immediatamente per visualizzazione Dashboard
-    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=isRepartoLinea(dest,linee)?"":(nSku||sp); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
+    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
     setTimeout(caricaSessioni,1000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,1500); };
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
