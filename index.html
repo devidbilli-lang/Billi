@@ -5903,9 +5903,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   await Promise.all(ops.map(async(s)=>{
                     // Linea di partenza = quella corrente della sessione di riferimento dell'operatore
                     const lineaPartenza = s.lineaCorrente||s.lineaInizio||"";
-                    // 1. CHECKOUT di TUTTE le sessioni aperte di QUESTA persona sulla SUA linea di
-                    //    partenza (gestisce il multi-articolo: X, Z... vengono chiusi tutti).
-                    //    Non tocca eventuali sessioni su altre linee.
+                    // SPOSTAMENTO IN-PLACE (niente chiudi+riapri): la sessione esistente viene
+                    // SPOSTATA sulla linea di destinazione con un evento TRASFERIMENTO. Resta la STESSA
+                    // sessione e non viene MAI chiusa → non può "chiudersi da sola".
+                    // OBIETTIVI INVARIATI: il worker ricostruisce i trasferimenti come {da,a,skuDa,skuA,ts}
+                    // e il calcolo obiettivi spezza i minuti per linea/articolo sugli stessi istanti di
+                    // trasferimento. È identico a prima: il chiudi+riapri produceva segmenti con gli
+                    // stessi confini temporali, qui sono gli stessi confini su un'unica sessione continua.
                     const matKey = s.matricola||s.nome+"-"+s.cognome;
                     const sessioniAperte = sessAggiornate.filter(ss=>{
                       const k = ss.matricola||ss.nome+"-"+ss.cognome;
@@ -5914,7 +5918,30 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       const lc = ss.lineaCorrente||ss.lineaInizio||"";
                       return lc===lineaPartenza; // solo sessioni sulla linea di partenza
                     });
-                    await Promise.all(sessioniAperte.map(async(sess)=>{
+                    const _destId = modTrasf.lineaDest.id;
+                    const _skusDest = (skuDestinazione||[]).slice();
+                    const _nMove = Math.min(sessioniAperte.length, _skusDest.length);
+                    // a) Sposta le sessioni esistenti, una per articolo di destinazione (TRASFERIMENTO).
+                    //    La sessione resta aperta: cambia solo linea e articolo.
+                    for(let i=0;i<_nMove;i++){
+                      const sess = sessioniAperte[i];
+                      await api.evento({
+                        sessionId: sess.id,
+                        matricola: sess.matricola||"",
+                        nome: sess.nome||"",
+                        cognome: sess.cognome||"",
+                        sku: _skusDest[i],
+                        tipo: "TRASFERIMENTO",
+                        lineaDa: sess.lineaCorrente||lineaPartenza,
+                        lineaA: _destId,
+                        skuDa: sess.skuCorrente||sess.sku||"",
+                        skuA: _skusDest[i]
+                      }).catch(e=>{});
+                    }
+                    // b) Sessioni di partenza in eccesso (più articoli in partenza che in destinazione):
+                    //    l'operatore smette di lavorarle → CHECKOUT. NON sparisce: ha le sessioni spostate aperte.
+                    for(let i=_nMove;i<sessioniAperte.length;i++){
+                      const sess = sessioniAperte[i];
                       await api.evento({
                         sessionId: sess.id,
                         matricola: sess.matricola||"",
@@ -5927,12 +5954,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         skuDa: sess.skuCorrente||sess.sku||"",
                         skuA: ""
                       }).catch(e=>{});
-                      if(onTr) onTr(sess.id, modTrasf.lineaDest.id, sess.skuCorrente||sess.sku||"");
-                    }));
-                    // 2. CHECKIN per ogni SKU sulla linea di destinazione (in parallelo, dopo i checkout)
-                    await Promise.all(skuDestinazione.map(skuNew=>{
+                    }
+                    // c) Articoli di destinazione in eccesso (più articoli che sessioni da spostare):
+                    //    nuove sotto-sessioni, marcate trasf=1 per saltare la guardia anti-doppione.
+                    for(let i=_nMove;i<_skusDest.length;i++){
+                      const skuNew = _skusDest[i];
                       const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
-                      return api.evento({
+                      await api.evento({
                         sessionId: newId,
                         matricola: s.matricola||"",
                         nome: s.nome||"",
@@ -5940,12 +5968,12 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         sku: skuNew,
                         tipo: "CHECKIN",
                         trasf: "1",
-                        lineaDa: modTrasf.lineaDest.id,
-                        lineaA: modTrasf.lineaDest.id,
+                        lineaDa: _destId,
+                        lineaA: _destId,
                         skuDa: skuNew,
                         skuA: skuNew
                       }).catch(e=>{});
-                    }));
+                    }
                     // 3. Registra il trasferimento nello storico (D1 + foglio Google).
                     //    Scritto qui, nel momento esatto dello spostamento: il CHECKOUT non
                     //    salva la destinazione, quindi non sarebbe ricostruibile dagli eventi.
