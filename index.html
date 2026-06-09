@@ -1282,6 +1282,41 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     skuSet.forEach(sk=>{ const _s={}; calcObItemConRampa(sk, finoAMs, _s); if(_s.v) tot += _s.v; });
     return tot;
   };
+  // MINUTI REALMENTE LAVORATI sulla linea — stessa logica del worker (riepilogoStorico) e quindi
+  // del Riepilogo: per ogni sessione si ricostruisce la timeline (check-in, trasferimenti, corso/
+  // pausa che SOSPENDONO, rientro/ripresa che RIPRENDONO, check-out) e si sommano solo i tratti
+  // ATTIVI che cadono su QUESTA linea. Le sessioni ancora aperte si chiudono "ad adesso", così il
+  // valore è reale anche in tempo reale. NON è l'obiettivo×TC: è il tempo davvero lavorato.
+  const minutiLavReali = ()=>{
+    const _oggi0 = new Date(); _oggi0.setHours(0,0,0,0);
+    const _nowMs = Date.now();
+    let tot = 0;
+    (sessioni||[]).forEach(s=>{
+      if(s._pianificato) return;
+      const dIni = tsInizioRealeSessione(s); if(!dIni) return;
+      const g0 = new Date(dIni); g0.setHours(0,0,0,0); if(g0.getTime() < _oggi0.getTime()) return;
+      const evs = [];
+      evs.push({ts: dIni, t:"IN", linea: s.lineaInizio||s.lineaCorrente||""});
+      (s.trasferimenti||[]).forEach(tr=>{ if(tr.ts) evs.push({ts: tr.ts, t:"TR", linea: tr.a||""}); });
+      (s.corsi||[]).forEach(c=>{ const q=parseData(c.quando); if(q) evs.push({ts:q.getTime(), t:"SUSP"}); const r=c.rientro?parseData(c.rientro):null; if(r) evs.push({ts:r.getTime(), t:"RES"}); });
+      (s.pause||[]).forEach(p=>{ const q=parseData(p.quando); if(q) evs.push({ts:q.getTime(), t:"SUSP"}); const r=p.ripresa?parseData(p.ripresa):null; if(r) evs.push({ts:r.getTime(), t:"RES"}); });
+      const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      if(haCk){ const dF=parseData(s.fine); if(dF) evs.push({ts:dF.getTime(), t:"OUT"}); }
+      evs.sort((a,b)=> (a.ts-b.ts) || (a.t==="IN"?-1:(b.t==="IN"?1:0)));
+      let linea = null, inizio = null;
+      const chiudi = (fineTs)=>{ if(inizio!=null && linea===lineaId && fineTs>inizio) tot += (fineTs - inizio)/60000; };
+      for(const e of evs){
+        if(e.t==="IN"){ linea = e.linea; inizio = e.ts; }
+        else if(e.t==="TR"){ chiudi(e.ts); linea = e.linea||linea; inizio = e.ts; }
+        else if(e.t==="SUSP"){ chiudi(e.ts); inizio = null; }
+        else if(e.t==="RES"){ inizio = e.ts; }
+        else if(e.t==="OUT"){ chiudi(e.ts); inizio = null; }
+      }
+      // Sessione ancora aperta: chiudi il tratto corrente ad adesso (tempo reale).
+      if(inizio!=null && linea===lineaId && _nowMs>inizio) tot += (_nowMs - inizio)/60000;
+    });
+    return tot;
+  };
   // Obiettivo GIORNALIERO aggregato (somma articoli fino a fine turno, rampe incluse).
   const obFinaleConRampa = sommaObiettiviArticoli(null);
   // Obiettivo ATTESO A QUEST'ORA (real-time): somma articoli fino ad ADESSO. Un articolo
@@ -1319,12 +1354,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare})).catch(()=>{});
   },[obDaCongelare, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
-  // EFFICIENZA = minuti prodotti / minuti lavorati effettivi × 100. Misura il RITMO reale sul tempo
-  // (minuti standard prodotti rispetto ai minuti realmente lavorati), NON più borse/obiettivo (che è
-  // l'efficacia). minuti prodotti = Σ per articolo (borse OK × TC articolo); minuti lavorati =
-  // presenza degli operatori sulla linea al netto di corso/pausa, ripartita per i paralleli
-  // (sommaMinutiDisponibili). Stesso criterio della vista a griglia (minProd/minLav). NB: senza rampa
-  // i due valori coincidono (l'obiettivo è minuti/TC); in rampa l'efficacia si gonfia, l'efficienza no.
+  // EFFICIENZA = minuti prodotti / minuti lavorati REALI × 100. Misura il RITMO sul tempo davvero
+  // lavorato. minuti prodotti = Σ per articolo (borse OK × TC articolo); minuti lavorati = quelli del
+  // worker/Riepilogo (minutiLavReali: check-in→check-out, corso/pausa sospendono). NON è borse/obiettivo
+  // (efficacia) e NON coincide con essa: i minuti lavorati reali sono indipendenti dall'obiettivo
+  // (es. linea Veronica: 49×119,6 / 10557 ≈ 55%, non 60%).
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
     // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
@@ -1336,9 +1370,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const quotaBorse = (baseAtteso!=null && baseAtteso>0) ? (borseTot/baseAtteso) : 0;
       return Math.round(quotaBorse*100 + (minutiAttivitaRMA/minDisp)*100);
     }
-    // Minuti realmente lavorati sulla linea (netti di corso/pausa): fino a ora durante il turno,
-    // totali a turno chiuso.
-    const minLav = sommaMinutiDisponibili(turnoTerminato ? null : Date.now());
+    // Minuti realmente lavorati sulla linea (stessi del Riepilogo/worker), NON l'obiettivo×TC.
+    const minLav = minutiLavReali();
     if(minLav<=0) return null;
     // Minuti prodotti = somma, per ogni articolo attivo oggi sulla linea, di (borse OK × TC articolo).
     const _lNome = (linee.find(l=>l.id===lineaId)||{}).nome||lineaId;
