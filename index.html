@@ -43,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1Ekly_pwdtfKCYvq-iHmFxs6EUFr2Vl_I7Qm7eXNUHT8guczV3-diZmrpMJHoyB-NQA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbze_nraNNE-6APn4b1ODtbF5l56UFrwWlXEfjU5yCGTbrAdviKCTOUd8sz9Yg9EPIda0w/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -774,7 +774,7 @@ function aggregaDifetti(note){
   });
   return Object.entries(agg).sort((a,b)=>b[1]-a[1]);
 }
-function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiLav=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
@@ -1356,12 +1356,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare})).catch(()=>{});
   },[obDaCongelare, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
-  // EFFICIENZA = minuti prodotti / minuti lavorati REALI × 100. Misura il RITMO sul tempo davvero
-  // lavorato. minuti prodotti = Σ per articolo (borse OK × TC articolo); minuti lavorati = quelli
-  // calcolati dal WORKER (azione produzione, stessa logica del Riepilogo/colonna G: presenza per
-  // operatore con corso/pausa scalati, dedup per operatore, segmenti aperti chiusi ad adesso),
-  // arrivano come prop minutiLav. NON è borse/obiettivo (efficacia) e NON è l'obiettivo×TC: i minuti
-  // lavorati reali sono indipendenti dall'obiettivo (es. Veronica: 49×119,6 / 10557 ≈ 55%, non 60%).
+  // EFFICIENZA — due regole, a seconda dello stato del turno:
+  //  • TURNO IN CORSO: efficacia sull'obiettivo real-time = borse / obiettivo atteso a quest'ora
+  //    (come stamattina). È il "quanto sei avanti sul piano", stabile durante il turno.
+  //  • TURNO TERMINATO: efficienza vera = (borse OK × TC) / minuti presenza linea, dove i minuti
+  //    presenza linea arrivano dal foglio "Presenze Linea" sincronizzato in D1 (prop minutiPresenzaLinea).
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
     // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
@@ -1373,10 +1372,15 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const quotaBorse = (baseAtteso!=null && baseAtteso>0) ? (borseTot/baseAtteso) : 0;
       return Math.round(quotaBorse*100 + (minutiAttivitaRMA/minDisp)*100);
     }
-    // Minuti realmente lavorati sulla linea = quelli calcolati dal WORKER (azione produzione,
-    // stessa logica del Riepilogo/colonna G), passati come prop. Fallback al ricalcolo locale solo
-    // se il worker non li fornisce ancora (es. worker non ancora ridistribuito).
-    const minLav = minutiLav>0 ? minutiLav : minutiLavReali();
+    // TURNO IN CORSO → efficacia sull'obiettivo real-time (come stamattina): borse / obiettivo atteso ora.
+    if(!turnoTerminato){
+      const baseAtteso = obAttesoRealTime;
+      if(baseAtteso==null || baseAtteso<=0) return null;
+      return Math.round(borseTot/baseAtteso*100);
+    }
+    // TURNO TERMINATO → efficienza vera = (borse OK × TC) / minuti presenza linea (dal foglio, via D1).
+    // Fallback al ricalcolo locale solo finché i minuti presenza linea non sono ancora arrivati in D1.
+    const minLav = minutiPresenzaLinea>0 ? minutiPresenzaLinea : minutiLavReali();
     if(minLav<=0) return null;
     // Minuti prodotti = somma, per ogni articolo attivo oggi sulla linea, di (borse OK × TC articolo).
     const _lNome = (linee.find(l=>l.id===lineaId)||{}).nome||lineaId;
@@ -2523,7 +2527,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     borseKO={d.borseKO||0}
                     borseMigl={d.borseMigl||0}
                     maxOpOggi={d.maxOpOggi||0}
-                    minutiLav={d.minutiLav||0}
+                    minutiPresenzaLinea={d.minutiPresenzaLinea||0}
                     coloreLinea={l.colore||"#7c3aed"}
                     qualitaPerSku={qualitaPerSku||{}}
                     linee={linee||[]}
@@ -2555,7 +2559,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   borseKO={d.borseKO||0}
                   borseMigl={d.borseMigl||0}
                   maxOpOggi={d.maxOpOggi||0}
-                  minutiLav={d.minutiLav||0}
+                  minutiPresenzaLinea={d.minutiPresenzaLinea||0}
                   coloreLinea={l.colore||"#7c3aed"}
                   qualitaPerSku={qualitaPerSku||{}}
                   linee={linee||[]}
