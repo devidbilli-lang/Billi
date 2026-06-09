@@ -5204,6 +5204,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       if(onAggiornaSessioni) onAggiornaSessioni();
     } catch(e){ /* silenzioso */ }
   };
+  // Svuota l'SKU di una sessione MANTENENDOLA aperta (per i reparti senza articolo).
+  // È un TRASFERIMENTO sulla stessa linea con skuA vuoto: la sessione resta aperta, i minuti continuano.
+  const _svuotaSkuEvento = (s)=> api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:"",tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.skuCorrente||s.sku||"",skuA:""});
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
     // Costruisce mappa: matricola -> Set di linee su cui ha sessione ATTIVA
   const matricoleAttivePerLinea = {};
@@ -5486,6 +5489,15 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
                         }}
                         style={{marginLeft:"auto",background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"2px 12px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>−</button>
+                    )}
+                    {ss._attiva && !ss._pianificato && editOrario && isRepartoLinea(ss.lineaCorrente,linee) && (ss.skuCorrente||ss.sku) && (
+                      <button type="button" title={"Svuota l'articolo "+(ss.skuCorrente||ss.sku||"")+" — la sessione resta APERTA (reparto senza SKU)"}
+                        onClick={async()=>{
+                          if(!window.confirm("Svuotare l'articolo "+(ss.skuCorrente||ss.sku||"")+" da "+(op?op.nome+" "+op.cognome:"questo operatore")+"?\n\nLa sessione resta APERTA e i minuti continuano a contare. (Per i reparti senza SKU.)")) return;
+                          try{ await _svuotaSkuEvento(ss); }catch(e){}
+                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
+                        }}
+                        style={{marginLeft:0,background:"#fff",color:"#0891b2",border:"2px solid #0891b2",borderRadius:6,padding:"3px 10px",fontWeight:800,fontSize:12,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>Svuota SKU</button>
                     )}
                     {editOrario && !ss._pianificato && (
                       <button type="button" title={"Elimina l'articolo "+(ss.skuCorrente||ss.sku||"")+" da questa linea: rimuove la sessione e azzera l'obiettivo residuo"}
@@ -6258,6 +6270,17 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   <button onClick={()=>setModAddSku({matricole:new Set(selezionati), sku:"", linea:lineaFiltro||null})} style={{background:"#fff",color:"#f59e0b",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>Articolo</button>
                   <button onClick={()=>setModCorsoMulti({matricole:new Set(selezionati), nome:""})} style={{background:"#fff",color:"#06b6d4",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>C Corso</button>
                   <button onClick={()=>rientroCorsoMultiplo(new Set(selezionati))} style={{background:"#fff",color:"#10b981",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>▶ Rientro</button>
+                  {[...selezionati].some(mat=>sessioni.some(s=>(s.matricola||s.nome)===mat && (!s.fine||s.fine===""||s.fine===null||s.fine==="null") && !s._pianificato && isRepartoLinea(s.lineaCorrente,linee) && (s.skuCorrente||s.sku))) && (
+                  <button onClick={async()=>{
+                    const target = sessioni.filter(s=> selezionati.has(s.matricola||s.nome) && (!s.fine||s.fine===""||s.fine===null||s.fine==="null") && !s._pianificato && isRepartoLinea(s.lineaCorrente,linee) && (s.skuCorrente||s.sku));
+                    if(target.length===0) return;
+                    if(!window.confirm("Svuotare l'articolo di "+target.length+" session"+(target.length===1?"e":"i")+" nei reparti?\n\nLe sessioni restano APERTE e i minuti continuano a contare.")) return;
+                    setLoading(true); setLoadingMsg("Svuotamento articolo...");
+                    await Promise.all(target.map(s=>_svuotaSkuEvento(s).catch(e=>{})));
+                    setLoading(false); setSelezionati(new Set());
+                    if(onAggiornaSessioni) onAggiornaSessioni();
+                  }} style={{background:"#fff",color:"#0891b2",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,fontFamily:"'Montserrat',sans-serif"}}>Svuota articolo</button>
+                  )}
                   <button onClick={async()=>{
                     if(!window.confirm("Eliminare "+selezionati.size+" sessioni?")) return;
                     setLoading(true); setLoadingMsg("Eliminazione...");
