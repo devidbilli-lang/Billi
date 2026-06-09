@@ -1282,40 +1282,42 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     skuSet.forEach(sk=>{ const _s={}; calcObItemConRampa(sk, finoAMs, _s); if(_s.v) tot += _s.v; });
     return tot;
   };
-  // MINUTI REALMENTE LAVORATI sulla linea — stessa logica del worker (riepilogoStorico) e quindi
-  // del Riepilogo: per ogni sessione si ricostruisce la timeline (check-in, trasferimenti, corso/
-  // pausa che SOSPENDONO, rientro/ripresa che RIPRENDONO, check-out) e si sommano solo i tratti
-  // ATTIVI che cadono su QUESTA linea. Le sessioni ancora aperte si chiudono "ad adesso", così il
-  // valore è reale anche in tempo reale. NON è l'obiettivo×TC: è il tempo davvero lavorato.
+  // MINUTI REALMENTE LAVORATI sulla linea = presenza FISICA degli operatori sulla linea, al netto di
+  // corso/pausa. Ogni operatore è contato UNA sola volta: se lavora più articoli in parallelo (più
+  // sessioni nello stesso istante) la sua presenza NON si somma due volte — si fondono gli intervalli.
+  // È il tempo davvero lavorato, indipendente dall'obiettivo (NON è obiettivo×TC). A turno chiuso
+  // coincide col minuti_lav del worker/Riepilogo; in tempo reale conta la presenza fino ad adesso.
   const minutiLavReali = ()=>{
     const _oggi0 = new Date(); _oggi0.setHours(0,0,0,0);
     const _nowMs = Date.now();
-    let tot = 0;
+    const perMat = {}; // matricola -> {pres:[[dal,al]], susp:[[dal,al]]}
     (sessioni||[]).forEach(s=>{
       if(s._pianificato) return;
       const dIni = tsInizioRealeSessione(s); if(!dIni) return;
       const g0 = new Date(dIni); g0.setHours(0,0,0,0); if(g0.getTime() < _oggi0.getTime()) return;
-      const evs = [];
-      evs.push({ts: dIni, t:"IN", linea: s.lineaInizio||s.lineaCorrente||""});
-      (s.trasferimenti||[]).forEach(tr=>{ if(tr.ts) evs.push({ts: tr.ts, t:"TR", linea: tr.a||""}); });
-      (s.corsi||[]).forEach(c=>{ const q=parseData(c.quando); if(q) evs.push({ts:q.getTime(), t:"SUSP"}); const r=c.rientro?parseData(c.rientro):null; if(r) evs.push({ts:r.getTime(), t:"RES"}); });
-      (s.pause||[]).forEach(p=>{ const q=parseData(p.quando); if(q) evs.push({ts:q.getTime(), t:"SUSP"}); const r=p.ripresa?parseData(p.ripresa):null; if(r) evs.push({ts:r.getTime(), t:"RES"}); });
+      const mat = s.matricola||s.nome; if(!mat) return;
+      if(!perMat[mat]) perMat[mat] = {pres:[], susp:[]};
       const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
-      if(haCk){ const dF=parseData(s.fine); if(dF) evs.push({ts:dF.getTime(), t:"OUT"}); }
-      evs.sort((a,b)=> (a.ts-b.ts) || (a.t==="IN"?-1:(b.t==="IN"?1:0)));
-      let linea = null, inizio = null;
-      const chiudi = (fineTs)=>{ if(inizio!=null && linea===lineaId && fineTs>inizio) tot += (fineTs - inizio)/60000; };
-      for(const e of evs){
-        if(e.t==="IN"){ linea = e.linea; inizio = e.ts; }
-        else if(e.t==="TR"){ chiudi(e.ts); linea = e.linea||linea; inizio = e.ts; }
-        else if(e.t==="SUSP"){ chiudi(e.ts); inizio = null; }
-        else if(e.t==="RES"){ inizio = e.ts; }
-        else if(e.t==="OUT"){ chiudi(e.ts); inizio = null; }
-      }
-      // Sessione ancora aperta: chiudi il tratto corrente ad adesso (tempo reale).
-      if(inizio!=null && linea===lineaId && _nowMs>inizio) tot += (_nowMs - inizio)/60000;
+      const dF = haCk ? parseData(s.fine) : null;
+      const finReale = dF ? dF.getTime() : _nowMs;
+      // Presenza sulla linea: segmenti [in,out] su QUESTA linea (gestendo i trasferimenti), fine reale.
+      const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+      let cur=dIni, curL=s.lineaInizio||s.lineaCorrente;
+      for(const t of trasf){ if(curL===lineaId && t.ts>cur) perMat[mat].pres.push([cur, Math.min(t.ts,finReale)]); cur=t.ts; curL=t.a||curL; }
+      if(curL===lineaId && finReale>cur) perMat[mat].pres.push([cur, finReale]);
+      // Sospensioni reali (corso/pausa): NON sono tempo lavorato.
+      (s.corsi||[]).forEach(c=>{ const q=parseData(c.quando); if(!q) return; const r=c.rientro?parseData(c.rientro):null; const a=q.getTime(), b=r?r.getTime():finReale; if(b>a) perMat[mat].susp.push([a,b]); });
+      (s.pause||[]).forEach(p=>{ const q=parseData(p.quando); if(!q) return; const r=p.ripresa?parseData(p.ripresa):null; const a=q.getTime(), b=r?r.getTime():finReale; if(b>a) perMat[mat].susp.push([a,b]); });
     });
-    return tot;
+    const _fondi = (ivs)=>{ if(!ivs.length) return []; ivs.sort((a,b)=>a[0]-b[0]); const out=[[ivs[0][0],ivs[0][1]]]; for(let i=1;i<ivs.length;i++){ const L=out[out.length-1]; if(ivs[i][0]<=L[1]) L[1]=Math.max(L[1],ivs[i][1]); else out.push([ivs[i][0],ivs[i][1]]); } return out; };
+    let tot = 0;
+    Object.values(perMat).forEach(({pres, susp})=>{
+      const P=_fondi(pres), S=_fondi(susp);
+      let presMs=0; for(const iv of P) presMs += (iv[1]-iv[0]);
+      let sospMs=0; for(const sv of S){ for(const pv of P){ const lo=Math.max(sv[0],pv[0]), hi=Math.min(sv[1],pv[1]); if(hi>lo) sospMs += (hi-lo); } }
+      tot += Math.max(0, presMs - sospMs);
+    });
+    return tot/60000;
   };
   // Obiettivo GIORNALIERO aggregato (somma articoli fino a fine turno, rampe incluse).
   const obFinaleConRampa = sommaObiettiviArticoli(null);
