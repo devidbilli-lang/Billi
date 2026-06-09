@@ -1175,8 +1175,15 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(haCk){
         const dF = parseData(s.fine);
         const secCk = dF ? dF.getHours()*3600+dF.getMinutes()*60+dF.getSeconds() : secFineTurnoAssoluto;
-        const anticipoSec = secFinePianItem - secCk;
-        secFineEff = (anticipoSec > 120) ? secCk : secFinePianItem;
+        if(turnoTerminato){
+          // A turno TERMINATO l'obiettivo si basa sulla presenza REALE di ogni operatore: si usa
+          // SEMPRE l'orario di checkout effettivo (niente tolleranza dei 2 min, niente fine pianificata),
+          // così l'obiettivo combacia con i minuti reali di presenza linea usati dall'efficienza.
+          secFineEff = secCk;
+        } else {
+          const anticipoSec = secFinePianItem - secCk;
+          secFineEff = (anticipoSec > 120) ? secCk : secFinePianItem;
+        }
       } else if(secFinePianItem < secFineTurnoAssoluto){ secFineEff = secFinePianItem; }
       const _fineOrig = giornoBase.getTime() + secFineEff*1000;
       // Per il calcolo REAL-TIME (finoAMs = adesso) la finestra dell'articolo è troncata
