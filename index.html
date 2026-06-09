@@ -190,7 +190,7 @@ function codaRimuovi(chiave) {
 }
 
 async function inviaEvento(p) {
-  const url = nexusUrl("evento",{sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||""});
+  const url = nexusUrl("evento",{sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||"",trasf:p.trasf||""});
   const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(),12000);
   const r = await fetch(url,{mode:"cors",signal:ctrl.signal}).finally(()=>clearTimeout(tid));
@@ -5291,7 +5291,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         ));
         // 2. CHECKIN nuovo sulla linea di DESTINAZIONE col nuovo articolo (riparte da zero).
         const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
-        try{ await api.evento({sessionId:newId,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:skuNuovo,tipo:"CHECKIN",lineaDa:destId,lineaA:destId,skuDa:skuNuovo,skuA:skuNuovo}); }catch(e){}
+        try{ await api.evento({sessionId:newId,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:skuNuovo,tipo:"CHECKIN",trasf:"1",lineaDa:destId,lineaA:destId,skuDa:skuNuovo,skuA:skuNuovo}); }catch(e){}
         if(onAggiornaSessioni) onAggiornaSessioni();
       }} onClose={()=>setMod(null)}/>}
       {popupRiepilogoOp&&(()=>{
@@ -5939,6 +5939,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         cognome: s.cognome||"",
                         sku: skuNew,
                         tipo: "CHECKIN",
+                        trasf: "1",
                         lineaDa: modTrasf.lineaDest.id,
                         lineaA: modTrasf.lineaDest.id,
                         skuDa: skuNew,
