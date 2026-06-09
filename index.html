@@ -1319,28 +1319,45 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare})).catch(()=>{});
   },[obDaCongelare, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
-  // Efficienza = borse prodotte / obiettivo ATTESO A QUEST'ORA * 100.
-  // Non misura più il ritmo sul tempo, ma quanto prodotto rispetto al target progressivo.
-  // A fine turno, se prodotte == obiettivo finale → 100%.
+  // EFFICIENZA = minuti prodotti / minuti lavorati effettivi × 100. Misura il RITMO reale sul tempo
+  // (minuti standard prodotti rispetto ai minuti realmente lavorati), NON più borse/obiettivo (che è
+  // l'efficacia). minuti prodotti = Σ per articolo (borse OK × TC articolo); minuti lavorati =
+  // presenza degli operatori sulla linea al netto di corso/pausa, ripartita per i paralleli
+  // (sommaMinutiDisponibili). Stesso criterio della vista a griglia (minProd/minLav). NB: senza rampa
+  // i due valori coincidono (l'obiettivo è minuti/TC); in rampa l'efficacia si gonfia, l'efficienza no.
   const efficienzaPct = (()=>{
     const borseTot = borseOggi||0;
-    // Confronto con l'obiettivo ATTESO A QUEST'ORA = somma per articolo, ognuno scalato sulla
-    // propria finestra (un articolo aggiunto a metà turno conta solo dal momento dell'aggiunta).
-    // A turno chiuso il riferimento è l'obiettivo giornaliero finale (eventualmente congelato).
-    const baseAtteso = turnoTerminato ? obFinaleEffettivo : obAttesoRealTime;
     // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
-    // tempo prodotto. L'efficienza standard borse/obiettivo equivale a tempoProdottoBorse/tempoDisp,
-    // quindi sommiamo i minuti delle attività rapportati allo stesso tempo disponibile. Gestisce
-    // anche il caso senza borse (solo attività): quota borse = 0.
+    // tempo prodotto, sommato alla quota borse, sullo stesso tempo disponibile.
     if(_isRMALinea){
       const minDisp = sommaMinutiDisponibili(turnoTerminato ? null : Date.now());
       if(minDisp<=0) return null;
+      const baseAtteso = turnoTerminato ? obFinaleEffettivo : obAttesoRealTime;
       const quotaBorse = (baseAtteso!=null && baseAtteso>0) ? (borseTot/baseAtteso) : 0;
       return Math.round(quotaBorse*100 + (minutiAttivitaRMA/minDisp)*100);
     }
-    if(tc<=0) return null;
-    if(baseAtteso==null || baseAtteso<=0) return null;
-    return Math.round((borseTot/baseAtteso)*100);
+    // Minuti realmente lavorati sulla linea (netti di corso/pausa): fino a ora durante il turno,
+    // totali a turno chiuso.
+    const minLav = sommaMinutiDisponibili(turnoTerminato ? null : Date.now());
+    if(minLav<=0) return null;
+    // Minuti prodotti = somma, per ogni articolo attivo oggi sulla linea, di (borse OK × TC articolo).
+    const _lNome = (linee.find(l=>l.id===lineaId)||{}).nome||lineaId;
+    const _skuVisti = new Set();
+    let minProd = 0;
+    for(const s of sessioni){
+      if(s._pianificato) continue;
+      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
+      const sk = s.skuCorrente||s.sku||"";
+      if(!sk || isSkuSpeciale(sk) || _skuVisti.has(sk)) continue;
+      _skuVisti.add(sk);
+      const _q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_lNome+"_"+sk] || {};
+      minProd += (Number(_q.ok)||0) * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
+    }
+    // Fallback robusto: se le borse per-articolo non risolvono (chiavi qualità mancanti) ma ci sono
+    // borse totali, uso borse × TC rappresentativo (esatto per linea a un solo articolo).
+    if(minProd<=0 && borseTot>0 && tc>0) minProd = borseTot*tc;
+    if(minProd<=0) return 0;
+    return Math.round(minProd/minLav*100);
   })();
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
 
