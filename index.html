@@ -1375,6 +1375,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // conta il tempo PIANIFICATO (chi entra in ritardo o esce prima e' conteggiato sul pianificato; lo
   // straordinario oltre la fine pianificata non conta). Se mancano gli orari pianificati ripiega sui reali.
   const minutiPianificati = ()=>{
+    const _hmTs = (hm, refTs)=>{ const _pp=(hm||"").split(":"); const d=new Date(refTs); d.setHours(parseInt(_pp[0])||0, parseInt(_pp[1])||0, 0, 0); return d.getTime(); };
     const _oggi0 = new Date(); _oggi0.setHours(0,0,0,0);
     const _nowMs = Date.now();
     const perMat = {};
@@ -1388,8 +1389,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const finReale = dF ? dF.getTime() : _nowMs;
       const _iniHM = s.orarioInizioOggiPian || s.orarioInizioPian || "";
       const _finHM = s.orarioFineOggiPian || s.orarioFinePian || "";
-      const plIni = (_iniHM && _iniHM.indexOf(":")>-1) ? hmToTs(_iniHM, dIni) : dIni;
-      const plFin = (_finHM && _finHM.indexOf(":")>-1) ? hmToTs(_finHM, dIni) : finReale;
+      const plIni = (_iniHM && _iniHM.indexOf(":")>-1) ? _hmTs(_iniHM, dIni) : dIni;
+      const plFin = (_finHM && _finHM.indexOf(":")>-1) ? _hmTs(_finHM, dIni) : finReale;
       if(plFin<=plIni) return;
       if(!perMat[mat]) perMat[mat] = {pres:[], susp:[]};
       const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
