@@ -1471,10 +1471,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(baseAtteso==null || baseAtteso<=0) return null;
       return Math.round(borseTot/baseAtteso*100);
     }
-    // TURNO TERMINATO → efficienza vera = (borse OK × TC) / minuti presenza linea, calcolati sulla
-    // FINESTRA PIANIFICATA (orario operatore) al netto di corso e pausa. Ripiego sul foglio Presenze
-    // Linea (D1) o sul ricalcolo reale solo se gli orari pianificati non sono disponibili.
-    const minLav = minutiPianificati() || (minutiPresenzaLinea>0 ? minutiPresenzaLinea : minutiLavReali());
+    // TURNO TERMINATO → efficienza consuntiva = (borse OK × TC) / MINUTI LAVORATI REALI sulla linea:
+    // presenza reale raggruppata per linea, al netto di corso e pausa, gestendo i trasferimenti.
+    const minLav = minutiLavReali();
     if(minLav<=0) return null;
     // Minuti prodotti = somma, per ogni articolo attivo oggi sulla linea, di (borse OK × TC articolo).
     const _lNome = (linee.find(l=>l.id===lineaId)||{}).nome||lineaId;
