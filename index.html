@@ -1945,7 +1945,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     {inRampaItem && (
                       <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1.5px solid #ff6937",borderRadius:6,padding:"1px 6px"}}>
                         <IconaRampa size={11} color="#ff6937"/>
-                        <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:800,color:"#ff6937"}}>{giornoRampaItem}/15</span>
+                        <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:800,color:"#ff6937"}}>{giornoRampaItem}/{durataRampaItem}</span>
                       </div>
                     )}
                     {/* Obiettivo grande (stile valore Operatori) */}
@@ -2013,7 +2013,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                           {inRampaItem ? (
                             <div style={{display:"inline-flex",alignItems:"center",gap:7,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 14px"}}>
                               <IconaRampa size={18} color="#ff6937"/>
-                              <span style={{fontSize:16,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/15</span>
+                              <span style={{fontSize:16,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/{durataRampaItem}</span>
                             </div>
                           ) : (
                             <div style={{fontSize:fSep,color:"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,marginBottom:8,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
@@ -2037,7 +2037,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                         {inRampaItem && (
                           <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:"2px solid #ff6937",borderRadius:8,padding:"3px 12px"}}>
                             <IconaRampa size={16} color="#ff6937"/>
-                            <span style={{fontSize:15,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/15</span>
+                            <span style={{fontSize:15,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/{durataRampaItem}</span>
                           </span>
                         )}
                       </div>
@@ -2785,7 +2785,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             </div>
             {rampa&&rampa.dal&&(()=>{
               const dataInizio = new Date(rampa.dal);
-              const dataFine = aggiungiGiorniLavorativi(rampa.dal, dur);
+              const dataFine = aggiungiGiorniLavorativi(rampa.dal, dur-1);
               const fmtD = d => d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
               const isoData = `${dataInizio.getFullYear()}-${String(dataInizio.getMonth()+1).padStart(2,"0")}-${String(dataInizio.getDate()).padStart(2,"0")}`;
               return (
@@ -2813,7 +2813,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                   <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
                     <input type="number" min="2" max="60" value={modDurata.val} onChange={e=>setModDurata({...modDurata,val:e.target.value,err:""})} style={{width:64,padding:"4px 8px",border:"1.5px solid #ff6937",borderRadius:6,fontFamily:"'Montserrat',sans-serif",fontSize:13,textAlign:"center"}}/>
                     <span style={{fontSize:11,color:"#64748b"}}>giorni</span>
-                    <button onClick={async()=>{ const _n=parseInt(modDurata.val,10); if(!(_n>=2)){ setModDurata({...modDurata,err:"min 2"}); return; } const _nn=Math.min(_n,60); try{ await fetch(nexusUrl("salvaDurataRampa",{sku,lineaId:rampaLinea,durata:_nn})); }catch(e){} setDurataOverride(o=>({...o,[key]:_nn})); setModDurata(null); }} style={{background:"#10b981",color:"#fff",border:"none",borderRadius:6,padding:"4px 10px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓ Salva</button>
+                    <button onClick={async()=>{ const _n=parseInt(modDurata.val,10); if(!(_n>=2)){ setModDurata({...modDurata,err:"min 2"}); return; } const _nn=Math.min(_n,60); try{ await fetch(nexusUrl("salvaDurataRampa",{sku,lineaId:rampaLinea,durata:_nn})); }catch(e){} try{ await fetch(nexusUrl("invalidaObiettivoCongelato",{})); }catch(e){} setDurataOverride(o=>({...o,[key]:_nn})); setModDurata(null); }} style={{background:"#10b981",color:"#fff",border:"none",borderRadius:6,padding:"4px 10px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓ Salva</button>
                     <button onClick={()=>setModDurata(null)} style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"4px 10px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     {modDurata.err&&<span style={{fontSize:11,color:"#ef4444",fontWeight:700}}>{modDurata.err}</span>}
                   </span>
@@ -5075,11 +5075,12 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
                     <code style={S.sku}>{sessAtt.skuCorrente||sessAtt.sku}</code>
                     {sessAtt.rampaDal&&(()=>{
                       const gg = giorniLavorativiJS(sessAtt.rampaDal);
-                      if(gg>15) return null;
+                      const durG = (sessAtt.rampaDurata && +sessAtt.rampaDurata>=2) ? +sessAtt.rampaDurata : 15;
+                      if(gg>durG) return null;
                       return (
                         <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"4px 12px"}}>
                           <IconaRampa size={14} color="#ff6937"/>
-                          <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1}}>{gg}/15</span>
+                          <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1}}>{gg}/{durG}</span>
                         </span>
                       );
                     })()}
@@ -6642,13 +6643,13 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const rDal = (rampaS && (rampaS.dal||rampaS.rampaDal)) || s.rampaDal;
                         if(!rDal) return null;
                         const gg = giorniLavorativiJS(rDal);
-                        // Rampa completata = arrivati al giorno 15 (100% = pieno regime, come
-                        // inRampaItem nelle card produzione, che è gg<15): niente più badge.
-                        if(gg>=15) return null;
+                        const durG = (rampaS && rampaS.durata && +rampaS.durata>=2) ? +rampaS.durata : ((s.rampaDurata && +s.rampaDurata>=2) ? +s.rampaDurata : 15);
+                        // Rampa completata quando si raggiunge il giorno durG (100% = pieno regime).
+                        if(gg>=durG) return null;
                         return (
                           <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"6px 14px"}}>
                             <IconaRampa size={14} color="#ff6937"/>
-                            <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1}}>{gg}/15</span>
+                            <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1}}>{gg}/{durG}</span>
                           </span>
                         );
                       })()}
