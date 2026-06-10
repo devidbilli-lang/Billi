@@ -823,7 +823,12 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const [koDragMap, setKoDragMap] = React.useState({}); // {sku:{x,y}} offset dal centro per ogni bottone
   const koDragRef = React.useRef(null); // {sku,moved} per distinguere tap da trascinamento
   const [modalKoSku, setModalKoSku] = React.useState(null); // {sku,ok,ko,migl,desc,tc} o null
+  const turnoTermRef = React.useRef(false); // turnoTerminato leggibile dentro caricaObCongelato (definito più sotto)
   const caricaObCongelato = React.useCallback(()=>{
+    // A TURNO IN CORSO usa sempre il calcolo live (rampe + presenze incluse): non caricare il
+    // congelato (che vale solo a turno chiuso). Altrimenti un valore vecchio salvato in continuo
+    // resta appiccicato e l'obiettivo non si aggiorna quando cambi i giorni di rampa.
+    if(!turnoTermRef.current){ setObCongelato(null); return; }
     fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{
       if(j.ok && j.data && j.data.obiettivi){
         const v = j.data.obiettivi[lineaId];
@@ -974,6 +979,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   });
   // Se non ci sono sessioni attive ma ci sono sessioni di oggi → turno terminato, mostra i dati finali
   const turnoTerminato = sessAttive.length === 0 && sessGiornata.length > 0;
+  turnoTermRef.current = turnoTerminato; // tiene il ref allineato per caricaObCongelato
   const sessRiferimento = turnoTerminato ? sessGiornata : sessAttive;
   // Deduplica per matricola: una matricola = un operatore (prendi sessione più recente)
   const sessAttivePerMat = {};
