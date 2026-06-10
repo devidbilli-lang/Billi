@@ -43,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziW6qmVG3c67BIWP15HIEGHVvX5LtV2nKsW3nNnQs8SkMS7LjbymI6sZf1UODPyv7S0w/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyb-WuBbn4J_GYwXueY3VAZT8wfh3o_SrLDZwU4g2LKHfZCCp2SLOKLVFE3s7QJp57KMw/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -1471,9 +1471,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(baseAtteso==null || baseAtteso<=0) return null;
       return Math.round(borseTot/baseAtteso*100);
     }
-    // TURNO TERMINATO → efficienza consuntiva = (borse OK × TC) / MINUTI LAVORATI REALI sulla linea:
-    // presenza reale raggruppata per linea, al netto di corso e pausa, gestendo i trasferimenti.
-    const minLav = minutiLavReali();
+    // TURNO TERMINATO → efficienza consuntiva = (borse OK × TC) / minuti lavorati della linea presi dal
+    // foglio "Presenze Linea" sincronizzato in D1 (un valore per linea = una card). Ripiego sul calcolo
+    // reale locale solo finché i minuti del foglio non sono ancora arrivati in D1.
+    const minLav = minutiPresenzaLinea>0 ? minutiPresenzaLinea : minutiLavReali();
     if(minLav<=0) return null;
     // Minuti prodotti = somma, per ogni articolo attivo oggi sulla linea, di (borse OK × TC articolo).
     const _lNome = (linee.find(l=>l.id===lineaId)||{}).nome||lineaId;
