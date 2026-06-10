@@ -795,7 +795,7 @@ function aggregaDifetti(note){
   });
   return Object.entries(agg).sort((a,b)=>b[1]-a[1]);
 }
-function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false, onObiettiviArticoli }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
@@ -1420,6 +1420,13 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const obDaCongelare = (obFinaleConRampa!=null) ? obFinaleConRampa : obFinale;
   // Mappa obiettivi per articolo (giornaliero) salvata insieme al totale, per il riquadro OGGI.
   const obPerArticoloJson = JSON.stringify(mappaObiettiviArticoli(null)||{});
+  // MIRROR DIRETTO: riporta al genitore la mappa obiettivi per articolo GIORNALIERA appena cambia,
+  // così il widget Qualità la mostra SENZA dipendere dal congelamento su D1 (robusto anche a produzione spenta).
+  React.useEffect(()=>{
+    if(typeof onObiettiviArticoli==="function"){
+      try{ onObiettiviArticoli(JSON.parse(obPerArticoloJson)); }catch(e){}
+    }
+  },[obPerArticoloJson]);
   // OBIETTIVO EFFETTIVO: se esiste un valore congelato (turno chiuso), usa quello e non ricalcolare.
   const obFinaleEffettivo = (obCongelato!=null) ? obCongelato : obDaCongelare;
   // CONGELAMENTO a turno chiuso (con freno anti-ricongelamento dopo una correzione di orario:
@@ -3531,6 +3538,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [lineaSelQ, setLineaSelQ] = useState("");
   const [qualitaOggi, setQualitaOggi] = useState([]);
   const [obPerArticolo, setObPerArticolo] = React.useState({}); // {linea:{sku:obiettivo}} dalla card Entra in Produzione
+  const [obPerArticoloLocal, setObPerArticoloLocal] = React.useState({}); // {sku:obiettivo} riportato DIRETTAMENTE dalla card-mirror (no D1)
   const [showRiepilogoQ, setShowRiepilogoQ] = useState(false);
   // Carica dati qualità di oggi per mostrare totali per SKU (richiamabile dopo ogni registrazione)
   const caricaQualitaOggi = React.useCallback(()=>{
@@ -3662,6 +3670,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             coloreLinea={(lObj&&lObj.colore)||"#7c3aed"}
             qualitaPerSku={{}}
             compatto={true}
+            onObiettiviArticoli={setObPerArticoloLocal}
           />
         </div>
       )}
@@ -3750,7 +3759,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                       <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1.2}}>{r.sku}</span>
                       {skuObj?.descrizione&&<span style={{fontSize:10,color:"#ff6937cc",lineHeight:1.2}}>{skuObj.descrizione}</span>}
                     </div>
-                    {(()=>{ const _ob=(obPerArticolo[lineaEffettiva]||{})[r.sku]; return (_ob!=null) ? (
+                    {(()=>{ const _ob=((obPerArticoloLocal||{})[r.sku]!=null)?(obPerArticoloLocal||{})[r.sku]:(obPerArticolo[lineaEffettiva]||{})[r.sku]; return (_ob!=null) ? (
                       <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1,background:"#10b98114",border:"1.5px solid #10b981",borderRadius:8,padding:"4px 14px"}} title="Obiettivo giornaliero (da Entra in Produzione)">
                         <span style={{fontSize:9,color:"#10b981",fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.2}}>Obiettivo</span>
                         <span style={{fontSize:18,fontWeight:900,color:"#10b981",lineHeight:1}}>{_ob}</span>
