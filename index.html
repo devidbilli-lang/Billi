@@ -809,7 +809,10 @@ function NumViola({ value, onChange, style={}, ...rest }){
   if(style.flex!=null) _wrap.flex = style.flex;
   if(style.width!=null) _wrap.width = style.width; else if(style.flex==null) _wrap.width = "100%";
   const _inp = {...style}; delete _inp.flex; delete _inp.width;
-  const _btn = {flex:1,minHeight:0,padding:0,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #7c3aed",background:"#7c3aed1f",color:"#7c3aed",borderRadius:5,cursor:"pointer",fontSize:13,fontWeight:900,lineHeight:1,fontFamily:"inherit",userSelect:"none",touchAction:"manipulation"};
+  const _bc = style.borderColor || "#7c3aed";
+  const _col = (typeof _bc==="string" && _bc.length===9 && _bc[0]==="#") ? _bc.slice(0,7) : _bc; // frecce = colore del bordo del campo (alpha rimossa per visibilità)
+  const _colBg = (typeof _col==="string" && _col.length===7 && _col[0]==="#") ? _col+"1f" : "transparent";
+  const _btn = {flex:1,minHeight:0,padding:0,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid "+_col,background:_colBg,color:_col,borderRadius:5,cursor:"pointer",fontSize:13,fontWeight:900,lineHeight:1,fontFamily:"inherit",userSelect:"none",touchAction:"manipulation"};
   return (
     <div style={_wrap}>
       <input value={value} onChange={onChange} {...rest} type="number" className={"nviola-inp"+(rest.className?(" "+rest.className):"")} style={{..._inp, width:"100%", paddingRight:40}}/>
