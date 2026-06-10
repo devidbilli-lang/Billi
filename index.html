@@ -795,7 +795,7 @@ function aggregaDifetti(note){
   });
   return Object.entries(agg).sort((a,b)=>b[1]-a[1]);
 }
-function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, minLavReale=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
@@ -1473,21 +1473,20 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     }
     // TURNO TERMINATO → efficienza consuntiva = (borse OK × TC) / MINUTI LAVORATI REALI sulla linea:
     // presenza reale raggruppata per linea, al netto di corso e pausa, gestendo i trasferimenti.
-    const minLav = (minLavReale>0 ? minLavReale : minutiLavReali());
+    const minLav = minutiLavReali();
     if(minLav<=0) return null;
-    // Minuti prodotti = somma, su TUTTI gli articoli con qualità sulla linea (come il Riepilogo, non
-    // solo quelli con sessione attiva), di (borse OK × TC articolo): così Σ(borse×TC) coincide.
+    // Minuti prodotti = somma, per ogni articolo attivo oggi sulla linea, di (borse OK × TC articolo).
     const _lNome = (linee.find(l=>l.id===lineaId)||{}).nome||lineaId;
-    let minProd = 0;
     const _skuVisti = new Set();
-    for(const _k in (qualitaPerSku||{})){
-      let _sk = null;
-      if(_k.indexOf(lineaId+"_")===0) _sk = _k.slice((lineaId+"_").length);
-      else if(_lNome && _k.indexOf(_lNome+"_")===0) _sk = _k.slice((_lNome+"_").length);
-      if(_sk==null || _sk==="" || isSkuSpeciale(_sk) || _skuVisti.has(_sk)) continue;
-      _skuVisti.add(_sk);
-      const _q = qualitaPerSku[_k]||{};
-      minProd += (Number(_q.ok)||0) * (tcPerLinea(skuList.find(x=>x&&x.sku===_sk)) || 0);
+    let minProd = 0;
+    for(const s of sessioni){
+      if(s._pianificato) continue;
+      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
+      const sk = s.skuCorrente||s.sku||"";
+      if(!sk || isSkuSpeciale(sk) || _skuVisti.has(sk)) continue;
+      _skuVisti.add(sk);
+      const _q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_lNome+"_"+sk] || {};
+      minProd += (Number(_q.ok)||0) * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
     }
     // Fallback robusto: se le borse per-articolo non risolvono (chiavi qualità mancanti) ma ci sono
     // borse totali, uso borse × TC rappresentativo (esatto per linea a un solo articolo).
@@ -2623,7 +2622,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     borseKO={d.borseKO||0}
                     borseMigl={d.borseMigl||0}
                     maxOpOggi={d.maxOpOggi||0}
-                    minutiPresenzaLinea={d.minutiPresenzaLinea||0} minLavReale={d.minLavReale||0}
+                    minutiPresenzaLinea={d.minutiPresenzaLinea||0}
                     coloreLinea={l.colore||"#7c3aed"}
                     qualitaPerSku={qualitaPerSku||{}}
                     linee={linee||[]}
@@ -2655,7 +2654,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   borseKO={d.borseKO||0}
                   borseMigl={d.borseMigl||0}
                   maxOpOggi={d.maxOpOggi||0}
-                  minutiPresenzaLinea={d.minutiPresenzaLinea||0} minLavReale={d.minLavReale||0}
+                  minutiPresenzaLinea={d.minutiPresenzaLinea||0}
                   coloreLinea={l.colore||"#7c3aed"}
                   qualitaPerSku={qualitaPerSku||{}}
                   linee={linee||[]}
