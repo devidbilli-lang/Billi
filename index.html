@@ -291,7 +291,7 @@ const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+
       }).catch(()=>{});
     }
   },
-  async reset(){ try{ await fetchTimeout(nexusUrl("reset",{})); }catch{} }
+  async reset(){ /* reset manuale disabilitato: non svuota più nulla (vedi worker action "reset") */ }
 };
 function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
   const [operatori,setOperatori] = useState([]);
