@@ -4173,7 +4173,8 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
             {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={async(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=ns||sp;
+              const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===ld); const _u=((ld||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG"); })();
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=_dRep?"":(ns||sp);
                 try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn}); }catch(e){}
                 if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,ld,ns);
               setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
@@ -5428,7 +5429,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       )}
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={async(d,ns)=>{
         const destId = d&&d.id ? d.id : d;
-        const skuNuovo = ns || mod.skuCorrente || mod.sku || "";
+        const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===destId); const _u=((destId||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG"); })();
+        const skuNuovo = _dRep ? "" : (ns || mod.skuCorrente || mod.sku || "");
         const lineaPartenza = mod.lineaCorrente||mod.lineaInizio||"";
         const matKey = mod.matricola||mod.nome+"-"+mod.cognome;
         setMod(null);
@@ -6231,10 +6233,18 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 </div>
                 <div style={{marginBottom:14}}>
                   <label style={{...S.lbl,color:"#f59e0b"}}>SKU Articolo</label>
-                  <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
-                    <option value="">-- Seleziona articolo --</option>
-                    {skuLinea.map(s=>{ const skuObj = skuList.find(x=>x&&x.sku===s); return <option key={s} value={s}>{s}{skuObj?" — "+skuObj.descrizione:""}</option>; })}
-                  </select>
+                  {(()=>{
+                    const _opt = s => { const skuObj = skuList.find(x=>x&&x.sku===s); return <option key={s} value={s}>{s}{skuObj&&skuObj.descrizione?" — "+skuObj.descrizione:""}</option>; };
+                    const _tutti = (skuList||[]).filter(x=>x&&x.sku&&!x.speciale).map(x=>x.sku).sort();
+                    const _altri = _tutti.filter(s=>!skuLinea.includes(s));
+                    return (
+                      <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
+                        <option value="">-- Seleziona articolo --</option>
+                        {skuLinea.length>0 && <optgroup label="In lavorazione su questa linea">{skuLinea.map(_opt)}</optgroup>}
+                        <optgroup label="Tutti gli articoli">{_altri.map(_opt)}</optgroup>
+                      </select>
+                    );
+                  })()}
                 </div>
                 <div style={{marginBottom:14}}>
                   <label style={{...S.lbl,color:"#f59e0b"}}>Note (mancato raggiungimento obiettivo)</label>
@@ -6943,9 +6953,10 @@ function App() { const [view,setView]             = useState("login");
   const coFromSheets = s => { if(!s||!s.id) return;
     api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); };
   const tr = (id,dest,nSku) => {
-    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
+    const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===dest); const _u=((dest||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG"); })();
+    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     // Aggiorna anche sessSheets immediatamente per visualizzazione Dashboard
-    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=nSku||sp; return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
+    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
     setTimeout(caricaSessioni,1000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,1500); };
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
