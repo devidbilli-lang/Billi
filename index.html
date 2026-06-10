@@ -6233,18 +6233,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 </div>
                 <div style={{marginBottom:14}}>
                   <label style={{...S.lbl,color:"#f59e0b"}}>SKU Articolo</label>
-                  {(()=>{
-                    const _opt = s => { const skuObj = skuList.find(x=>x&&x.sku===s); return <option key={s} value={s}>{s}{skuObj&&skuObj.descrizione?" — "+skuObj.descrizione:""}</option>; };
-                    const _tutti = (skuList||[]).filter(x=>x&&x.sku&&!x.speciale).map(x=>x.sku).sort();
-                    const _altri = _tutti.filter(s=>!skuLinea.includes(s));
-                    return (
-                      <select value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value})} style={{...S.inp,cursor:"pointer"}}>
-                        <option value="">-- Seleziona articolo --</option>
-                        {skuLinea.length>0 && <optgroup label="In lavorazione su questa linea">{skuLinea.map(_opt)}</optgroup>}
-                        <optgroup label="Tutti gli articoli">{_altri.map(_opt)}</optgroup>
-                      </select>
-                    );
-                  })()}
+                  <input style={{...S.inp}} placeholder="Inserisci articolo..." value={modNoteLinea.sku||""} onChange={e=>setModNoteLinea({...modNoteLinea,sku:e.target.value.toUpperCase()})}/>
                 </div>
                 <div style={{marginBottom:14}}>
                   <label style={{...S.lbl,color:"#f59e0b"}}>Note (mancato raggiungimento obiettivo)</label>
