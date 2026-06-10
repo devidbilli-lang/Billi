@@ -3439,6 +3439,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [obRealeQ, setObRealeQ]   = React.useState(null);
   const [obTeoricoQ, setObTeoricoQ] = React.useState(null);
   const [skuAttiviOggi, setSkuAttiviOggi] = React.useState(null); // null = caricamento, [] = nessuno
+  const [sessioniQ, setSessioniQ] = React.useState([]); // sessioni grezze per la card-mirror nascosta (alimenta obPerArticolo su D1)
 
   // Carica automaticamente gli obiettivi dalla sezione produzione
   React.useEffect(()=>{
@@ -3449,6 +3450,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         const j = await r.json();
         if(!j.ok||!j.data) return;
         const sessioni = j.data.sessioni||[];
+        setSessioniQ(sessioni); // alimenta la card-mirror nascosta
         const lineaId = linea?.id||"";
         const skuConSpecialiList = [...SKU_SPECIALI,...(skuList||[])];
         // SKU attivi oggi su questa linea
@@ -3513,7 +3515,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         setObTeoricoQ(obTeorico);
       } catch(e){ console.warn("Errore calcolo obiettivi:", e); }
     };
-    if(linea) caricaObiettivi();
+    if(linea){ caricaObiettivi(); const _idObMirror=setInterval(caricaObiettivi,60000); return ()=>clearInterval(_idObMirror); }
   },[linea?.id]);
 
   const [ok, setOk]         = useState("");
@@ -3641,6 +3643,28 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
+      {/* MIRROR NASCOSTO: monta la card "Entra in Produzione" invisibile, alimentata dalle sessioni
+          già scaricate. Calcola e congela su D1 gli obiettivi per articolo con lo STESSO codice della
+          card (non toccato); il widget li rilegge come già fa e i badge OBIETTIVO del riquadro OGGI
+          si riempiono. Le borse/efficienza qui non servono (sono nascoste): solo il calcolo obiettivo. */}
+      {lineaEffettiva && sessioniQ.length>0 && (
+        <div style={{display:"none"}} aria-hidden="true">
+          <ObiettivoProduzione
+            sessioni={sessioniQ}
+            lineaId={lineaEffettiva}
+            skuList={skuList}
+            linee={linee}
+            borseOggi={0}
+            borseKO={0}
+            borseMigl={0}
+            maxOpOggi={0}
+            minutiPresenzaLinea={0}
+            coloreLinea={(lObj&&lObj.colore)||"#7c3aed"}
+            qualitaPerSku={{}}
+            compatto={true}
+          />
+        </div>
+      )}
       {(()=>{
         // Calcola totali per SKU della linea oggi
         const lineaId2 = linea?.id || lineaSelQ;
