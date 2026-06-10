@@ -1296,6 +1296,21 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     skuSet.forEach(sk=>{ const o = calcObItemConRampa(sk, finoAMs); if(o!=null){ somma += o; almenoUno=true; } });
     return almenoUno ? somma : null;
   };
+  // Mappa {sku: obiettivo giornaliero} per articolo sulla linea: stessi valori delle carte,
+  // salvati su D1 per essere mostrati identici nel riquadro OGGI della tab Qualità.
+  const mappaObiettiviArticoli = (finoAMs)=>{
+    const skuSet = new Set();
+    for(const s of sessioni){
+      if(s._pianificato) continue;
+      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
+      const sk = s.skuCorrente||s.sku||"";
+      if(!sk || isSkuSpeciale(sk)) continue;
+      skuSet.add(sk);
+    }
+    const m = {};
+    skuSet.forEach(sk=>{ const o = calcObItemConRampa(sk, finoAMs); if(o!=null) m[sk]=o; });
+    return m;
+  };
   // Minuti di permanenza totali degli operatori sulla linea (= tempo disponibile), sommando i
   // minTot di ogni articolo (già al netto di corsi/pause e ripartiti per i paralleli). Usato
   // dall'efficienza RMA come denominatore. finoAMs=adesso → fin qui; null → fino a fine turno.
@@ -1357,6 +1372,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // OBIETTIVO GIORNALIERO da MOSTRARE/CONGELARE: la somma per articolo (con la finestra di
   // ciascuno). Fallback al vecchio aggregato obFinale solo se la somma non è disponibile.
   const obDaCongelare = (obFinaleConRampa!=null) ? obFinaleConRampa : obFinale;
+  // Mappa obiettivi per articolo (giornaliero) salvata insieme al totale, per il riquadro OGGI.
+  const obPerArticoloJson = JSON.stringify(mappaObiettiviArticoli(null)||{});
   // OBIETTIVO EFFETTIVO: se esiste un valore congelato (turno chiuso), usa quello e non ricalcolare.
   const obFinaleEffettivo = (obCongelato!=null) ? obCongelato : obDaCongelare;
   // CONGELAMENTO a turno chiuso (con freno anti-ricongelamento dopo una correzione di orario:
@@ -1370,7 +1387,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const _t = setTimeout(()=>{ setObCongelato(c=>c); }, 8000 - _trascorsi + 200);
         return ()=>clearTimeout(_t);
       }
-      fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare}))
+      fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare,perArticolo:obPerArticoloJson}))
         .then(r=>r.json()).then(()=>{ setObCongelato(obDaCongelare); }).catch(()=>{});
     }
   },[turnoTerminato, obCongelato, obDaCongelare, lineaId, tick]);
@@ -1383,7 +1400,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     if(obDaCongelare==null || obDaCongelare<=0) return;
     if(_ultimoObSalvatoRef.current === obDaCongelare) return;
     _ultimoObSalvatoRef.current = obDaCongelare;
-    fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare})).catch(()=>{});
+    fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare,perArticolo:obPerArticoloJson})).catch(()=>{});
   },[obDaCongelare, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
   // EFFICIENZA — due regole, a seconda dello stato del turno:
@@ -3464,6 +3481,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [modalConfermaQ, setModalConfermaQ] = useState(null);
   const [lineaSelQ, setLineaSelQ] = useState("");
   const [qualitaOggi, setQualitaOggi] = useState([]);
+  const [obPerArticolo, setObPerArticolo] = React.useState({}); // {linea:{sku:obiettivo}} dalla card Entra in Produzione
   const [showRiepilogoQ, setShowRiepilogoQ] = useState(false);
   // Carica dati qualità di oggi per mostrare totali per SKU (richiamabile dopo ogni registrazione)
   const caricaQualitaOggi = React.useCallback(()=>{
@@ -3475,6 +3493,10 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     }).catch(()=>{});
   },[]);
   React.useEffect(()=>{ caricaQualitaOggi(); },[caricaQualitaOggi]);
+  React.useEffect(()=>{
+    const _carica=()=>{ fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{ if(j&&j.perArticolo) setObPerArticolo(j.perArticolo); }).catch(()=>{}); };
+    _carica(); const _t=setInterval(_carica,30000); return ()=>clearInterval(_t);
+  },[]);
   const isAdminQ = !linea;
   const lineaEffettiva = isAdminQ ? lineaSelQ : linea?.id;
   const lObj = linea ? (linee.find(l=>l.id===linea.id)||linea) : {id:"Admin",colore:"#7c3aed"};
@@ -3652,9 +3674,17 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s&&s.sku===r.sku);
                 return <div key={r.sku} style={{marginBottom:10,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
-                  <div style={{display:"inline-flex",flexDirection:"column",alignItems:"flex-start",gap:1,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"4px 12px",marginBottom:6}}>
-                    <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1.2}}>{r.sku}</span>
-                    {skuObj?.descrizione&&<span style={{fontSize:10,color:"#ff6937cc",lineHeight:1.2}}>{skuObj.descrizione}</span>}
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
+                    <div style={{display:"inline-flex",flexDirection:"column",alignItems:"flex-start",gap:1,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"4px 12px"}}>
+                      <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1.2}}>{r.sku}</span>
+                      {skuObj?.descrizione&&<span style={{fontSize:10,color:"#ff6937cc",lineHeight:1.2}}>{skuObj.descrizione}</span>}
+                    </div>
+                    {(()=>{ const _ob=(obPerArticolo[lineaEffettiva]||{})[r.sku]; return (_ob!=null) ? (
+                      <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1,background:"#10b98114",border:"1.5px solid #10b981",borderRadius:8,padding:"4px 14px"}} title="Obiettivo giornaliero (da Entra in Produzione)">
+                        <span style={{fontSize:9,color:"#10b981",fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.2}}>Obiettivo</span>
+                        <span style={{fontSize:18,fontWeight:900,color:"#10b981",lineHeight:1}}>{_ob}</span>
+                      </div>
+                    ) : null; })()}
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:6}}>
                     <div style={{flex:1,background:"rgba(0,0,0,0.06)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
