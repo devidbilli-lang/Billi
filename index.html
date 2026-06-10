@@ -3705,9 +3705,9 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             </div>
             <div style={{padding:"8px 14px 14px",maxHeight:360,overflowY:"auto"}}>
               {lista.length===0&&<div style={{display:"flex",gap:8,padding:"8px 0"}}>
-                <div style={{flex:1,background:"rgba(0,0,0,0.06)",borderRadius:12,padding:"8px 4px",textAlign:"center"}}>
+                <div style={{flex:1,background:"rgba(16,185,129,0.08)",borderRadius:12,padding:"8px 4px",textAlign:"center"}}>
                   <div style={{fontSize:10,color:"#10b981",fontWeight:600,marginBottom:2}}>OK</div>
-                  <div style={{fontSize:24,fontWeight:900,color:"#0f172a"}}>0</div>
+                  <div style={{fontSize:24,fontWeight:900,color:"#10b981"}}>0</div>
                 </div>
                 <div style={{flex:1,background:"rgba(239,68,68,0.08)",borderRadius:12,padding:"8px 4px",textAlign:"center"}}>
                   <div style={{fontSize:10,color:"#ef4444",fontWeight:600,marginBottom:2}}>KO</div>
@@ -3734,9 +3734,9 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                     ) : null; })()}
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:6}}>
-                    <div style={{flex:1,background:"rgba(0,0,0,0.06)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
+                    <div style={{flex:1,background:"rgba(16,185,129,0.08)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
                       <div style={{fontSize:10,color:"#10b981",fontWeight:600,marginBottom:2}}>OK</div>
-                      <div style={{fontSize:20,fontWeight:900,color:"#0f172a"}}>{r.ok}</div>
+                      <div style={{fontSize:20,fontWeight:900,color:"#10b981"}}>{r.ok}</div>
                     </div>
                     <div style={{flex:1,background:"rgba(239,68,68,0.08)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
                       <div style={{fontSize:10,color:"#ef4444",fontWeight:600,marginBottom:2}}>KO</div>
@@ -3819,16 +3819,16 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#10b981",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse OK</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px"}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(16,185,129,0.08)",borderColor:"#10b981",color:"#10b981"}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
 
             </div>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#ef4444",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse KO</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",color:"#ef4444"}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(239,68,68,0.08)",borderColor:"#ef4444",color:"#ef4444"}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
             </div>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#f59e0b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Migliorabili</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
+              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(245,158,11,0.08)",borderColor:"#f59e0b",color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
             </div>
           </div>
           <div style={{marginBottom:10}}>
