@@ -47,7 +47,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziW6qmVG3c67BI
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -108,6 +108,19 @@ function giorniLavorativiJS(tsInizio) {
 }
 // Curva di rampa teorica: percentuale dell'obiettivo a pieno regime per ciascuno dei 15 giorni lavorativi.
 const PERC_RAMPA = [0,20,35,45,55,64,73,76,82,85,88,92,95,98,100];
+// Percentuale di rampa per il giorno indicato, ricampionando la curva PERC_RAMPA su `durata`
+// giorni totali: giorno 1 -> 0%, giorno `durata` -> 100%, mantenendo la forma della curva.
+function rampaPerc(giorno, durata){
+  const N0 = PERC_RAMPA.length; // 15 punti di riferimento
+  const D = (durata && durata >= 2) ? durata : 15;
+  if(giorno <= 1) return PERC_RAMPA[0];      // primo giorno
+  if(giorno >= D) return 100;                // ultimo giorno = 100%
+  const pos = (giorno - 1) / (D - 1) * (N0 - 1); // posizione 0..14 nella curva originale
+  const i = Math.floor(pos), f = pos - i;
+  const a = PERC_RAMPA[i] || 0;
+  const b = PERC_RAMPA[Math.min(i + 1, N0 - 1)] || 0;
+  return a + (b - a) * f;
+}
 
 const parseData = s => { if(!s) return null;
   if(typeof s === "number") return new Date(s);
@@ -1251,16 +1264,18 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     if(obPieno==null) return null;
     // Applica rampa se l'articolo è in rampa
     let rampaDalItem = null;
+    let durataRampaItem = 15;
     for(const s of sessioni){
       if(s.lineaCorrente!==lineaId) continue;
       if((s.skuCorrente||s.sku)!==skuItem) continue;
       let rd = s.rampaDal||null;
       if(!rd && (s.skuA||"").includes("__RAMPA__")){ const pp=(s.skuA||"").split("__RAMPA__"); const dd=new Date(pp[1]); if(!isNaN(dd)) rd=dd.getTime(); }
       if(rd && (!rampaDalItem || rd>rampaDalItem)) rampaDalItem = rd;
+      if(s.rampaDurata && +s.rampaDurata>=2) durataRampaItem = +s.rampaDurata;
     }
     const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem) : null;
-    const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<15;
-    return inRampaItem ? Math.ceil(obPieno * (PERC_RAMPA[Math.min(giornoRampaItem,15)-1]||0) / 100) : obPieno;
+    const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<durataRampaItem;
+    return inRampaItem ? Math.ceil(obPieno * rampaPerc(giornoRampaItem, durataRampaItem) / 100) : obPieno;
   };
   // Obiettivo di linea AGGREGATO con rampa: somma degli obiettivi (ridotti se in rampa) di tutti
   // gli articoli attivi oggi sulla linea. Usato per misurare l'efficienza in modo equo durante le rampe.
@@ -1828,15 +1843,17 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // segue la curva teorica PERC_RAMPA invece dell'obiettivo a pieno regime.
               // Trovo la data inizio rampa dalle sessioni di questo SKU+linea.
               let rampaDalItem = null;
+              let durataRampaItem = 15;
               for(const s of sessioni){
                 if(s.lineaCorrente!==lineaId) continue;
                 if((s.skuCorrente||s.sku)!==skuItem) continue;
                 let rd = s.rampaDal||null;
                 if(!rd && (s.skuA||"").includes("__RAMPA__")){ const pp=(s.skuA||"").split("__RAMPA__"); const dd=new Date(pp[1]); if(!isNaN(dd)) rd=dd.getTime(); }
                 if(rd && (!rampaDalItem || rd>rampaDalItem)) rampaDalItem = rd;
+                if(s.rampaDurata && +s.rampaDurata>=2) durataRampaItem = +s.rampaDurata;
               }
               const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem) : null;
-              const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<15;
+              const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<durataRampaItem;
               // obFinaleItem pieno regime salvato a parte per riferimento
               const obPienoRegimeItem = obFinaleItem;
               // GIORNALIERO dell'articolo = stessa funzione usata per il totale di linea, così
@@ -2631,6 +2648,8 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
   const [modRampa, setModRampa] = useState(null); // {sku, lineaId, dataAttuale, dataNuova, err}
   const [confElimRampa, setConfElimRampa] = useState(null); // {sku, lineaId} per conferma eliminazione
   const [refreshKey, setRefreshKey] = useState(0);
+  const [modDurata, setModDurata] = useState(null); // {key, sku, lineaId, val, err} editor giorni di rampa
+  const [durataOverride, setDurataOverride] = useState({}); // {key: giorni} override locale immediato
   const [nOpOverride, setNOpOverride] = useState({}); // {sku: numero personalizzato} per scenari "what-if"
   const [filtroStato, setFiltroStato] = useState("attive"); // attive | completate | tutte
   const [filtroDataDa, setFiltroDataDa] = useState("");
@@ -2666,14 +2685,15 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       const key = r.sku + KEYSEP + lid;
       // Se più record per stessa coppia sku+linea, prendi quello con data più recente
       if(!rampaMap[key] || dal > rampaMap[key].dal) {
-        rampaMap[key] = { sku:r.sku, dal, giorni:g, lineaId:lid, completata: !!r.completata };
+        rampaMap[key] = { sku:r.sku, dal, giorni:g, lineaId:lid, completata: !!r.completata, durata:(r.durata!=null && +r.durata>=2)?+r.durata:15 };
       }
     }
   }
   // Estrai rampe anche dalle sessioni attuali (per coppie sku+linea non ancora in rampeSheets)
   for(const s of sessioni){ let rdal = s.rampaDal||null;
     if(!rdal && (s.skuA||"").includes("__RAMPA__")){ const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime(); }
-    if(rdal){ const sku=s.skuCorrente||s.sku||""; const lid=s.lineaCorrente||""; const key=sku+KEYSEP+lid; if(sku&&!rampaMap[key]){ const g=giorniLavorativiJS(rdal); rampaMap[key]={sku,dal:rdal,giorni:g,lineaId:lid,completata:false}; } } }
+    if(rdal){ const sku=s.skuCorrente||s.sku||""; const lid=s.lineaCorrente||""; const key=sku+KEYSEP+lid; if(sku&&!rampaMap[key]){ const g=giorniLavorativiJS(rdal); rampaMap[key]={sku,dal:rdal,giorni:g,lineaId:lid,completata:false,durata:15}; } } }
+  for(const _k in durataOverride){ if(rampaMap[_k]) rampaMap[_k].durata = durataOverride[_k]; }
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
   // Filtri storici: stato (attive/completate/tutte), range date, ricerca SKU
@@ -2687,7 +2707,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       const sku = r.sku;
       // Filtro linea di accesso: se entri come linea, vedi SOLO le tue rampe.
       if(lineaFiltro && r.lineaId !== lineaFiltro.id && r.lineaId !== lineaFiltro.nome) return false;
-      const isCompletata = r.completata || (r.giorni||0) >= 15;
+      const isCompletata = r.completata || (r.giorni||0) >= (r.durata||15);
       // Filtro stato
       if(filtroStato === "attive" && isCompletata) return false;
       if(filtroStato === "completate" && !isCompletata) return false;
@@ -2737,8 +2757,8 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       {BarraFiltri}
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:22,letterSpacing:1,textTransform:"uppercase",color:"#ff6937",marginBottom:24,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><IconaRampa size={26}/> Rampe di Crescita</div>
-      {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null;
-        const completata=g!==null&&g>=15; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
+      {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null; const dur=rampa?(rampa.durata||15):15;
+        const completata=g!==null&&g>=dur; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
           <div key={key} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #f1f5f9"}}>
@@ -2748,7 +2768,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             </div>
             {rampa&&rampa.dal&&(()=>{
               const dataInizio = new Date(rampa.dal);
-              const dataFine = aggiungiGiorniLavorativi(rampa.dal, 15);
+              const dataFine = aggiungiGiorniLavorativi(rampa.dal, dur);
               const fmtD = d => d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
               const isoData = `${dataInizio.getFullYear()}-${String(dataInizio.getMonth()+1).padStart(2,"0")}-${String(dataInizio.getDate()).padStart(2,"0")}`;
               return (
@@ -2770,8 +2790,19 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               );
             })()}
             {g!==null&&(
-              <div style={{marginBottom:6}}>
-                <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 12px"}}><IconaRampa size={14} color="#ff6937"/><span style={{fontSize:13,fontWeight:800,color:"#ff6937",lineHeight:1}}>Giorno {g} / 15</span>{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:4}}>✓ COMPLETATA</span>}</span>
+              <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 12px"}}><IconaRampa size={14} color="#ff6937"/><span style={{fontSize:13,fontWeight:800,color:"#ff6937",lineHeight:1}}>Giorno {g} / {dur}</span>{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:4}}>✓ COMPLETATA</span>}</span>
+                {modDurata&&modDurata.key===key ? (
+                  <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
+                    <input type="number" min="2" max="60" value={modDurata.val} onChange={e=>setModDurata({...modDurata,val:e.target.value,err:""})} style={{width:64,padding:"4px 8px",border:"1.5px solid #ff6937",borderRadius:6,fontFamily:"'Montserrat',sans-serif",fontSize:13,textAlign:"center"}}/>
+                    <span style={{fontSize:11,color:"#64748b"}}>giorni</span>
+                    <button onClick={async()=>{ const _n=parseInt(modDurata.val,10); if(!(_n>=2)){ setModDurata({...modDurata,err:"min 2"}); return; } const _nn=Math.min(_n,60); try{ await fetch(nexusUrl("salvaDurataRampa",{sku,lineaId:rampaLinea,durata:_nn})); }catch(e){} setDurataOverride(o=>({...o,[key]:_nn})); setModDurata(null); }} style={{background:"#10b981",color:"#fff",border:"none",borderRadius:6,padding:"4px 10px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✓ Salva</button>
+                    <button onClick={()=>setModDurata(null)} style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"4px 10px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
+                    {modDurata.err&&<span style={{fontSize:11,color:"#ef4444",fontWeight:700}}>{modDurata.err}</span>}
+                  </span>
+                ) : (
+                  <button onClick={()=>setModDurata({key,sku,lineaId:rampaLinea,val:String(dur),err:""})} style={{background:"#ffffff",border:"1.5px solid #ff6937",color:"#ff6937",borderRadius:6,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:4}} title="Modifica i giorni di rampa (ultimo giorno = 100%)">⚙ Giorni rampa</button>
+                )}
               </div>
             )}
             {rampa&&rampa.dal&&(()=>{
@@ -2787,7 +2818,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               if(rampa && rampa.dal){
                 // Calcola giorni della rampa passati (lavorativi) e raccogli nOp per ognuno
                 const valoriPerGiorno = [];
-                const giorniTrascorsi = Math.min(rampa.giorni || 1, 15);
+                const giorniTrascorsi = Math.min(rampa.giorni || 1, dur);
                 for(let d=1; d<=giorniTrascorsi; d++){
                   const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
@@ -2961,7 +2992,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                   </svg>
                   <div style={{display:"flex",gap:12,marginTop:1}}>
                     <div style={{fontSize:8,color:"#ff6937",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#ff6937",display:"inline-block",borderRadius:1}}></span>Obiettivo teorico</div>
-                    <div style={{fontSize:8,color:"#56e3ab",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#56e3ab",display:"inline-block",borderRadius:1}}></span>Borse prodotte</div>
+                    <div style={{fontSize:8,color:"#56e3ab",display:"flex",alignItems:"center",gap:3}}><span style={{width:12,height:2,background:"#56e3ab",display:"inline-block",borderRadius:1}}></span>Borse OK</div>
 
                   </div>
                 </div>
@@ -3256,7 +3287,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table className="tabQ" style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
-          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Borse Prodotte","#1e293b"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
+          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Borse OK","#10b981"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
             <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
           ))}</tr>
         </thead>
@@ -3606,7 +3637,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             <div style={{padding:"8px 14px 14px",maxHeight:360,overflowY:"auto"}}>
               {lista.length===0&&<div style={{display:"flex",gap:8,padding:"8px 0"}}>
                 <div style={{flex:1,background:"rgba(0,0,0,0.06)",borderRadius:12,padding:"8px 4px",textAlign:"center"}}>
-                  <div style={{fontSize:10,color:"#64748b",fontWeight:600,marginBottom:2}}>Prodotte</div>
+                  <div style={{fontSize:10,color:"#10b981",fontWeight:600,marginBottom:2}}>OK</div>
                   <div style={{fontSize:24,fontWeight:900,color:"#0f172a"}}>0</div>
                 </div>
                 <div style={{flex:1,background:"rgba(239,68,68,0.08)",borderRadius:12,padding:"8px 4px",textAlign:"center"}}>
@@ -3627,7 +3658,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:6}}>
                     <div style={{flex:1,background:"rgba(0,0,0,0.06)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
-                      <div style={{fontSize:10,color:"#64748b",fontWeight:600,marginBottom:2}}>Prodotte</div>
+                      <div style={{fontSize:10,color:"#10b981",fontWeight:600,marginBottom:2}}>OK</div>
                       <div style={{fontSize:20,fontWeight:900,color:"#0f172a"}}>{r.ok}</div>
                     </div>
                     <div style={{flex:1,background:"rgba(239,68,68,0.08)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
@@ -3710,7 +3741,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           </div>
           <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#1e293b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse Prodotte</label>
+              <label style={{...S.lbl,color:"#10b981",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse OK</label>
               <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px"}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
 
             </div>
