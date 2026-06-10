@@ -805,17 +805,17 @@ function NumViola({ value, onChange, style={}, ...rest }){
   const _min = rest.min!=null ? Number(rest.min) : null;
   const _max = rest.max!=null ? Number(rest.max) : null;
   const _set = (d)=>{ let n=_n+d; if(_min!=null) n=Math.max(_min,n); if(_max!=null) n=Math.min(_max,n); onChange && onChange({target:{value:String(n)}}); };
-  const _wrap = {display:"flex", alignItems:"stretch", gap:5};
+  const _wrap = {position:"relative", display:"flex", alignItems:"center"};
   if(style.flex!=null) _wrap.flex = style.flex;
-  if(style.width!=null) _wrap.width = style.width;
+  if(style.width!=null) _wrap.width = style.width; else if(style.flex==null) _wrap.width = "100%";
   const _inp = {...style}; delete _inp.flex; delete _inp.width;
-  const _btn = {minWidth:38,padding:"0 8px",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #7c3aed",background:"#7c3aed1f",color:"#7c3aed",borderRadius:8,cursor:"pointer",fontSize:18,fontWeight:900,lineHeight:1,fontFamily:"inherit",userSelect:"none",touchAction:"manipulation"};
+  const _btn = {flex:1,minHeight:0,padding:0,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #7c3aed",background:"#7c3aed1f",color:"#7c3aed",borderRadius:5,cursor:"pointer",fontSize:13,fontWeight:900,lineHeight:1,fontFamily:"inherit",userSelect:"none",touchAction:"manipulation"};
   return (
     <div style={_wrap}>
-      <input value={value} onChange={onChange} {...rest} type="number" className={"nviola-inp"+(rest.className?(" "+rest.className):"")} style={{..._inp, flex:1, minWidth:0}}/>
-      <div style={{display:"flex",flexDirection:"column",gap:4}}>
-        <button type="button" tabIndex={-1} onClick={()=>_set(1)} style={{..._btn,flex:1}}>▲</button>
-        <button type="button" tabIndex={-1} onClick={()=>_set(-1)} style={{..._btn,flex:1}}>▼</button>
+      <input value={value} onChange={onChange} {...rest} type="number" className={"nviola-inp"+(rest.className?(" "+rest.className):"")} style={{..._inp, width:"100%", paddingRight:40}}/>
+      <div style={{position:"absolute", top:4, bottom:4, right:6, width:30, display:"flex", flexDirection:"column", gap:3}}>
+        <button type="button" tabIndex={-1} onClick={()=>_set(1)} style={_btn}>▲</button>
+        <button type="button" tabIndex={-1} onClick={()=>_set(-1)} style={_btn}>▼</button>
       </div>
     </div>
   );
