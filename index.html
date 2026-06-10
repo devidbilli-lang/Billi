@@ -2807,7 +2807,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             )}
             {rampa&&rampa.dal&&(()=>{
               // Grafico rampa di crescita
-              const PERC = PERC_RAMPA;
+              const PERC = Array.from({length:dur},(_,i)=>rampaPerc(i+1,dur)); // ricampionata su N giorni
               const skuObj = skuList.find(s=>s&&s.sku===sku) || {};
               const tc = skuObj.tc || skuObj.tc_minuti || skuObj.tcMinuti || 0;
               // nOpReale: media operatori sui giorni di rampa GIÀ TRASCORSI.
@@ -2846,7 +2846,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               const obMax = tc > 0 ? Math.floor(minTurno / tc) : 0;
               // Giorno corrente della rampa (oggi). I giorni < gOggiCalc sono passati (consuntivo),
               // da gOggiCalc in poi sono previsione (usano nOp della casella).
-              const gOggiCalc = Math.min((g||1), 15);
+              const gOggiCalc = Math.min((g||1), dur);
               // Operatori da usare per il giorno d della rampa:
               //  - giorno PASSATO (d < oggi): operatori REALI di quel giorno specifico (da operatoriPerGiorno)
               //  - oggi e FUTURO (d >= oggi): operatori PREVISTI (nOp dalla casella)
@@ -2875,7 +2875,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               // Dimensioni SVG
               const W = 280, H = 110, PL = 28, PR = 8, PT = 14, PB = 18;
               const iW = W-PL-PR, iH = H-PT-PB;
-              const xStep = iW / 14;
+              const xStep = iW / Math.max(1,(dur-1));
               // L'asse Y si scala sul massimo tra l'obiettivo previsto e i valori effettivi della
               // curva (un giorno passato con piu operatori puo superare obMax): cosi nulla viene tagliato.
               const yRef = Math.max(obMax, ...curvaOb.filter(v=>typeof v==="number"));
@@ -2885,11 +2885,11 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               // Linea teorica
               const pts = curvaOb.map((v,i) => px(i)+","+py(v)).join(" ");
               // Giorno corrente
-              const gOggi = Math.min((g||0), 15);
+              const gOggi = Math.min((g||0), dur);
               // Borse prodotte per giorno (riusato per disegno e per etichette)
               const borsePerGiorno = [];
               if(rampa&&rampa.dal&&riepilogo.length>0){
-                for(let d=1;d<=15;d++){
+                for(let d=1;d<=dur;d++){
                   const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
                   // Match linea robusto: la linea nel riepilogo può essere id o nome.
@@ -2955,8 +2955,8 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                         <text x={PL-3} y={y+2} fontSize="6" textAnchor="end" fill="#94a3b8">{Math.round(obMax*p/100)}</text>
                       </g>;
                     })}
-                    {/* Asse X - tutti i 15 giorni */}
-                    {Array.from({length:15},(_,i)=>i+1).map(d=>{
+                    {/* Asse X - tutti i giorni di rampa */}
+                    {Array.from({length:dur},(_,i)=>i+1).map(d=>{
                       const x = px(d-1);
                       return <g key={d}>
                         <line x1={x} y1={PT+iH} x2={x} y2={PT+iH+2} stroke="#cbd5e1" strokeWidth="0.5"/>
