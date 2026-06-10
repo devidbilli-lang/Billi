@@ -43,7 +43,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjOLvGM6xolN9yUYpWzYm7_1ZZjfT5mDud61nWoQ-9x-RMCz7jQKRQ5ZSPVV-XONtp/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziW6qmVG3c67BIWP15HIEGHVvX5LtV2nKsW3nNnQs8SkMS7LjbymI6sZf1UODPyv7S0w/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
@@ -4008,7 +4008,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const [oraRef, setOraRef] = useState(now());
   useEffect(()=>{ if(lineaFiltro) setLineaCheckinSel(lineaFiltro); },[lineaFiltro]);
   useEffect(() => { const t = setInterval(() => setOraRef(now()), 1000); return () => clearInterval(t); }, []);
-  // PRE-SELEZIONE OPERATORI GIORNO PRECEDENTE (solo Taglio DG / Preparazione DG).
+  // PRE-SELEZIONE OPERATORI GIORNO PRECEDENTE (reparti: Taglio DG / Preparazione DG / RMA).
   // Quando si entra nella registrazione presenza su questi reparti, pre-spunta automaticamente
   // gli operatori dell'ultimo giorno lavorativo (1° e 2° turno) su quella linea.
   const _preselFattaRef = React.useRef("");
@@ -4017,7 +4017,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     const _l = lineaCheckinSel || lineaFiltro || null;
     const _ln = ((_l&&_l.id)||(_l&&_l.nome)||"").toString();
     const _lu = _ln.toUpperCase();
-    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG");
+    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG") || _lu.includes("RMA");
     if(!isReparto) return;
     // Evita di ricaricare/sovrascrivere ripetutamente per la stessa linea nello stesso ingresso.
     if(_preselFattaRef.current === _ln) return;
@@ -4213,7 +4213,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
           </div>
 
-          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isPrepDG = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG")); if(_isPrepDG) return null; return (
+          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isReparto = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG") || _n.includes("RMA")); if(_isReparto) return null; return (
           <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
             <div style={{width:4,background:"#f59e0b",borderRadius:2,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
@@ -4373,7 +4373,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             const lineaEffettiva = lineaCheckinSel || linea;
             const isLineSenzaSKU = skuList.filter(s=>!s.speciale).length === 0;
             const _nLin = ((lineaEffettiva&&lineaEffettiva.id)||"").toUpperCase()+" "+((lineaEffettiva&&lineaEffettiva.nome)||"").toUpperCase();
-            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG"));
+            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG") || _nLin.includes("RMA"));
             if(skuMulti.length===0 && !isLineSenzaSKU && !isPrepDG){setErr("Seleziona almeno un articolo.");return;}
             if(!linea&&!lineaCheckinSel){setErr("Seleziona una linea.");return;}
             var errori=[]; var registrati=[];
@@ -4515,7 +4515,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <div style={{width:4,height:44,borderRadius:2,background:"#00d4aa",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#00d4aa",marginBottom:4}}>Inizio Turno</div><div style={{fontSize:15,color:"#00d4aa",fontWeight:500,opacity:0.85}}>Registra presenza + SKU</div></div>
             </button>
-            {!(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("PREPARAZIONE DG"))&&(
+            {!(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("RMA")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("RMA"))&&(
             <button onClick={()=>{ onQualita&&onQualita(lineaFiltro||null); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#f1f4f8",border:"2px solid #3b82f6",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
               <div style={{width:4,height:44,borderRadius:2,background:"#3b82f6",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#3b82f6",marginBottom:4}}>Qualità</div><div style={{fontSize:15,color:"#3b82f6",fontWeight:500,opacity:0.85}}>Inserimento dati qualità</div></div>
