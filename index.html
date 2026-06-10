@@ -22,6 +22,8 @@ body{background:#f0f2f5;font-family:'Montserrat',sans-serif;color:#e2e8f0;}
 tr{animation:rowIn 0.25s ease both;}
 .tabQ td:not(:last-child){border-right:2px dashed #7c3aed44;}
 .tp-num::-webkit-inner-spin-button,.tp-num::-webkit-outer-spin-button{transform:scale(0.7);opacity:0.6;}
+.nviola-inp::-webkit-inner-spin-button,.nviola-inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.nviola-inp{-moz-appearance:textfield;appearance:textfield;}
 input:focus{border-color:#00d4aa!important;outline:none;}
 button:hover{filter:brightness(1.12);}
 ::-webkit-scrollbar{width:6px;height:6px;}
@@ -795,6 +797,30 @@ function aggregaDifetti(note){
   });
   return Object.entries(agg).sort((a,b)=>b[1]-a[1]);
 }
+// Stepper numerico con frecce VIOLA grandi e ben cliccabili. Lo spinner nativo non è ricolorabile,
+// quindi lo nascondo (classe .nviola-inp) e affianco due bottoni ▲▼. Inoltra tutti i prop dell'input
+// (value, onChange, style, min/max, placeholder, ...); rispetta flex/width dello style originale.
+function NumViola({ value, onChange, style={}, ...rest }){
+  const _n = (value===""||value==null) ? 0 : (Number(value)||0);
+  const _min = rest.min!=null ? Number(rest.min) : null;
+  const _max = rest.max!=null ? Number(rest.max) : null;
+  const _set = (d)=>{ let n=_n+d; if(_min!=null) n=Math.max(_min,n); if(_max!=null) n=Math.min(_max,n); onChange && onChange({target:{value:String(n)}}); };
+  const _wrap = {display:"flex", alignItems:"stretch", gap:5};
+  if(style.flex!=null) _wrap.flex = style.flex;
+  if(style.width!=null) _wrap.width = style.width;
+  const _inp = {...style}; delete _inp.flex; delete _inp.width;
+  const _btn = {minWidth:38,padding:"0 8px",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #7c3aed",background:"#7c3aed1f",color:"#7c3aed",borderRadius:8,cursor:"pointer",fontSize:18,fontWeight:900,lineHeight:1,fontFamily:"inherit",userSelect:"none",touchAction:"manipulation"};
+  return (
+    <div style={_wrap}>
+      <input value={value} onChange={onChange} {...rest} type="number" className={"nviola-inp"+(rest.className?(" "+rest.className):"")} style={{..._inp, flex:1, minWidth:0}}/>
+      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+        <button type="button" tabIndex={-1} onClick={()=>_set(1)} style={{..._btn,flex:1}}>▲</button>
+        <button type="button" tabIndex={-1} onClick={()=>_set(-1)} style={{..._btn,flex:1}}>▼</button>
+      </div>
+    </div>
+  );
+}
+
 function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false, onObiettiviArticoli }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
@@ -3852,16 +3878,16 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           <div style={{display:"flex",gap:12,marginBottom:14,alignItems:"flex-end"}}>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#10b981",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse OK</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(16,185,129,0.08)",borderColor:"#10b981",color:"#10b981"}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
+              <NumViola min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(16,185,129,0.08)",borderColor:"#10b981",color:"#10b981"}} value={ok} onChange={e=>setOk(e.target.value)} placeholder="0"/>
 
             </div>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#ef4444",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Borse KO</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(239,68,68,0.08)",borderColor:"#ef4444",color:"#ef4444"}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
+              <NumViola min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(239,68,68,0.08)",borderColor:"#ef4444",color:"#ef4444"}} value={ko} onChange={e=>setKo(e.target.value)} placeholder="0"/>
             </div>
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#f59e0b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Migliorabili</label>
-              <input type="number" min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(245,158,11,0.08)",borderColor:"#f59e0b",color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
+              <NumViola min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(245,158,11,0.08)",borderColor:"#f59e0b",color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
             </div>
           </div>
           <div style={{marginBottom:10}}>
@@ -3882,7 +3908,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   </div>
                 )}
               </div>
-                <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#ef444466",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteKo];a[i]={...a[i],q:e.target.value};setNoteKo(a);}}/>
+                <NumViola min="0" style={{...S.inp,flex:1,borderColor:"#ef444466",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteKo];a[i]={...a[i],q:e.target.value};setNoteKo(a);}}/>
                 {noteKo.length>1&&<button onClick={()=>setNoteKo(noteKo.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
               {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&<div style={{fontSize:11,color:"#ef4444",marginBottom:4,fontWeight:600}}>⚠ Valore non valido</div>}
@@ -3908,7 +3934,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   </div>
                 )}
               </div>
-                <input type="number" min="0" style={{...S.inp,flex:1,borderColor:"#f59e0b66",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],q:e.target.value};setNoteMigl(a);}}/>
+                <NumViola min="0" style={{...S.inp,flex:1,borderColor:"#f59e0b66",textAlign:"center"}} placeholder="Qta" value={r.q} onChange={e=>{const a=[...noteMigl];a[i]={...a[i],q:e.target.value};setNoteMigl(a);}}/>
                 {noteMigl.length>1&&<button onClick={()=>setNoteMigl(noteMigl.filter((_,j)=>j!==i))} style={{background:"transparent",border:"none",color:"#f59e0b",cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
               </div>
               {(r.cerca||r.p)&&!(difettiList||[]).find(d=>d.difetto===(r.cerca||r.p))&&<div style={{fontSize:11,color:"#f59e0b",marginBottom:4,fontWeight:600}}>⚠ Valore non valido</div>}
