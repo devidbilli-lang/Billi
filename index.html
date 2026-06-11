@@ -4986,7 +4986,7 @@ function TabAttivita({ repTipo="taglio" }) {
 
   const BRANDS = ["Chanel","LV"];
   // RMA: Rilavorazione + Campioni/Prototipi. Preparazione DG: solo Rilavorazione. Taglio DG: Rilavorazione+Collaudo+Cartelloni.
-  const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi"] : (_isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo","Cartelloni"]);
+  const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi","Tracolle PH Holder"] : (_isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo","Cartelloni"]);
   const _mostraArticolo = _isRMA && tipologia === "Campioni/Prototipi"; // campo Articolo solo RMA + Campioni/Prototipi
   const _mostraPellame = !_isPrep && tipologia !== "Cartelloni"; // pellame solo Taglio DG e NON per Cartelloni
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
