@@ -3406,8 +3406,8 @@ function TortaQ({ titolo, voci, totaleLabel }){
   let acc=-90;
   const slices = vis.map(v=>{ const frac=v.valore/tot; const a0=acc,a1=acc+frac*360; acc=a1; return {v,frac,a0,a1,mid:(a0+a1)/2}; });
   return (
-    <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:18,flex:"1 1 340px",minWidth:300,boxShadow:"0 1px 4px rgba(124,58,237,0.06)"}}>
-      <div style={{fontSize:14,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,textAlign:"center"}}>{titolo}</div>
+    <div style={{background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:18,flex:"1 1 340px",minWidth:300,boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18"}}>
+      <div style={{fontSize:20,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,textAlign:"center"}}>{titolo}</div>
       {tot<=0 ? (
         <div style={{textAlign:"center",color:"#94a3b8",padding:"36px 0",fontSize:13}}>Nessun dato nel periodo</div>
       ) : (<>
@@ -3487,9 +3487,9 @@ function GraficoSettimaneQ({ dati }){
         <polyline key={s.key} fill="none" stroke={s.colore} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"
           points={dati.map((d,i)=>`${xFor(i)},${yFor(d[s.key])}`).join(" ")}/>
       ) : null)}
-      {series.map(s=> dati.map((d,i)=>(
-        <circle key={s.key+i} cx={xFor(i)} cy={yFor(d[s.key])} r={n<=30?3.5:2} fill="#fff" stroke={s.colore} strokeWidth={2}/>
-      )))}
+      {n===1 && series.map(s=>(
+        <circle key={s.key} cx={xFor(0)} cy={yFor(dati[0][s.key])} r={4} fill="#fff" stroke={s.colore} strokeWidth={2.5}/>
+      ))}
     </svg>
   );
 }
@@ -3588,7 +3588,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         </div>
         {!lineaFiltro && (
         <div style={{flex:"0 0 auto"}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Linea</label>
-          <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{...S.inp,width:170,maxWidth:170,minWidth:0}}>
+          <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{...S.inp,width:200,maxWidth:200,minWidth:0}}>
             <option value="__tutte__">Tutte le linee</option>
             {lineeConDati.map(l=><option key={l.id} value={l.id}>{l.id||l.nome}</option>)}
           </select>
@@ -3597,10 +3597,10 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         <div style={{fontSize:12,color:"#94a3b8",fontWeight:700,paddingBottom:10,whiteSpace:"nowrap"}}>{recs.length} record{caricandoStorico?" · carico storico…":""}</div>
       </div>
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
-        <TortaQ titolo="Qualità · OK / KO / Migliorabili" voci={vociQ} totaleLabel="Totale borse"/>
+        <TortaQ titolo="Qualità" voci={vociQ} totaleLabel="Totale borse"/>
         <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"stretch",flex:"1 1 520px",minWidth:300}}>
-          <TortaQ titolo="Dettaglio note (KO + Migliorabili)" voci={vociD} totaleLabel="Totale difetti"/>
-          <div style={{flex:"0 0 190px",minWidth:170,background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:"14px 16px",boxShadow:"0 1px 4px rgba(124,58,237,0.06)",display:"flex",flexDirection:"column"}}>
+          <TortaQ titolo="Dettaglio Difetti" voci={vociD} totaleLabel="Totale difetti"/>
+          <div style={{flex:"0 0 190px",minWidth:170,background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:"14px 16px",boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18",display:"flex",flexDirection:"column"}}>
             <div style={{fontSize:13,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:12,textAlign:"center"}}>Top 5 difetti</div>
             {vociD.length===0 ? (
               <div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:"20px 0"}}>Nessun difetto</div>
@@ -3615,7 +3615,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
           </div>
         </div>
       </div>
-      <div style={{marginTop:18,background:"#fff",border:"1px solid #ede9fe",borderRadius:14,padding:"16px 18px"}}>
+      <div style={{marginTop:18,background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:"16px 18px",boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
           <div style={{fontSize:15,fontWeight:800,color:"#6d28d9"}}>Andamento settimanale · OK / KO / Migliorabili</div>
           <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
