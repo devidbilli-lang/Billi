@@ -1772,14 +1772,41 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               if(lc===lid && sc===sk && finMs > cur) totMs += (finMs - cur);
               return totMs/60000;
             };
-            const skuAttiviLinea = skuAttiviLineaRaw.filter(sk=>{
+            // Tutti gli SKU realmente lavorati OGGI su questa linea da una sessione (segmenti reali:
+            // articolo iniziale + ogni trasferimento). Se una persona è stata assegnata a un articolo,
+            // ci ha lavorato → deve comparire, a prescindere da obiettivo/produzione/operatori attivi ora.
+            const skusSuLinea = (s, lid)=>{
+              const out = new Set();
+              const tIn = (s.tsInizio && s.tsInizio>0) ? Number(s.tsInizio) : (parseData(s.inizio)?.getTime());
+              if(!tIn || tIn < _oggi00Sku.getTime()) return out;
+              const finMs = s.fine ? ((parseData(s.fine)?.getTime())|| (s.tsFine?Number(s.tsFine):Date.now())) : Date.now();
+              const trasf = (s.trasferimenti||[]).filter(t=>t.ts).sort((a,b)=>a.ts-b.ts);
+              if(trasf.length===0){
+                const lc = s.lineaCorrente || s.lineaInizio;
+                const sc = s.skuCorrente || s.sku;
+                if(lc===lid && sc && !isSkuSpeciale(sc) && finMs>tIn) out.add(sc);
+                return out;
+              }
+              let lc = s.lineaInizio || s.lineaCorrente;
+              let sc = s.sku || s.skuCorrente;
+              let cur = tIn;
+              for(const t of trasf){
+                if(lc===lid && sc && !isSkuSpeciale(sc) && t.ts>cur) out.add(sc);
+                cur = t.ts; lc = t.a||lc; sc = t.skuA||sc;
+              }
+              if(lc===lid && sc && !isSkuSpeciale(sc) && finMs>cur) out.add(sc);
+              return out;
+            };
+            const skuLavorati = new Set();
+            sessGiornata.forEach(s=>{ skusSuLinea(s, lineaId).forEach(sk=>skuLavorati.add(sk)); });
+            // Candidati = articoli correnti/qualità (grezzi) ∪ tutti gli articoli lavorati oggi
+            const skuAttiviLinea = [...new Set([...skuAttiviLineaRaw, ...skuLavorati])].filter(sk=>{
               // Qualità: se ci sono borse/KO/MIGL registrati, la card va sempre mostrata
               const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
               if((q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0) return true;
-              // Mostra la card SOLO se c'è almeno un operatore ATTIVO ora su questo (linea, articolo):
-              // una sessione APERTA con linea/articolo correnti = lineaId/sk. Gli articoli con sole
-              // sessioni CHIUSE (trasferiti/finiti → 0 operatori dedicati) non compaiono più, così i
-              // residui dei trasferimenti spariscono da soli. Quelli con borse/KO restano (regola sopra).
+              // Lavorato/assegnato oggi (anche un solo minuto) → mostra sempre
+              if(skuLavorati.has(sk)) return true;
+              // Sessione APERTA ora su questo (linea, articolo) → mostra (copre check-in appena fatto, ~0 min)
               for(const s of sessioni){
                 const _ap = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
                 if(!_ap) continue;
