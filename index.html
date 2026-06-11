@@ -2053,9 +2053,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     </div>
                     {/* Giorni di rampa (solo se presente) */}
                     {inRampaItem && (
-                      <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff7ed",border:"1.5px solid #ff6937",borderRadius:6,padding:"1px 6px"}}>
-                        <IconaRampa size={11} color="#ff6937"/>
-                        <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:800,color:"#ff6937"}}>{giornoRampaItem}/{durataRampaItem}</span>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:5,background:"#fff7ed",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}>
+                        <IconaRampa size={16} color="#ff6937"/>
+                        <span style={{fontSize:"clamp(13px,1.6vw,17px)",fontWeight:800,color:"#ff6937"}}>{giornoRampaItem}/{durataRampaItem}</span>
                       </div>
                     )}
                     {/* Obiettivo grande (stile valore Operatori) */}
@@ -2121,9 +2121,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                         return (
                         <div style={{flex:1,background:"#ffffff",border:"2px solid "+(inRampaItem?"#ff6937":"#7c3aed"),boxShadow:"0 0 10px 3px "+(inRampaItem?"#ff693744":"#7c3aed44"),borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                           {inRampaItem ? (
-                            <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"#ffffff",border:"2.5px solid #ff6937",borderRadius:10,padding:"7px 18px"}}>
-                              <IconaRampa size={23} color="#ff6937"/>
-                              <span style={{fontSize:20,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/{durataRampaItem}</span>
+                            <div style={{display:"inline-flex",alignItems:"center",gap:10,background:"#ffffff",border:"3px solid #ff6937",borderRadius:12,padding:"10px 24px"}}>
+                              <IconaRampa size={32} color="#ff6937"/>
+                              <span style={{fontSize:28,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/{durataRampaItem}</span>
                             </div>
                           ) : (
                             <div style={{fontSize:fSep,color:"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,marginBottom:8,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
@@ -2145,9 +2145,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       <div style={{fontSize:fSep,color:inRampaItem?"#ff6937":"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
                       <div style={{minHeight:"2em",display:"flex",alignItems:"center",justifyContent:"center"}}>
                         {inRampaItem && (
-                          <span style={{display:"inline-flex",alignItems:"center",gap:8,background:"#fff",border:"2.5px solid #ff6937",borderRadius:10,padding:"7px 18px"}}>
-                            <IconaRampa size={23} color="#ff6937"/>
-                            <span style={{fontSize:20,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/{durataRampaItem}</span>
+                          <span style={{display:"inline-flex",alignItems:"center",gap:10,background:"#fff",border:"3px solid #ff6937",borderRadius:12,padding:"10px 24px"}}>
+                            <IconaRampa size={32} color="#ff6937"/>
+                            <span style={{fontSize:28,fontWeight:800,color:"#ff6937",lineHeight:1}}>{giornoRampaItem}/{durataRampaItem}</span>
                           </span>
                         )}
                       </div>
