@@ -45,11 +45,11 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyb-WuBbn4J_GYwXueY3VAZT8wfh3o_SrLDZwU4g2LKHfZCCp2SLOKLVFE3s7QJp57KMw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz2BjiKqF9zSYQupSnEZpKNljwIG4qpa0-ts4lkj-tiBImh4-uS0mrZpZVLL54JFlRUwg/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -3381,6 +3381,20 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const [dal, setDal] = React.useState(_oggiISO);
   const [al, setAl]   = React.useState(_oggiISO);
   const [brandSel, setBrandSel] = React.useState("__tutti__");
+  // Storico archiviato (giorni passati) da storico_qualita: fetch una volta sola al mount.
+  // Il prop `qualita` copre il giorno corrente (già aggiornato ogni 60s dalla tabella). Unisco i due.
+  const [storicoQ, setStoricoQ] = React.useState([]);
+  const [caricandoStorico, setCaricandoStorico] = React.useState(true);
+  React.useEffect(()=>{
+    let vivo=true;
+    (async()=>{
+      try { const r=await fetch(nexusUrl("leggiStoricoQualita",{})); const j=await r.json(); if(vivo && j && j.ok && j.data && Array.isArray(j.data.qualita)) setStoricoQ(j.data.qualita); }
+      catch(e){}
+      if(vivo) setCaricandoStorico(false);
+    })();
+    return ()=>{ vivo=false; };
+  },[]);
+  const tutti = React.useMemo(()=>[...(qualita||[]), ...(storicoQ||[])],[qualita, storicoQ]);
   const skuBrand = React.useMemo(()=>{ const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]=String(s.brand||"").trim(); }); return m; },[skuList]);
   const brands = React.useMemo(()=>{ const set=new Set(); (skuList||[]).forEach(s=>{ if(s&&s.brand&&String(s.brand).trim()) set.add(String(s.brand).trim()); }); return Array.from(set).sort(); },[skuList]);
   // Confronto a livello di GIORNO: normalizza la data del record (DD/MM/YYYY, YYYY-MM-DD o con orario)
@@ -3395,7 +3409,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   };
   const _dalTs = dal ? new Date(dal+"T00:00:00").getTime() : -Infinity;
   const _alTs  = al  ? new Date(al +"T00:00:00").getTime() :  Infinity;
-  const recs = (qualita||[]).filter(q=>{
+  const recs = tutti.filter(q=>{
     if(lineaFiltro && q.linea!==lineaFiltro.id) return false;
     const t = _giornoTs(q.data); if(t==null) return false;
     if(t<_dalTs || t>_alTs) return false;
@@ -3423,7 +3437,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
             {brands.map(b=><option key={b} value={b}>{b}</option>)}
           </select>
         </div>
-        <div style={{fontSize:12,color:"#94a3b8",fontWeight:700,paddingBottom:10,whiteSpace:"nowrap"}}>{recs.length} record</div>
+        <div style={{fontSize:12,color:"#94a3b8",fontWeight:700,paddingBottom:10,whiteSpace:"nowrap"}}>{recs.length} record{caricandoStorico?" · carico storico…":""}</div>
       </div>
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
         <TortaQ titolo="Qualità · OK / KO / Migliorabili" voci={vociQ} totaleLabel="Totale borse"/>
