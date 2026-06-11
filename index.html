@@ -3345,7 +3345,7 @@ function TortaQ({ titolo, voci, totaleLabel }){
     if(b) setThumb({left:b.offsetLeft, width:b.offsetWidth});
   },[sel, vis.length, tot]);
   const short = l => { const s=String(l||""); return s.length>9 ? s.slice(0,8)+"…" : s; };
-  const W=320, H=176, cx=160, cy=88, r=64;
+  const W=176, H=176, cx=88, cy=88, r=64;
   const rad=a=>a*Math.PI/180;
   let acc=-90;
   const slices = vis.map(v=>{ const frac=v.valore/tot; const a0=acc,a1=acc+frac*360; acc=a1; return {v,frac,a0,a1,mid:(a0+a1)/2}; });
@@ -3355,7 +3355,7 @@ function TortaQ({ titolo, voci, totaleLabel }){
       {tot<=0 ? (
         <div style={{textAlign:"center",color:"#94a3b8",padding:"36px 0",fontSize:13}}>Nessun dato nel periodo</div>
       ) : (<>
-        <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{display:"block"}}>
+        <svg viewBox={"0 0 "+W+" "+H} style={{display:"block",width:"100%",maxWidth:170,margin:"0 auto"}}>
           {vis.length===1 ? (
             <circle cx={cx} cy={cy} r={r} fill={vis[0].colore}/>
           ) : slices.map((s,i)=>{
@@ -3365,11 +3365,6 @@ function TortaQ({ titolo, voci, totaleLabel }){
             const x1=(cx+r*Math.cos(rad(s.a1))+ox), y1=(cy+r*Math.sin(rad(s.a1))+oy);
             const lg=(s.a1-s.a0)>180?1:0;
             return <path key={i} d={"M "+(cx+ox).toFixed(2)+" "+(cy+oy).toFixed(2)+" L "+x0.toFixed(2)+" "+y0.toFixed(2)+" A "+r+" "+r+" 0 "+lg+" 1 "+x1.toFixed(2)+" "+y1.toFixed(2)+" Z"} fill={s.v.colore} stroke="#fff" strokeWidth={isSel?3:2} onClick={()=>setSel(i)} style={{cursor:"pointer"}}/>;
-          })}
-          {vis.length>1 && slices.map((s,i)=>{ if(s.frac<0.08) return null;
-            const lx=cx+(r+13)*Math.cos(rad(s.mid)), ly=cy+(r+13)*Math.sin(rad(s.mid));
-            const c=Math.cos(rad(s.mid)), anchor=c>0.25?"start":c<-0.25?"end":"middle";
-            return (<text key={i} x={lx.toFixed(1)} y={ly.toFixed(1)} textAnchor={anchor} dominantBaseline="middle" fontFamily="'Montserrat',sans-serif" fontSize="9" fontWeight={i===sel?800:600} fill={i===sel?s.v.colore:"#64748b"}>{short(s.v.label)} {Math.round(s.frac*100)}%</text>);
           })}
         </svg>
         <div ref={wrapRef} style={{position:"relative",display:"flex",flexWrap:"nowrap",overflowX:"auto",background:"#f1f5f9",borderRadius:10,padding:4,marginTop:6}}>
@@ -3384,7 +3379,7 @@ function TortaQ({ titolo, voci, totaleLabel }){
             <span style={{fontWeight:800,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].label}</span>
             <span style={{fontWeight:900,color:vis[sel].colore,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].valore}</span>
             <span style={{fontWeight:700,color:"#94a3b8",fontSize:13,marginRight:4}}>({Math.round(vis[sel].valore/tot*100)}%)</span>
-            {vis[sel].skus && vis[sel].skus.slice(0,16).map(sk=>(<code key={sk} style={{...S.sku,fontSize:12,padding:"3px 9px"}}>{sk}</code>))}
+            {vis[sel].skus && vis[sel].skus.slice(0,16).map(sk=>(<code key={sk} style={{...S.sku,fontSize:15,padding:"3px 10px"}}>{sk}</code>))}
             {vis[sel].skus && vis[sel].skus.length>16 && <span style={{fontSize:12,color:"#94a3b8",fontWeight:700}}>+{vis[sel].skus.length-16}</span>}
           </div>
         )}
