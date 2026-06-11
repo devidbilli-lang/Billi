@@ -3369,7 +3369,7 @@ function TortaQ({ titolo, voci, totaleLabel }){
           {vis.length>1 && slices.map((s,i)=>{ if(s.frac<0.08) return null;
             const lx=cx+(r+13)*Math.cos(rad(s.mid)), ly=cy+(r+13)*Math.sin(rad(s.mid));
             const c=Math.cos(rad(s.mid)), anchor=c>0.25?"start":c<-0.25?"end":"middle";
-            return (<text key={i} x={lx.toFixed(1)} y={ly.toFixed(1)} textAnchor={anchor} dominantBaseline="middle" fontFamily="'Montserrat',sans-serif" fontSize="10.5" fontWeight={i===sel?800:600} fill={i===sel?s.v.colore:"#64748b"}>{short(s.v.label)} {Math.round(s.frac*100)}%</text>);
+            return (<text key={i} x={lx.toFixed(1)} y={ly.toFixed(1)} textAnchor={anchor} dominantBaseline="middle" fontFamily="'Montserrat',sans-serif" fontSize="9" fontWeight={i===sel?800:600} fill={i===sel?s.v.colore:"#64748b"}>{short(s.v.label)} {Math.round(s.frac*100)}%</text>);
           })}
         </svg>
         <div ref={wrapRef} style={{position:"relative",display:"flex",flexWrap:"nowrap",overflowX:"auto",background:"#f1f5f9",borderRadius:10,padding:4,marginTop:6}}>
@@ -3379,11 +3379,19 @@ function TortaQ({ titolo, voci, totaleLabel }){
           ))}
         </div>
         {vis[sel] && (
-          <div style={{marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
-            <span style={{width:14,height:14,borderRadius:4,background:vis[sel].colore}}/>
-            <span style={{fontWeight:800,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].label}</span>
-            <span style={{fontWeight:900,color:vis[sel].colore,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].valore}</span>
-            <span style={{fontWeight:700,color:"#94a3b8",fontSize:13}}>({Math.round(vis[sel].valore/tot*100)}%)</span>
+          <div style={{marginTop:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+              <span style={{width:14,height:14,borderRadius:4,background:vis[sel].colore}}/>
+              <span style={{fontWeight:800,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].label}</span>
+              <span style={{fontWeight:900,color:vis[sel].colore,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].valore}</span>
+              <span style={{fontWeight:700,color:"#94a3b8",fontSize:13}}>({Math.round(vis[sel].valore/tot*100)}%)</span>
+              {vis[sel].nSku!=null && <span style={{fontWeight:800,color:"#475569",fontSize:12,background:"#f1f5f9",borderRadius:6,padding:"3px 9px"}}>su {vis[sel].nSku} SKU</span>}
+            </div>
+            {vis[sel].skus && vis[sel].skus.length>0 && (
+              <div style={{marginTop:8,textAlign:"center",fontSize:11,color:"#94a3b8",lineHeight:1.6,wordBreak:"break-word"}}>
+                {vis[sel].skus.slice(0,12).join(" · ")}{vis[sel].skus.length>12 ? "  +"+(vis[sel].skus.length-12)+" altri" : ""}
+              </div>
+            )}
           </div>
         )}
         <div style={{borderTop:"1px solid #f1f5f9",marginTop:12,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:800,color:"#64748b"}}>
@@ -3436,16 +3444,31 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     if(brandSel!=="__tutti__"){ const b = skuBrand[String(q.sku||"").toUpperCase()]||""; if(b!==brandSel) return false; }
     return true;
   });
-  let tOk=0,tKo=0,tMg=0; const noteKoArr=[], noteMgArr=[];
-  recs.forEach(q=>{ tOk+=Number(q.ok)||0; tKo+=Number(q.ko)||0; tMg+=Number(q.migliorabili)||0; if(q.noteKo) noteKoArr.push(q.noteKo); if(q.noteMigl) noteMgArr.push(q.noteMigl); });
-  const difetti = aggregaDifetti(noteKoArr.concat(noteMgArr)).filter(kv=>kv[1]>0);
-  const PALETTE = ["#ef4444","#f59e0b","#7c3aed","#0ea5e9","#10b981","#ec4899","#f97316","#8b5cf6","#14b8a6","#eab308","#06b6d4","#a855f7"];
+  let tOk=0,tKo=0,tMg=0;
+  recs.forEach(q=>{ tOk+=Number(q.ok)||0; tKo+=Number(q.ko)||0; tMg+=Number(q.migliorabili)||0; });
+  // Difetti aggregati per SORGENTE (KO/Mgl), con gli SKU coinvolti. Stesso parsing di aggregaDifetti: "Difetto (N pz)".
+  const _mappaDif = {}; // fonte|||nome -> {label, fonte, count, skus:Set}
+  const _accDif = (str, sku, fonte) => {
+    String(str||"").split("|").forEach(pezzo=>{
+      const t=pezzo.trim(); if(!t) return;
+      const m=t.match(/^(.+?)\s*\(\s*(\d+)\s*pz\s*\)\s*$/i);
+      const nome=(m?m[1]:t).trim(); if(!nome) return;
+      const q=m?(Number(m[2])||0):0;
+      const k=fonte+"|||"+nome.toLowerCase();
+      if(!_mappaDif[k]) _mappaDif[k]={label:nome, fonte, count:0, skus:new Set()};
+      _mappaDif[k].count+=q;
+      if(sku) _mappaDif[k].skus.add(String(sku).trim().toUpperCase());
+    });
+  };
+  recs.forEach(q=>{ _accDif(q.noteKo,q.sku,"KO"); _accDif(q.noteMigl,q.sku,"MGL"); });
+  const difetti = Object.values(_mappaDif).filter(d=>d.count>0)
+    .sort((a,b)=> a.fonte!==b.fonte ? (a.fonte==="KO"?-1:1) : b.count-a.count);
   const vociQ = [
     {label:"OK", valore:tOk, colore:"#10b981"},
     {label:"KO", valore:tKo, colore:"#ef4444"},
     {label:"Migliorabili", valore:tMg, colore:"#f59e0b"},
   ];
-  const vociD = difetti.map((kv,i)=>({label:kv[0], valore:kv[1], colore:PALETTE[i%PALETTE.length]}));
+  const vociD = difetti.map(d=>({ label:d.label, valore:d.count, colore:d.fonte==="KO"?"#ef4444":"#f59e0b", fonte:d.fonte, nSku:d.skus.size, skus:Array.from(d.skus).sort() }));
   return (
     <div>
       <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",marginBottom:18,background:"#faf5ff",border:"1px solid #ede9fe",borderRadius:12,padding:"14px 16px"}}>
