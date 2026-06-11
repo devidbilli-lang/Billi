@@ -5042,7 +5042,7 @@ function TabAttivita({ repTipo="taglio" }) {
   );
 }
 
-function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useState(0);
+function TabOperatori({ operatori, sessioni, linee, isAdmin, lineaFiltro }) { const [,setTk] = useState(0);
   useEffect(()=>{ const t=setInterval(()=>setTk(x=>x+1),60000); return()=>clearInterval(t); },[]);
   const [filtro,setFiltro] = useState("tutti");
   const [cerca,setCerca]   = useState("");
@@ -5094,10 +5094,24 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
     } catch(e){}
     setTk(x=>x+1);
   };
-  const stati = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
+  const _statiAll = operatori.map(op => { const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
     const sessAtt = sessioni.find(s => (s.matricola===chiave||s.matricola===op.matricola) && !s.fine && !s._pianificato);
     const ultimaSess = sessioni.filter(s => s.matricola===chiave||s.matricola===op.matricola).sort((a,b)=> (parseData(b.inizio)||0)-(parseData(a.inizio)||0))[0];
     return { op, sessAtt, ultimaSess }; });
+  // VISIBILITÀ: l'admin vede tutti gli operatori; una linea vede SOLO chi oggi è (o è stato) su quella linea.
+  const _oggi0Op = (()=>{ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
+  const _opSuLinea = (op) => {
+    if (isAdmin || !lineaFiltro) return true;
+    const chiave = op.nome.toUpperCase()+"-"+op.cognome.toUpperCase();
+    return (sessioni||[]).some(s => {
+      if (s._pianificato) return false;
+      if (s.matricola!==chiave && s.matricola!==op.matricola) return false;
+      const dI = parseData(s.inizio);
+      if (!dI || dI.getTime() < _oggi0Op) return false;
+      return s.lineaCorrente===lineaFiltro.id || s.lineaInizio===lineaFiltro.id;
+    });
+  };
+  const stati = _statiAll.filter(s => _opSuLinea(s.op));
   const presenti = stati.filter(s=>s.sessAtt).length;
   const assenti  = stati.filter(s=>!s.sessAtt).length;
   const filtrati = stati.filter(s=>{ if(filtro==="presenti") return !!s.sessAtt; if(filtro==="assenti") return !s.sessAtt; return true; }).filter(s=>{ if(!cerca) return true; const q = cerca.toLowerCase(); return s.op.nome.toLowerCase().includes(q)||s.op.cognome.toLowerCase().includes(q)||s.op.matricola.toLowerCase().includes(q); });
@@ -5105,7 +5119,7 @@ function TabOperatori({ operatori, sessioni, linee }) { const [,setTk] = useStat
     <div>
       <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
         <div style={{background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
-          <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{operatori.length}</div>
+          <div style={{fontSize:28,fontWeight:800,color:"#ffffff",lineHeight:1}}>{stati.length}</div>
           <div style={{fontSize:11,color:"#ffffff",marginTop:4,fontWeight:700}}>Totale</div>
         </div>
         <div style={{background:"#f8fafc",border:"1px solid #22c55e44",borderTop:"3px solid #22c55e",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:100}}>
@@ -6834,7 +6848,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         </div>
       )}
       {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList} lineaFiltro={lineaFiltro}/></div>}
-      {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee}/></div>}
+      {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
       {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
       {tab==="attivita"&&<TabAttivita repTipo={(()=>{ const _id=(lineaFiltro&&lineaFiltro.id||"").toUpperCase(); const _nm=(lineaFiltro&&lineaFiltro.nome||"").toUpperCase(); if(_id.includes("RMA")||_nm.includes("RMA")) return "rma"; if(_id.includes("PREPARAZIONE DG")||_nm.includes("PREPARAZIONE DG")) return "prep"; return "taglio"; })()}/>}
