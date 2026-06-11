@@ -3456,9 +3456,9 @@ function GraficoSettimaneQ({ dati }){
   const plotW=W-mL-mR, plotH=H-mT-mB;
   const n=(dati||[]).length;
   const series=[
-    {key:"ok",label:"OK",colore:"#10b981"},
-    {key:"ko",label:"KO",colore:"#ef4444"},
-    {key:"mg",label:"Migliorabili",colore:"#f59e0b"},
+    {key:"ok",label:"OK",colore:"#06e08a"},
+    {key:"ko",label:"KO",colore:"#ff2d2d"},
+    {key:"mg",label:"Migliorabili",colore:"#ffb31a"},
   ];
   const settNum=(ts)=>{ const d=new Date(ts); const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const dayNum=(date.getUTCDay()+6)%7; date.setUTCDate(date.getUTCDate()-dayNum+3); const ft=new Date(Date.UTC(date.getUTCFullYear(),0,4)); const ftd=(ft.getUTCDay()+6)%7; ft.setUTCDate(ft.getUTCDate()-ftd+3); return 1+Math.round((date-ft)/(7*86400000)); };
   if(n===0) return <div style={{padding:30,textAlign:"center",color:"#94a3b8",fontSize:14}}>Nessun dato nel periodo selezionato</div>;
@@ -3558,11 +3558,11 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const difetti = Object.values(_mappaDif).filter(d=>d.count>0)
     .sort((a,b)=> b.count-a.count);
   const vociQ = [
-    {label:"OK", valore:tOk, colore:"#10b981"},
-    {label:"KO", valore:tKo, colore:"#ef4444"},
-    {label:"Migliorabili", valore:tMg, colore:"#f59e0b"},
+    {label:"OK", valore:tOk, colore:"#06e08a"},
+    {label:"KO", valore:tKo, colore:"#ff2d2d"},
+    {label:"Migliorabili", valore:tMg, colore:"#ffb31a"},
   ];
-  const vociD = difetti.map(d=>({ label:d.label, valore:d.count, colore:d.fonte==="KO"?"#ef4444":"#f59e0b", fonte:d.fonte, nSku:d.skus.size, skus:Array.from(d.skus).sort() }));
+  const vociD = difetti.map(d=>({ label:d.label, valore:d.count, colore:d.fonte==="KO"?"#ff2d2d":"#ffb31a", fonte:d.fonte, nSku:d.skus.size, skus:Array.from(d.skus).sort() }));
   // Aggregazione per settimana: chiave = lunedì della settimana (mezzanotte locale), somma OK/KO/Mgl.
   const _mappaSett = {};
   recs.forEach(q=>{
@@ -3619,7 +3619,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
           <div style={{fontSize:20,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5}}>Andamento Settimanale</div>
           <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-            {[["OK","#10b981"],["KO","#ef4444"],["Migliorabili","#f59e0b"]].map(([l,c])=>(
+            {[["OK","#06e08a"],["KO","#ff2d2d"],["Migliorabili","#ffb31a"]].map(([l,c])=>(
               <span key={l} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:"#475569"}}>
                 <span style={{width:16,height:4,borderRadius:2,background:c,display:"inline-block"}}/>{l}
               </span>
