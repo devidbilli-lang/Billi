@@ -3334,42 +3334,62 @@ function TabTrasferimenti({ linee=[], onRiepilogo }) {
 function TortaQ({ titolo, voci, totaleLabel }){
   const vis = (voci||[]).filter(v=>(v.valore||0)>0);
   const tot = vis.reduce((s,v)=>s+v.valore,0);
-  const size=180, cx=size/2, cy=size/2, r=size/2-3;
+  const [sel, setSel] = React.useState(0);
+  React.useEffect(()=>{ if(sel>=vis.length) setSel(0); },[vis.length]);
+  // Selettore: cursore scorrevole posizionato sul bottone selezionato (misura DOM reale).
+  const wrapRef = React.useRef(null);
+  const [thumb, setThumb] = React.useState({left:0,width:0});
+  React.useLayoutEffect(()=>{
+    const w=wrapRef.current; if(!w) return;
+    const b=w.querySelectorAll("[data-seg]")[sel];
+    if(b) setThumb({left:b.offsetLeft, width:b.offsetWidth});
+  },[sel, vis.length, tot]);
+  const short = l => { const s=String(l||""); return s.length>9 ? s.slice(0,8)+"…" : s; };
+  const W=320, H=176, cx=160, cy=88, r=64;
   const rad=a=>a*Math.PI/180;
-  let ang=-90;
+  let acc=-90;
+  const slices = vis.map(v=>{ const frac=v.valore/tot; const a0=acc,a1=acc+frac*360; acc=a1; return {v,frac,a0,a1,mid:(a0+a1)/2}; });
   return (
     <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:18,flex:"1 1 340px",minWidth:300,boxShadow:"0 1px 4px rgba(124,58,237,0.06)"}}>
-      <div style={{fontSize:14,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:14,textAlign:"center"}}>{titolo}</div>
+      <div style={{fontSize:14,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,textAlign:"center"}}>{titolo}</div>
       {tot<=0 ? (
         <div style={{textAlign:"center",color:"#94a3b8",padding:"36px 0",fontSize:13}}>Nessun dato nel periodo</div>
-      ) : (
-        <div style={{display:"flex",alignItems:"center",gap:18,flexWrap:"wrap",justifyContent:"center"}}>
-          <svg width={size} height={size} viewBox={"0 0 "+size+" "+size} style={{flexShrink:0}}>
-            {vis.length===1 ? (
-              <circle cx={cx} cy={cy} r={r} fill={vis[0].colore}/>
-            ) : vis.map((v,i)=>{
-              const frac=v.valore/tot; const a0=ang, a1=ang+frac*360; ang=a1;
-              const x0=cx+r*Math.cos(rad(a0)), y0=cy+r*Math.sin(rad(a0));
-              const x1=cx+r*Math.cos(rad(a1)), y1=cy+r*Math.sin(rad(a1));
-              const lg=(a1-a0)>180?1:0;
-              return <path key={i} d={"M "+cx+" "+cy+" L "+x0.toFixed(2)+" "+y0.toFixed(2)+" A "+r+" "+r+" 0 "+lg+" 1 "+x1.toFixed(2)+" "+y1.toFixed(2)+" Z"} fill={v.colore} stroke="#fff" strokeWidth={2}/>;
-            })}
-          </svg>
-          <div style={{display:"flex",flexDirection:"column",gap:7,minWidth:140,flex:"1 1 auto"}}>
-            {vis.map((v,i)=>{ const pct=Math.round(v.valore/tot*100); return (
-              <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
-                <span style={{width:13,height:13,borderRadius:3,background:v.colore,flexShrink:0}}/>
-                <span style={{fontWeight:700,color:"#1e293b",flex:1,wordBreak:"break-word"}}>{v.label}</span>
-                <span style={{fontWeight:800,color:v.colore}}>{v.valore}</span>
-                <span style={{color:"#94a3b8",fontSize:11,minWidth:34,textAlign:"right"}}>{pct}%</span>
-              </div>
-            ); })}
-            <div style={{borderTop:"1px solid #f1f5f9",marginTop:4,paddingTop:6,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:800,color:"#64748b"}}>
-              <span>{totaleLabel||"Totale"}</span><span>{tot}</span>
-            </div>
-          </div>
+      ) : (<>
+        <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{display:"block"}}>
+          {vis.length===1 ? (
+            <circle cx={cx} cy={cy} r={r} fill={vis[0].colore}/>
+          ) : slices.map((s,i)=>{
+            const isSel=i===sel;
+            const off=isSel?7:0, ox=off*Math.cos(rad(s.mid)), oy=off*Math.sin(rad(s.mid));
+            const x0=(cx+r*Math.cos(rad(s.a0))+ox), y0=(cy+r*Math.sin(rad(s.a0))+oy);
+            const x1=(cx+r*Math.cos(rad(s.a1))+ox), y1=(cy+r*Math.sin(rad(s.a1))+oy);
+            const lg=(s.a1-s.a0)>180?1:0;
+            return <path key={i} d={"M "+(cx+ox).toFixed(2)+" "+(cy+oy).toFixed(2)+" L "+x0.toFixed(2)+" "+y0.toFixed(2)+" A "+r+" "+r+" 0 "+lg+" 1 "+x1.toFixed(2)+" "+y1.toFixed(2)+" Z"} fill={s.v.colore} stroke="#fff" strokeWidth={isSel?3:2} onClick={()=>setSel(i)} style={{cursor:"pointer"}}/>;
+          })}
+          {vis.length>1 && slices.map((s,i)=>{ if(s.frac<0.08) return null;
+            const lx=cx+(r+13)*Math.cos(rad(s.mid)), ly=cy+(r+13)*Math.sin(rad(s.mid));
+            const c=Math.cos(rad(s.mid)), anchor=c>0.25?"start":c<-0.25?"end":"middle";
+            return (<text key={i} x={lx.toFixed(1)} y={ly.toFixed(1)} textAnchor={anchor} dominantBaseline="middle" fontFamily="'Montserrat',sans-serif" fontSize="10.5" fontWeight={i===sel?800:600} fill={i===sel?s.v.colore:"#64748b"}>{short(s.v.label)} {Math.round(s.frac*100)}%</text>);
+          })}
+        </svg>
+        <div ref={wrapRef} style={{position:"relative",display:"flex",flexWrap:"nowrap",overflowX:"auto",background:"#f1f5f9",borderRadius:10,padding:4,marginTop:6}}>
+          <div style={{position:"absolute",top:4,bottom:4,left:thumb.left,width:thumb.width,background:(vis[sel]&&vis[sel].colore)||"#7c3aed",borderRadius:8,transition:"left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1)",zIndex:0}}/>
+          {vis.map((v,i)=>(
+            <button key={i} data-seg onClick={()=>setSel(i)} style={{flex:"1 0 auto",minWidth:54,position:"relative",zIndex:1,border:"none",background:"transparent",color:i===sel?"#fff":"#64748b",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer",transition:"color 0.2s",fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>{v.label}</button>
+          ))}
         </div>
-      )}
+        {vis[sel] && (
+          <div style={{marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+            <span style={{width:14,height:14,borderRadius:4,background:vis[sel].colore}}/>
+            <span style={{fontWeight:800,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].label}</span>
+            <span style={{fontWeight:900,color:vis[sel].colore,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].valore}</span>
+            <span style={{fontWeight:700,color:"#94a3b8",fontSize:13}}>({Math.round(vis[sel].valore/tot*100)}%)</span>
+          </div>
+        )}
+        <div style={{borderTop:"1px solid #f1f5f9",marginTop:12,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:800,color:"#64748b"}}>
+          <span>{totaleLabel||"Totale"}</span><span>{tot}</span>
+        </div>
+      </>)}
     </div>
   );
 }
@@ -3431,8 +3451,8 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
       <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",marginBottom:18,background:"#faf5ff",border:"1px solid #ede9fe",borderRadius:12,padding:"14px 16px"}}>
         <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Dal</label><input type="date" value={dal} max={al} onChange={e=>setDal(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
         <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Al</label><input type="date" value={al} min={dal} onChange={e=>setAl(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
-        <div style={{flex:"1 1 200px",minWidth:180}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Brand</label>
-          <select value={brandSel} onChange={e=>setBrandSel(e.target.value)} style={{...S.inp}}>
+        <div style={{flex:"0 0 auto"}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Brand</label>
+          <select value={brandSel} onChange={e=>setBrandSel(e.target.value)} style={{...S.inp,width:150,maxWidth:150,minWidth:0}}>
             <option value="__tutti__">Tutti i brand</option>
             {brands.map(b=><option key={b} value={b}>{b}</option>)}
           </select>
