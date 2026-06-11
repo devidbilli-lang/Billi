@@ -3451,7 +3451,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   };
   recs.forEach(q=>{ _accDif(q.noteKo,q.sku,"KO"); _accDif(q.noteMigl,q.sku,"MGL"); });
   const difetti = Object.values(_mappaDif).filter(d=>d.count>0)
-    .sort((a,b)=> a.fonte!==b.fonte ? (a.fonte==="KO"?-1:1) : b.count-a.count);
+    .sort((a,b)=> b.count-a.count);
   const vociQ = [
     {label:"OK", valore:tOk, colore:"#10b981"},
     {label:"KO", valore:tKo, colore:"#ef4444"},
@@ -3535,7 +3535,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   return (
     <div>
       <div style={{display:"flex",gap:10,marginBottom:16}}>
-        {[["tabella","Tabella"],["report","\uD83D\uDCCA Report"]].map(([k,l])=>(
+        {[["tabella","Tabella"],["report","Report"]].map(([k,l])=>(
           <button key={k} onClick={()=>setVistaQ(k)} style={{padding:"9px 20px",border:"2px solid #7c3aed",borderRadius:9,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700,background:vistaQ===k?"#7c3aed":"#fff",color:vistaQ===k?"#fff":"#6d28d9",transition:"all 0.15s"}}>{l}</button>
         ))}
       </div>
