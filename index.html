@@ -3345,7 +3345,7 @@ function TortaQ({ titolo, voci, totaleLabel }){
     if(b) setThumb({left:b.offsetLeft, width:b.offsetWidth});
   },[sel, vis.length, tot]);
   const short = l => { const s=String(l||""); return s.length>9 ? s.slice(0,8)+"…" : s; };
-  const W=176, H=176, cx=88, cy=88, r=64;
+  const W=320, H=176, cx=160, cy=88, r=64;
   const rad=a=>a*Math.PI/180;
   let acc=-90;
   const slices = vis.map(v=>{ const frac=v.valore/tot; const a0=acc,a1=acc+frac*360; acc=a1; return {v,frac,a0,a1,mid:(a0+a1)/2}; });
@@ -3355,7 +3355,7 @@ function TortaQ({ titolo, voci, totaleLabel }){
       {tot<=0 ? (
         <div style={{textAlign:"center",color:"#94a3b8",padding:"36px 0",fontSize:13}}>Nessun dato nel periodo</div>
       ) : (<>
-        <svg viewBox={"0 0 "+W+" "+H} style={{display:"block",width:"100%",maxWidth:170,margin:"0 auto"}}>
+        <svg width="100%" viewBox={"0 0 "+W+" "+H} style={{display:"block"}}>
           {vis.length===1 ? (
             <circle cx={cx} cy={cy} r={r} fill={vis[0].colore}/>
           ) : slices.map((s,i)=>{
