@@ -3449,11 +3449,57 @@ function TortaQ({ titolo, voci, totaleLabel }){
 
 // Pagina REPORT della tab Qualità: filtro data (dal/al) + brand (colonna H degli SKU), due torte
 // (OK/KO/Migliorabili e dettaglio note KO+Mgl). Rispetta la linea: una linea vede i propri dati.
+// Grafico cartesiano settimanale (SVG a mano, nessuna libreria): X = settimane (numero ISO),
+// Y = quantità; 3 serie OK / KO / Migliorabili aggregate per settimana.
+function GraficoSettimaneQ({ dati }){
+  const W=760, H=320, mL=46, mR=18, mT=18, mB=46;
+  const plotW=W-mL-mR, plotH=H-mT-mB;
+  const n=(dati||[]).length;
+  const series=[
+    {key:"ok",label:"OK",colore:"#10b981"},
+    {key:"ko",label:"KO",colore:"#ef4444"},
+    {key:"mg",label:"Migliorabili",colore:"#f59e0b"},
+  ];
+  const settNum=(ts)=>{ const d=new Date(ts); const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const dayNum=(date.getUTCDay()+6)%7; date.setUTCDate(date.getUTCDate()-dayNum+3); const ft=new Date(Date.UTC(date.getUTCFullYear(),0,4)); const ftd=(ft.getUTCDay()+6)%7; ft.setUTCDate(ft.getUTCDate()-ftd+3); return 1+Math.round((date-ft)/(7*86400000)); };
+  if(n===0) return <div style={{padding:30,textAlign:"center",color:"#94a3b8",fontSize:14}}>Nessun dato nel periodo selezionato</div>;
+  const rawMax=Math.max(1, ...dati.map(d=>Math.max(d.ok||0,d.ko||0,d.mg||0)));
+  const rough=rawMax/5, mag=Math.pow(10,Math.floor(Math.log10(rough))), norm=rough/mag;
+  const stepRaw=(norm<1.5?1:norm<3?2:norm<7?5:10)*mag;
+  const step=Math.max(1, Math.round(stepRaw));
+  const maxY=Math.max(step, Math.ceil(rawMax/step)*step);
+  const ticks=[]; for(let v=0; v<=maxY+1e-6; v+=step) ticks.push(v);
+  const xFor=(i)=> n<=1 ? mL+plotW/2 : mL + (i/(n-1))*plotW;
+  const yFor=(v)=> mT + plotH - ((v||0)/maxY)*plotH;
+  const skip=Math.max(1, Math.ceil(n/16));
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:"block"}}>
+      {ticks.map((t,i)=>{ const y=yFor(t); return (
+        <g key={"t"+i}>
+          <line x1={mL} y1={y} x2={W-mR} y2={y} stroke={t===0?"#cbd5e1":"#eef2f7"} strokeWidth={t===0?1.5:1}/>
+          <text x={mL-8} y={y+4} textAnchor="end" fontSize={11} fill="#94a3b8" fontWeight={700}>{t}</text>
+        </g>
+      ); })}
+      {dati.map((d,i)=> (i%skip===0||i===n-1) ? (
+        <text key={"x"+i} x={xFor(i)} y={H-mB+18} textAnchor="middle" fontSize={11} fill="#64748b" fontWeight={700}>S{settNum(d.ts)}</text>
+      ) : null)}
+      <line x1={mL} y1={mT} x2={mL} y2={mT+plotH} stroke="#cbd5e1" strokeWidth={1.5}/>
+      {series.map(s=> n>1 ? (
+        <polyline key={s.key} fill="none" stroke={s.colore} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"
+          points={dati.map((d,i)=>`${xFor(i)},${yFor(d[s.key])}`).join(" ")}/>
+      ) : null)}
+      {series.map(s=> dati.map((d,i)=>(
+        <circle key={s.key+i} cx={xFor(i)} cy={yFor(d[s.key])} r={n<=30?3.5:2} fill="#fff" stroke={s.colore} strokeWidth={2}/>
+      )))}
+    </svg>
+  );
+}
+
 function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const _oggiISO = (()=>{ const d=new Date(); const l=new Date(d.getTime()-d.getTimezoneOffset()*60000); return l.toISOString().slice(0,10); })();
   const [dal, setDal] = React.useState(_oggiISO);
   const [al, setAl]   = React.useState(_oggiISO);
   const [brandSel, setBrandSel] = React.useState("__tutti__");
+  const [lineaSel, setLineaSel] = React.useState("__tutte__");
   // Storico archiviato (giorni passati) da storico_qualita: fetch una volta sola al mount.
   // Il prop `qualita` copre il giorno corrente (già aggiornato ogni 60s dalla tabella). Unisco i due.
   const [storicoQ, setStoricoQ] = React.useState([]);
@@ -3470,6 +3516,8 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const tutti = React.useMemo(()=>[...(qualita||[]), ...(storicoQ||[])],[qualita, storicoQ]);
   const skuBrand = React.useMemo(()=>{ const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]=String(s.brand||"").trim(); }); return m; },[skuList]);
   const brands = React.useMemo(()=>{ const set=new Set(); (skuList||[]).forEach(s=>{ if(s&&s.brand&&String(s.brand).trim()) set.add(String(s.brand).trim()); }); return Array.from(set).sort(); },[skuList]);
+  // Linee con almeno un record di qualità (oggi o storico) → opzioni del filtro Linea.
+  const lineeConDati = React.useMemo(()=>{ const ids=new Set((tutti||[]).map(q=>q.linea).filter(Boolean)); return (linee||[]).filter(l=>l&&ids.has(l.id)).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""))); },[tutti, linee]);
   // Confronto a livello di GIORNO: normalizza la data del record (DD/MM/YYYY, YYYY-MM-DD o con orario)
   // alla mezzanotte locale, e confronta con [dal, al] inclusi (anch'essi mezzanotte locale).
   const _giornoTs = (raw)=>{
@@ -3484,6 +3532,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const _alTs  = al  ? new Date(al +"T00:00:00").getTime() :  Infinity;
   const recs = tutti.filter(q=>{
     if(lineaFiltro && q.linea!==lineaFiltro.id) return false;
+    if(!lineaFiltro && lineaSel!=="__tutte__" && q.linea!==lineaSel) return false;
     const t = _giornoTs(q.data); if(t==null) return false;
     if(t<_dalTs || t>_alTs) return false;
     if(brandSel!=="__tutti__"){ const b = skuBrand[String(q.sku||"").toUpperCase()]||""; if(b!==brandSel) return false; }
@@ -3514,6 +3563,18 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     {label:"Migliorabili", valore:tMg, colore:"#f59e0b"},
   ];
   const vociD = difetti.map(d=>({ label:d.label, valore:d.count, colore:d.fonte==="KO"?"#ef4444":"#f59e0b", fonte:d.fonte, nSku:d.skus.size, skus:Array.from(d.skus).sort() }));
+  // Aggregazione per settimana: chiave = lunedì della settimana (mezzanotte locale), somma OK/KO/Mgl.
+  const _mappaSett = {};
+  recs.forEach(q=>{
+    const t=_giornoTs(q.data); if(t==null) return;
+    const d=new Date(t); const g=(d.getDay()+6)%7; d.setHours(0,0,0,0); d.setDate(d.getDate()-g);
+    const key=d.getTime();
+    if(!_mappaSett[key]) _mappaSett[key]={ts:key, ok:0, ko:0, mg:0};
+    _mappaSett[key].ok += Number(q.ok)||0;
+    _mappaSett[key].ko += Number(q.ko)||0;
+    _mappaSett[key].mg += Number(q.migliorabili)||0;
+  });
+  const datiSett = Object.values(_mappaSett).sort((a,b)=>a.ts-b.ts);
   return (
     <div>
       <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",marginBottom:18,background:"#faf5ff",border:"1px solid #ede9fe",borderRadius:12,padding:"14px 16px"}}>
@@ -3525,11 +3586,32 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
             {brands.map(b=><option key={b} value={b}>{b}</option>)}
           </select>
         </div>
+        {!lineaFiltro && (
+        <div style={{flex:"0 0 auto"}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Linea</label>
+          <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{...S.inp,width:170,maxWidth:170,minWidth:0}}>
+            <option value="__tutte__">Tutte le linee</option>
+            {lineeConDati.map(l=><option key={l.id} value={l.id}>{l.nome||l.id}</option>)}
+          </select>
+        </div>
+        )}
         <div style={{fontSize:12,color:"#94a3b8",fontWeight:700,paddingBottom:10,whiteSpace:"nowrap"}}>{recs.length} record{caricandoStorico?" · carico storico…":""}</div>
       </div>
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
         <TortaQ titolo="Qualità · OK / KO / Migliorabili" voci={vociQ} totaleLabel="Totale borse"/>
         <TortaQ titolo="Dettaglio note (KO + Migliorabili)" voci={vociD} totaleLabel="Totale difetti"/>
+      </div>
+      <div style={{marginTop:18,background:"#fff",border:"1px solid #ede9fe",borderRadius:14,padding:"16px 18px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
+          <div style={{fontSize:15,fontWeight:800,color:"#6d28d9"}}>Andamento settimanale · OK / KO / Migliorabili</div>
+          <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+            {[["OK","#10b981"],["KO","#ef4444"],["Migliorabili","#f59e0b"]].map(([l,c])=>(
+              <span key={l} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:"#475569"}}>
+                <span style={{width:16,height:4,borderRadius:2,background:c,display:"inline-block"}}/>{l}
+              </span>
+            ))}
+          </div>
+        </div>
+        <GraficoSettimaneQ dati={datiSett}/>
       </div>
     </div>
   );
