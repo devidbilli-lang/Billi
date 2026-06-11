@@ -3330,12 +3330,116 @@ function TabTrasferimenti({ linee=[], onRiepilogo }) {
   );
 }
 
+// Torta SVG (nessuna libreria) con legenda + percentuali. voci: [{label, valore, colore}].
+function TortaQ({ titolo, voci, totaleLabel }){
+  const vis = (voci||[]).filter(v=>(v.valore||0)>0);
+  const tot = vis.reduce((s,v)=>s+v.valore,0);
+  const size=180, cx=size/2, cy=size/2, r=size/2-3;
+  const rad=a=>a*Math.PI/180;
+  let ang=-90;
+  return (
+    <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:18,flex:"1 1 340px",minWidth:300,boxShadow:"0 1px 4px rgba(124,58,237,0.06)"}}>
+      <div style={{fontSize:14,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:14,textAlign:"center"}}>{titolo}</div>
+      {tot<=0 ? (
+        <div style={{textAlign:"center",color:"#94a3b8",padding:"36px 0",fontSize:13}}>Nessun dato nel periodo</div>
+      ) : (
+        <div style={{display:"flex",alignItems:"center",gap:18,flexWrap:"wrap",justifyContent:"center"}}>
+          <svg width={size} height={size} viewBox={"0 0 "+size+" "+size} style={{flexShrink:0}}>
+            {vis.length===1 ? (
+              <circle cx={cx} cy={cy} r={r} fill={vis[0].colore}/>
+            ) : vis.map((v,i)=>{
+              const frac=v.valore/tot; const a0=ang, a1=ang+frac*360; ang=a1;
+              const x0=cx+r*Math.cos(rad(a0)), y0=cy+r*Math.sin(rad(a0));
+              const x1=cx+r*Math.cos(rad(a1)), y1=cy+r*Math.sin(rad(a1));
+              const lg=(a1-a0)>180?1:0;
+              return <path key={i} d={"M "+cx+" "+cy+" L "+x0.toFixed(2)+" "+y0.toFixed(2)+" A "+r+" "+r+" 0 "+lg+" 1 "+x1.toFixed(2)+" "+y1.toFixed(2)+" Z"} fill={v.colore} stroke="#fff" strokeWidth={2}/>;
+            })}
+          </svg>
+          <div style={{display:"flex",flexDirection:"column",gap:7,minWidth:140,flex:"1 1 auto"}}>
+            {vis.map((v,i)=>{ const pct=Math.round(v.valore/tot*100); return (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
+                <span style={{width:13,height:13,borderRadius:3,background:v.colore,flexShrink:0}}/>
+                <span style={{fontWeight:700,color:"#1e293b",flex:1,wordBreak:"break-word"}}>{v.label}</span>
+                <span style={{fontWeight:800,color:v.colore}}>{v.valore}</span>
+                <span style={{color:"#94a3b8",fontSize:11,minWidth:34,textAlign:"right"}}>{pct}%</span>
+              </div>
+            ); })}
+            <div style={{borderTop:"1px solid #f1f5f9",marginTop:4,paddingTop:6,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:800,color:"#64748b"}}>
+              <span>{totaleLabel||"Totale"}</span><span>{tot}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Pagina REPORT della tab Qualità: filtro data (dal/al) + brand (colonna H degli SKU), due torte
+// (OK/KO/Migliorabili e dettaglio note KO+Mgl). Rispetta la linea: una linea vede i propri dati.
+function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
+  const _oggiISO = (()=>{ const d=new Date(); const l=new Date(d.getTime()-d.getTimezoneOffset()*60000); return l.toISOString().slice(0,10); })();
+  const [dal, setDal] = React.useState(_oggiISO);
+  const [al, setAl]   = React.useState(_oggiISO);
+  const [brandSel, setBrandSel] = React.useState("__tutti__");
+  const skuBrand = React.useMemo(()=>{ const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]=String(s.brand||"").trim(); }); return m; },[skuList]);
+  const brands = React.useMemo(()=>{ const set=new Set(); (skuList||[]).forEach(s=>{ if(s&&s.brand&&String(s.brand).trim()) set.add(String(s.brand).trim()); }); return Array.from(set).sort(); },[skuList]);
+  // Confronto a livello di GIORNO: normalizza la data del record (DD/MM/YYYY, YYYY-MM-DD o con orario)
+  // alla mezzanotte locale, e confronta con [dal, al] inclusi (anch'essi mezzanotte locale).
+  const _giornoTs = (raw)=>{
+    const day = String(raw||"").split(" ")[0].split(",")[0].split("T")[0].trim();
+    let mm = day.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(mm) return new Date(+mm[3], +mm[2]-1, +mm[1]).getTime();
+    mm = day.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if(mm) return new Date(+mm[1], +mm[2]-1, +mm[3]).getTime();
+    const d = parseData(raw); return d ? new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime() : null;
+  };
+  const _dalTs = dal ? new Date(dal+"T00:00:00").getTime() : -Infinity;
+  const _alTs  = al  ? new Date(al +"T00:00:00").getTime() :  Infinity;
+  const recs = (qualita||[]).filter(q=>{
+    if(lineaFiltro && q.linea!==lineaFiltro.id) return false;
+    const t = _giornoTs(q.data); if(t==null) return false;
+    if(t<_dalTs || t>_alTs) return false;
+    if(brandSel!=="__tutti__"){ const b = skuBrand[String(q.sku||"").toUpperCase()]||""; if(b!==brandSel) return false; }
+    return true;
+  });
+  let tOk=0,tKo=0,tMg=0; const noteKoArr=[], noteMgArr=[];
+  recs.forEach(q=>{ tOk+=Number(q.ok)||0; tKo+=Number(q.ko)||0; tMg+=Number(q.migliorabili)||0; if(q.noteKo) noteKoArr.push(q.noteKo); if(q.noteMigl) noteMgArr.push(q.noteMigl); });
+  const difetti = aggregaDifetti(noteKoArr.concat(noteMgArr)).filter(kv=>kv[1]>0);
+  const PALETTE = ["#ef4444","#f59e0b","#7c3aed","#0ea5e9","#10b981","#ec4899","#f97316","#8b5cf6","#14b8a6","#eab308","#06b6d4","#a855f7"];
+  const vociQ = [
+    {label:"OK", valore:tOk, colore:"#10b981"},
+    {label:"KO", valore:tKo, colore:"#ef4444"},
+    {label:"Migliorabili", valore:tMg, colore:"#f59e0b"},
+  ];
+  const vociD = difetti.map((kv,i)=>({label:kv[0], valore:kv[1], colore:PALETTE[i%PALETTE.length]}));
+  return (
+    <div>
+      <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",marginBottom:18,background:"#faf5ff",border:"1px solid #ede9fe",borderRadius:12,padding:"14px 16px"}}>
+        <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Dal</label><input type="date" value={dal} max={al} onChange={e=>setDal(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
+        <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Al</label><input type="date" value={al} min={dal} onChange={e=>setAl(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
+        <div style={{flex:"1 1 200px",minWidth:180}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Brand</label>
+          <select value={brandSel} onChange={e=>setBrandSel(e.target.value)} style={{...S.inp}}>
+            <option value="__tutti__">Tutti i brand</option>
+            {brands.map(b=><option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        <div style={{fontSize:12,color:"#94a3b8",fontWeight:700,paddingBottom:10,whiteSpace:"nowrap"}}>{recs.length} record</div>
+      </div>
+      <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
+        <TortaQ titolo="Qualità · OK / KO / Migliorabili" voci={vociQ} totaleLabel="Totale borse"/>
+        <TortaQ titolo="Dettaglio note (KO + Migliorabili)" voci={vociD} totaleLabel="Totale difetti"/>
+      </div>
+    </div>
+  );
+}
+
 function TabQualita({ lineaFiltro, linee, skuList }) {
   const [qualita, setQualita] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [editQ, setEditQ] = React.useState(null); // chiave riga in modifica
   const [tmpQ, setTmpQ] = React.useState({ok:"",ko:"",migl:""});
   const [salvandoQ, setSalvandoQ] = React.useState(false);
+  const [vistaQ, setVistaQ] = React.useState("tabella"); // "tabella" | "report"
   const caricaQ = React.useCallback(async () => {
     try {
       const r = await fetch(nexusUrl("leggiqualita",{}));
@@ -3382,9 +3486,19 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     return (a.sku||"").localeCompare(b.sku||"");
   });
   if (loading) return <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>;
-  if (righe.length === 0) return <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessun dato qualità per oggi.</div>;
   return (
-    <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
+    <div>
+      <div style={{display:"flex",gap:10,marginBottom:16}}>
+        {[["tabella","Tabella"],["report","\uD83D\uDCCA Report"]].map(([k,l])=>(
+          <button key={k} onClick={()=>setVistaQ(k)} style={{padding:"9px 20px",border:"2px solid #7c3aed",borderRadius:9,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700,background:vistaQ===k?"#7c3aed":"#fff",color:vistaQ===k?"#fff":"#6d28d9",transition:"all 0.15s"}}>{l}</button>
+        ))}
+      </div>
+      {vistaQ==="report" ? (
+        <ReportQualita qualita={qualita} skuList={skuList} lineaFiltro={lineaFiltro} linee={linee}/>
+      ) : righe.length === 0 ? (
+        <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessun dato qualità per oggi.</div>
+      ) : (
+      <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table className="tabQ" style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
           <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Borse OK","#10b981"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
@@ -3436,6 +3550,8 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
           })}
         </tbody>
       </table>
+    </div>
+      )}
     </div>
   );
 }
