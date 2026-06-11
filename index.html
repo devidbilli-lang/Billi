@@ -3379,19 +3379,13 @@ function TortaQ({ titolo, voci, totaleLabel }){
           ))}
         </div>
         {vis[sel] && (
-          <div style={{marginTop:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
-              <span style={{width:14,height:14,borderRadius:4,background:vis[sel].colore}}/>
-              <span style={{fontWeight:800,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].label}</span>
-              <span style={{fontWeight:900,color:vis[sel].colore,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].valore}</span>
-              <span style={{fontWeight:700,color:"#94a3b8",fontSize:13}}>({Math.round(vis[sel].valore/tot*100)}%)</span>
-              {vis[sel].nSku!=null && <span style={{fontWeight:800,color:"#475569",fontSize:12,background:"#f1f5f9",borderRadius:6,padding:"3px 9px"}}>su {vis[sel].nSku} SKU</span>}
-            </div>
-            {vis[sel].skus && vis[sel].skus.length>0 && (
-              <div style={{marginTop:8,textAlign:"center",fontSize:11,color:"#94a3b8",lineHeight:1.6,wordBreak:"break-word"}}>
-                {vis[sel].skus.slice(0,12).join(" · ")}{vis[sel].skus.length>12 ? "  +"+(vis[sel].skus.length-12)+" altri" : ""}
-              </div>
-            )}
+          <div style={{marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
+            <span style={{width:14,height:14,borderRadius:4,background:vis[sel].colore,flexShrink:0}}/>
+            <span style={{fontWeight:800,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].label}</span>
+            <span style={{fontWeight:900,color:vis[sel].colore,fontSize:20,fontFamily:"'Montserrat',sans-serif"}}>{vis[sel].valore}</span>
+            <span style={{fontWeight:700,color:"#94a3b8",fontSize:13,marginRight:4}}>({Math.round(vis[sel].valore/tot*100)}%)</span>
+            {vis[sel].skus && vis[sel].skus.slice(0,16).map(sk=>(<code key={sk} style={{...S.sku,fontSize:12,padding:"3px 9px"}}>{sk}</code>))}
+            {vis[sel].skus && vis[sel].skus.length>16 && <span style={{fontSize:12,color:"#94a3b8",fontWeight:700}}>+{vis[sel].skus.length-16}</span>}
           </div>
         )}
         <div style={{borderTop:"1px solid #f1f5f9",marginTop:12,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:800,color:"#64748b"}}>
