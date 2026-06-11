@@ -3517,7 +3517,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const skuBrand = React.useMemo(()=>{ const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]=String(s.brand||"").trim(); }); return m; },[skuList]);
   const brands = React.useMemo(()=>{ const set=new Set(); (skuList||[]).forEach(s=>{ if(s&&s.brand&&String(s.brand).trim()) set.add(String(s.brand).trim()); }); return Array.from(set).sort(); },[skuList]);
   // Linee con almeno un record di qualità (oggi o storico) → opzioni del filtro Linea.
-  const lineeConDati = React.useMemo(()=>{ const ids=new Set((tutti||[]).map(q=>q.linea).filter(Boolean)); return (linee||[]).filter(l=>l&&ids.has(l.id)).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""))); },[tutti, linee]);
+  const lineeConDati = React.useMemo(()=>{ const ids=new Set((tutti||[]).map(q=>q.linea).filter(Boolean)); return (linee||[]).filter(l=>l&&ids.has(l.id)).sort((a,b)=>String(a.id||"").localeCompare(String(b.id||""))); },[tutti, linee]);
   // Confronto a livello di GIORNO: normalizza la data del record (DD/MM/YYYY, YYYY-MM-DD o con orario)
   // alla mezzanotte locale, e confronta con [dal, al] inclusi (anch'essi mezzanotte locale).
   const _giornoTs = (raw)=>{
@@ -3590,7 +3590,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         <div style={{flex:"0 0 auto"}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Linea</label>
           <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{...S.inp,width:170,maxWidth:170,minWidth:0}}>
             <option value="__tutte__">Tutte le linee</option>
-            {lineeConDati.map(l=><option key={l.id} value={l.id}>{l.nome||l.id}</option>)}
+            {lineeConDati.map(l=><option key={l.id} value={l.id}>{l.id||l.nome}</option>)}
           </select>
         </div>
         )}
