@@ -3406,7 +3406,7 @@ function TortaQ({ titolo, voci, totaleLabel }){
   let acc=-90;
   const slices = vis.map(v=>{ const frac=v.valore/tot; const a0=acc,a1=acc+frac*360; acc=a1; return {v,frac,a0,a1,mid:(a0+a1)/2}; });
   return (
-    <div style={{background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:18,flex:"1 1 340px",minWidth:300,boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18"}}>
+    <div style={{background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:18,flex:"1 1 315px",minWidth:280,boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18"}}>
       <div style={{fontSize:20,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,textAlign:"center"}}>{titolo}</div>
       {tot<=0 ? (
         <div style={{textAlign:"center",color:"#94a3b8",padding:"36px 0",fontSize:13}}>Nessun dato nel periodo</div>
@@ -3598,9 +3598,9 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
       </div>
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
         <TortaQ titolo="Qualità" voci={vociQ} totaleLabel="Totale borse"/>
-        <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"stretch",flex:"1 1 520px",minWidth:300}}>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"stretch",flex:"1 1 560px",minWidth:300}}>
           <TortaQ titolo="Dettaglio Difetti" voci={vociD} totaleLabel="Totale difetti"/>
-          <div style={{flex:"0 0 190px",minWidth:170,background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:"14px 16px",boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18",display:"flex",flexDirection:"column"}}>
+          <div style={{flex:"0 0 235px",minWidth:215,background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:"14px 16px",boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18",display:"flex",flexDirection:"column"}}>
             <div style={{fontSize:13,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:12,textAlign:"center"}}>Top 5 difetti</div>
             {vociD.length===0 ? (
               <div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:"20px 0"}}>Nessun difetto</div>
