@@ -3587,6 +3587,20 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     if(mm) return new Date(+mm[1], +mm[2]-1, +mm[3]).getTime();
     const d = parseData(raw); return d ? new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime() : null;
   };
+  // Default "Dal" = data del PRIMO dato registrato. Impostato una sola volta, dopo che lo storico
+  // è stato caricato (altrimenti userebbe solo l'oggi). "Al" resta a oggi.
+  const dalAutoRef = React.useRef(false);
+  React.useEffect(()=>{
+    if(dalAutoRef.current) return;
+    if(caricandoStorico) return;
+    if(!tutti || tutti.length===0) return;
+    let min=Infinity;
+    for(const q of tutti){ const t=_giornoTs(q.data); if(t!=null && t<min) min=t; }
+    if(min===Infinity) return;
+    const d=new Date(min);
+    setDal(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"));
+    dalAutoRef.current=true;
+  },[caricandoStorico, tutti]);
   const _dalTs = dal ? new Date(dal+"T00:00:00").getTime() : -Infinity;
   const _alTs  = al  ? new Date(al +"T00:00:00").getTime() :  Infinity;
   const recs = tutti.filter(q=>{
@@ -3634,9 +3648,31 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     _mappaSett[key].mg += Number(q.migliorabili)||0;
   });
   const datiSett = Object.values(_mappaSett).sort((a,b)=>a.ts-b.ts);
+  // Barra filtri: pannello effetto vetro trascinabile su TUTTA la pagina (position:fixed).
+  // Il drag parte SOLO dalla maniglia, così input/select restano usabili. Limiti = viewport.
+  const [filtriPos, setFiltriPos] = React.useState({x:24, y:118});
+  const barraRef = React.useRef(null);
+  const startDragBarra=(clientX,clientY)=>{
+    const el=barraRef.current; if(!el) return;
+    const base=filtriPos||{x:24,y:118};
+    const orig={x:clientX,y:clientY,bx:base.x,by:base.y};
+    const pad=4, clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+    const onMove=(mx,my)=>{
+      const maxX=Math.max(pad, window.innerWidth - el.offsetWidth - pad);
+      const maxY=Math.max(pad, window.innerHeight - el.offsetHeight - pad);
+      setFiltriPos({x:clamp(orig.bx+(mx-orig.x),pad,maxX), y:clamp(orig.by+(my-orig.y),pad,maxY)});
+    };
+    const mm=(e)=>onMove(e.clientX,e.clientY);
+    const tm=(e)=>{ if(e.touches[0]){ e.preventDefault(); onMove(e.touches[0].clientX,e.touches[0].clientY); } };
+    const up=()=>{ document.removeEventListener("mousemove",mm); document.removeEventListener("mouseup",up); document.removeEventListener("touchmove",tm); document.removeEventListener("touchend",up); };
+    document.addEventListener("mousemove",mm); document.addEventListener("mouseup",up);
+    document.addEventListener("touchmove",tm,{passive:false}); document.addEventListener("touchend",up);
+  };
+  const _fp = filtriPos||{x:24,y:118};
   return (
     <div>
-      <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",marginBottom:18,background:"#faf5ff",border:"1px solid #ede9fe",borderRadius:12,padding:"14px 16px"}}>
+      <div ref={barraRef} style={{position:"fixed",left:0,top:0,transform:`translate(${_fp.x}px, ${_fp.y}px)`,zIndex:50,maxWidth:"calc(100vw - 32px)",display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",background:"rgba(255,255,255,0.80)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",border:"2px solid #7c3aed",borderRadius:16,padding:"12px 16px",boxShadow:"0 8px 28px rgba(124,58,237,0.30), inset 0 1px 0 rgba(255,255,255,0.55)"}}>
+        <div onMouseDown={(e)=>{e.preventDefault(); startDragBarra(e.clientX,e.clientY);}} onTouchStart={(e)=>{ if(e.touches[0]) startDragBarra(e.touches[0].clientX,e.touches[0].clientY); }} title="Trascina i filtri" style={{cursor:"grab",display:"flex",alignItems:"center",alignSelf:"stretch",padding:"0 6px",marginRight:2,color:"#a78bfa",fontSize:22,fontWeight:900,letterSpacing:-3,touchAction:"none",userSelect:"none"}}>⠿</div>
         <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Dal</label><input type="date" value={dal} max={al} onChange={e=>setDal(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
         <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Al</label><input type="date" value={al} min={dal} onChange={e=>setAl(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
         <div style={{flex:"0 0 auto"}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Brand</label>
