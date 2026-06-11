@@ -3598,7 +3598,22 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
       </div>
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
         <TortaQ titolo="Qualità · OK / KO / Migliorabili" voci={vociQ} totaleLabel="Totale borse"/>
-        <TortaQ titolo="Dettaglio note (KO + Migliorabili)" voci={vociD} totaleLabel="Totale difetti"/>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"stretch",flex:"1 1 520px",minWidth:300}}>
+          <TortaQ titolo="Dettaglio note (KO + Migliorabili)" voci={vociD} totaleLabel="Totale difetti"/>
+          <div style={{flex:"0 0 190px",minWidth:170,background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:"14px 16px",boxShadow:"0 1px 4px rgba(124,58,237,0.06)",display:"flex",flexDirection:"column"}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:12,textAlign:"center"}}>Top 5 difetti</div>
+            {vociD.length===0 ? (
+              <div style={{textAlign:"center",color:"#94a3b8",fontSize:13,padding:"20px 0"}}>Nessun difetto</div>
+            ) : vociD.slice(0,5).map((d,i,arr)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:i<arr.length-1?"1px solid #f1f5f9":"none"}}>
+                <span style={{fontSize:12,fontWeight:800,color:"#cbd5e1",width:14,flexShrink:0,textAlign:"right"}}>{i+1}</span>
+                <span style={{width:10,height:10,borderRadius:"50%",background:d.colore,flexShrink:0}}/>
+                <span style={{flex:1,fontSize:13,fontWeight:600,color:"#334155",lineHeight:1.2,overflowWrap:"anywhere"}}>{d.label}</span>
+                <span style={{fontSize:15,fontWeight:900,color:d.colore,flexShrink:0}}>{d.valore}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       <div style={{marginTop:18,background:"#fff",border:"1px solid #ede9fe",borderRadius:14,padding:"16px 18px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
