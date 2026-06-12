@@ -1338,7 +1338,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(s.rampaDurata && +s.rampaDurata>=2) durataRampaItem = +s.rampaDurata;
     }
     const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem) : null;
-    const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<durataRampaItem;
+    const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<=durataRampaItem;
     return inRampaItem ? Math.ceil(obPieno * rampaPerc(giornoRampaItem, durataRampaItem) / 100) : obPieno;
   };
   // Obiettivo di linea AGGREGATO con rampa: somma degli obiettivi (ridotti se in rampa) di tutti
@@ -2009,7 +2009,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 if(s.rampaDurata && +s.rampaDurata>=2) durataRampaItem = +s.rampaDurata;
               }
               const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem) : null;
-              const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<durataRampaItem;
+              const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && giornoRampaItem<=durataRampaItem;
               // obFinaleItem pieno regime salvato a parte per riferimento
               const obPienoRegimeItem = obFinaleItem;
               // GIORNALIERO dell'articolo = stessa funzione usata per il totale di linea, così
@@ -2863,7 +2863,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       const sku = r.sku;
       // Filtro linea di accesso: se entri come linea, vedi SOLO le tue rampe.
       if(lineaFiltro && r.lineaId !== lineaFiltro.id && r.lineaId !== lineaFiltro.nome) return false;
-      const isCompletata = r.completata || (r.giorni||0) >= (r.durata||15);
+      const isCompletata = r.completata || (r.giorni||0) > (r.durata||15);
       // Filtro stato
       if(filtroStato === "attive" && isCompletata) return false;
       if(filtroStato === "completate" && !isCompletata) return false;
@@ -2914,7 +2914,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:22,letterSpacing:1,textTransform:"uppercase",color:"#ff6937",marginBottom:24,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><IconaRampa size={26}/> Rampe di Crescita</div>
       {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null; const dur=rampa?(rampa.durata||15):15;
-        const completata=g!==null&&g>=dur; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
+        const completata=g!==null&&g>dur; const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
           <div key={key} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #f1f5f9"}}>
@@ -7210,8 +7210,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         if(!rDal) return null;
                         const gg = giorniLavorativiJS(rDal);
                         const durG = (rampaS && rampaS.durata && +rampaS.durata>=2) ? +rampaS.durata : ((s.rampaDurata && +s.rampaDurata>=2) ? +s.rampaDurata : 15);
-                        // Rampa completata quando si raggiunge il giorno durG (100% = pieno regime).
-                        if(gg>=durG) return null;
+                        // Rampa completata solo DOPO l'ultimo giorno (gg > durG): l'ultimo giorno è ancora in rampa.
+                        if(gg>durG) return null;
                         return (
                           <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"6px 14px"}}>
                             <IconaRampa size={14} color="#ff6937"/>
