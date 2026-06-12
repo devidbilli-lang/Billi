@@ -3696,7 +3696,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         <TortaQ titolo="Qualità" voci={vociQ} totaleLabel="Totale borse"/>
         <TortaQ titolo="Dettaglio Difetti" voci={vociD} totaleLabel="Totale difetti" overlay={vociD.length>0?(<React.Fragment>
           <Top5DifettiVetro difetti={vociD} titolo="Top 5 difetti" ancora="tr"/>
-          {vociD.some(d=>d.fonte==="KO") && <Top5DifettiVetro difetti={vociD.filter(d=>d.fonte==="KO")} titolo="Top 5 difetti KO" ancora="bl"/>}
+          {vociD.some(d=>d.fonte==="KO") && <Top5DifettiVetro difetti={vociD.filter(d=>d.fonte==="KO")} titolo="Top 5 difetti KO" ancora="tl"/>}
         </React.Fragment>):null}/>
       </div>
       <div style={{marginTop:18,background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:"16px 18px",boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18"}}>
