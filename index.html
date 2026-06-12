@@ -6949,6 +6949,30 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
               <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore}}>{l.id}</button>
             ))}
           </div>
+          {isAdmin && (
+            <button onClick={async()=>{
+              try{
+                if(!window.XLSX){
+                  await new Promise((res,rej)=>{ const sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload=res; sc.onerror=()=>rej(new Error("CDN non raggiungibile")); document.head.appendChild(sc); });
+                }
+                const XLSX=window.XLSX;
+                const seen=new Set(); const righe=[];
+                (fil||[]).forEach(s=>{
+                  const cognome=(s.cognome||"").trim(), nome=(s.nome||"").trim(), linea=(s.lineaCorrente||s.lineaInizio||"").trim();
+                  if(!cognome && !nome) return;
+                  const k=(cognome+"|"+nome+"|"+linea).toLowerCase();
+                  if(seen.has(k)) return; seen.add(k);
+                  righe.push({Cognome:cognome, Nome:nome, Linea:linea});
+                });
+                righe.sort((a,b)=> (a.Cognome||"").localeCompare(b.Cognome||"") || (a.Nome||"").localeCompare(b.Nome||"") || (a.Linea||"").localeCompare(b.Linea||""));
+                const ws=XLSX.utils.json_to_sheet(righe,{header:["Cognome","Nome","Linea"]});
+                ws["!cols"]=[{wch:22},{wch:18},{wch:26}];
+                const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Sessioni");
+                const oggi=new Date().toLocaleDateString("it-IT").replace(/\//g,"-");
+                XLSX.writeFile(wb,"sessioni_"+oggi+".xlsx");
+              }catch(e){ alert("Errore esportazione Excel: "+((e&&e.message)||e)); }
+            }} title="Esporta Cognome, Nome, Linea in Excel" style={{padding:"8px 16px",border:"2px solid #1d6f42",borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:800,background:"#1d6f42",color:"#fff",display:"inline-flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>⬇ Esporta Excel</button>
+          )}
         </div>
       )}
       {tab==="sessioni"&&(
