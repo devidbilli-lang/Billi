@@ -3498,16 +3498,18 @@ function GraficoSettimaneQ({ dati }){
 // Pannello "Top 5 difetti" effetto vetro, trascinabile DENTRO il contenitore della torta
 // (offsetParent = contenitore TortaQ, position:relative). Stesso meccanismo del bottone KO/MGL
 // delle card di produzione: drag mouse+touch con limiti calcolati sul contenitore.
-function Top5DifettiVetro({ difetti }){
+function Top5DifettiVetro({ difetti, titolo="Top 5 difetti", ancora="tr" }){
   const top = (difetti||[]).slice(0,5);
-  const [pos, setPos] = React.useState(null); // {x,y}; null finché non posizionato (angolo alto-dx)
+  const [pos, setPos] = React.useState(null); // {x,y}; null finché non posizionato
   const elRef = React.useRef(null);
   React.useLayoutEffect(()=>{
     if(pos!==null) return;
     const el=elRef.current, par=el&&el.offsetParent;
     if(!el||!par) return;
     const pad=12;
-    setPos({ x:Math.max(pad, par.clientWidth - el.offsetWidth - pad), y:pad });
+    const x = (ancora==="tl"||ancora==="bl") ? pad : Math.max(pad, par.clientWidth - el.offsetWidth - pad);
+    const y = (ancora==="bl"||ancora==="br") ? Math.max(pad, par.clientHeight - el.offsetHeight - pad) : pad;
+    setPos({ x, y });
   });
   const startDrag=(clientX,clientY)=>{
     const el=elRef.current, par=el&&el.offsetParent;
@@ -3532,13 +3534,13 @@ function Top5DifettiVetro({ difetti }){
     <div ref={elRef}
       onMouseDown={(e)=>{ e.preventDefault(); startDrag(e.clientX,e.clientY); }}
       onTouchStart={(e)=>{ if(e.touches[0]) startDrag(e.touches[0].clientX,e.touches[0].clientY); }}
-      title="Top 5 difetti — trascinami"
+      title={titolo+" — trascinami"}
       style={{position:"absolute",left:0,top:0,transform:`translate(${_p.x}px, ${_p.y}px)`,width:210,
         background:"rgba(255,255,255,0.80)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",
         border:"2px solid #7c3aed",borderRadius:16,padding:"12px 14px",cursor:"grab",
         boxShadow:"0 8px 28px rgba(124,58,237,0.30), inset 0 1px 0 rgba(255,255,255,0.55)",
         userSelect:"none",touchAction:"none",zIndex:8,opacity:pos===null?0:1,transition:"opacity 0.15s"}}>
-      <div style={{fontSize:13,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:10,textAlign:"center"}}>Top 5 difetti</div>
+      <div style={{fontSize:13,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5,marginBottom:10,textAlign:"center"}}>{titolo}</div>
       {top.length===0 ? (
         <div style={{textAlign:"center",color:"#94a3b8",fontSize:12,padding:"8px 0"}}>Nessun difetto</div>
       ) : top.map((d,i,arr)=>(
@@ -3692,7 +3694,10 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
       </div>
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
         <TortaQ titolo="Qualità" voci={vociQ} totaleLabel="Totale borse"/>
-        <TortaQ titolo="Dettaglio Difetti" voci={vociD} totaleLabel="Totale difetti" overlay={vociD.length>0?<Top5DifettiVetro difetti={vociD}/>:null}/>
+        <TortaQ titolo="Dettaglio Difetti" voci={vociD} totaleLabel="Totale difetti" overlay={vociD.length>0?(<React.Fragment>
+          <Top5DifettiVetro difetti={vociD} titolo="Top 5 difetti" ancora="tr"/>
+          {vociD.some(d=>d.fonte==="KO") && <Top5DifettiVetro difetti={vociD.filter(d=>d.fonte==="KO")} titolo="Top 5 difetti KO" ancora="bl"/>}
+        </React.Fragment>):null}/>
       </div>
       <div style={{marginTop:18,background:"#fff",border:"2px solid #7c3aed",borderRadius:14,padding:"16px 18px",boxShadow:"0 0 14px 3px #7c3aed55, inset 0 0 8px #7c3aed18"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
