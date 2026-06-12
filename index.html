@@ -5018,7 +5018,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     // salva l'orario: senza questo, il turno verrebbe chiuso al default delle 14:00.
                     if(_secondoTurnoEff){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),{mode:'cors'}); }catch(e){} }
                     // Orario futuro (>10 min) e persona NON ancora uscita oggi — pianifica il check-in
-                    await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
+                    await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):""),lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
                     // Non chiamare onSuccess — verrà registrato in automatico
                   } else {
                     // MODALITÀ 2° TURNO (Taglio DG): salva PRIMA (e ASPETTA) l'orario solo-oggi
