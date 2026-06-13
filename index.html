@@ -5325,7 +5325,19 @@ function TabAttivita({ repTipo="taglio" }) {
     setSalvando(true);
     try{
       const _params = {repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():"",pellame:_mostraPellame?pellame:"",articolo:_mostraArticolo?articolo.trim():""};
-      await fetch(nexusUrl(editId ? "modificaAttivita" : "salvaAttivita", editId ? {..._params, id:editId} : _params));
+      const _r = await fetch(nexusUrl(editId ? "modificaAttivita" : "salvaAttivita", editId ? {..._params, id:editId} : _params));
+      const _j = await _r.json().catch(()=>null);
+      const _ok = editId ? !!(_j && _j.ok && _j.data && _j.data.modificato) : !!(_j && _j.ok);
+      if(!_ok){
+        setMsg((editId?"Modifica":"Salvataggio")+" non riuscito"+((_j&&_j.error)?": "+_j.error:(editId?". Aggiorna worker.js su Cloudflare.":".")));
+        setSalvando(false);
+        return;
+      }
+      if(editId){
+        const _eid = editId;
+        const _upd = {data, brand, tempo:Math.round(+tempo||0), tipologia, reparto:_isPrep?"":reparto, nRichiesta:_isPrep?nRichiesta.trim():"", n_richiesta:_isPrep?nRichiesta.trim():"", pellame:_mostraPellame?pellame:"", articolo:_mostraArticolo?articolo.trim():""};
+        setLista(l=>l.map(x=>x.id===_eid ? {...x, ..._upd} : x));
+      }
       setEditId(null);
       setBrand(""); setTempo(""); setReparto(""); setNRichiesta(""); setPellame(""); setArticolo("");
       setTipologia(_isPrep ? "Rilavorazione" : "");
