@@ -5282,7 +5282,7 @@ function TabAttivita({ repTipo="taglio" }) {
   const _mostraArticolo = _isRMA && tipologia === "Campioni/Prototipi"; // campo Articolo solo RMA + Campioni/Prototipi
   const _mostraPellame = !_isPrep && tipologia !== "Cartelloni"; // pellame solo Taglio DG e NON per Cartelloni
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
-  const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO"];
+  const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO","INFUSTITURE"];
   const _titoloRep = _isRMA ? "Attività RMA" : (_isPrep ? "Attività Preparazione DG" : "Attività Taglio DG");
 
   const carica = ()=>{
@@ -5350,7 +5350,7 @@ function TabAttivita({ repTipo="taglio" }) {
                 ))}</tr>
               </thead>
               <tbody>
-                {lista.map((a)=>(
+                {[...lista].sort((x,y)=>String(x.data||"").substring(0,10).localeCompare(String(y.data||"").substring(0,10))).map((a)=>(
                   <tr key={a.id} style={{borderBottom:"1px solid #f1f5f9"}}>
                     <td style={{padding:"8px 10px",fontWeight:600}}>{fmtData(a.data)}</td>
                     <td style={{padding:"8px 10px"}}>{a.brand}</td>
