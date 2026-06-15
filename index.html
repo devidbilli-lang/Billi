@@ -5370,7 +5370,7 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
                   : righe.map(a=>(
                     <tr key={a.id}>
                       <td style={_td}>{a.reparto||"—"}</td>
-                      <td style={{...(_td),fontFamily:"monospace",fontSize:13,color:"#0f172a"}}>{a.articolo||"—"}</td>
+                      <td style={_td}>{a.articolo ? <code style={{...S.sku,minWidth:80,fontSize:13}}>{a.articolo}</code> : "—"}</td>
                       <td style={{...(_td),fontWeight:800,color:"#7c3aed"}}>{(+a.qta||0)}</td>
                       <td style={{...(_td),color:"#64748b"}}>{a.note||"—"}</td>
                       <td style={{...(_td),whiteSpace:"nowrap"}}>
