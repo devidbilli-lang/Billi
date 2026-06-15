@@ -5330,17 +5330,12 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
 
   const _oggi = oggiISOtt();
   const _lst = (lista||[]).filter(a=> (a.data||"").toString().substring(0,10)===_oggi);
-  const totGen = _lst.reduce((s,a)=>s+(+a.qta||0),0);
   const _td = {padding:"10px",fontSize:14,borderBottom:"1px solid #eef2f7",textAlign:"center",verticalAlign:"middle"};
   const _lbl = {fontSize:12,fontWeight:800,color:"#7c3aed",textTransform:"uppercase",letterSpacing:.5};
   const _inp = {fontFamily:"'Montserrat',sans-serif",fontSize:15,padding:"11px 12px",border:"2px solid #e2e8f0",borderRadius:10,color:"#1e293b",background:"#fff",outline:"none"};
 
   return (
     <div style={{padding:"0 24px 100px"}}>
-      <div style={{display:"inline-flex",alignItems:"baseline",gap:8,marginBottom:16,background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"10px 16px"}}>
-        <span style={{fontSize:24,fontWeight:900,color:"#7c3aed"}}>{totGen}</span>
-        <span style={{fontSize:12,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:1}}>pezzi totali oggi</span>
-      </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2, minmax(0, 1fr))",gap:18,alignItems:"start"}}>
       {BLOCCHI_TT.map(b=>{
         const righe = _lst.filter(a=>a.blocco===b);
@@ -5386,7 +5381,6 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
               </tbody>
             </table>
             </div>
-            <div style={{display:"flex",justifyContent:"flex-end",padding:"9px 18px",background:"#fafafa",fontSize:12.5,fontWeight:800,color:"#334155",borderTop:"1px solid #f1f5f9"}}>Totale {b}: <b style={{color:"#7c3aed",marginLeft:6}}>{sub} pz</b></div>
           </div>
         );
       })}
