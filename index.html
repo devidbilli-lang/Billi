@@ -5286,6 +5286,8 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   const [note,setNote] = useState("");
   const [righe,setRighe] = useState([{articolo:"", qta:""}]);   // più articoli+qtà nello stesso blocco
   const [openSug,setOpenSug] = useState(-1);                     // indice riga con suggerimenti aperti
+  const [fabDrag,setFabDrag] = useState(null);                   // {x,y} offset pulsante flottante
+  const fabDragRef = React.useRef(null);
 
   // Reparto = nomi delle linee di produzione (escludo i reparti tipo Taglio DG / RMA / track&trace).
   const lineeReparto = (linee||[]).filter(l=>l && l.id && !isRepartoLinea(l.id, l.nome)).map(l=>l.id);
@@ -5386,7 +5388,36 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
       })}
       </div>
 
-      <button onClick={apriNuova} title="Nuova attività" style={{position:"fixed",right:28,bottom:28,width:62,height:62,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",color:"#fff",border:"none",cursor:"pointer",fontSize:32,fontWeight:300,boxShadow:"0 8px 24px #7c3aed66",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",zIndex:30}}>+</button>
+      {/* PULSANTE FLOTTANTE "+" — cerchio effetto vetro viola, parte da sinistra, trascinabile su tutta la pagina */}
+      {(()=>{
+        const startDrag=(clientX,clientY)=>{
+          const base = fabDrag || {x:0,y:0};
+          const orig = {x:clientX, y:clientY, bx:base.x, by:base.y};
+          let moved=false;
+          const onMove=(mx,my)=>{ const dx=mx-orig.x, dy=my-orig.y; if(Math.abs(dx)>4||Math.abs(dy)>4) moved=true; setFabDrag({x:orig.bx+dx, y:orig.by+dy}); };
+          const mm=(e)=>onMove(e.clientX,e.clientY);
+          const tm=(e)=>{ if(e.touches[0]){ e.preventDefault(); onMove(e.touches[0].clientX,e.touches[0].clientY); } };
+          const up=()=>{ document.removeEventListener("mousemove",mm); document.removeEventListener("mouseup",up); document.removeEventListener("touchmove",tm); document.removeEventListener("touchend",up); fabDragRef.current={moved}; };
+          document.addEventListener("mousemove",mm); document.addEventListener("mouseup",up);
+          document.addEventListener("touchmove",tm,{passive:false}); document.addEventListener("touchend",up);
+        };
+        return (
+          <button
+            onMouseDown={(e)=>{ e.preventDefault(); startDrag(e.clientX,e.clientY); }}
+            onTouchStart={(e)=>{ if(e.touches[0]) startDrag(e.touches[0].clientX,e.touches[0].clientY); }}
+            onClick={()=>{ if(!fabDragRef.current||!fabDragRef.current.moved){ apriNuova(); } fabDragRef.current=null; }}
+            title="Registra una nuova attività — trascinabile"
+            style={{position:"fixed", left:32, bottom:32,
+              transform:`translate(${(fabDrag?fabDrag.x:0)}px, ${(fabDrag?fabDrag.y:0)}px)`,
+              width:68, height:68, borderRadius:"50%",
+              background:"rgba(124,58,237,0.30)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)",
+              border:"2px solid rgba(124,58,237,0.55)", color:"#fff",
+              cursor:"grab", display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow:"0 8px 28px rgba(124,58,237,0.45)", zIndex:1000, touchAction:"none", userSelect:"none"}}>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="3" strokeLinecap="round"/></svg>
+          </button>
+        );
+      })()}
 
       {modalAperto && (
         <div onClick={e=>{ if(e.target===e.currentTarget) setModalAperto(false); }} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(3px)",display:"flex",alignItems:"center",justifyContent:"center",padding:18,zIndex:50}}>
