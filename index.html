@@ -49,7 +49,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz2BjiKqF9zSYQu
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -5283,17 +5283,9 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   const [msg,setMsg] = useState("");
   const [blocco,setBlocco] = useState("COFFRE");
   const [reparto,setReparto] = useState("");
-  const [qta,setQta] = useState("");
   const [note,setNote] = useState("");
-  const [articolo,setArticolo] = useState("");
-
-  // Elenco articoli dal foglio SKU (deduplicato per codice, ordinato).
-  const articoliOpts = React.useMemo(()=>{
-    const seen={}, out=[];
-    (skuList||[]).forEach(s=>{ if(s&&s.sku&&!seen[s.sku]){ seen[s.sku]=1; out.push({sku:s.sku, descr:(s.descrizione||"")}); } });
-    out.sort((a,b)=>String(a.sku).localeCompare(String(b.sku)));
-    return out;
-  },[skuList]);
+  const [righe,setRighe] = useState([{articolo:"", qta:""}]);   // più articoli+qtà nello stesso blocco
+  const [openSug,setOpenSug] = useState(-1);                     // indice riga con suggerimenti aperti
 
   // Reparto = nomi delle linee di produzione (escludo i reparti tipo Taglio DG / RMA / track&trace).
   const lineeReparto = (linee||[]).filter(l=>l && l.id && !isRepartoLinea(l.id, l.nome)).map(l=>l.id);
@@ -5303,22 +5295,33 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   },[]);
   useEffect(()=>{ carica(); const t=setInterval(carica,60000); return ()=>clearInterval(t); },[carica]);
 
-  const resetCampi = ()=>{ setBlocco("COFFRE"); setReparto(""); setArticolo(""); setQta(""); setNote(""); };
-  const apriNuova = ()=>{ setEditId(null); resetCampi(); setMsg(""); setModalAperto(true); };
-  const apriModifica = (a)=>{ setEditId(a.id); setBlocco(a.blocco||"COFFRE"); setReparto(a.reparto||""); setArticolo(a.articolo||""); setQta(a.qta!=null?String(a.qta):""); setNote(a.note||""); setMsg(""); setModalAperto(true); };
+  const setRiga = (i,patch)=>setRighe(rs=>rs.map((r,k)=>k===i?{...r,...patch}:r));
+  const addRiga = ()=>setRighe(rs=>[...rs,{articolo:"",qta:""}]);
+  const delRiga = (i)=>setRighe(rs=>rs.length>1?rs.filter((_,k)=>k!==i):rs);
+  const apriNuova = ()=>{ setEditId(null); setBlocco("COFFRE"); setReparto(""); setNote(""); setRighe([{articolo:"",qta:""}]); setOpenSug(-1); setMsg(""); setModalAperto(true); };
+  const apriModifica = (a)=>{ setEditId(a.id); setBlocco(a.blocco||"COFFRE"); setReparto(a.reparto||""); setNote(a.note||""); setRighe([{articolo:a.articolo||"", qta:a.qta!=null?String(a.qta):""}]); setOpenSug(-1); setMsg(""); setModalAperto(true); };
 
   const salva = async ()=>{
     if(!reparto){ setMsg("Seleziona il reparto (linea)."); return; }
-    const q = parseInt(qta,10);
-    if(!(q>0)){ setMsg("Inserisci una quantità maggiore di 0."); return; }
+    const artSenzaQta = righe.find(r => (r.articolo||"").trim() && !(parseInt(r.qta,10)>0));
+    if(artSenzaQta){ setMsg("Inserisci la quantità per "+artSenzaQta.articolo+"."); return; }
+    const valide = righe.filter(r => parseInt(r.qta,10)>0).map(r=>({articolo:(r.articolo||"").trim(), qta:parseInt(r.qta,10)}));
+    if(!valide.length){ setMsg("Inserisci almeno una riga con quantità."); return; }
     setSalvando(true);
     try{
-      const _params = { blocco, reparto, articolo, qta:String(q), note:note.trim(), data:oggiISOtt() };
-      const _r = await fetch(nexusUrl(editId ? "modificaTTBlocco" : "salvaTTBlocco", editId ? {..._params, id:editId} : _params));
-      const _j = await _r.json().catch(()=>null);
-      const _ok = editId ? !!(_j&&_j.ok&&_j.data&&_j.data.modificato) : !!(_j&&_j.ok);
-      if(!_ok){ setMsg((editId?"Modifica":"Salvataggio")+" non riuscito"+((_j&&_j.error)?": "+_j.error:". Aggiorna worker.js su Cloudflare.")); setSalvando(false); return; }
-      setEditId(null); resetCampi(); setMsg(""); setModalAperto(false);
+      let _ok=false, _err="";
+      if(editId){
+        const v=valide[0];
+        const _r=await fetch(nexusUrl("modificaTTBlocco",{id:editId, blocco, reparto, articolo:v.articolo, qta:String(v.qta), note:note.trim(), data:oggiISOtt()}));
+        const _j=await _r.json().catch(()=>null);
+        _ok=!!(_j&&_j.ok&&_j.data&&_j.data.modificato); _err=(_j&&_j.error)||"";
+      } else {
+        const _r=await fetch(nexusUrl("salvaTTBlocchiBatch",{blocco, reparto, note:note.trim(), data:oggiISOtt(), righe:JSON.stringify(valide)}));
+        const _j=await _r.json().catch(()=>null);
+        _ok=!!(_j&&_j.ok); _err=(_j&&_j.error)||"";
+      }
+      if(!_ok){ setMsg((editId?"Modifica":"Salvataggio")+" non riuscito"+(_err?": "+_err:". Aggiorna worker.js su Cloudflare.")); setSalvando(false); return; }
+      setEditId(null); setModalAperto(false); setMsg("");
       setTimeout(carica,600);
     }catch(e){ setMsg("Errore nel salvataggio."); }
     setSalvando(false);
@@ -5405,15 +5408,20 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
                   </select>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6,gridColumn:"1 / -1"}}>
-                  <label style={_lbl}>Articolo</label>
-                  <select value={articolo} onChange={e=>setArticolo(e.target.value)} style={_inp}>
-                    <option value="">— seleziona —</option>
-                    {articoliOpts.map(o=><option key={o.sku} value={o.sku}>{o.descr ? (o.sku+" — "+o.descr) : o.sku}</option>)}
-                  </select>
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  <label style={_lbl}>Qtà (pz)</label>
-                  <input type="number" min="0" step="1" value={qta} onChange={e=>setQta(e.target.value)} placeholder="0" style={_inp}/>
+                  <label style={_lbl}>{editId ? "Articolo e quantità" : "Articoli e quantità"}</label>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {righe.map((r,i)=>(
+                      <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                        <div style={{flex:1,position:"relative"}}>
+                          <input value={r.articolo} onChange={e=>{ setRiga(i,{articolo:e.target.value.toUpperCase()}); setOpenSug(i); }} onBlur={()=>setTimeout(()=>setOpenSug(o=>o===i?-1:o),200)} placeholder="Cerca articolo o descrizione..." style={{..._inp,width:"100%"}}/>
+                          {openSug===i && <div style={{position:"absolute",left:0,right:0,top:"100%",zIndex:60}}><SugSku val={r.articolo} list={skuList} onSel={s=>{ setRiga(i,{articolo:s.sku}); setOpenSug(-1); }}/></div>}
+                        </div>
+                        <input type="number" min="0" step="1" value={r.qta} onChange={e=>setRiga(i,{qta:e.target.value})} placeholder="pz" style={{..._inp,width:92,flex:"none",textAlign:"center"}}/>
+                        {!editId && righe.length>1 && <button onClick={()=>delRiga(i)} title="Rimuovi riga" style={{background:"#fff",color:"#dc2626",border:"1.5px solid #dc2626",borderRadius:10,padding:"0 13px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",alignSelf:"stretch"}}>×</button>}
+                      </div>
+                    ))}
+                  </div>
+                  {!editId && <button onClick={addRiga} style={{marginTop:4,background:"#f5f3ff",color:"#7c3aed",border:"1.5px dashed #a855f7",borderRadius:10,padding:"9px 14px",fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",width:"100%"}}>＋ Aggiungi articolo</button>}
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6,gridColumn:"1 / -1"}}>
                   <label style={_lbl}>Note</label>
