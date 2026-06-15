@@ -55,6 +55,20 @@ function nexusUrl(action, params) {
   return base + "?" + q.toString();
 }
 
+// Reparti che lavorano "a minuti" (registrazione attività), senza card di produzione a borse.
+// Restituisce il repTipo attività per la linea ("taglio"/"prep"/"rma"/"tt") oppure null se NON è
+// un reparto. track&trace è gestita come RMA (efficienza a tempo) ma con tabella dati separata "tt".
+function repartoTipoLinea(lineaId, lineaNome){
+  const u = ((lineaId||"")+" "+(lineaNome||"")).toUpperCase();
+  if(u.includes("TRACK")) return "tt";
+  if(u.includes("RMA")) return "rma";
+  if(u.includes("PREPARAZIONE DG")) return "prep";
+  if(u.includes("TAGLIO DG")) return "taglio";
+  return null;
+}
+function isRepartoLinea(lineaId, lineaNome){ return repartoTipoLinea(lineaId, lineaNome) !== null; }
+// Linee a efficienza "a tempo" come RMA (RMA + track&trace).
+function isLineaRMAlike(lineaId, lineaNome){ const r=repartoTipoLinea(lineaId, lineaNome); return r==="rma"||r==="tt"; }
 
 const ADMIN_PWD = "Nexus2026!";
 const LINEE_DEFAULT = [
@@ -666,7 +680,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
   const [cLinea,setCLinea] = useState("");
   const destObj = dest ? linee.find(l=>l.id===dest) : null;
   const _ud = destObj ? ((destObj.id||"")+" "+(destObj.nome||"")).toUpperCase() : "";
-  const destReparto = !!destObj && (_ud.includes("RMA")||_ud.includes("PREPARAZIONE DG")||_ud.includes("TAGLIO DG"));
+  const destReparto = !!destObj && (_ud.includes("RMA")||_ud.includes("PREPARAZIONE DG")||_ud.includes("TAGLIO DG")||_ud.includes("TRACK"));
   const articoloMancante = !!dest && !destReparto && !nSku;
   const conferma = () => { if(!dest||articoloMancante) return; onOk(dest, destReparto?null:nSku); };
   return (
@@ -872,7 +886,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
   // Tempo ciclo per linea: RMA usa il tc della colonna G (tcRMA), tutte le altre la colonna E (tc).
-  const _isLineaRMA = ((lineaId||"").toUpperCase().includes("RMA"));
+  const _isLineaRMA = isLineaRMAlike(lineaId, "");
   const tcPerLinea = (skuObj)=> {
     if(!skuObj) return 0;
     return _isLineaRMA ? (skuObj.tcRMA || skuObj.tc || 0) : (skuObj.tc || 0);
@@ -935,7 +949,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   React.useEffect(()=>{ const t=setInterval(()=>setTick(x=>x+1),1000); return()=>clearInterval(t); },[]);
   // RMA: minuti totali delle attività di oggi (rilavorazioni, campioni). Entrano nel "tempo
   // prodotto" dell'efficienza solo per la linea RMA. Polling ogni 60s come le altre letture.
-  const _isRMALinea = ((lineaId||"")+"").toUpperCase().includes("RMA");
+  const _repAttLinea = repartoTipoLinea(lineaId, "");
+  const _isRMALinea = (_repAttLinea==="rma"||_repAttLinea==="tt");
   const [minutiAttivitaRMA, setMinutiAttivitaRMA] = React.useState(0);
   React.useEffect(()=>{
     if(!_isRMALinea){ setMinutiAttivitaRMA(0); return; }
@@ -953,7 +968,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       return y===t.getFullYear() && m===(t.getMonth()+1) && d===t.getDate();
     };
     const carica=()=>{
-      fetch(nexusUrl("leggiAttivita",{repTipo:"rma"})).then(r=>r.json()).then(j=>{
+      fetch(nexusUrl("leggiAttivita",{repTipo:_repAttLinea||"rma"})).then(r=>r.json()).then(j=>{
         if(stop) return;
         const arr = (j&&j.ok&&j.data&&Array.isArray(j.data.attivita))?j.data.attivita:[];
         let tot=0;
@@ -2656,7 +2671,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   // I reparti (Preparazione DG / Taglio DG / RMA) lavorano solo a minuti: niente loro card nella
   // panoramica "Entra in Produzione" (vista singola e griglia). Restano accessibili entrando
   // direttamente sulla loro linea (lineaFiltro), dove non c'è il toggle singola/griglia.
-  const _isRepartoProd = (l) => { const u=(((l&&l.id)||"")+" "+((l&&l.nome)||"")).toUpperCase(); return u.includes("RMA")||u.includes("PREPARAZIONE DG")||u.includes("TAGLIO DG"); };
+  const _isRepartoProd = (l) => isRepartoLinea(l&&l.id, l&&l.nome);
   const _lineeNoRep = (linee||[]).filter(l=>!_isRepartoProd(l));
   const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? _lineeNoRep.filter(l=>l.id===lineaSel) : _lineeNoRep);
   // In vista griglia il filtro singola linea non ha senso: mostra tutte (reparti esclusi)
@@ -3957,7 +3972,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         });
         const skuPiu = Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
         const skuObj = skuConSpecialiList.find(s=>s&&s.sku===skuPiu);
-        const tc = (((lineaId||"").toUpperCase().includes("RMA")) ? (skuObj?.tcRMA||skuObj?.tc||0) : (skuObj?.tc||0));
+        const tc = (isLineaRMAlike(lineaId, "") ? (skuObj?.tcRMA||skuObj?.tc||0) : (skuObj?.tc||0));
         if(tc<=0) return;
 
         // Obiettivo Reale: minuti effettivi / TC
@@ -4631,7 +4646,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     const _l = lineaCheckinSel || lineaFiltro || null;
     const _ln = ((_l&&_l.id)||(_l&&_l.nome)||"").toString();
     const _lu = _ln.toUpperCase();
-    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG") || _lu.includes("RMA");
+    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG") || _lu.includes("RMA") || _lu.includes("TRACK");
     if(!isReparto) return;
     // Evita di ricaricare/sovrascrivere ripetutamente per la stessa linea nello stesso ingresso.
     if(_preselFattaRef.current === _ln) return;
@@ -4720,7 +4735,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
             {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={async(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===ld); const _u=((ld||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG"); })();
+              const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===ld); const _u=((ld||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK"); })();
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=_dRep?"":(ns||sp);
                 try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn}); }catch(e){}
                 if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,ld,ns);
@@ -4828,7 +4843,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
           </div>
 
-          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isReparto = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG") || _n.includes("RMA")); if(_isReparto) return null; return (
+          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isReparto = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG") || _n.includes("RMA") || _n.includes("TRACK")); if(_isReparto) return null; return (
           <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
             <div style={{width:4,background:"#f59e0b",borderRadius:2,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
@@ -4988,7 +5003,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             const lineaEffettiva = lineaCheckinSel || linea;
             const isLineSenzaSKU = skuList.filter(s=>!s.speciale).length === 0;
             const _nLin = ((lineaEffettiva&&lineaEffettiva.id)||"").toUpperCase()+" "+((lineaEffettiva&&lineaEffettiva.nome)||"").toUpperCase();
-            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG") || _nLin.includes("RMA"));
+            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG") || _nLin.includes("RMA") || _nLin.includes("TRACK"));
             if(skuMulti.length===0 && !isLineSenzaSKU && !isPrepDG){setErr("Seleziona almeno un articolo.");return;}
             if(!linea&&!lineaCheckinSel){setErr("Seleziona una linea.");return;}
             var errori=[]; var registrati=[];
@@ -5130,7 +5145,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               <div style={{width:4,height:44,borderRadius:2,background:"#00d4aa",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#00d4aa",marginBottom:4}}>Inizio Turno</div><div style={{fontSize:15,color:"#00d4aa",fontWeight:500,opacity:0.85}}>Registra presenza + SKU</div></div>
             </button>
-            {!(((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("TAGLIO DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("PREPARAZIONE DG")||((lineaFiltro&&lineaFiltro.id)||"").toUpperCase().includes("RMA")||((lineaFiltro&&lineaFiltro.nome)||"").toUpperCase().includes("RMA"))&&(
+            {!isRepartoLinea(lineaFiltro&&lineaFiltro.id, lineaFiltro&&lineaFiltro.nome)&&(
             <button onClick={()=>{ onQualita&&onQualita(lineaFiltro||null); }} style={{display:"flex",alignItems:"center",gap:16,padding:"20px 24px",background:"#f1f4f8",border:"2px solid #3b82f6",borderRadius:12,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",color:"#1e293b",transition:"all 0.2s",width:"100%"}}>
               <div style={{width:4,height:44,borderRadius:2,background:"#3b82f6",flexShrink:0}}/>
               <div style={{textAlign:"left"}}><div style={{fontWeight:700,fontSize:16,color:"#3b82f6",marginBottom:4}}>Qualità</div><div style={{fontSize:15,color:"#3b82f6",fontWeight:500,opacity:0.85}}>Inserimento dati qualità</div></div>
@@ -5258,9 +5273,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 // Registrazione attività separata dalle presenze: Data, Brand, Tempo[min], Tipologia, Reparto.
 // NON tocca minuti lavorati. Salva su D1 + foglio "Attività Taglio DG".
 function TabAttivita({ repTipo="taglio" }) {
-  const _isRMA = repTipo === "rma";
-  // RMA usa gli stessi campi di Preparazione DG (N° Richiesta), quindi _isPrep copre entrambi.
-  const _isPrep = repTipo === "prep" || repTipo === "rma";
+  const _isRMA = repTipo === "rma" || repTipo === "tt";
+  // RMA e track&trace usano gli stessi campi di Preparazione DG (N° Richiesta), _isPrep li copre.
+  const _isPrep = repTipo === "prep" || repTipo === "rma" || repTipo === "tt";
   const oggiISO = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
   const [data,setData] = useState(oggiISO());
   const [brand,setBrand] = useState("");
@@ -5908,7 +5923,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   // Entra in Produzione rimosse per RMA), torna automaticamente a Sessioni.
   useEffect(()=>{
     const _u = (((lineaFiltro&&lineaFiltro.id)||"")+" "+((lineaFiltro&&lineaFiltro.nome)||"")).toUpperCase();
-    const _rma = _u.includes("RMA");
+    const _rma = isLineaRMAlike(lineaFiltro&&lineaFiltro.id, lineaFiltro&&lineaFiltro.nome);
     if(tab==="riepilogo" || (_rma && (tab==="qualita"||tab==="produzione"))){ setTab("sessioni"); }
   },[tab, lineaFiltro]);
   const [,setTk]          = useState(0);
@@ -6022,7 +6037,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       )}
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={async(d,ns)=>{
         const destId = d&&d.id ? d.id : d;
-        const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===destId); const _u=((destId||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG"); })();
+        const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===destId); const _u=((destId||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK"); })();
         const skuNuovo = _dRep ? "" : (ns || mod.skuCorrente || mod.sku || "");
         const lineaPartenza = mod.lineaCorrente||mod.lineaInizio||"";
         const matKey = mod.matricola||mod.nome+"-"+mod.cognome;
@@ -6588,7 +6603,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       // skuMultiDest=[""] (un articolo "vuoto") fa sì che eseguiTrasf SPOSTI la sessione
                       // sul reparto con articolo vuoto, senza chiederlo.
                       const _u = ((modTrasf.lineaDest.id||"")+" "+(modTrasf.lineaDest.nome||"")).toUpperCase();
-                      const _destRep = _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG");
+                      const _destRep = _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK");
                       if(_destRep){
                         setModTrasf({...modTrasf,step:"pwd",skuNuovo:"",cercaSku:"",skuMultiDest:[""],pwd:"",errPwd:""});
                       } else {
@@ -7003,7 +7018,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             ((lineaFiltro.id||"").toUpperCase().includes("TAGLIO DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("TAGLIO DG")) ||
             ((lineaFiltro.id||"").toUpperCase().includes("PREPARAZIONE DG")) || ((lineaFiltro.nome||"").toUpperCase().includes("PREPARAZIONE DG"))
           );
-          const _isRMALinea = lineaFiltro && (((lineaFiltro.id||"").toUpperCase().includes("RMA")) || ((lineaFiltro.nome||"").toUpperCase().includes("RMA")));
+          const _isRMALinea = !!lineaFiltro && isLineaRMAlike(lineaFiltro.id, lineaFiltro.nome);
           const _tabsProd = [["operatori","Turni&Operatori"],["sessioni","Sessioni"],...(isAdmin?[["sku","Rampa di Crescita"]]:[]),...(!_isRMALinea?[["qualita","Qualità"]]:[]),...(_isRMALinea?[["attivita","Inserimento Attività"]]:[]),...(isAdmin?[["note","Note"],["trasferimenti","Trasferimenti"]]:[]),...(!_isRMALinea?[["produzione",(<span style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="data:image/png;base64,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" width="22" height="22" style={{display:"block"}} alt="Entra"/>Entra in Produzione</span>)]]:[])];
           const _tabs = _isTaglioDG ? [["operatori","Turni&Operatori"],["sessioni","Sessioni"],["attivita","Inserimento Attività"]] : _tabsProd;
           return _tabs.map(([t,l])=>(
@@ -7351,7 +7366,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
       {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
-      {tab==="attivita"&&<TabAttivita repTipo={(()=>{ const _id=(lineaFiltro&&lineaFiltro.id||"").toUpperCase(); const _nm=(lineaFiltro&&lineaFiltro.nome||"").toUpperCase(); if(_id.includes("RMA")||_nm.includes("RMA")) return "rma"; if(_id.includes("PREPARAZIONE DG")||_nm.includes("PREPARAZIONE DG")) return "prep"; return "taglio"; })()}/>}
+      {tab==="attivita"&&<TabAttivita repTipo={repartoTipoLinea(lineaFiltro&&lineaFiltro.id, lineaFiltro&&lineaFiltro.nome) || "taglio"}/>}
       {tab==="note"&&<TabNote lineaFiltro={lineaFiltro} linee={linee} skuList={skuList} sessioni={sessioni}/>}
       {tab==="trasferimenti"&&<TabTrasferimenti linee={linee} onRiepilogo={setPopupRiepilogoOp}/>}
       {/* Tab Riepilogo rimossa da ovunque */}
@@ -7559,7 +7574,7 @@ function App() { const [view,setView]             = useState("login");
   const coFromSheets = s => { if(!s||!s.id) return;
     api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); };
   const tr = (id,dest,nSku) => {
-    const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===dest); const _u=((dest||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG"); })();
+    const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===dest); const _u=((dest||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK"); })();
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     // Aggiorna anche sessSheets immediatamente per visualizzazione Dashboard
     setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
