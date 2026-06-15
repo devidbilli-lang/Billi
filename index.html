@@ -2051,8 +2051,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const _prossimaOraMsItem=_oggiBaseItem.getTime()+prossimaOraItem*3600*1000;
               const _borseCalcItem=calcObItemConRampa(skuItem,_prossimaOraMsItem);
               const borseAProssimaItem=prossimaOraItem>=oraTurnoFineItem?(obFinaleItemRampa||_borseCalcItem):_borseCalcItem;
-              const pHH2=Math.floor(prossimaOraItem)%24;
-              const pMM2=Math.round((prossimaOraItem%1)*60);
+              const _totMinItem=Math.round(prossimaOraItem*60);
+              const pHH2=Math.floor(_totMinItem/60)%24;
+              const pMM2=_totMinItem%60;
               const prossimaOraLabelItem=String(pHH2).padStart(2,"0")+":"+String(pMM2).padStart(2,"0");
               const inTurnoItem=prossimaOraItem<=oraTurnoFineItem&&prossimaOraItem>_secInizioTurno/3600;
               // Dati qualità per questo SKU specifico
@@ -2352,8 +2353,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const oraTurnoFine = oraInizioDecimale + oreTotali;
         const orePassate = oraAttualeDecimale - oraInizioDecimale;
         const prossimaOraDecimale = oraInizioDecimale + Math.ceil(orePassate);
-        const pHH = Math.floor(prossimaOraDecimale) % 24;
-        const pMM = Math.round((prossimaOraDecimale % 1) * 60);
+        const _totMin = Math.round(prossimaOraDecimale * 60);
+        const pHH = Math.floor(_totMin / 60) % 24;
+        const pMM = _totMin % 60;
         const prossimaOraInt = prossimaOraDecimale;
         const prossimaOraLabel = String(pHH).padStart(2,"0")+":"+String(pMM).padStart(2,"0");
         // Obiettivo accumulato alla prossima ora: proporzione diretta del giornaliero,
