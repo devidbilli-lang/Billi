@@ -7178,7 +7178,22 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     }catch(e){}
     f = _fineTs ? Math.min(_nowTs, _fineTs) : _nowTs;
   }
-  return (ini&&f)?(f-ini):0;
+  const _iniMs = ini ? (ini.getTime ? ini.getTime() : ini) : 0;
+  const _fMs   = f   ? (f.getTime   ? f.getTime()   : f)   : 0;
+  let _durMs = (_iniMs && _fMs) ? (_fMs - _iniMs) : 0;
+  // PAUSE: il tempo in pausa NON conta nella durata. Mentre è in pausa (nessuna ripresa) l'intervallo
+  // sottratto arriva fino a f (=adesso, con cap fine turno) e cresce come f, quindi la durata resta
+  // CONGELATA fino a quando non si preme Riprendi; dopo la ripresa riparte.
+  if(s.pause && s.pause.length>0 && _iniMs && _fMs){
+    s.pause.forEach(pz=>{
+      const _dIn=parseData(pz.quando); if(!_dIn) return;
+      let _pin=_dIn.getTime();
+      let _pout = pz.ripresa ? (parseData(pz.ripresa)?.getTime()||_pin) : _fMs;
+      _pin=Math.max(_pin,_iniMs); _pout=Math.min(_pout,_fMs);
+      if(_pout>_pin) _durMs -= (_pout-_pin);
+    });
+  }
+  return _durMs>0?_durMs:0;
 })();
                 const corsi = s.corsi||[];
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
