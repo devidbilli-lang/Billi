@@ -5274,7 +5274,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 // Salva su D1 (tabella tt_blocchi) via endpoint salvaTTBlocco/leggiTTBlocchi/modificaTTBlocco/eliminaTTBlocco.
 function TabAttivitaTT({ linee=[], skuList=[] }) {
   const BLOCCHI_TT = ["COFFRE","GIRO 1","GIRO 2","GIRO 3"];
-  const COLORI_TT = { "COFFRE":"#0891b2", "GIRO 1":"#7c3aed", "GIRO 2":"#ea580c", "GIRO 3":"#16a34a" };
+  const COLORI_TT = { "COFFRE":"#ff44ff", "GIRO 1":"#86f8d7", "GIRO 2":"#86f8d7", "GIRO 3":"#86f8d7" };
   const oggiISOtt = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
   const [lista,setLista] = useState([]);
   const [modalAperto,setModalAperto] = useState(false);
@@ -5346,11 +5346,19 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
         const righe = _lst.filter(a=>a.blocco===b);
         const sub = righe.reduce((s,a)=>s+(+a.qta||0),0);
         const col = COLORI_TT[b];
+        const isCoffre = b === "COFFRE";
+        const txtScuro = !isCoffre; // GIRO 1/2/3 → sfondo chiaro #86f8d7, testo nero; COFFRE → testo bianco
+        const txtColor = txtScuro ? "#0f172a" : "#fff";
+        const badgeBg = txtScuro ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.22)";
+        const badgeBorder = txtScuro ? "1px solid rgba(0,0,0,0.18)" : "1px solid rgba(255,255,255,0.4)";
+        const headStyle = isCoffre
+          ? { background:"linear-gradient(135deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.06) 42%), linear-gradient(135deg, rgba(255,68,255,0.92) 0%, rgba(224,64,251,0.82) 100%)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", border:"1px solid rgba(255,255,255,0.35)", boxShadow:"inset 0 1px 0 rgba(255,255,255,0.65)" }
+          : { background: col };
         return (
           <div key={b} style={{background:"#fff",borderRadius:14,overflow:"hidden",border:"1px solid #e2e8f0",boxShadow:"0 2px 10px rgba(15,23,42,0.04)"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 18px",background:col,color:"#fff"}}>
+            <div style={{position:"relative",display:"flex",alignItems:"center",justifyContent:"center",padding:"12px 18px",color:txtColor,...headStyle}}>
               <div style={{fontSize:16,fontWeight:900,letterSpacing:1}}>{b}</div>
-              <div style={{background:"rgba(255,255,255,0.22)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:800}}>{sub} pz</div>
+              <div style={{position:"absolute",right:18,top:"50%",transform:"translateY(-50%)",background:badgeBg,border:badgeBorder,borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:800}}>{sub} pz</div>
             </div>
             <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",minWidth:420}}>
