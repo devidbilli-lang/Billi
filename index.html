@@ -5952,7 +5952,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       // Invalida l'obiettivo congelato: la correzione manuale deve ricalcolarlo
       fetch(nexusUrl("invalidaObiettivoCongelato",{})).catch(()=>{});
       setEditSegmento(null);
-      if(onAggiornaSessioni) onAggiornaSessioni();
+      // Ricarica con ritardo: la lettura immediata dal worker può restituire ancora il vecchio
+      // orario (propagazione scrittura D1). Doppia ricarica per coprire latenze diverse.
+      if(onAggiornaSessioni){ setTimeout(onAggiornaSessioni, 1200); setTimeout(onAggiornaSessioni, 3000); }
     } catch(e){ /* silenzioso */ setEditSegmento(null); }
   };
   const eliminaSegmentoFn = async (sessionId, segIndex) => {
@@ -5960,7 +5962,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       await fetchConRetry(nexusUrl("eliminaSegmento",{sessionId,segIndex}), 4, 800);
       // Invalida l'obiettivo congelato: la correzione manuale deve ricalcolarlo
       fetch(nexusUrl("invalidaObiettivoCongelato",{})).catch(()=>{});
-      if(onAggiornaSessioni) onAggiornaSessioni();
+      if(onAggiornaSessioni){ setTimeout(onAggiornaSessioni, 1200); setTimeout(onAggiornaSessioni, 3000); }
     } catch(e){ /* silenzioso */ }
   };
   useEffect(()=>{const t=setInterval(()=>setTk(x=>x+1),60000);return()=>clearInterval(t);},[]);
