@@ -5272,7 +5272,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
 // ─── TAB INSERIMENTO ATTIVITÀ — TRACK&TRACE (blocchi Coffre/Giro 1-2-3, a quantità) ──────────
 // Tabella divisa in 4 blocchi; il blocco è scelto dalla "Tipologia blocco". Reparto = nome linea.
 // Salva su D1 (tabella tt_blocchi) via endpoint salvaTTBlocco/leggiTTBlocchi/modificaTTBlocco/eliminaTTBlocco.
-function TabAttivitaTT({ linee=[] }) {
+function TabAttivitaTT({ linee=[], skuList=[] }) {
   const BLOCCHI_TT = ["COFFRE","GIRO 1","GIRO 2","GIRO 3"];
   const COLORI_TT = { "COFFRE":"#0891b2", "GIRO 1":"#7c3aed", "GIRO 2":"#ea580c", "GIRO 3":"#16a34a" };
   const oggiISOtt = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
@@ -5285,6 +5285,15 @@ function TabAttivitaTT({ linee=[] }) {
   const [reparto,setReparto] = useState("");
   const [qta,setQta] = useState("");
   const [note,setNote] = useState("");
+  const [articolo,setArticolo] = useState("");
+
+  // Elenco articoli dal foglio SKU (deduplicato per codice, ordinato).
+  const articoliOpts = React.useMemo(()=>{
+    const seen={}, out=[];
+    (skuList||[]).forEach(s=>{ if(s&&s.sku&&!seen[s.sku]){ seen[s.sku]=1; out.push({sku:s.sku, descr:(s.descrizione||"")}); } });
+    out.sort((a,b)=>String(a.sku).localeCompare(String(b.sku)));
+    return out;
+  },[skuList]);
 
   // Reparto = nomi delle linee di produzione (escludo i reparti tipo Taglio DG / RMA / track&trace).
   const lineeReparto = (linee||[]).filter(l=>l && l.id && !isRepartoLinea(l.id, l.nome)).map(l=>l.id);
@@ -5294,9 +5303,9 @@ function TabAttivitaTT({ linee=[] }) {
   },[]);
   useEffect(()=>{ carica(); const t=setInterval(carica,60000); return ()=>clearInterval(t); },[carica]);
 
-  const resetCampi = ()=>{ setBlocco("COFFRE"); setReparto(""); setQta(""); setNote(""); };
+  const resetCampi = ()=>{ setBlocco("COFFRE"); setReparto(""); setArticolo(""); setQta(""); setNote(""); };
   const apriNuova = ()=>{ setEditId(null); resetCampi(); setMsg(""); setModalAperto(true); };
-  const apriModifica = (a)=>{ setEditId(a.id); setBlocco(a.blocco||"COFFRE"); setReparto(a.reparto||""); setQta(a.qta!=null?String(a.qta):""); setNote(a.note||""); setMsg(""); setModalAperto(true); };
+  const apriModifica = (a)=>{ setEditId(a.id); setBlocco(a.blocco||"COFFRE"); setReparto(a.reparto||""); setArticolo(a.articolo||""); setQta(a.qta!=null?String(a.qta):""); setNote(a.note||""); setMsg(""); setModalAperto(true); };
 
   const salva = async ()=>{
     if(!reparto){ setMsg("Seleziona il reparto (linea)."); return; }
@@ -5304,7 +5313,7 @@ function TabAttivitaTT({ linee=[] }) {
     if(!(q>0)){ setMsg("Inserisci una quantità maggiore di 0."); return; }
     setSalvando(true);
     try{
-      const _params = { blocco, reparto, qta:String(q), note:note.trim(), data:oggiISOtt() };
+      const _params = { blocco, reparto, articolo, qta:String(q), note:note.trim(), data:oggiISOtt() };
       const _r = await fetch(nexusUrl(editId ? "modificaTTBlocco" : "salvaTTBlocco", editId ? {..._params, id:editId} : _params));
       const _j = await _r.json().catch(()=>null);
       const _ok = editId ? !!(_j&&_j.ok&&_j.data&&_j.data.modificato) : !!(_j&&_j.ok);
@@ -5341,16 +5350,17 @@ function TabAttivitaTT({ linee=[] }) {
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                {["Reparto (linea)","Qtà (pz)","Note",""].map((h,i)=>(
+                {["Reparto (linea)","Articolo","Qtà (pz)","Note",""].map((h,i)=>(
                   <th key={i} style={{textAlign:"center",padding:"9px 10px",fontSize:11.5,fontWeight:800,color:"#475569",background:"#f8fafc",borderBottom:"2px solid #e2e8f0",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
                 {righe.length===0
-                  ? <tr><td colSpan={4} style={{color:"#94a3b8",fontStyle:"italic",padding:18,fontSize:13,textAlign:"center"}}>Nessuna attività in questo blocco</td></tr>
+                  ? <tr><td colSpan={5} style={{color:"#94a3b8",fontStyle:"italic",padding:18,fontSize:13,textAlign:"center"}}>Nessuna attività in questo blocco</td></tr>
                   : righe.map(a=>(
                     <tr key={a.id}>
                       <td style={_td}>{a.reparto||"—"}</td>
+                      <td style={{...(_td),fontFamily:"monospace",fontSize:13,color:"#0f172a"}}>{a.articolo||"—"}</td>
                       <td style={{...(_td),fontWeight:800,color:"#7c3aed"}}>{(+a.qta||0)}</td>
                       <td style={{...(_td),color:"#64748b"}}>{a.note||"—"}</td>
                       <td style={{...(_td),whiteSpace:"nowrap"}}>
@@ -5392,6 +5402,13 @@ function TabAttivitaTT({ linee=[] }) {
                   <select value={reparto} onChange={e=>setReparto(e.target.value)} style={_inp}>
                     <option value="">— seleziona —</option>
                     {lineeReparto.map(n=><option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6,gridColumn:"1 / -1"}}>
+                  <label style={_lbl}>Articolo</label>
+                  <select value={articolo} onChange={e=>setArticolo(e.target.value)} style={_inp}>
+                    <option value="">— seleziona —</option>
+                    {articoliOpts.map(o=><option key={o.sku} value={o.sku}>{o.descr ? (o.sku+" — "+o.descr) : o.sku}</option>)}
                   </select>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -7529,7 +7546,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
       {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
-      {tab==="attivita"&&(()=>{ const _rt=repartoTipoLinea(lineaFiltro&&lineaFiltro.id, lineaFiltro&&lineaFiltro.nome) || "taglio"; return _rt==="tt" ? <TabAttivitaTT linee={linee}/> : <TabAttivita repTipo={_rt}/>; })()}
+      {tab==="attivita"&&(()=>{ const _rt=repartoTipoLinea(lineaFiltro&&lineaFiltro.id, lineaFiltro&&lineaFiltro.nome) || "taglio"; return _rt==="tt" ? <TabAttivitaTT linee={linee} skuList={skuList}/> : <TabAttivita repTipo={_rt}/>; })()}
       {tab==="note"&&<TabNote lineaFiltro={lineaFiltro} linee={linee} skuList={skuList} sessioni={sessioni}/>}
       {tab==="trasferimenti"&&<TabTrasferimenti linee={linee} onRiepilogo={setPopupRiepilogoOp}/>}
       {/* Tab Riepilogo rimossa da ovunque */}
