@@ -2662,6 +2662,46 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
     window.addEventListener("resize", _onR);
     return ()=>window.removeEventListener("resize", _onR);
   },[]);
+  // ── Filtro data + storico per la GRIGLIA ─────────────────────────────────────
+  // Range = oggi → griglia live (ObiettivoProduzione). Range passato → aggregati da
+  // riepilogoStorico (stesso endpoint della tab Riepilogo), mostrati in card a griglia.
+  const _oggiISOp = (()=>{ const d=new Date(); const l=new Date(d.getTime()-d.getTimezoneOffset()*60000); return l.toISOString().slice(0,10); })();
+  const [dalProd, setDalProd] = React.useState(_oggiISOp);
+  const [alProd, setAlProd]   = React.useState(_oggiISOp);
+  const isStoricoGrid = !(dalProd===_oggiISOp && alProd===_oggiISOp);
+  const [storicoGrid, setStoricoGrid] = React.useState(null);
+  const [loadingStorico, setLoadingStorico] = React.useState(false);
+  React.useEffect(()=>{
+    if(!isStoricoGrid){ setStoricoGrid(null); return; }
+    let vivo=true;
+    const p1=(dalProd||_oggiISOp).split("-").map(Number); const dal=new Date(p1[0],(p1[1]||1)-1,p1[2]||1,0,0,0,0).getTime();
+    const p2=(alProd||_oggiISOp).split("-").map(Number); const al=new Date(p2[0],(p2[1]||1)-1,p2[2]||1,0,0,0,0).getTime()+86400000-1;
+    setLoadingStorico(true);
+    (async()=>{
+      try{ const r=await fetch(nexusUrl("riepilogoStorico",{dal:String(dal),al:String(al)}),{mode:"cors"}); const j=await r.json(); const d=(j&&j.ok&&j.data)?j.data:{}; if(vivo) setStoricoGrid({righe:Array.isArray(d.righe)?d.righe:[], operatori:d.operatori||{}}); }
+      catch(e){ if(vivo) setStoricoGrid({righe:[], operatori:{}}); }
+      if(vivo) setLoadingStorico(false);
+    })();
+    return ()=>{ vivo=false; };
+  },[isStoricoGrid, dalProd, alProd]);
+  // Aggregati per linea dallo storico (borse/obiettivo/minuti → efficacia/efficienza), come TabRiepilogo.
+  const cardLineeStorico = React.useMemo(()=>{
+    if(!storicoGrid) return [];
+    const skuInfo={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) skuInfo[String(s.sku).toUpperCase()]={tc:Number(s.tc)||0}; });
+    const g={};
+    (storicoGrid.righe||[]).forEach(r=>{
+      const lid=r.linea||""; if(!lid) return;
+      const tc=(skuInfo[String(r.sku||"").toUpperCase()]||{}).tc||0;
+      const o=(g[lid]=g[lid]||{borse:0,ob:0,minLav:0,minProd:0,ko:0,migl:0});
+      const b=Number(r.borse_ok)||0;
+      o.borse+=b; o.ob+=Number(r.ob_reale)||0; o.minLav+=Number(r.minuti_lav)||0; o.minProd+=b*tc; o.ko+=Number(r.ko)||0; o.migl+=Number(r.migl)||0;
+    });
+    return Object.keys(g).filter(lid=>{ const lo=(linee||[]).find(x=>String(x.id)===String(lid)||String(x.nome)===String(lid))||{}; return !isRepartoLinea(lid, lo.nome); }).map(lid=>{
+      const o=g[lid]; const lObj=(linee||[]).find(x=>String(x.id)===String(lid)||String(x.nome)===String(lid))||{};
+      return { lid, nome:(lObj.id)||lid, colore:lObj.colore||"#7c3aed", borse:o.borse, ko:o.ko, migl:o.migl, nOp:(storicoGrid.operatori||{})[lid]||0,
+        efficacia: o.ob>0?Math.round(o.borse/o.ob*100):0, efficienza: o.minLav>0?Math.round(o.minProd/o.minLav*100):0 };
+    }).sort((a,b)=>String(a.nome).localeCompare(String(b.nome)));
+  },[storicoGrid, skuList, linee]);
   if (!dati) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:300}}>
       <LogoSpinner size={120}/>
@@ -2706,6 +2746,15 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
             </button>
           </div>
         )}
+        {vistaGriglia && !lineaFiltro && (
+          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",background:"#fff",border:"1.5px solid #ddd6fe",borderRadius:8,padding:"5px 9px"}}>
+            <span style={{fontSize:12,fontWeight:800,color:"#6d28d9",fontFamily:"'Montserrat',sans-serif"}}>Dal</span>
+            <input type="date" value={dalProd} max={alProd||undefined} onChange={e=>setDalProd(e.target.value)} style={{border:"1.5px solid #c4b5fd",borderRadius:7,padding:"5px 7px",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#1e293b",background:"#faf5ff"}}/>
+            <span style={{fontSize:12,fontWeight:800,color:"#6d28d9",fontFamily:"'Montserrat',sans-serif"}}>Al</span>
+            <input type="date" value={alProd} min={dalProd||undefined} onChange={e=>setAlProd(e.target.value)} style={{border:"1.5px solid #c4b5fd",borderRadius:7,padding:"5px 7px",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#1e293b",background:"#faf5ff"}}/>
+            {isStoricoGrid && <button onClick={()=>{ setDalProd(_oggiISOp); setAlProd(_oggiISOp); }} title="Torna a oggi (dati live)" style={{border:"none",background:"#7c3aed",color:"#fff",borderRadius:7,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Oggi</button>}
+          </div>
+        )}
         <button onClick={()=>{
           const el=document.documentElement;
           if(!document.fullscreenElement){ el.requestFullscreen&&el.requestFullscreen(); }
@@ -2717,6 +2766,45 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
       </div>
       {/* VISTA GRIGLIA: 3 colonne, ogni card rimpicciolita con zoom */}
       {vistaGriglia ? (() => {
+        // ── GRIGLIA STORICA (periodo passato): card efficacia/efficienza per linea ──
+        if(isStoricoGrid){
+          const ArcoH = ({pct,label,colore})=>(
+            <div style={{flex:1,minWidth:0,background:"#fff",border:"2px solid "+colore,boxShadow:"0 0 10px 2px "+colore+"44, inset 0 0 6px "+colore+"22",borderRadius:12,padding:"7px 4px 3px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              <div style={{fontSize:"clamp(9px,1.1vw,12px)",color:"#111827",fontWeight:800,letterSpacing:0.5,marginBottom:2,whiteSpace:"nowrap"}}>{label}</div>
+              <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
+                <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
+                {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={colore} strokeWidth="16" strokeLinecap="round" strokeDasharray={(pct/100)*Math.PI*90+" "+(Math.PI*90)} style={{filter:"drop-shadow(0 0 6px "+colore+")"}}/>}
+                {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={colore} strokeWidth="16" strokeLinecap="round" style={{filter:"drop-shadow(0 0 6px "+colore+")"}}/>}
+                <text x="100" y="92" textAnchor="middle" fontSize="44" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{pct}%</text>
+              </svg>
+            </div>
+          );
+          if(loadingStorico) return <div style={{textAlign:"center",color:"#7c3aed",fontWeight:700,padding:40,fontFamily:"'Montserrat',sans-serif"}}>Caricamento storico…</div>;
+          if(!cardLineeStorico.length) return <div style={{textAlign:"center",color:"#94a3b8",fontWeight:600,padding:40,fontFamily:"'Montserrat',sans-serif"}}>Nessun dato di produzione nel periodo selezionato.</div>;
+          const _ncolH = Math.max(1, Math.min(_colDisp, cardLineeStorico.length));
+          return (
+            <div style={{display:"grid",gridTemplateColumns:`repeat(${_ncolH}, 1fr)`,gap:12,padding:"6px",alignItems:"start"}}>
+              {cardLineeStorico.map(L=>(
+                <div key={L.lid} style={{background:"#fff",border:"4px solid "+L.colore,borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+L.colore+"99, 0 0 4px "+L.colore+", inset 0 0 8px "+L.colore+"22",display:"flex",flexDirection:"column"}}>
+                  <div style={{padding:"7px 12px",borderBottom:"1px solid "+L.colore+"33",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:L.colore,flexShrink:0}}/>
+                    <div style={{fontSize:13,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{L.nome}</div>
+                    <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {L.ko}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {L.migl}</span>
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"stretch",padding:10}}>
+                    <ArcoH pct={L.efficienza} label="Efficienza" colore={L.colore}/>
+                    <ArcoH pct={L.efficacia} label="Efficacia" colore={L.colore}/>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-around",alignItems:"center",padding:"4px 10px 10px",gap:10,flexWrap:"wrap"}}>
+                    <span style={{fontSize:13,fontWeight:800,color:"#10b981",fontFamily:"'Montserrat',sans-serif"}}>Borse OK {L.borse}</span>
+                    <span style={{fontSize:13,fontWeight:800,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif"}}>Operatori {L.nOp}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
         const nCard = lineeGriglia.filter(l=>perLinea[l.id]).length;
         const nCol = Math.max(1, Math.min(_colDisp, nCard));
         const nRighe = Math.ceil(nCard / nCol) || 1;
