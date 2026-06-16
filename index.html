@@ -609,11 +609,18 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
   const [oraInizio,setOraInizio] = useState("10:00");
   const [oraFine,setOraFine] = useState("12:00");
   const la = getLinea(sess.lineaCorrente, linee);
+  const isForm = !!sess._formazione;                        // modalità Formazione: riusa la pipeline corsi, marcata "FORMAZIONE"
+  const COL  = isForm ? "#d97706" : "#06b6d4";              // accento testo/label (arancione leggibile per formazione)
+  const COLb = isForm ? "#ffc946" : "#06b6d4";              // bordo/accento forte
+  const GRAD = isForm ? "linear-gradient(135deg,#f59e0b,#d97706)" : "linear-gradient(135deg,#06b6d4,#0284c7)";
+  const GRADp= isForm ? "linear-gradient(135deg,#d97706,#b45309)" : "linear-gradient(135deg,#0891b2,#0369a1)";
+  const nomeOut = isForm ? "FORMAZIONE" : (nomeCorso||"CORSO");
+  const parola = isForm ? "formazione" : "corso";
   return (
     <div style={MS.ov}>
       <div style={{...MS.md,maxWidth:400}}>
         <div style={MS.mh}>
-          <span style={{...MS.mt,color:"#06b6d4"}}>🎓 Corso / Formazione</span>
+          <span style={{...MS.mt,color:COL}}>{isForm?"📚 Formazione":"🎓 Corso / Formazione"}</span>
           <button style={MS.mx} onClick={onClose}>X</button>
         </div>
         <div style={{padding:22}}>
@@ -622,7 +629,7 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
             <span style={{...S.tag,background:"#ffffff",color:la.colore,border:"2px solid "+la.colore,marginLeft:8}}>{la.id}</span>
           </div>
-          {(tipoUscita==="sospendi"||pianifica)&&(
+          {!isForm&&(tipoUscita==="sospendi"||pianifica)&&(
             <div style={{marginBottom:16}}>
               <label style={S.lbl}>Nome corso / formazione</label>
               <input style={{...S.inp,borderColor:"#06b6d4",borderWidth:2}} placeholder="es. Sicurezza sul lavoro..."
@@ -632,8 +639,8 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
           {/* Toggle pianificazione */}
           {onPianifica&&(
             <button type="button" onClick={()=>setPianifica(!pianifica)}
-              style={{width:"100%",marginBottom:14,padding:"10px",background:pianifica?"#0891b2":"#ecfeff",color:pianifica?"#fff":"#0891b2",border:"2px solid #06b6d4",borderRadius:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}>
-              ⏱ Pianifica corso {pianifica?"(attivo)":""}
+              style={{width:"100%",marginBottom:14,padding:"10px",background:pianifica?COL:(isForm?"#fffbeb":"#ecfeff"),color:pianifica?"#fff":COL,border:"2px solid "+COLb,borderRadius:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}>
+              ⏱ Pianifica {parola} {pianifica?"(attivo)":""}
             </button>
           )}
           {pianifica ? (
@@ -648,7 +655,7 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
             <>
               <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Cosa succede alla produzione?</div>
               <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-                {[["sospendi","⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione","#06b6d4"],["rientro","▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo il corso","#10b981"]
+                {[["sospendi",isForm?"⏸ Sposta in Formazione":"⏸ Sposta al Corso","L'operatore si stacca temporaneamente dalla produzione",COLb],["rientro",isForm?"▶ Rientro dalla formazione — riprendo la produzione":"▶ Rientro dal corso — riprendo la produzione","L'operatore torna in produzione dopo "+(isForm?"la formazione":"il corso"),"#10b981"]
                 ].map(([val,tit,desc,c])=>(
                   <button key={val} onClick={()=>setTipoUscita(val)}
                     style={{display:"flex",flexDirection:"column",gap:2,padding:"12px 14px",border:"1px solid "+(tipoUscita===val?c:"#1e3a5f"),borderRadius:8,cursor:"pointer",background:tipoUscita===val?(c+"22"):"transparent",fontFamily:"'Montserrat',sans-serif",textAlign:"left",transition:"all 0.2s"}}>
@@ -662,11 +669,11 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
           <div style={{display:"flex",gap:10}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
             {pianifica ? (
-              <button style={{...MS.cf,background:"linear-gradient(135deg,#0891b2,#0369a1)"}}
-                onClick={()=>onPianifica(oraInizio, oraFine, nomeCorso||"CORSO")}>✓ Pianifica</button>
+              <button style={{...MS.cf,background:GRADp}}
+                onClick={()=>onPianifica(oraInizio, oraFine, nomeOut)}>✓ Pianifica</button>
             ) : (
-              <button style={{...MS.cf,background:"linear-gradient(135deg,#06b6d4,#0284c7)"}}
-                onClick={()=>onOk(tipoUscita, nomeCorso||"CORSO")}>Conferma</button>
+              <button style={{...MS.cf,background:GRAD}}
+                onClick={()=>onOk(tipoUscita, nomeOut)}>Conferma</button>
             )}
           </div>
         </div>
@@ -7109,7 +7116,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         }}/>}
       {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
         onOk={async(tipo,nomeCorso)=>{
-          setLoading(true); setLoadingMsg(tipo==="rientro"?"Rientro in produzione...":"Registrazione corso...");
+          setLoading(true); setLoadingMsg(tipo==="rientro"?"Rientro in produzione...":(modCorso._formazione?"Registrazione formazione...":"Registrazione corso..."));
           const tipoEvento = tipo==="rientro" ? "RIENTRO" : "CORSO";
           const _sessId = modCorso.id;
           const _skuA = tipo==="rientro" ? (modCorso.skuCorrente||modCorso.sku||"") : (nomeCorso||"CORSO");
@@ -7118,7 +7125,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           if(setSessioni) setSessioni(prev=>(prev||[]).map(s=>{
             if(s.id!==_sessId) return s;
             const corsiAgg = [...(s.corsi||[])];
-            if(tipoEvento==="CORSO") corsiAgg.push({tipo:"sospendi",quando:new Date().toLocaleString("it-IT"),ts:Date.now()});
+            if(tipoEvento==="CORSO") corsiAgg.push({tipo:"sospendi",quando:new Date().toLocaleString("it-IT"),ts:Date.now(),nomeCorso:_skuA});
             else if(corsiAgg.length>0){ corsiAgg[corsiAgg.length-1]={...corsiAgg[corsiAgg.length-1],tipo:"rientrato",rientro:new Date().toLocaleString("it-IT")}; }
             return {...s, corsi:corsiAgg};
           }));
@@ -7408,6 +7415,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const corsi = s.corsi||[];
                 const ultimoCorso = corsi.length>0?corsi[corsi.length-1]:null;
                 const inCorso = !s.fine && ultimoCorso && ultimoCorso.tipo==="sospendi" && !ultimoCorso.rientro;
+                const inFormazione = inCorso && ((ultimoCorso.nomeCorso||"").toUpperCase()==="FORMAZIONE");
+                const inCorsoReale = inCorso && !inFormazione;
                 const pause = s.pause||[];
                 const ultimaPausa = pause.length>0?pause[pause.length-1]:null;
                 const inPausa = !s.fine && ultimaPausa && ultimaPausa.tipo==="pausa";
@@ -7416,7 +7425,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     (!att2) ? "#fee2e2" :                                   // chiuso → ROSSO
                     isPianificato ? (haSoloOggi ? "#ffedd5" : "#fef3c7") :   // pianificato non arrivato → ARANCIONE (solo oggi) / GIALLO (standard)
                     inPausa ? "#fecaca" :                                    // in pausa
-                    inCorso ? "#06b6d422" :                                  // al corso
+                    inFormazione ? "#ffc94622" :                             // in formazione → ARANCIONE
+                    inCorsoReale ? "#06b6d422" :                             // al corso
                     "#dcfce7"                                                // in turno → VERDE
                   }}>
                     {editOrario&&<td style={{padding:"6px 8px",textAlign:"center"}}>
@@ -7448,9 +7458,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const fmtHM = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
                         const ini = fmtHM(cp.quando);
                         const fin = cp.rientro ? fmtHM(cp.rientro) : "";
+                        const _isForm = (cp.nomeCorso||"").toUpperCase()==="FORMAZIONE";
                         return (
-                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
-                            <span style={{fontWeight:900}}>C</span> {ini}{fin?("→"+fin):""}
+                          <span style={{background:_isForm?"#ffc94622":"#06b6d422",color:_isForm?"#b45309":"#0891b2",border:"1px solid "+(_isForm?"#ffc94666":"#06b6d455"),borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
+                            <span style={{fontWeight:900}}>{_isForm?"F":"C"}</span> {ini}{fin?("→"+fin):""}
                             {editOrario&&<span onClick={()=>setModCorsoPian({sess:s, nome:(cp.nomeCorso||"CORSO"), oraInizio:ini||"10:00", oraFine:fin||""})} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title="Modifica corso"><IconaMatita size={13}/></span>}
                           </span>
                         );
@@ -7463,9 +7474,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const fmtHM = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
                         const ini = fmtHM(ultimoCorso.quando);
                         const fin = ultimoCorso.fineCorsoPrevista ? fmtHM(ultimoCorso.fineCorsoPrevista) : "";
+                        const _isForm = (ultimoCorso.nomeCorso||"").toUpperCase()==="FORMAZIONE";
                         return (
-                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
-                            <span style={{fontWeight:900}}>C</span> {ini}{fin?("→"+fin):""}
+                          <span style={{background:_isForm?"#ffc94622":"#06b6d422",color:_isForm?"#b45309":"#0891b2",border:"1px solid "+(_isForm?"#ffc94666":"#06b6d455"),borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
+                            <span style={{fontWeight:900}}>{_isForm?"F":"C"}</span> {ini}{fin?("→"+fin):""}
                             {editOrario&&<span onClick={()=>setModCorsoPian({sess:s, nome:(ultimoCorso.nomeCorso||"CORSO"), oraInizio:ini||"10:00", oraFine:fin||"", inAtto:true})} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title="Modifica orari corso in atto"><IconaMatita size={13}/></span>}
                           </span>
                         );
@@ -7546,11 +7558,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     <td style={S.td}><span style={{background:"#ffffff",color:"#64748b",border:"1px solid #e2e8f0",padding:"4px 10px",borderRadius:4,fontSize:13}}>{durataStr(dur)}</span></td>
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap"}}>
-                        {att2&&inPausa?<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>:att2&&inCorso?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
+                        {att2&&inPausa?<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>:att2&&inFormazione?<span style={{width:10,height:10,borderRadius:"50%",background:"#ffc946",display:"inline-block",flexShrink:0}}/>:att2&&inCorsoReale?<span style={{width:10,height:10,borderRadius:"50%",background:"#06b6d4",display:"inline-block",flexShrink:0}}/>:att2?<span style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>:<span style={{width:10,height:10,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
                         {att2&&(
                           <>
-                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorso?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorso?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorso?"▶":"C"}</button>
-                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid #f59e0b66",borderRadius:6,color:"#f59e0b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCambioSku(s)}>S</button>
+                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inCorsoReale?"#22c55e44":"#06b6d444"),borderRadius:6,color:inCorsoReale?"#22c55e":"#06b6d4",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso(s)}>{inCorsoReale?"▶":"C"}</button>
+                            <button style={{padding:"8px 12px",background:"#ffffff",border:"1px solid "+(inFormazione?"#22c55e44":"#ffc94666"),borderRadius:6,color:inFormazione?"#22c55e":"#ffc946",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={()=>setModCorso({...s,_formazione:true})} title="Formazione">{inFormazione?"▶":"F"}</button>
                             <button title={inPausa?"Riprendi turno":"Metti in pausa"} style={{padding:"8px 12px",background:inPausa?"#dcfce7":"#ffffff",border:"1px solid "+(inPausa?"#22c55e":"#f9731666"),borderRadius:6,color:inPausa?"#22c55e":"#f97316",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700}} onClick={async()=>{
                               const sessioniOp = sessioni.filter(ss=>ss.matricola===s.matricola&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
                               const tipoEv = inPausa ? "RIPRESA" : "PAUSA";
