@@ -3790,6 +3790,28 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   const [tmpQ, setTmpQ] = React.useState({ok:"",ko:"",migl:""});
   const [salvandoQ, setSalvandoQ] = React.useState(false);
   const [vistaQ, setVistaQ] = React.useState("tabella"); // "tabella" | "report"
+  // Filtro data + storico (vista Tabella): oggi (live, ogni 60s) + giorni archiviati (storico_qualita).
+  const _oggiISOq = (()=>{ const d=new Date(); const l=new Date(d.getTime()-d.getTimezoneOffset()*60000); return l.toISOString().slice(0,10); })();
+  const [storicoQ, setStoricoQ] = React.useState([]);
+  const [dalQ, setDalQ] = React.useState(_oggiISOq);
+  const [alQ, setAlQ]   = React.useState(_oggiISOq);
+  React.useEffect(()=>{
+    let vivo=true;
+    (async()=>{
+      try { const r=await fetch(nexusUrl("leggiStoricoQualita",{})); const j=await r.json(); if(vivo && j && j.ok && j.data && Array.isArray(j.data.qualita)) setStoricoQ(j.data.qualita); }
+      catch(e){}
+    })();
+    return ()=>{ vivo=false; };
+  },[]);
+  // Normalizza la data del record (DD/MM/YYYY, YYYY-MM-DD o con orario) alla mezzanotte locale.
+  const _giornoTsQ = (raw)=>{
+    const day = String(raw||"").split(" ")[0].split(",")[0].split("T")[0].trim();
+    let mm = day.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(mm) return new Date(+mm[3], +mm[2]-1, +mm[1]).getTime();
+    mm = day.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if(mm) return new Date(+mm[1], +mm[2]-1, +mm[3]).getTime();
+    const d = parseData(raw); return d ? new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime() : null;
+  };
   const caricaQ = React.useCallback(async () => {
     try {
       const r = await fetch(nexusUrl("leggiqualita",{}));
@@ -3814,7 +3836,16 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     setEditQ(null); setSalvandoQ(false);
     setTimeout(caricaQ, 1000);
   };
-  const dati = lineaFiltro ? qualita.filter(q => q.linea === lineaFiltro.id) : qualita;
+  // Tabella: unisce oggi (live) + storico, filtra per linea e per intervallo [dalQ, alQ].
+  const _dalTsQ = dalQ ? new Date(dalQ+"T00:00:00").getTime() : -Infinity;
+  const _alTsQ  = alQ  ? new Date(alQ +"T00:00:00").getTime() :  Infinity;
+  const _tuttiQ = [...(qualita||[]), ...(storicoQ||[])];
+  const dati = _tuttiQ.filter(q => {
+    if (lineaFiltro && q.linea !== lineaFiltro.id) return false;
+    const t = _giornoTsQ(q.data); if (t==null) return false;
+    if (t < _dalTsQ || t > _alTsQ) return false;
+    return true;
+  });
   const aggMap = {};
   for (const q of dati) {
     // Usa solo la data (senza ora) come chiave
@@ -3838,15 +3869,23 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   if (loading) return <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>;
   return (
     <div>
-      <div style={{display:"flex",gap:10,marginBottom:16}}>
+      <div style={{display:"flex",gap:10,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
         {[["tabella","Tabella"],["report","Report"]].map(([k,l])=>(
           <button key={k} onClick={()=>setVistaQ(k)} style={{padding:"9px 20px",border:"2px solid #7c3aed",borderRadius:9,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:700,background:vistaQ===k?"#7c3aed":"#fff",color:vistaQ===k?"#fff":"#6d28d9",transition:"all 0.15s"}}>{l}</button>
         ))}
+        {vistaQ==="tabella" && (
+          <div style={{display:"flex",gap:8,alignItems:"center",marginLeft:"auto",flexWrap:"wrap",background:"#ffffff",border:"1.5px solid #ddd6fe",borderRadius:10,padding:"6px 10px"}}>
+            <span style={{fontSize:12,fontWeight:800,color:"#6d28d9",fontFamily:"'Montserrat',sans-serif",letterSpacing:0.5}}>Dal</span>
+            <input type="date" value={dalQ} max={alQ||undefined} onChange={e=>setDalQ(e.target.value)} style={{border:"1.5px solid #c4b5fd",borderRadius:8,padding:"6px 8px",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#1e293b",background:"#faf5ff"}}/>
+            <span style={{fontSize:12,fontWeight:800,color:"#6d28d9",fontFamily:"'Montserrat',sans-serif",letterSpacing:0.5}}>Al</span>
+            <input type="date" value={alQ} min={dalQ||undefined} onChange={e=>setAlQ(e.target.value)} style={{border:"1.5px solid #c4b5fd",borderRadius:8,padding:"6px 8px",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#1e293b",background:"#faf5ff"}}/>
+          </div>
+        )}
       </div>
       {vistaQ==="report" ? (
         <ReportQualita qualita={qualita} skuList={skuList} lineaFiltro={lineaFiltro} linee={linee}/>
       ) : righe.length === 0 ? (
-        <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessun dato qualità per oggi.</div>
+        <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessun dato qualità nell'intervallo selezionato.</div>
       ) : (
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table className="tabQ" style={{width:"100%",borderCollapse:"collapse"}}>
@@ -3889,9 +3928,11 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                       <button disabled={salvandoQ} onClick={()=>salvaModificaQ(r)} style={{background:"#ff6937",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>{salvandoQ?"...":"✓"}</button>
                       <button disabled={salvandoQ} onClick={()=>setEditQ(null)} style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"5px 10px",fontSize:13,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     </div>
-                  ) : (
+                  ) : (_giornoTsQ(r.data)===_giornoTsQ(_oggiISOq)) ? (
                     <button onClick={()=>{ setEditQ(rowKey); setTmpQ({ok:String(r.ok||0),ko:String(r.ko||0),migl:String(r.migl||0)}); }} title="Modifica valori"
                       style={{background:"#fff",border:"1.5px solid #ff6937",borderRadius:6,padding:"5px 9px",cursor:"pointer",color:"#ff6937"}}><IconaMatita size={14}/></button>
+                  ) : (
+                    <span style={{color:"#cbd5e1",fontSize:13,fontFamily:"'Montserrat',sans-serif"}} title="Solo i dati di oggi sono modificabili">—</span>
                   )}
                 </td>
                 </>); })()}
