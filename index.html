@@ -3951,7 +3951,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
   const [err, setErr] = useState("");
   if(sync==="caricamento") return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
-      <LogoSpinner size={140}/>
+      <LogoSpinner size={110}/>
       <span style={{fontSize:52,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
     </div>
   );
@@ -7678,7 +7678,7 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
 
   if(sync==="caricamento") return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
-      <LogoSpinner size={140}/>
+      <LogoSpinner size={110}/>
       <span style={{fontSize:52,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
     </div>
   );
@@ -7868,7 +7868,7 @@ function App() { const [view,setView]             = useState("login");
     if(sync==="caricamento") return (
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
         <LogoSpinner size={140}/>
-        <span style={{fontSize:52,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
+        <span style={{fontSize:96,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
         <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Caricamento...</span>
       </div>
     );
