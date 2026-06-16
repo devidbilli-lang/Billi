@@ -6897,7 +6897,6 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     return s;
                   }).filter(Boolean);
                   const skuDestinazione = modTrasf.skuMultiDest||[];
-                  console.log("%c[TRASF-DEBUG] inizio","color:#a855f7;font-weight:700","| selezionati:",modTrasf.opSelezionati,"| destinazione:",modTrasf.lineaDest.id,"| articoli:",skuDestinazione,"| ops trovati:",ops.map(o=>({mat:o.matricola,lineaCorrente:o.lineaCorrente,id:(o.id||"").slice(0,10),fine:o.fine||null})));
                   await Promise.all(ops.map(async(s)=>{
                     // Linea di partenza = quella corrente della sessione di riferimento dell'operatore
                     const lineaPartenza = s.lineaCorrente||s.lineaInizio||"";
@@ -6919,15 +6918,22 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     const _destId = modTrasf.lineaDest.id;
                     const _skusDest = (skuDestinazione||[]).slice();
                     const _nMove = Math.min(sessioniAperte.length, _skusDest.length);
-                    console.log("%c[TRASF-DEBUG] op "+(s.matricola||""),"color:#0891b2;font-weight:700","| lineaPartenza:",lineaPartenza,"| sessioniAperte:",sessioniAperte.map(x=>({id:(x.id||"").slice(0,10),linea:x.lineaCorrente})),"| _nMove:",_nMove,"| _skusDest:",_skusDest);
                     // a) Sposta le sessioni esistenti, una per articolo di destinazione (TRASFERIMENTO).
                     //    La sessione resta aperta: cambia solo linea e articolo.
                     for(let i=0;i<_nMove;i++){
                       const sess = sessioniAperte[i];
-                      const _payload = { sessionId: sess.id, matricola: sess.matricola||"", nome: sess.nome||"", cognome: sess.cognome||"", sku: _skusDest[i], tipo: "TRASFERIMENTO", lineaDa: sess.lineaCorrente||lineaPartenza, lineaA: _destId, skuDa: sess.skuCorrente||sess.sku||"", skuA: _skusDest[i] };
-                      console.log("%c[TRASF-DEBUG] INVIO","color:#a855f7;font-weight:700",{ sessionId:(_payload.sessionId||"").slice(0,10), lineaDa:_payload.lineaDa, lineaA:_payload.lineaA, sku:_payload.sku });
-                      await api.evento(_payload).catch(e=>{});
-                      try { const _r=await fetch(nexusUrl("evento",_payload),{mode:"cors"}); const _j=await _r.json().catch(()=>null); console.log("%c[TRASF-DEBUG] RISPOSTA worker","color:#16a34a;font-weight:700",_j); } catch(_e){ console.log("%c[TRASF-DEBUG] FETCH FALLITA","color:#dc2626;font-weight:700",_e&&_e.message); }
+                      await api.evento({
+                        sessionId: sess.id,
+                        matricola: sess.matricola||"",
+                        nome: sess.nome||"",
+                        cognome: sess.cognome||"",
+                        sku: _skusDest[i],
+                        tipo: "TRASFERIMENTO",
+                        lineaDa: sess.lineaCorrente||lineaPartenza,
+                        lineaA: _destId,
+                        skuDa: sess.skuCorrente||sess.sku||"",
+                        skuA: _skusDest[i]
+                      }).catch(e=>{});
                     }
                     // b) Sessioni di partenza in eccesso (più articoli in partenza che in destinazione):
                     //    l'operatore smette di lavorarle → CHECKOUT. NON sparisce: ha le sessioni spostate aperte.
