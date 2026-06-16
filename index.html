@@ -5292,6 +5292,9 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   // Reparto = nomi delle linee di produzione (escludo i reparti tipo Taglio DG / RMA / track&trace).
   const lineeReparto = (linee||[]).filter(l=>l && l.id && !isRepartoLinea(l.id, l.nome)).map(l=>l.id);
 
+  // Tabella condivisa via D1: persiste durante la giornata (ricaricata e in polling tra i tablet)
+  // e si azzera SOLO con il reset notturno (che svuota tt_blocchi). Salvataggi/modifiche/eliminazioni
+  // passano dal worker, che propaga tutto sul foglio Google "Attività Track&Trace".
   const carica = React.useCallback(async()=>{
     try{ const r=await fetch(nexusUrl("leggiTTBlocchi",{}),{mode:"cors"}); const j=await r.json(); setLista((j&&j.ok&&j.data&&Array.isArray(j.data.blocchi))?j.data.blocchi:[]); }catch(e){}
   },[]);
@@ -5328,10 +5331,9 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
     }catch(e){ setMsg("Errore nel salvataggio."); }
     setSalvando(false);
   };
-  const elimina = async (id)=>{ try{ await fetch(nexusUrl("eliminaTTBlocco",{id})); setLista(l=>l.filter(x=>x.id!==id)); }catch(e){} };
+  const elimina = async (id)=>{ try{ await fetch(nexusUrl("eliminaTTBlocco",{id})); setLista(l=>l.filter(x=>x.id!==id)); setTimeout(carica,800); }catch(e){} };
 
-  const _oggi = oggiISOtt();
-  const _lst = (lista||[]).filter(a=> (a.data||"").toString().substring(0,10)===_oggi);
+  const _lst = (lista||[]);  // tutto ciò che è in tt_blocchi (svuotato dal reset notturno)
   const _td = {padding:"10px",fontSize:14,borderBottom:"1px solid #eef2f7",textAlign:"center",verticalAlign:"middle"};
   const _lbl = {fontSize:12,fontWeight:800,color:"#7c3aed",textTransform:"uppercase",letterSpacing:.5};
   const _inp = {fontFamily:"'Montserrat',sans-serif",fontSize:15,padding:"11px 12px",border:"2px solid #e2e8f0",borderRadius:10,color:"#1e293b",background:"#fff",outline:"none"};
