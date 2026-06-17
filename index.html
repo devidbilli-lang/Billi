@@ -4113,7 +4113,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   },[]);
   React.useEffect(()=>{ caricaQualitaOggi(); },[caricaQualitaOggi]);
   React.useEffect(()=>{
-    const _carica=()=>{ fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{ if(j&&j.perArticolo) setObPerArticolo(j.perArticolo); }).catch(()=>{}); };
+    const _carica=()=>{ fetch(nexusUrl("leggiObiettiviCongelati",{})).then(r=>r.json()).then(j=>{ if(j&&j.ok&&j.data&&j.data.perArticolo) setObPerArticolo(j.data.perArticolo); }).catch(()=>{}); };
     _carica(); const _t=setInterval(_carica,30000); return ()=>clearInterval(_t);
   },[]);
   const isAdminQ = !linea;
