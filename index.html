@@ -5364,7 +5364,8 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   const fabDragRef = React.useRef(null);
 
   // Reparto = nomi delle linee di produzione (escludo i reparti tipo Taglio DG / RMA / track&trace).
-  const lineeReparto = (linee||[]).filter(l=>l && l.id && !isRepartoLinea(l.id, l.nome)).map(l=>l.id);
+  // Aggiunta manuale "Giuseppe Mazzei" all'elenco (dedup se già presente tra le linee).
+  const lineeReparto = (()=>{ const _b=(linee||[]).filter(l=>l && l.id && !isRepartoLinea(l.id, l.nome)).map(l=>l.id); if(!_b.includes("Giuseppe Mazzei")) _b.push("Giuseppe Mazzei"); return _b; })();
 
   // Tabella condivisa via D1: persiste durante la giornata (ricaricata e in polling tra i tablet)
   // e si azzera SOLO con il reset notturno (che svuota tt_blocchi). Salvataggi/modifiche/eliminazioni
