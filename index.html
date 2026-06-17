@@ -4213,29 +4213,10 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
-      {/* MIRROR NASCOSTO: monta la card "Entra in Produzione" invisibile, alimentata dalle sessioni
-          già scaricate. Calcola e congela su D1 gli obiettivi per articolo con lo STESSO codice della
-          card (non toccato); il widget li rilegge come già fa e i badge OBIETTIVO del riquadro OGGI
-          si riempiono. Le borse/efficienza qui non servono (sono nascoste): solo il calcolo obiettivo. */}
-      {lineaEffettiva && sessioniQ.length>0 && (
-        <div style={{display:"none"}} aria-hidden="true">
-          <ObiettivoProduzione
-            sessioni={sessioniQ}
-            lineaId={lineaEffettiva}
-            skuList={skuList}
-            linee={linee}
-            borseOggi={0}
-            borseKO={0}
-            borseMigl={0}
-            maxOpOggi={0}
-            minutiPresenzaLinea={0}
-            coloreLinea={(lObj&&lObj.colore)||"#7c3aed"}
-            qualitaPerSku={{}}
-            compatto={true}
-            onObiettiviArticoli={setObPerArticoloLocal}
-          />
-        </div>
-      )}
+      {/* OBIETTIVO QUALITÀ = lo stesso valore per articolo calcolato dalla card di produzione,
+          letto da D1 (obPerArticolo). Nessun ricalcolo locale qui: il vecchio mirror nascosto
+          ricalcolava per conto suo e driftava rispetto alla produzione (es. 58 invece di 65),
+          oltre a sovrascrivere il valore corretto su D1. */}
       {(()=>{
         // Calcola totali per SKU della linea oggi
         const lineaId2 = linea?.id || lineaSelQ;
@@ -4321,7 +4302,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                       <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1.2}}>{r.sku}</span>
                       {skuObj?.descrizione&&<span style={{fontSize:10,color:"#ff6937cc",lineHeight:1.2}}>{skuObj.descrizione}</span>}
                     </div>
-                    {(()=>{ const _ob=((obPerArticoloLocal||{})[r.sku]!=null)?(obPerArticoloLocal||{})[r.sku]:(obPerArticolo[lineaEffettiva]||{})[r.sku]; return (_ob!=null) ? (
+                    {(()=>{ const _ob=(obPerArticolo[lineaEffettiva]||{})[r.sku]; return (_ob!=null) ? (
                       <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1,background:"#7c3aed14",border:"1.5px solid #7c3aed",borderRadius:8,padding:"4px 14px"}} title="Obiettivo giornaliero (da Entra in Produzione)">
                         <span style={{fontSize:9,color:"#7c3aed",fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.2}}>Obiettivo</span>
                         <span style={{fontSize:18,fontWeight:900,color:"#7c3aed",lineHeight:1}}>{_ob}</span>
