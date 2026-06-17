@@ -911,7 +911,7 @@ function CodiceFit({ text, max=22, min=9, color="#6d28d9" }){
   );
 }
 
-function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false, onObiettiviArticoli }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, minutiFormazioneServer=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false, onObiettiviArticoli }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
@@ -1511,14 +1511,25 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) return;
       const dIni = tsInizioRealeSessione(s); if(!dIni) return;
       const g0 = new Date(dIni); g0.setHours(0,0,0,0); if(g0.getTime() < _oggi0.getTime()) return;
+      // Fine effettiva della sessione: checkout se c'è; altrimenti NON oltre la fine pianificata/fine turno,
+      // e in tempo reale non oltre adesso. Senza questo cap un corso di formazione APERTO (senza rientro)
+      // cresceva all'infinito: a turno terminato continuava a contare quando→adesso (es. 1434 min).
       const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
       const dF = haCk ? parseData(s.fine) : null;
-      const finReale = dF ? dF.getTime() : _nowMs;
+      let _secFine = secFineTurnoAssoluto;
+      const _fpHM = s.orarioFineOggiPian || s.orarioFinePian || "";
+      if(_fpHM.indexOf(":")>-1){ const _pp=_fpHM.split(":").map(Number); const _sp=(_pp[0]||0)*3600+(_pp[1]||0)*60; if(_sp<_secFine) _secFine=_sp; }
+      const _fineCapMs = g0.getTime() + _secFine*1000;
+      const finReale = dF ? dF.getTime() : Math.min(_nowMs, _fineCapMs);
       (s.corsi||[]).forEach(c=>{
         if(!_isFormaz(c)) return;
         const q=parseData(c.quando); if(!q) return;
         const r=c.rientro?parseData(c.rientro):null;
-        const a=q.getTime(), b=r?r.getTime():finReale;
+        const a=q.getTime();
+        // rientro reale: si fida; corso aperto: usa la fine prevista se c'è, comunque MAI oltre la fine effettiva.
+        let b;
+        if(r){ b=r.getTime(); }
+        else { const _fp=c.fineCorsoPrevista?parseData(c.fineCorsoPrevista):null; b=_fp?Math.min(_fp.getTime(),finReale):finReale; }
         if(b>a) tot += (b-a)/60000;
       });
     });
@@ -1663,7 +1674,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // SOLO i minuti dei segmenti che le competono (anche se l'operatore è tornato più volte).
   // Per l'ULTIMO segmento aperto: fine PIANIFICATA se ancora in linea, REALE se uscito (auto-corregge).
   const borse=borseOggi||0;
-  const _minFormaz = minutiFormazioneLinea(); // minuti formazione oggi sulla linea (tracciati a parte, NON sottratti)
+  // A turno TERMINATO uso i minuti formazione calcolati lato server (foglio Presenze Linea → D1): stessa
+  // fonte dell'efficienza, già cappati per-operatore. In tempo reale (o se il server non li ha ancora)
+  // uso il calcolo client real-time.
+  const _minFormaz = (turnoTerminato && minutiFormazioneServer>0) ? minutiFormazioneServer : minutiFormazioneLinea();
   const ko=borseKO||0;
   const migl=borseMigl||0;
   const pctQualita = borse>0 ? Math.round((borse-ko-migl)/borse*100) : null;
@@ -2872,6 +2886,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     borseMigl={d.borseMigl||0}
                     maxOpOggi={d.maxOpOggi||0}
                     minutiPresenzaLinea={d.minutiPresenzaLinea||0}
+                    minutiFormazioneServer={d.minutiFormazioneLinea||0}
                     coloreLinea={l.colore||"#7c3aed"}
                     qualitaPerSku={qualitaPerSku||{}}
                     linee={linee||[]}
@@ -2908,6 +2923,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   borseMigl={d.borseMigl||0}
                   maxOpOggi={d.maxOpOggi||0}
                   minutiPresenzaLinea={d.minutiPresenzaLinea||0}
+                  minutiFormazioneServer={d.minutiFormazioneLinea||0}
                   coloreLinea={l.colore||"#7c3aed"}
                   qualitaPerSku={qualitaPerSku||{}}
                   linee={linee||[]}
