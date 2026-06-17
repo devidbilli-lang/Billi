@@ -2680,6 +2680,55 @@ function TabRiepilogo({ skuList=[], linee=[] }) {
   );
 }
 
+// Prototipia: niente assegnazione operatori-articolo → gli articoli con qualità vengono dalle
+// chiavi di qualitaPerSku ("linea_SKU"), non dalle sessioni. Ritorna articoli + aggregati OK/KO/MIGL.
+function _qualitaArticoliLinea(qualitaPerSku, lineaId){
+  const arts = Object.keys(qualitaPerSku||{})
+    .filter(k=>k.indexOf(lineaId+"_")===0)
+    .map(k=>({sku:k.slice((lineaId+"_").length), q:qualitaPerSku[k]||{}}))
+    .filter(x=>x.sku && !isSkuSpeciale(x.sku))
+    .sort((a,b)=>(b.q.ok||0)-(a.q.ok||0));
+  let ok=0,ko=0,migl=0;
+  arts.forEach(({q})=>{ ok+=(Number(q.ok)||0); ko+=(Number(q.ko)||0); migl+=(Number(q.migl)||0); });
+  return {arts, ok, ko, migl};
+}
+// Card minimale Prototipia in "Entra in Produzione": per ogni articolo solo borse prodotte (OK)
+// + riquadro KO/MIGL. Nessun obiettivo/real-time/efficienza (su questa linea non c'è obiettivo).
+function CardProtoQualita({ linea, qualitaPerSku, skuList, compatto=false }){
+  const {arts} = _qualitaArticoliLinea(qualitaPerSku, linea.id);
+  if(arts.length===0) return <div style={{padding:compatto?"16px 8px":"36px 10px",textAlign:"center",color:"#94a3b8",fontSize:compatto?13:15,fontWeight:700}}>Nessun dato qualità oggi.</div>;
+  const col = linea.colore||"#7c3aed";
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:compatto?8:14}}>
+      {arts.map(({sku,q})=>{
+        const _info=(skuList||[]).find(x=>x&&x.sku===sku)||{};
+        const _tc=_info.tc||0;
+        return (
+        <div key={sku} style={{border:"2px solid "+col,borderRadius:12,overflow:"hidden",boxShadow:"0 0 10px 3px "+col+"33"}}>
+          <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:compatto?"8px 12px":"12px 18px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <span style={{fontSize:compatto?16:18,fontWeight:900,color:"#fff",letterSpacing:1}}>{sku}</span>
+            {_info.descrizione&&<span style={{fontSize:compatto?13:14,fontWeight:600,color:"#ede9fe"}}>{_info.descrizione}{_tc>0?" · TC "+_tc+" min":""}</span>}
+          </div>
+          <div style={{background:"#fff",padding:compatto?"14px 12px":"22px 18px",display:"flex",flexDirection:"column",alignItems:"center",gap:compatto?10:16}}>
+            <div style={{display:"inline-flex",alignItems:"center",gap:14,background:"#fff",border:"1px solid #eef0f3",borderRadius:14,padding:"7px 16px",boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
+              <span style={{display:"inline-flex",alignItems:"center",gap:7,fontSize:compatto?20:22,fontWeight:800,color:"#ef4444"}}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M8 16 Q12 13 16 16" strokeLinecap="round"/><circle cx="9" cy="10" r="1.1" fill="#ef4444" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="#ef4444" stroke="none"/></svg>
+                {q.ko||0}
+              </span>
+              <span style={{width:1,height:24,background:"#e5e7eb"}}/>
+              <span style={{display:"inline-flex",alignItems:"center",gap:7,fontSize:compatto?20:22,fontWeight:800,color:"#f59e0b"}}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M8 15 H16" strokeLinecap="round"/><circle cx="9" cy="10" r="1.1" fill="#f59e0b" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="#f59e0b" stroke="none"/></svg>
+                {q.migl||0}
+              </span>
+            </div>
+            <div style={{fontSize:compatto?60:84,fontWeight:900,color:"#111827",lineHeight:1}}>{q.ok||0}</div>
+          </div>
+        </div>
+        );
+      })}
+    </div>
+  );
+}
 function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
   const [lineaSel, setLineaSel] = React.useState("");
   // Larghezza del dispositivo, per adattare il layout (telefono / tablet / monitor-TV).
@@ -2706,7 +2755,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   // panoramica "Entra in Produzione" (vista singola e griglia). Restano accessibili entrando
   // direttamente sulla loro linea (lineaFiltro), dove non c'è il toggle singola/griglia.
   const _isRepartoProd = (l) => isRepartoLinea(l&&l.id, l&&l.nome);
-  const _lineeNoRep = (linee||[]).filter(l=>!_isRepartoProd(l));
+  const _lineeNoRep = (linee||[]).filter(l=>!_isRepartoProd(l) || repartoTipoLinea(l.id,l.nome)==="prototip");
   const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? _lineeNoRep.filter(l=>l.id===lineaSel) : _lineeNoRep);
   // In vista griglia il filtro singola linea non ha senso: mostra tutte (reparti esclusi)
   const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : _lineeNoRep;
@@ -2744,7 +2793,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
       </div>
       {/* VISTA GRIGLIA: 3 colonne, ogni card rimpicciolita con zoom */}
       {vistaGriglia ? (() => {
-        const nCard = lineeGriglia.filter(l=>perLinea[l.id]).length;
+        const nCard = lineeGriglia.filter(l=>perLinea[l.id] || repartoTipoLinea(l.id,l.nome)==="prototip").length;
         const nCol = Math.max(1, Math.min(_colDisp, nCard));
         const nRighe = Math.ceil(nCard / nCol) || 1;
         // Monitor/TV: tutto in una schermata ad altezza fissa (niente scroll). Telefono/tablet:
@@ -2755,13 +2804,14 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         return (
         <div style={_gridStyle}>
           {lineeGriglia.map(l=>{
-            const d=perLinea[l.id]; if(!d) return null;
+            const d=perLinea[l.id]; const _isProto=repartoTipoLinea(l.id,l.nome)==="prototip"; if(!d && !_isProto) return null;
+            const _aggProto = _isProto ? _qualitaArticoliLinea(qualitaPerSku||{}, l.id) : null;
             // Numero di articoli attivi sulla linea (SKU distinti): più card a destra =
             // più altezza necessaria. Riduco lo zoom di conseguenza così entrano tutte nella
             // cella ad altezza fissa, senza tagli (per linee con tanti articoli, es. molte SKU).
             const _skuAttiviCard = new Set();
             (sessioni||[]).forEach(s=>{ if(s._pianificato) return; if(s.lineaCorrente!==l.id && s.lineaInizio!==l.id) return; const _sk=s.skuCorrente||s.sku||""; if(_sk) _skuAttiviCard.add(_sk); });
-            const _nArtCard = _skuAttiviCard.size;
+            const _nArtCard = _isProto ? (_aggProto.arts.length||1) : _skuAttiviCard.size;
             // Su monitor (4 colonne strette) lo zoom è basso; su telefono/tablet le celle sono più
             // larghe, quindi il contenuto va ingrandito per riempirle. Più articoli = più zoom-out.
             const _zoomCard = _grandeSchermo
@@ -2774,12 +2824,15 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   <div style={{fontSize:12,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{l.id}</div>
                   {/* Totale KO + MIGL della linea, sulla stessa riga del nome, allineati a destra */}
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {d.borseKO||0}</span>
-                    <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {d.borseMigl||0}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {_isProto?_aggProto.ko:(d.borseKO||0)}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {_isProto?_aggProto.migl:(d.borseMigl||0)}</span>
                   </div>
                 </div>
                 {/* compatto=true riduce font e nasconde card gialla; il contenuto è clippato all'altezza della card */}
                 <div style={{flex:1,overflow:"hidden",zoom:_zoomCard,padding:"2px 2px"}}>
+                  {_isProto ? (
+                    <CardProtoQualita linea={l} qualitaPerSku={qualitaPerSku||{}} skuList={skuList||[]} compatto={true}/>
+                  ) : (
                   <ObiettivoProduzione
                     sessioni={sessioni||[]}
                     lineaId={l.id}
@@ -2794,6 +2847,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     linee={linee||[]}
                     compatto={true}
                   />
+                  )}
                 </div>
               </div>
             );
@@ -2803,7 +2857,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
       })() : (
       <div style={{display:"flex",flexDirection:"column",gap:20,zoom:_scalaLista}}>
         {lineeVis.map(l=>{
-          const d=perLinea[l.id]; if(!d) return null;
+          const d=perLinea[l.id]; const _isProto=repartoTipoLinea(l.id,l.nome)==="prototip"; if(!d && !_isProto) return null;
           return (
             <div key={l.id} style={{background:"#fff",borderTop:"5px solid "+(l.colore||"#7c3aed"),borderRadius:0,overflow:"visible",boxShadow:"none",display:"flex",flexDirection:"column"}}>
               <div style={{padding:"16px 24px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:10}}>
@@ -2812,6 +2866,9 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                 <div style={{fontSize:13,color:"#94a3b8",marginLeft:4}}>{l.nome}</div>
               </div>
               <div style={{padding:"20px 16px"}}>
+                {_isProto ? (
+                  <CardProtoQualita linea={l} qualitaPerSku={qualitaPerSku||{}} skuList={skuList||[]}/>
+                ) : (
                 <ObiettivoProduzione
                   sessioni={sessioni||[]}
                   lineaId={l.id}
@@ -2825,6 +2882,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   qualitaPerSku={qualitaPerSku||{}}
                   linee={linee||[]}
                 />
+                )}
               </div>
             </div>
           );
@@ -4122,8 +4180,8 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const lObj = linea ? (linee.find(l=>l.id===linea.id)||linea) : {id:"Admin",colore:"#7c3aed"};
   const _isPrototipLine = repartoTipoLinea((lineaEffettiva||""), "")==="prototip"; // Prototipia: nessuna card di produzione → l'obiettivo qui si calcola in autonomia
   const skuFiltrati = skuConSpeciali(skuList).filter(s=>{
-    // Se abbiamo SKU attivi oggi, mostra solo quelli (+ RIPARAZIONE)
-    if(skuAttiviOggi!==null && skuAttiviOggi.length>0 && !s.speciale && !skuAttiviOggi.includes(s.sku)) return false;
+    // Se abbiamo SKU attivi oggi, mostra solo quelli (+ RIPARAZIONE). Prototipia: nessuna assegnazione → mostra TUTTI.
+    if(!_isPrototipLine && skuAttiviOggi!==null && skuAttiviOggi.length>0 && !s.speciale && !skuAttiviOggi.includes(s.sku)) return false;
     if(!cSku) return true;
     return s.sku.includes(cSku.toUpperCase()) || s.descrizione.toLowerCase().includes(cSku.toLowerCase());
   });
@@ -4219,27 +4277,8 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           letto da D1 (obPerArticolo). Nessun ricalcolo locale qui: il vecchio mirror nascosto
           ricalcolava per conto suo e driftava rispetto alla produzione (es. 58 invece di 65),
           oltre a sovrascrivere il valore corretto su D1.
-          ECCEZIONE: le linee Prototipia NON hanno card di produzione, quindi non esiste un valore su D1.
-          Solo per loro montiamo qui un mirror nascosto che calcola l'obiettivo per articolo. */}
-      {_isPrototipLine && lineaEffettiva && sessioniQ.length>0 && (
-        <div style={{display:"none"}} aria-hidden="true">
-          <ObiettivoProduzione
-            sessioni={sessioniQ}
-            lineaId={lineaEffettiva}
-            skuList={skuList}
-            linee={linee}
-            borseOggi={0}
-            borseKO={0}
-            borseMigl={0}
-            maxOpOggi={0}
-            minutiPresenzaLinea={0}
-            coloreLinea={(lObj&&lObj.colore)||"#7c3aed"}
-            qualitaPerSku={{}}
-            compatto={true}
-            onObiettiviArticoli={setObPerArticoloLocal}
-          />
-        </div>
-      )}
+          Le linee Prototipia non hanno obiettivo (nessuna assegnazione operatori-articolo): la card OGGI
+          mostra solo OK/KO/MIGL, senza riquadro obiettivo. */}
       {(()=>{
         // Calcola totali per SKU della linea oggi
         const lineaId2 = linea?.id || lineaSelQ;
