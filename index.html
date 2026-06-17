@@ -7578,11 +7578,15 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const rampe = rampeSheets||[];
                         let rampaS = rampe.find(r=>r.sku===skuS && (r.linea_id===lineaS||r.lineaId===lineaS));
                         if(!rampaS) rampaS = rampe.find(r=>r.sku===skuS);
-                        // Il campo nel DB è `dal`; supporto anche legacy `rampaDal`.
-                        const rDal = (rampaS && (rampaS.dal||rampaS.rampaDal)) || s.rampaDal;
+                        // Mostra la pillola SOLO se esiste un record rampa ATTIVO (tabella `rampe`) per
+                        // questa coppia sku+linea. NON ripiegare sul marcatore __RAMPA__ della sessione:
+                        // se la rampa reale è già finita (record spostato in rampe_storico), un marcatore
+                        // residuo darebbe una rampa "fantasma" con durata di default 15 (es. 13/15 anche
+                        // se la rampa di 10 gg è già conclusa).
+                        const rDal = rampaS && (rampaS.dal||rampaS.rampaDal);
                         if(!rDal) return null;
                         const gg = giorniLavorativiJS(rDal);
-                        const durG = (rampaS && rampaS.durata && +rampaS.durata>=2) ? +rampaS.durata : ((s.rampaDurata && +s.rampaDurata>=2) ? +s.rampaDurata : 15);
+                        const durG = (rampaS.durata && +rampaS.durata>=2) ? +rampaS.durata : 15;
                         // Rampa completata solo DOPO l'ultimo giorno (mezzanotte della fine teorica).
                         if(rampaCompletata(rDal, durG)) return null;
                         return (
