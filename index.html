@@ -5344,6 +5344,25 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   const [fabDrag,setFabDrag] = useState(null);                   // {x,y} offset pulsante flottante
   const fabDragRef = React.useRef(null);
 
+  // STORICO track&trace: legge il foglio "Attività Track&Trace" (accumula tutto, NON si azzera col reset notturno).
+  const [showStorico,setShowStorico] = useState(false);
+  const [storicoDal,setStoricoDal] = useState(()=>{ const d=new Date(); d.setDate(d.getDate()-7); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); });
+  const [storicoAl,setStoricoAl] = useState(oggiISOtt());
+  const [storicoLista,setStoricoLista] = useState([]);
+  const [storicoLoad,setStoricoLoad] = useState(false);
+  const [storicoMsg,setStoricoMsg] = useState("");
+  const _fmtDataIT = (iso)=>{ if(!iso) return "—"; const pp=(iso||"").toString().split("-"); return pp.length===3?(pp[2]+"/"+pp[1]+"/"+pp[0]):iso; };
+  const caricaStorico = async ()=>{
+    setStoricoLoad(true); setStoricoMsg("");
+    try{
+      const r=await fetch(nexusUrl("leggiStoricoTT",{dal:storicoDal, al:storicoAl}));
+      const j=await r.json();
+      if(j&&j.ok&&j.data&&Array.isArray(j.data.storico)){ setStoricoLista(j.data.storico); if(j.data.storico.length===0) setStoricoMsg("Nessuna attività nel periodo selezionato."); }
+      else { setStoricoLista([]); setStoricoMsg("Errore nel caricamento dello storico. Verifica Codice.gs su Apps Script."); }
+    }catch(e){ setStoricoLista([]); setStoricoMsg("Errore di rete."); }
+    setStoricoLoad(false);
+  };
+
   // Reparto = nomi delle linee di produzione (escludo i reparti tipo Taglio DG / RMA / track&trace).
   // Aggiunta manuale "Giuseppe Mazzei" all'elenco (dedup se già presente tra le linee).
   const lineeReparto = (()=>{ const _b=(linee||[]).filter(l=>l && l.id && !isRepartoLinea(l.id, l.nome)).map(l=>l.id); if(!_b.includes("Giuseppe Mazzei")) _b.push("Giuseppe Mazzei"); return _b; })();
@@ -5396,7 +5415,62 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
 
   return (
     <div style={{padding:"0 24px 100px"}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2, minmax(0, 1fr))",gap:18,alignItems:"start"}}>
+      {/* STORICO: filtro data Da→A, dal foglio "Attività Track&Trace". Apre/chiude col pulsante. */}
+      <div style={{marginBottom:18}}>
+        <button onClick={()=>{ const n=!showStorico; setShowStorico(n); if(n && storicoLista.length===0) caricaStorico(); }}
+          style={{display:"inline-flex",alignItems:"center",gap:8,background:showStorico?"#7c3aed":"#fff",color:showStorico?"#fff":"#7c3aed",border:"2px solid #7c3aed",borderRadius:10,padding:"10px 18px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>
+          📅 Storico {showStorico?"▲":"▼"}
+        </button>
+        {showStorico && (
+          <div style={{marginTop:14,background:"#fff",border:"2px solid #e2e8f0",borderRadius:14,padding:18}}>
+            <div style={{display:"flex",flexWrap:"wrap",alignItems:"flex-end",gap:14,marginBottom:16}}>
+              <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                <span style={_lbl}>Da</span>
+                <input type="date" value={storicoDal} onChange={e=>setStoricoDal(e.target.value)} style={{..._inp,width:170}}/>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                <span style={_lbl}>A</span>
+                <input type="date" value={storicoAl} onChange={e=>setStoricoAl(e.target.value)} style={{..._inp,width:170}}/>
+              </div>
+              <button onClick={caricaStorico} disabled={storicoLoad}
+                style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:10,padding:"12px 24px",fontWeight:800,fontSize:14,cursor:storicoLoad?"default":"pointer",opacity:storicoLoad?0.6:1,fontFamily:"'Montserrat',sans-serif"}}>
+                {storicoLoad?"Carico…":"Cerca"}
+              </button>
+            </div>
+            {storicoMsg && <div style={{color:"#94a3b8",fontStyle:"italic",fontSize:13,padding:"4px 2px"}}>{storicoMsg}</div>}
+            {storicoLista.length>0 && (()=>{
+              const totPz = storicoLista.reduce((s,a)=>s+(+a.qta||0),0);
+              return (
+              <div>
+                <div style={{fontSize:13,color:"#475569",fontWeight:700,marginBottom:10}}>{storicoLista.length} righe · {totPz} pz totali</div>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",minWidth:580}}>
+                    <thead><tr>
+                      {["Data","Blocco","Reparto","Articolo","Qtà","Note"].map((h,i)=>(
+                        <th key={i} style={{textAlign:"center",padding:"9px 10px",fontSize:12.5,fontWeight:800,color:"#475569",background:"#f8fafc",borderBottom:"2px solid #e2e8f0",letterSpacing:.3,whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {storicoLista.map((a,i)=>(
+                        <tr key={a.id||i}>
+                          <td style={{..._td,whiteSpace:"nowrap"}}>{_fmtDataIT(a.data)}</td>
+                          <td style={_td}><span style={{fontWeight:800,color:COLORI_TT[a.blocco]||"#7c3aed"}}>{a.blocco||"—"}</span></td>
+                          <td style={_td}>{a.reparto||"—"}</td>
+                          <td style={_td}>{a.articolo ? <code style={{...S.sku,minWidth:80,fontSize:13}}>{a.articolo}</code> : "—"}</td>
+                          <td style={{..._td,fontWeight:800,color:"#7c3aed"}}>{(+a.qta||0)}</td>
+                          <td style={{..._td,textAlign:"left",color:"#64748b"}}>{a.note||"—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+      {!showStorico && (<div style={{display:"grid",gridTemplateColumns:"repeat(2, minmax(0, 1fr))",gap:18,alignItems:"start"}}>
       {BLOCCHI_TT.map(b=>{
         const righe = _lst.filter(a=>a.blocco===b);
         const sub = righe.reduce((s,a)=>s+(+a.qta||0),0);
@@ -5444,10 +5518,10 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
           </div>
         );
       })}
-      </div>
+      </div>)}
 
       {/* PULSANTE FLOTTANTE "+" — cerchio effetto vetro viola, parte da sinistra, trascinabile su tutta la pagina */}
-      {(()=>{
+      {!showStorico && (()=>{
         const startDrag=(clientX,clientY)=>{
           const base = fabDrag || {x:0,y:0};
           const orig = {x:clientX, y:clientY, bx:base.x, by:base.y};
