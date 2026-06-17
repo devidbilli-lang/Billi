@@ -1116,6 +1116,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const nRiparazione=sessAttiveUniche.filter(s=>isSkuSpeciale(s.skuCorrente||s.sku||"")).length;
   const nCorso=sessAttiveUniche.filter(s=>s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")).length;
   const _ultimaSospFormazione=(s)=>{ if(!s.corsi) return false; const sosp=s.corsi.filter(c=>c.tipo==="sospendi"); if(!sosp.length) return false; return (sosp[sosp.length-1].nomeCorso||"").toString().toUpperCase().split("@@")[0]==="FORMAZIONE"; };
+  // Un singolo corso/sospensione è FORMAZIONE? La formazione NON va più sottratta dai minuti lavorati/
+  // obiettivo (conta come tempo-linea); i corsi normali sì. Marcata da nomeCorso "FORMAZIONE@@tipologia".
+  const _isFormaz = (c)=> !!c && (c.nomeCorso||"").toString().toUpperCase().split("@@")[0]==="FORMAZIONE";
   const nFormazione=sessAttiveUniche.filter(s=>s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")&&_ultimaSospFormazione(s)).length;
   const nCorsoReale=nCorso-nFormazione;
   const nPausa=sessAttiveUniche.filter(s=>s.pause&&s.pause.some(pz=>pz.tipo==="pausa")&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))).length;
@@ -1248,6 +1251,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       // Sottrai i corsi/sospensioni che cadono su questa linea
       if(s.corsi && s.corsi.length>0 && s.lineaCorrente===lineaId){
         s.corsi.forEach(c=>{
+          if(_isFormaz(c)) return; // FORMAZIONE: non sottratta (conta come tempo-linea)
           const dIn = parseData(c.quando); if(!dIn) return;
           const tsCorsoIn = dIn.getTime();
           // Fine corso: rientro reale, oppure fine pianificata (corso in corso con fine prevista),
@@ -1368,6 +1372,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       // Corsi/pause: sottratti, ripartiti per il n° di articoli attivi al loro orario.
       const _attiviA = (ms)=>{ let k=0; for(const iv of (intervalliPerMat[mat]||[])){ if(iv.al>iv.dal&&iv.dal<=ms&&ms<iv.al) k++; } return k<1?1:k; };
       if(s.corsi) s.corsi.forEach(c=>{
+        if(_isFormaz(c)) return; // FORMAZIONE: non sottratta (conta come tempo-linea)
         const dC=parseData(c.quando); if(!dC) return;
         const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
         const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
@@ -1482,7 +1487,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       for(const t of trasf){ if(curL===lineaId && t.ts>cur) perMat[mat].pres.push([cur, Math.min(t.ts,finReale)]); cur=t.ts; curL=t.a||curL; }
       if(curL===lineaId && finReale>cur) perMat[mat].pres.push([cur, finReale]);
       // Sospensioni reali (corso/pausa): NON sono tempo lavorato.
-      (s.corsi||[]).forEach(c=>{ const q=parseData(c.quando); if(!q) return; const r=c.rientro?parseData(c.rientro):null; const a=q.getTime(), b=r?r.getTime():finReale; if(b>a) perMat[mat].susp.push([a,b]); });
+      (s.corsi||[]).forEach(c=>{ if(_isFormaz(c)) return; const q=parseData(c.quando); if(!q) return; const r=c.rientro?parseData(c.rientro):null; const a=q.getTime(), b=r?r.getTime():finReale; if(b>a) perMat[mat].susp.push([a,b]); });
       (s.pause||[]).forEach(p=>{ const q=parseData(p.quando); if(!q) return; const r=p.ripresa?parseData(p.ripresa):null; const a=q.getTime(), b=r?r.getTime():finReale; if(b>a) perMat[mat].susp.push([a,b]); });
     });
     const _fondi = (ivs)=>{ if(!ivs.length) return []; ivs.sort((a,b)=>a[0]-b[0]); const out=[[ivs[0][0],ivs[0][1]]]; for(let i=1;i<ivs.length;i++){ const L=out[out.length-1]; if(ivs[i][0]<=L[1]) L[1]=Math.max(L[1],ivs[i][1]); else out.push([ivs[i][0],ivs[i][1]]); } return out; };
@@ -1495,7 +1500,30 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     });
     return tot/60000;
   };
-  // MINUTI su FINESTRA PIANIFICATA (orario operatore inizio->fine), al netto di corso e pausa, sulla
+  // MINUTI DI FORMAZIONE sulla linea (oggi): somma le durate dei corsi marcati FORMAZIONE degli operatori
+  // su questa linea. Tracciati a parte (badge) anche se NON più sottratti dal tempo lavorato/obiettivo.
+  const minutiFormazioneLinea = ()=>{
+    const _oggi0 = new Date(); _oggi0.setHours(0,0,0,0);
+    const _nowMs = Date.now();
+    let tot = 0;
+    (sessioni||[]).forEach(s=>{
+      if(s._pianificato) return;
+      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) return;
+      const dIni = tsInizioRealeSessione(s); if(!dIni) return;
+      const g0 = new Date(dIni); g0.setHours(0,0,0,0); if(g0.getTime() < _oggi0.getTime()) return;
+      const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
+      const dF = haCk ? parseData(s.fine) : null;
+      const finReale = dF ? dF.getTime() : _nowMs;
+      (s.corsi||[]).forEach(c=>{
+        if(!_isFormaz(c)) return;
+        const q=parseData(c.quando); if(!q) return;
+        const r=c.rientro?parseData(c.rientro):null;
+        const a=q.getTime(), b=r?r.getTime():finReale;
+        if(b>a) tot += (b-a)/60000;
+      });
+    });
+    return Math.round(tot);
+  };
   // linea giusta (gestendo i trasferimenti). A turno terminato e' questo il denominatore dell'efficienza:
   // conta il tempo PIANIFICATO (chi entra in ritardo o esce prima e' conteggiato sul pianificato; lo
   // straordinario oltre la fine pianificata non conta). Se mancano gli orari pianificati ripiega sui reali.
@@ -1522,7 +1550,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       let cur=plIni, curL=s.lineaInizio||s.lineaCorrente;
       for(const t of trasf){ const cut=Math.min(Math.max(t.ts,plIni),plFin); if(curL===lineaId && cut>cur) perMat[mat].pres.push([cur,cut]); cur=cut; curL=t.a||curL; }
       if(curL===lineaId && plFin>cur) perMat[mat].pres.push([cur, plFin]);
-      (s.corsi||[]).forEach(c=>{ const q=parseData(c.quando); if(!q) return; const r=c.rientro?parseData(c.rientro):null; const a=Math.max(q.getTime(),plIni), b=Math.min(r?r.getTime():plFin, plFin); if(b>a) perMat[mat].susp.push([a,b]); });
+      (s.corsi||[]).forEach(c=>{ if(_isFormaz(c)) return; const q=parseData(c.quando); if(!q) return; const r=c.rientro?parseData(c.rientro):null; const a=Math.max(q.getTime(),plIni), b=Math.min(r?r.getTime():plFin, plFin); if(b>a) perMat[mat].susp.push([a,b]); });
       (s.pause||[]).forEach(pp=>{ const q=parseData(pp.quando); if(!q) return; const r=pp.ripresa?parseData(pp.ripresa):null; const a=Math.max(q.getTime(),plIni), b=Math.min(r?r.getTime():plFin, plFin); if(b>a) perMat[mat].susp.push([a,b]); });
     });
     const _fondi = (ivs)=>{ if(!ivs.length) return []; ivs.sort((a,b)=>a[0]-b[0]); const out=[[ivs[0][0],ivs[0][1]]]; for(let i=1;i<ivs.length;i++){ const L=out[out.length-1]; if(ivs[i][0]<=L[1]) L[1]=Math.max(L[1],ivs[i][1]); else out.push([ivs[i][0],ivs[i][1]]); } return out; };
@@ -1635,6 +1663,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // SOLO i minuti dei segmenti che le competono (anche se l'operatore è tornato più volte).
   // Per l'ULTIMO segmento aperto: fine PIANIFICATA se ancora in linea, REALE se uscito (auto-corregge).
   const borse=borseOggi||0;
+  const _minFormaz = minutiFormazioneLinea(); // minuti formazione oggi sulla linea (tracciati a parte, NON sottratti)
   const ko=borseKO||0;
   const migl=borseMigl||0;
   const pctQualita = borse>0 ? Math.round((borse-ko-migl)/borse*100) : null;
@@ -1678,7 +1707,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nRiparazione} Riparazione</div>}
                   {nCorsoReale>0&&<div style={{background:"#06b6d4",color:"#ffffff",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nCorsoReale} Corso</div>}
-                  {nFormazione>0&&<div style={{background:"#ffc946",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nFormazione} Formazione</div>}
+                  {(nFormazione>0||_minFormaz>0)&&<div style={{background:"#ffc946",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>{nFormazione>0?"+"+nFormazione+" ":""}Formazione{_minFormaz>0?" · "+_minFormaz+" min":""}</div>}
                 </div>
               )}
             </div>
@@ -2044,6 +2073,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   for(const seg of segs){ minPerMat[mat].base += ripartisciMsPerPeriodo(seg.dal, seg.al, intervalliPerMat[mat])/60000; }
                   const _attiviA = (ms)=>{ let k=0; for(const iv of (intervalliPerMat[mat]||[])){ if(iv.al>iv.dal&&iv.dal<=ms&&ms<iv.al) k++; } return k<1?1:k; };
                   if(s.corsi) s.corsi.forEach(c=>{
+                    if(_isFormaz(c)) return; // FORMAZIONE: non sottratta (conta come tempo-linea)
                     const dC=parseData(c.quando); if(!dC) return;
                     const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
                     const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
