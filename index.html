@@ -1521,6 +1521,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(_fpHM.indexOf(":")>-1){ const _pp=_fpHM.split(":").map(Number); const _sp=(_pp[0]||0)*3600+(_pp[1]||0)*60; if(_sp<_secFine) _secFine=_sp; }
       const _fineCapMs = g0.getTime() + _secFine*1000;
       const finReale = dF ? dF.getTime() : Math.min(_nowMs, _fineCapMs);
+      // Raccogli gli intervalli di formazione e FONDILI (union): corsi formazione DUPLICATI o SOVRAPPOSTI
+      // sulla stessa sessione (es. lo stesso corso scritto più volte in D1) NON vanno sommati più volte —
+      // altrimenti 1 persona da 480 min può risultare 1920 (4×480).
+      const _intF = [];
       (s.corsi||[]).forEach(c=>{
         if(!_isFormaz(c)) return;
         const q=parseData(c.quando); if(!q) return;
@@ -1530,8 +1534,18 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         let b;
         if(r){ b=r.getTime(); }
         else { const _fp=c.fineCorsoPrevista?parseData(c.fineCorsoPrevista):null; b=_fp?Math.min(_fp.getTime(),finReale):finReale; }
-        if(b>a) tot += (b-a)/60000;
+        if(b>a) _intF.push([a,b]);
       });
+      if(_intF.length){
+        _intF.sort((x,y)=>x[0]-y[0]);
+        let _cs=_intF[0][0], _ce=_intF[0][1];
+        for(let _k=1;_k<_intF.length;_k++){
+          const _a=_intF[_k][0], _b=_intF[_k][1];
+          if(_a<=_ce){ if(_b>_ce) _ce=_b; }                 // sovrapposto/adiacente → estendi il blocco
+          else { tot += (_ce-_cs)/60000; _cs=_a; _ce=_b; }  // gap → chiudi il blocco e riparti
+        }
+        tot += (_ce-_cs)/60000;                             // ultimo blocco
+      }
     });
     return Math.round(tot);
   };
