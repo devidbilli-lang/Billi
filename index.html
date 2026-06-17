@@ -1505,15 +1505,18 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const minutiFormazioneLinea = ()=>{
     const _oggi0 = new Date(); _oggi0.setHours(0,0,0,0);
     const _nowMs = Date.now();
-    let tot = 0;
+    // Intervalli di formazione raggruppati PER OPERATORE (matricola). La stessa formazione può comparire
+    // su più sessioni della stessa persona (es. sotto-sessione multi-articolo "ADD_..." + check-in normale)
+    // e con eventi duplicati: vanno contati UNA volta sola, altrimenti 1 persona da 480 min risulta 960 o
+    // 1920. Quindi unione degli intervalli PER matricola, poi somma tra operatori.
+    const _perMat = {};
     (sessioni||[]).forEach(s=>{
       if(s._pianificato) return;
       if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) return;
       const dIni = tsInizioRealeSessione(s); if(!dIni) return;
       const g0 = new Date(dIni); g0.setHours(0,0,0,0); if(g0.getTime() < _oggi0.getTime()) return;
       // Fine effettiva della sessione: checkout se c'è; altrimenti NON oltre la fine pianificata/fine turno,
-      // e in tempo reale non oltre adesso. Senza questo cap un corso di formazione APERTO (senza rientro)
-      // cresceva all'infinito: a turno terminato continuava a contare quando→adesso (es. 1434 min).
+      // e in tempo reale non oltre adesso (un corso APERTO non deve crescere all'infinito, es. 1434 min).
       const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
       const dF = haCk ? parseData(s.fine) : null;
       let _secFine = secFineTurnoAssoluto;
@@ -1521,10 +1524,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(_fpHM.indexOf(":")>-1){ const _pp=_fpHM.split(":").map(Number); const _sp=(_pp[0]||0)*3600+(_pp[1]||0)*60; if(_sp<_secFine) _secFine=_sp; }
       const _fineCapMs = g0.getTime() + _secFine*1000;
       const finReale = dF ? dF.getTime() : Math.min(_nowMs, _fineCapMs);
-      // Raccogli gli intervalli di formazione e FONDILI (union): corsi formazione DUPLICATI o SOVRAPPOSTI
-      // sulla stessa sessione (es. lo stesso corso scritto più volte in D1) NON vanno sommati più volte —
-      // altrimenti 1 persona da 480 min può risultare 1920 (4×480).
-      const _intF = [];
+      const _mat = (s.matricola!=null && s.matricola!=="") ? s.matricola : ("__sid_"+(s.id||""));
       (s.corsi||[]).forEach(c=>{
         if(!_isFormaz(c)) return;
         const q=parseData(c.quando); if(!q) return;
@@ -1534,18 +1534,20 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         let b;
         if(r){ b=r.getTime(); }
         else { const _fp=c.fineCorsoPrevista?parseData(c.fineCorsoPrevista):null; b=_fp?Math.min(_fp.getTime(),finReale):finReale; }
-        if(b>a) _intF.push([a,b]);
+        if(b>a){ (_perMat[_mat]=_perMat[_mat]||[]).push([a,b]); }
       });
-      if(_intF.length){
-        _intF.sort((x,y)=>x[0]-y[0]);
-        let _cs=_intF[0][0], _ce=_intF[0][1];
-        for(let _k=1;_k<_intF.length;_k++){
-          const _a=_intF[_k][0], _b=_intF[_k][1];
-          if(_a<=_ce){ if(_b>_ce) _ce=_b; }                 // sovrapposto/adiacente → estendi il blocco
-          else { tot += (_ce-_cs)/60000; _cs=_a; _ce=_b; }  // gap → chiudi il blocco e riparti
-        }
-        tot += (_ce-_cs)/60000;                             // ultimo blocco
+    });
+    let tot = 0;
+    Object.keys(_perMat).forEach(_m=>{
+      const _arr = _perMat[_m]; if(!_arr.length) return;
+      _arr.sort((x,y)=>x[0]-y[0]);
+      let _cs=_arr[0][0], _ce=_arr[0][1];
+      for(let _k=1;_k<_arr.length;_k++){
+        const _a=_arr[_k][0], _b=_arr[_k][1];
+        if(_a<=_ce){ if(_b>_ce) _ce=_b; }                 // sovrapposto/adiacente → estendi il blocco
+        else { tot += (_ce-_cs)/60000; _cs=_a; _ce=_b; }  // gap → chiudi il blocco e riparti
       }
+      tot += (_ce-_cs)/60000;                             // ultimo blocco dell'operatore
     });
     return Math.round(tot);
   };
