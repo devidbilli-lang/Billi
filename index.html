@@ -63,6 +63,7 @@ function repartoTipoLinea(lineaId, lineaNome){
   if(u.includes("TRACK")) return "tt";
   if(u.includes("RMA")) return "rma";
   if(u.includes("PREPARAZIONE DG")) return "prep";
+  if(u.includes("LOGISTICA")||u.includes("INDUSTRIALIZZAZIONE")||u.includes("QUALIT")||u.includes("PRODUZIONE")||u.includes("MIGLIORAMENTO")) return "prep"; // reparti senza articolo, identici a Preparazione DG (Logistica_CC/LV, Industrializzazione, Qualità, Produzione, Miglioramento Continuo)
   if(u.includes("PROTOTIP")) return "prototip"; // Prototipia: reparto identico a Preparazione DG ma con foglio dati separato
   if(u.includes("TAGLIO DG")) return "taglio";
   return null;
@@ -710,7 +711,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
   const [cLinea,setCLinea] = useState("");
   const destObj = dest ? linee.find(l=>l.id===dest) : null;
   const _ud = destObj ? ((destObj.id||"")+" "+(destObj.nome||"")).toUpperCase() : "";
-  const destReparto = !!destObj && (_ud.includes("RMA")||_ud.includes("PREPARAZIONE DG")||_ud.includes("TAGLIO DG")||_ud.includes("TRACK")||_ud.includes("PROTOTIP"));
+  const destReparto = !!destObj && (_ud.includes("RMA")||_ud.includes("PREPARAZIONE DG")||_ud.includes("TAGLIO DG")||_ud.includes("TRACK")||_ud.includes("PROTOTIP")||_ud.includes("LOGISTICA")||_ud.includes("INDUSTRIALIZZAZIONE")||_ud.includes("QUALIT")||_ud.includes("PRODUZIONE")||_ud.includes("MIGLIORAMENTO"));
   const articoloMancante = !!dest && !destReparto && !nSku;
   const conferma = () => { if(!dest||articoloMancante) return; onOk(dest, destReparto?null:nSku); };
   return (
@@ -4825,7 +4826,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     const _l = lineaCheckinSel || lineaFiltro || null;
     const _ln = ((_l&&_l.id)||(_l&&_l.nome)||"").toString();
     const _lu = _ln.toUpperCase();
-    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG") || _lu.includes("RMA") || _lu.includes("TRACK")||_lu.includes("PROTOTIP");
+    const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG") || _lu.includes("RMA") || _lu.includes("TRACK")||_lu.includes("PROTOTIP")||_lu.includes("LOGISTICA")||_lu.includes("INDUSTRIALIZZAZIONE")||_lu.includes("QUALIT")||_lu.includes("PRODUZIONE")||_lu.includes("MIGLIORAMENTO");
     if(!isReparto) return;
     // Evita di ricaricare/sovrascrivere ripetutamente per la stessa linea nello stesso ingresso.
     if(_preselFattaRef.current === _ln) return;
@@ -4914,7 +4915,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
             {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={async(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
-              const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===ld); const _u=((ld||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP"); })();
+              const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===ld); const _u=((ld||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP")||_u.includes("LOGISTICA")||_u.includes("INDUSTRIALIZZAZIONE")||_u.includes("QUALIT")||_u.includes("PRODUZIONE")||_u.includes("MIGLIORAMENTO"); })();
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=_dRep?"":(ns||sp);
                 try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn}); }catch(e){}
                 if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,ld,ns);
@@ -5022,7 +5023,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             </div>
           </div>
 
-          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isReparto = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG") || _n.includes("RMA") || _n.includes("TRACK")||_n.includes("PROTOTIP")); if(_isReparto) return null; return (
+          {(()=>{ const _lEff = lineaCheckinSel||linea; const _n = ((_lEff&&_lEff.id)||"").toUpperCase()+" "+((_lEff&&_lEff.nome)||"").toUpperCase(); const _isReparto = _lEff && (_n.includes("PREPARAZIONE DG") || _n.includes("TAGLIO DG") || _n.includes("RMA") || _n.includes("TRACK")||_n.includes("PROTOTIP")||_n.includes("LOGISTICA")||_n.includes("INDUSTRIALIZZAZIONE")||_n.includes("QUALIT")||_n.includes("PRODUZIONE")||_n.includes("MIGLIORAMENTO")); if(_isReparto) return null; return (
           <div style={{width:"100%",padding:"18px 20px",background:"#f8fafc",border:"1.5px solid #a78bfa",borderRadius:14,marginBottom:14,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"stretch",gap:16}}>
             <div style={{width:4,background:"#f59e0b",borderRadius:2,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
@@ -5182,7 +5183,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             const lineaEffettiva = lineaCheckinSel || linea;
             const isLineSenzaSKU = skuList.filter(s=>!s.speciale).length === 0;
             const _nLin = ((lineaEffettiva&&lineaEffettiva.id)||"").toUpperCase()+" "+((lineaEffettiva&&lineaEffettiva.nome)||"").toUpperCase();
-            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG") || _nLin.includes("RMA") || _nLin.includes("TRACK")||_nLin.includes("PROTOTIP"));
+            const isPrepDG = lineaEffettiva && (_nLin.includes("PREPARAZIONE DG") || _nLin.includes("TAGLIO DG") || _nLin.includes("RMA") || _nLin.includes("TRACK")||_nLin.includes("PROTOTIP")||_nLin.includes("LOGISTICA")||_nLin.includes("INDUSTRIALIZZAZIONE")||_nLin.includes("QUALIT")||_nLin.includes("PRODUZIONE")||_nLin.includes("MIGLIORAMENTO"));
             if(skuMulti.length===0 && !isLineSenzaSKU && !isPrepDG){setErr("Seleziona almeno un articolo.");return;}
             if(!linea&&!lineaCheckinSel){setErr("Seleziona una linea.");return;}
             var errori=[]; var registrati=[];
@@ -6469,7 +6470,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       )}
       {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={async(d,ns)=>{
         const destId = d&&d.id ? d.id : d;
-        const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===destId); const _u=((destId||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP"); })();
+        const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===destId); const _u=((destId||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP")||_u.includes("LOGISTICA")||_u.includes("INDUSTRIALIZZAZIONE")||_u.includes("QUALIT")||_u.includes("PRODUZIONE")||_u.includes("MIGLIORAMENTO"); })();
         const skuNuovo = _dRep ? "" : (ns || mod.skuCorrente || mod.sku || "");
         const lineaPartenza = mod.lineaCorrente||mod.lineaInizio||"";
         const matKey = mod.matricola||mod.nome+"-"+mod.cognome;
@@ -7035,7 +7036,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       // skuMultiDest=[""] (un articolo "vuoto") fa sì che eseguiTrasf SPOSTI la sessione
                       // sul reparto con articolo vuoto, senza chiederlo.
                       const _u = ((modTrasf.lineaDest.id||"")+" "+(modTrasf.lineaDest.nome||"")).toUpperCase();
-                      const _destRep = _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP");
+                      const _destRep = _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP")||_u.includes("LOGISTICA")||_u.includes("INDUSTRIALIZZAZIONE")||_u.includes("QUALIT")||_u.includes("PRODUZIONE")||_u.includes("MIGLIORAMENTO");
                       if(_destRep){
                         setModTrasf({...modTrasf,step:"pwd",skuNuovo:"",cercaSku:"",skuMultiDest:[""],pwd:"",errPwd:""});
                       } else {
@@ -8028,7 +8029,7 @@ function App() { const [view,setView]             = useState("login");
   const coFromSheets = s => { if(!s||!s.id) return;
     api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); };
   const tr = (id,dest,nSku) => {
-    const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===dest); const _u=((dest||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP"); })();
+    const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===dest); const _u=((dest||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP")||_u.includes("LOGISTICA")||_u.includes("INDUSTRIALIZZAZIONE")||_u.includes("QUALIT")||_u.includes("PRODUZIONE")||_u.includes("MIGLIORAMENTO"); })();
     setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
     // Aggiorna anche sessSheets immediatamente per visualizzazione Dashboard
     setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
