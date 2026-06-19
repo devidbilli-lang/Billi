@@ -7626,6 +7626,22 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       if(_pout>_pin) _durMs -= (_pout-_pin);
     });
   }
+  // CORSO: il tempo al corso NON conta (timer congelato), esattamente come la pausa: mentre è
+  // al corso (nessun rientro) l'intervallo sottratto arriva fino a f (=adesso, con cap fine turno)
+  // e cresce come f, quindi la durata resta CONGELATA fino al rientro; dopo riparte. La FORMAZIONE
+  // invece continua a contare (scelta: solo il corso blocca) → la escludiamo (marker FORMAZIONE@@).
+  // I corsi solo PIANIFICATI (non ancora reali) non sottraggono nulla.
+  if(s.corsi && s.corsi.length>0 && _iniMs && _fMs){
+    s.corsi.forEach(cz=>{
+      if(cz._pianificato) return;
+      if(((cz.nomeCorso||"").toUpperCase().split("@@")[0])==="FORMAZIONE") return;
+      const _dIn=parseData(cz.quando); if(!_dIn) return;
+      let _cin=_dIn.getTime();
+      let _cout = cz.rientro ? (parseData(cz.rientro)?.getTime()||_cin) : _fMs;
+      _cin=Math.max(_cin,_iniMs); _cout=Math.min(_cout,_fMs);
+      if(_cout>_cin) _durMs -= (_cout-_cin);
+    });
+  }
   return _durMs>0?_durMs:0;
 })();
                 const corsi = s.corsi||[];
@@ -7695,6 +7711,28 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           <span style={{background:_isForm?"#ffc94622":"#06b6d422",color:_isForm?"#b45309":"#0891b2",border:"1px solid "+(_isForm?"#ffc94666":"#06b6d455"),borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
                             <span style={{fontWeight:900}}>{_isForm?"F":"C"}</span> {ini}{fin?("→"+fin):""}
                             {editOrario&&<span onClick={()=>setModCorsoPian({sess:s, nome:(ultimoCorso.nomeCorso||"CORSO"), oraInizio:ini||"10:00", oraFine:fin||"", inAtto:true})} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title="Modifica orari corso in atto"><IconaMatita size={13}/></span>}
+                          </span>
+                        );
+                      })()}
+                      {(()=>{
+                        // Corsi REALI TERMINATI (rientro fatto, non pianificati, NON formazione): badge
+                        // accanto al nome col tempo al corso. Decisione: se più d'uno, UN solo badge col
+                        // tempo TOTALE. La formazione non entra qui (non blocca il timer).
+                        const _fmtHM = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
+                        const finiti = (s.corsi||[]).filter(c=> !c._pianificato && c.rientro && ((c.nomeCorso||"").toUpperCase().split("@@")[0]!=="FORMAZIONE"));
+                        if(finiti.length===0) return null;
+                        let _totMin=0;
+                        finiti.forEach(c=>{ const a=parseData(c.quando), b=parseData(c.rientro); if(a&&b){ const dm=(b.getTime()-a.getTime())/60000; if(dm>0) _totMin+=dm; } });
+                        const _tH=Math.floor(_totMin/60), _tM=Math.round(_totMin%60);
+                        const _totLabel = _tH>0 ? (_tH+"h"+(_tM>0?(" "+_tM+"m"):"")) : (Math.round(_totMin)+"m");
+                        const _ult = finiti[finiti.length-1];
+                        // Matita solo se il corso finito è anche l'ULTIMO corso della sessione: modificaOrarioCorso
+                        // agisce sull'ultimo corso, quindi è sicuro solo quando NON si è attualmente in corso.
+                        const _editabile = editOrario && !inCorso;
+                        return (
+                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
+                            <span style={{fontWeight:900}}>C</span> {finiti.length===1 ? (_fmtHM(_ult.quando)+"→"+_fmtHM(_ult.rientro)) : (finiti.length+" corsi · "+_totLabel)}
+                            {_editabile&&<span onClick={()=>setModCorsoPian({sess:s, nome:(_ult.nomeCorso||"CORSO"), oraInizio:_fmtHM(_ult.quando)||"10:00", oraFine:_fmtHM(_ult.rientro)||"", inAtto:true})} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title={finiti.length>1?"Modifica l'ultimo corso (per gli altri usa il Riepilogo)":"Modifica orari corso"}><IconaMatita size={13}/></span>}
                           </span>
                         );
                       })()}
