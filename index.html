@@ -7620,33 +7620,48 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const _iniMs = ini ? (ini.getTime ? ini.getTime() : ini) : 0;
   const _fMs   = f   ? (f.getTime   ? f.getTime()   : f)   : 0;
   let _durMs = (_iniMs && _fMs) ? (_fMs - _iniMs) : 0;
-  // PAUSE: il tempo in pausa NON conta nella durata. Mentre è in pausa (nessuna ripresa) l'intervallo
-  // sottratto arriva fino a f (=adesso, con cap fine turno) e cresce come f, quindi la durata resta
-  // CONGELATA fino a quando non si preme Riprendi; dopo la ripresa riparte.
-  if(s.pause && s.pause.length>0 && _iniMs && _fMs){
-    s.pause.forEach(pz=>{
-      const _dIn=parseData(pz.quando); if(!_dIn) return;
-      let _pin=_dIn.getTime();
-      let _pout = pz.ripresa ? (parseData(pz.ripresa)?.getTime()||_pin) : _fMs;
-      _pin=Math.max(_pin,_iniMs); _pout=Math.min(_pout,_fMs);
-      if(_pout>_pin) _durMs -= (_pout-_pin);
-    });
-  }
-  // CORSO: il tempo al corso NON conta (timer congelato), esattamente come la pausa: mentre è
-  // al corso (nessun rientro) l'intervallo sottratto arriva fino a f (=adesso, con cap fine turno)
-  // e cresce come f, quindi la durata resta CONGELATA fino al rientro; dopo riparte. La FORMAZIONE
-  // invece continua a contare (scelta: solo il corso blocca) → la escludiamo (marker FORMAZIONE@@).
+  // PAUSE e CORSO non contano nella durata (timer congelato). Vanno raccolti come INTERVALLI e
+  // UNITI (merge) prima di sottrarre: se un corso e una pausa si SOVRAPPONGONO (es. pausa che parte
+  // mentre la persona è già al corso), sottrarli separati toglierebbe DUE VOLTE l'intervallo in
+  // comune → durata troppo bassa. Per ogni intervallo, se è ancora "aperto" (nessuna ripresa per la
+  // pausa / nessun rientro per il corso) il fine arriva a f (=adesso, cap fine turno) e cresce con f,
+  // quindi la durata resta CONGELATA finché non si riprende/rientra; dopo riparte. La FORMAZIONE
+  // invece continua a contare (solo il corso reale blocca) → la escludiamo (marker FORMAZIONE@@).
   // I corsi solo PIANIFICATI (non ancora reali) non sottraggono nulla.
-  if(s.corsi && s.corsi.length>0 && _iniMs && _fMs){
-    s.corsi.forEach(cz=>{
-      if(cz._pianificato) return;
-      if(((cz.nomeCorso||"").toUpperCase().split("@@")[0])==="FORMAZIONE") return;
-      const _dIn=parseData(cz.quando); if(!_dIn) return;
-      let _cin=_dIn.getTime();
-      let _cout = cz.rientro ? (parseData(cz.rientro)?.getTime()||_cin) : _fMs;
-      _cin=Math.max(_cin,_iniMs); _cout=Math.min(_cout,_fMs);
-      if(_cout>_cin) _durMs -= (_cout-_cin);
-    });
+  if(_iniMs && _fMs){
+    const _intervalli = [];
+    if(s.pause && s.pause.length>0){
+      s.pause.forEach(pz=>{
+        const _dIn=parseData(pz.quando); if(!_dIn) return;
+        let _pin=_dIn.getTime();
+        let _pout = pz.ripresa ? (parseData(pz.ripresa)?.getTime()||_pin) : _fMs;
+        _pin=Math.max(_pin,_iniMs); _pout=Math.min(_pout,_fMs);
+        if(_pout>_pin) _intervalli.push([_pin,_pout]);
+      });
+    }
+    if(s.corsi && s.corsi.length>0){
+      s.corsi.forEach(cz=>{
+        if(cz._pianificato) return;
+        if(((cz.nomeCorso||"").toUpperCase().split("@@")[0])==="FORMAZIONE") return;
+        const _dIn=parseData(cz.quando); if(!_dIn) return;
+        let _cin=_dIn.getTime();
+        let _cout = cz.rientro ? (parseData(cz.rientro)?.getTime()||_cin) : _fMs;
+        _cin=Math.max(_cin,_iniMs); _cout=Math.min(_cout,_fMs);
+        if(_cout>_cin) _intervalli.push([_cin,_cout]);
+      });
+    }
+    // Merge degli intervalli sovrapposti, poi sottrai il totale UNITO (ogni minuto non lavorato
+    // conta una volta sola, anche se ricade sia in un corso sia in una pausa).
+    if(_intervalli.length>0){
+      _intervalli.sort((a,b)=>a[0]-b[0]);
+      let _ms=_intervalli[0][0], _me=_intervalli[0][1], _tot=0;
+      for(let i=1;i<_intervalli.length;i++){
+        if(_intervalli[i][0]<=_me){ _me=Math.max(_me,_intervalli[i][1]); }
+        else { _tot+=(_me-_ms); _ms=_intervalli[i][0]; _me=_intervalli[i][1]; }
+      }
+      _tot+=(_me-_ms);
+      _durMs-=_tot;
+    }
   }
   return _durMs>0?_durMs:0;
 })();
