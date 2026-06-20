@@ -221,10 +221,11 @@ function codaAggiungi(evento) {
   try {
     const coda = JSON.parse(localStorage.getItem(CODA_KEY)||"[]");
     const chiave = codaChiave(evento);
-    if(coda.find(e=>e.chiave===chiave)) return; // già in coda
+    if(coda.find(e=>e.chiave===chiave)) return chiave; // già in coda
     coda.push({...evento, chiave, ts:Date.now(), tentativi:0});
     localStorage.setItem(CODA_KEY,JSON.stringify(coda));
-  } catch(e) {}
+    return chiave;
+  } catch(e) { return null; }
 }
 
 function codaRimuovi(chiave) {
@@ -320,19 +321,22 @@ setTimeout(()=>{
 
 const api = { async config() { try { const r=await fetchTimeout(APPS_SCRIPT_URL+"?action=config"); const j=await r.json(); return j.ok?j.data:null; } catch{ return null; } },
   async evento(p) {
-    // Salva in coda prima — nessun dato perso
-    codaAggiungi(p);
+    // Salva in coda prima — nessun dato perso. codaAggiungi restituisce la chiave ESATTA usata (per
+    // CORSO/RIENTRO contiene un timestamp), così la rimozione qui sotto usa la STESSA chiave. Prima si
+    // richiamava codaChiave(p) per rimuovere: ricalcolava il timestamp → chiave diversa → CORSO/RIENTRO
+    // non venivano MAI rimossi dalla coda → codaProcessa li re-inviava ogni 10s (doppioni "fantasma").
+    const chiaveCoda = codaAggiungi(p);
     // Aspetta D1 per azioni critiche (RIENTRO, CORSO, CHECKOUT, TRASFERIMENTO)
     const critiche = ["RIENTRO","CORSO","CHECKOUT","TRASFERIMENTO","CAMBIOSKU"];
     if(critiche.includes((p.tipo||"").toUpperCase())) {
       try {
         const ok = await inviaEvento(p);
-        if(ok) codaRimuovi(codaChiave(p));
+        if(ok && chiaveCoda) codaRimuovi(chiaveCoda);
       } catch(e) {}
     } else {
       // Per CHECKIN: fire and forget
       inviaEvento(p).then(ok=>{
-        if(ok) codaRimuovi(codaChiave(p));
+        if(ok && chiaveCoda) codaRimuovi(chiaveCoda);
       }).catch(()=>{});
     }
   },
@@ -1124,6 +1128,25 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const nCorsoReale=nCorso-nFormazione;
   const nPausa=sessAttiveUniche.filter(s=>s.pause&&s.pause.some(pz=>pz.tipo==="pausa")&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))).length;
   const nOpProduzione=nOp-nRiparazione-nCorso-nPausa;
+  // ─── BADGE CORSO/FORMAZIONE PERSISTENTE ──────────────────────────────────────
+  // Il badge corso deve restare visibile sia mentre il corso è IN CORSO, sia quando è CONCLUSO,
+  // sia DOPO i checkout. Quindi NON si basa su "chi è in corso adesso" (nCorso, che resta per
+  // nOpProduzione) ma su "chi ha avuto un corso OGGI" su questa linea, contando TUTTE le sessioni
+  // di oggi, aperte e chiuse (sessGiornata). Conta sia i corsi aperti (sospendi) sia quelli conclusi
+  // (rientrato). Esclude solo le iniezioni pianificate-chiuse (calcolo obiettivo, anche future);
+  // tiene i corsi reali aperti/chiusi e i pianificati ancora attivi.
+  const _haCorsoOggi = (s)=> s.corsi && s.corsi.some(c=>(c.tipo==="sospendi"||c.tipo==="rientrato") && !(c._pianificato && c.tipo==="rientrato"));
+  const _matCorsoOggi = {};
+  sessGiornata.forEach(s=>{
+    if(!_haCorsoOggi(s)) return;
+    const mat = s.matricola||s.nome||s.id; if(!mat) return;
+    const cc = s.corsi.filter(c=>(c.tipo==="sospendi"||c.tipo==="rientrato")&&!(c._pianificato&&c.tipo==="rientrato"));
+    const formaz = cc.length>0 && (cc[cc.length-1].nomeCorso||"").toString().toUpperCase().split("@@")[0]==="FORMAZIONE";
+    if(_matCorsoOggi[mat]===undefined) _matCorsoOggi[mat]={formaz}; else if(formaz) _matCorsoOggi[mat].formaz=true;
+  });
+  const nCorsoBadge = Object.keys(_matCorsoOggi).length;
+  const nFormazioneBadge = Object.values(_matCorsoOggi).filter(x=>x.formaz).length;
+  const nCorsoRealeBadge = nCorsoBadge - nFormazioneBadge;
   const skuObj=skuList.find(s=>s&&s.sku===skuPiu);
   const tc=tcPerLinea(skuObj);
   // Fine turno = primo check-in della linea + (8h + straordinario)
@@ -1734,11 +1757,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             <div style={{fontSize:compatto?"clamp(9px,1.1vw,12px)":"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:compatto?1:6}}>Operatori</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
               <div style={{fontSize:compatto?"clamp(22px,2.8vw,36px)":"clamp(56px,8vw,100px)",fontWeight:900,color:"#111827",lineHeight:1}}>{nOpProduzione}</div>
-              {(nRiparazione>0||nCorso>0)&&(
+              {(nRiparazione>0||nCorsoBadge>0||_minFormaz>0)&&(
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nRiparazione} Riparazione</div>}
-                  {nCorsoReale>0&&<div style={{background:"#06b6d4",color:"#ffffff",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nCorsoReale} Corso</div>}
-                  {(nFormazione>0||_minFormaz>0)&&<div style={{background:"#ffc946",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>{nFormazione>0?"+"+nFormazione+" ":""}Formazione{_minFormaz>0?" · "+_minFormaz+" min":""}</div>}
+                  {nCorsoRealeBadge>0&&<div style={{background:"#06b6d4",color:"#ffffff",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nCorsoRealeBadge} Corso</div>}
+                  {(nFormazioneBadge>0||_minFormaz>0)&&<div style={{background:"#ffc946",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>{nFormazioneBadge>0?"+"+nFormazioneBadge+" ":""}Formazione{_minFormaz>0?" · "+_minFormaz+" min":""}</div>}
                 </div>
               )}
             </div>
