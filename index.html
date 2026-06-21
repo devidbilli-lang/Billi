@@ -614,6 +614,7 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
   const [pianifica,setPianifica] = useState(false);
   const [oraInizio,setOraInizio] = useState("10:00");
   const [oraFine,setOraFine] = useState("12:00");
+  const [senzaFine,setSenzaFine] = useState(false);
   const [tipologia,setTipologia] = useState("");           // Formazione: tipologia obbligatoria
   const [tipologie,setTipologie] = useState([]);           // elenco dal foglio "Tipologie Formazione"
   React.useEffect(()=>{
@@ -633,6 +634,17 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
   const nomeOut = isForm ? "FORMAZIONE" : (nomeCorso||"CORSO");
   const skuOut  = isForm ? ("FORMAZIONE@@"+(tipologia||"")) : nomeOut;   // inviato come skuA: tipologia codificata
   const parola = isForm ? "formazione" : "corso";
+  // Messaggio dinamico: spiega quale dei 3 comportamenti scatterà in base agli orari scelti.
+  const _nowHM = (()=>{ const d=new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); })();
+  const _inizioFuturo = oraInizio > _nowHM;
+  const _finePassata = !senzaFine && !!oraFine && oraFine <= _nowHM;
+  const _msgCaso = _inizioFuturo
+    ? ("Corso PIANIFICATO: parte all'orario indicato — il badge si accende quando inizia.")
+    : ((senzaFine || !oraFine)
+        ? ("Corso IN CORSO adesso: resta segnato finché la persona non rientra (lo chiudi tu più tardi).")
+        : (_finePassata
+            ? ("Corso GIÀ CONCLUSO: registrato come fatto, conta nei minuti "+parola+".")
+            : ("Corso IN CORSO adesso: rientro automatico all'orario di fine indicato.")));
   return (
     <div style={MS.ov}>
       <div style={{...MS.md,maxWidth:400}}>
@@ -668,16 +680,22 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
           {onPianifica&&(
             <button type="button" onClick={()=>setPianifica(!pianifica)}
               style={{width:"100%",marginBottom:14,padding:"10px",background:pianifica?COL:(isForm?"#fffbeb":"#ecfeff"),color:pianifica?"#fff":COL,border:"2px solid "+COLb,borderRadius:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}>
-              ⏱ Pianifica {parola} {pianifica?"(attivo)":""}
+              ⏱ Inserisci {parola} {pianifica?"(attivo)":""}
             </button>
           )}
           {pianifica ? (
             <div style={{marginBottom:20,padding:"14px",background:isForm?"#fffbeb":"#f0fdff",border:"1px solid "+(isForm?"#ffc946":"#67e8f9"),borderRadius:12}}>
-              <div style={{fontSize:12,color:isForm?"#b45309":"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio {parola}</div>
+              <div style={{fontSize:12,color:isForm?"#b45309":"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio {parola} (passato o futuro)</div>
               <div style={{marginBottom:12,textAlign:"center"}}><TimePicker value={oraInizio} color={isForm?"#d97706":"#06b6d4"} onChange={setOraInizio}/></div>
-              <div style={{fontSize:12,color:isForm?"#b45309":"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine {parola} (opzionale)</div>
-              <div style={{marginBottom:6,textAlign:"center"}}><TimePicker value={oraFine} color={isForm?"#d97706":"#06b6d4"} onChange={setOraFine}/></div>
-              <div style={{fontSize:11,color:"#64748b",textAlign:"center",lineHeight:1.4}}>A fine {parola}: rientro in produzione se entro il turno, altrimenti checkout automatico.</div>
+              <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:senzaFine?2:8,cursor:"pointer",fontSize:13,fontWeight:700,color:isForm?"#b45309":"#0891b2"}}>
+                <input type="checkbox" checked={senzaFine} onChange={e=>setSenzaFine(e.target.checked)} style={{width:18,height:18,cursor:"pointer"}}/>
+                Senza orario di fine (corso aperto)
+              </label>
+              {!senzaFine&&(<>
+                <div style={{fontSize:12,color:isForm?"#b45309":"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine {parola}</div>
+                <div style={{marginBottom:8,textAlign:"center"}}><TimePicker value={oraFine} color={isForm?"#d97706":"#06b6d4"} onChange={setOraFine}/></div>
+              </>)}
+              <div style={{fontSize:11.5,color:isForm?"#92400e":"#0e7490",textAlign:"center",lineHeight:1.45,fontWeight:700,background:isForm?"#fef3c7":"#cffafe",borderRadius:8,padding:"7px 9px"}}>{_msgCaso}</div>
             </div>
           ) : (
             <>
@@ -698,7 +716,7 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
             <button style={MS.an} onClick={onClose}>Annulla</button>
             {pianifica ? (
               <button style={{...MS.cf,background:GRADp,opacity:(isForm&&!tipologia)?0.4:1}} disabled={isForm&&!tipologia}
-                onClick={()=>onPianifica(oraInizio, oraFine, skuOut)}>✓ Pianifica</button>
+                onClick={()=>onPianifica(oraInizio, senzaFine?"":oraFine, skuOut)}>✓ Inserisci</button>
             ) : (
               <button style={{...MS.cf,background:GRAD,opacity:(isForm&&!tipologia)?0.4:1}} disabled={isForm&&!tipologia}
                 onClick={()=>onOk(tipoUscita, skuOut)}>Conferma</button>
