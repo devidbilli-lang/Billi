@@ -3182,7 +3182,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             })()}
             {g!==null&&(
               <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 12px"}}><IconaRampa size={14} color="#ff6937"/><span style={{fontSize:13,fontWeight:800,color:"#ff6937",lineHeight:1}}>Giorno {g} / {dur}</span>{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:4}}>✓ COMPLETATA</span>}</span>
+                <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"5px 12px"}}><IconaRampa size={14} color="#ff6937"/><span style={{fontSize:13,fontWeight:800,color:"#ff6937",lineHeight:1}}>Giorno {Math.min(g,dur)} / {dur}</span>{completata&&<span style={{background:"#22c55e",color:"#000",borderRadius:4,padding:"1px 8px",fontSize:10,fontWeight:800,marginLeft:4}}>✓ COMPLETATA</span>}</span>
                 {modDurata&&modDurata.key===key ? (
                   <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
                     <input type="number" min="2" max="60" value={modDurata.val} onChange={e=>setModDurata({...modDurata,val:e.target.value,err:""})} style={{width:64,padding:"4px 8px",border:"1.5px solid #ff6937",borderRadius:6,fontFamily:"'Montserrat',sans-serif",fontSize:13,textAlign:"center"}}/>
@@ -6853,21 +6853,33 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,fontFamily:"'Montserrat',sans-serif"}}>Nome corso / formazione</div>
             <input value={modCorsoMulti.nome} onChange={e=>setModCorsoMulti({...modCorsoMulti, nome:e.target.value})} placeholder="Es. Sicurezza, Formazione macchina..." style={{width:"100%",padding:"12px 14px",fontSize:15,border:"2px solid #06b6d4",borderRadius:10,marginBottom:16,fontFamily:"'Montserrat',sans-serif",background:"#fff",color:"#1e293b",boxSizing:"border-box"}}/>
             {/* Toggle: sposta subito oppure pianifica a un orario */}
-            <button type="button" onClick={()=>setModCorsoMulti({...modCorsoMulti, pianifica:!modCorsoMulti.pianifica, oraInizio:modCorsoMulti.oraInizio||"10:00", oraFine:modCorsoMulti.oraFine||""})}
+            <button type="button" onClick={()=>setModCorsoMulti({...modCorsoMulti, pianifica:!modCorsoMulti.pianifica, oraInizio:modCorsoMulti.oraInizio||"10:00", oraFine:modCorsoMulti.oraFine||"12:00"})}
               style={{width:"100%",marginBottom:14,padding:"10px",background:modCorsoMulti.pianifica?"#0891b2":"#ecfeff",color:modCorsoMulti.pianifica?"#fff":"#0891b2",border:"2px solid #06b6d4",borderRadius:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}>
-              ⏱ Pianifica corso {modCorsoMulti.pianifica?"(attivo)":""}
+              ⏱ Inserisci corso {modCorsoMulti.pianifica?"(attivo)":""}
             </button>
             {modCorsoMulti.pianifica && (
               <div style={{marginBottom:16,padding:"14px",background:"#f0fdff",border:"1px solid #67e8f9",borderRadius:12}}>
-                <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio corso</div>
+                <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio corso (passato o futuro)</div>
                 <div style={{marginBottom:12}}>
                   <TimePicker value={modCorsoMulti.oraInizio||"10:00"} color="#06b6d4" onChange={v=>setModCorsoMulti({...modCorsoMulti, oraInizio:v})}/>
                 </div>
-                <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine corso (opzionale)</div>
-                <div style={{marginBottom:6}}>
-                  <TimePicker value={modCorsoMulti.oraFine||"12:00"} color="#06b6d4" onChange={v=>setModCorsoMulti({...modCorsoMulti, oraFine:v})}/>
-                </div>
-                <div style={{fontSize:11,color:"#64748b",textAlign:"center",lineHeight:1.4}}>A fine corso: rientro in produzione se entro il turno, altrimenti checkout automatico.</div>
+                <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:modCorsoMulti.senzaFine?2:8,cursor:"pointer",fontSize:13,fontWeight:700,color:"#0891b2"}}>
+                  <input type="checkbox" checked={!!modCorsoMulti.senzaFine} onChange={e=>setModCorsoMulti({...modCorsoMulti, senzaFine:e.target.checked})} style={{width:18,height:18,cursor:"pointer"}}/>
+                  Senza orario di fine (corso aperto)
+                </label>
+                {!modCorsoMulti.senzaFine && (<>
+                  <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine corso</div>
+                  <div style={{marginBottom:8}}>
+                    <TimePicker value={modCorsoMulti.oraFine||"12:00"} color="#06b6d4" onChange={v=>setModCorsoMulti({...modCorsoMulti, oraFine:v})}/>
+                  </div>
+                </>)}
+                {(()=>{
+                  const _nowHM=(()=>{const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");})();
+                  const _oi=modCorsoMulti.oraInizio||"10:00"; const _of=modCorsoMulti.senzaFine?"":(modCorsoMulti.oraFine||"12:00");
+                  const _fut=_oi>_nowHM; const _fp=!modCorsoMulti.senzaFine&&!!_of&&_of<=_nowHM;
+                  const _m=_fut?"Corso PIANIFICATO: parte all'orario indicato — il badge si accende quando inizia.":((modCorsoMulti.senzaFine||!_of)?"Corso IN CORSO adesso: resta segnato finché le persone non rientrano (lo chiudi tu più tardi).":(_fp?"Corso GIÀ CONCLUSO: registrato come fatto, conta nei minuti corso.":"Corso IN CORSO adesso: rientro automatico all'orario di fine indicato."));
+                  return <div style={{fontSize:11.5,color:"#0e7490",textAlign:"center",lineHeight:1.45,fontWeight:700,background:"#cffafe",borderRadius:8,padding:"7px 9px"}}>{_m}</div>;
+                })()}
               </div>
             )}
             {/* Toggle: modifica gli orari di un corso GIÀ in atto delle persone selezionate */}
@@ -6907,8 +6919,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 }}>✓ Salva orari</button>
               ) : modCorsoMulti.pianifica ? (
                 <button style={{flex:1,padding:11,background:"#0891b2",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
-                  pianificaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO", modCorsoMulti.oraInizio||"10:00", modCorsoMulti.oraFine||"");
-                }}>✓ Pianifica corso</button>
+                  pianificaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO", modCorsoMulti.oraInizio||"10:00", modCorsoMulti.senzaFine?"":(modCorsoMulti.oraFine||"12:00"));
+                }}>✓ Inserisci corso</button>
               ) : (
                 <button style={{flex:1,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
                   mandaCorsoMultiplo(modCorsoMulti.matricole, modCorsoMulti.nome||"CORSO");
