@@ -112,14 +112,27 @@ function isFestivitaJS(data) {
   if (dData.getTime() === pasqua.getTime() || dData.getTime() === pasquetta.getTime()) return true;
   return false;
 }
-function giorniLavorativiJS(tsInizio) {
+// Chiave giorno dd/MM/yyyy locale (stesso formato di data_ora del worker, fuso Italia).
+function _keyGiorno(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+// Set dei giorni festivi/weekend EFFETTIVAMENTE LAVORATI (chiavi dd/MM/yyyy) da una lista. Tollerante a null.
+function _setFestiviLav(weekendLav){ const s=new Set(); if(Array.isArray(weekendLav)){ for(const k of weekendLav){ if(k) s.add(String(k).trim()); } } return s; }
+// Cerca la lista dei weekend/festivi lavorati per la rampa (sku+linea) nei record rampa globali.
+function _weekendLav(sku, linea){
+  try{ const rs=(typeof window!=="undefined"&&window._rampeSheets)||[];
+    const r=rs.find(x=>x&&x.sku===sku&&(x.linea_id===linea||x.lineaId===linea))||rs.find(x=>x&&x.sku===sku);
+    return (r&&Array.isArray(r.weekendLavorati))?r.weekendLavorati:[];
+  }catch(e){ return []; }
+}
+function giorniLavorativiJS(tsInizio, weekendLav) {
   if(!tsInizio) return 1;
+  var extra = _setFestiviLav(weekendLav);
   var cur = new Date(tsInizio); cur.setHours(0,0,0,0);
   var oggi = new Date(); oggi.setHours(0,0,0,0);
   var gg = 0;
   while(cur.getTime() <= oggi.getTime()) {
     var dow = cur.getDay();
-    if(dow !== 0 && dow !== 6 && !isFestivitaJS(cur)) gg++;
+    // Conta i feriali non festivi, PIÙ i weekend/festivi che la linea ha effettivamente lavorato.
+    if((dow !== 0 && dow !== 6 && !isFestivitaJS(cur)) || extra.has(_keyGiorno(cur))) gg++;
     cur.setDate(cur.getDate()+1);
   }
   return Math.min(15, Math.max(1, gg));
@@ -144,10 +157,10 @@ function rampaPerc(giorno, durata){
 // "fine teorica" = aggiungiGiorniLavorativi(dal, durata-1) (la stessa mostrata nella UI).
 // Confronto a livello di giorno (mezzanotte): si completa la mezzanotte successiva all'ultimo
 // giorno, anche se cade in weekend/festivo, e non dipende dal conteggio dei giorni lavorativi.
-function rampaCompletata(dal, durata){
+function rampaCompletata(dal, durata, weekendLav){
   if(dal==null || dal==="") return false;
   var dur = (durata && +durata>=2) ? +durata : 15;
-  var fine = aggiungiGiorniLavorativi(dal, dur-1);
+  var fine = aggiungiGiorniLavorativi(dal, dur-1, weekendLav);
   if(!fine || isNaN(fine.getTime())) return false;
   var f = new Date(fine); f.setHours(0,0,0,0);
   var o = new Date(); o.setHours(0,0,0,0);
@@ -1455,8 +1468,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     { const _rg=(typeof window!=="undefined"&&window._rampeSheets)||[];
       const _rr=_rg.find(r=>r&&r.sku===skuItem&&(r.linea_id===lineaId||r.lineaId===lineaId))||_rg.find(r=>r&&r.sku===skuItem);
       if(_rr){ if(_rr.durata&&+_rr.durata>=2) durataRampaItem=+_rr.durata; const _rd=_rr.dal||_rr.rampaDal; if(_rd){ const _dd=parseData(_rd)||new Date(_rd); if(_dd&&!isNaN(_dd)) rampaDalItem=_dd.getTime(); } } }
-    const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem) : null;
-    const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && !rampaCompletata(rampaDalItem, durataRampaItem);
+    const _wlObj = _weekendLav(skuItem, lineaId);
+    const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem, _wlObj) : null;
+    const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && !rampaCompletata(rampaDalItem, durataRampaItem, _wlObj);
     return inRampaItem ? Math.ceil(obPieno * rampaPerc(giornoRampaItem, durataRampaItem) / 100) : obPieno;
   };
   // Obiettivo di linea AGGREGATO con rampa: somma degli obiettivi (ridotti se in rampa) di tutti
@@ -2185,8 +2199,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               { const _rg=(typeof window!=="undefined"&&window._rampeSheets)||[];
                 const _rr=_rg.find(r=>r&&r.sku===skuItem&&(r.linea_id===lineaId||r.lineaId===lineaId))||_rg.find(r=>r&&r.sku===skuItem);
                 if(_rr){ if(_rr.durata&&+_rr.durata>=2) durataRampaItem=+_rr.durata; const _rd=_rr.dal||_rr.rampaDal; if(_rd){ const _dd=parseData(_rd)||new Date(_rd); if(_dd&&!isNaN(_dd)) rampaDalItem=_dd.getTime(); } } }
-              const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem) : null;
-              const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && !rampaCompletata(rampaDalItem, durataRampaItem);
+              const _wlObj2 = _weekendLav(skuItem, lineaId);
+              const giornoRampaItem = rampaDalItem ? giorniLavorativiJS(rampaDalItem, _wlObj2) : null;
+              const inRampaItem = giornoRampaItem!==null && giornoRampaItem>=1 && !rampaCompletata(rampaDalItem, durataRampaItem, _wlObj2);
               // obFinaleItem pieno regime salvato a parte per riferimento
               const obPienoRegimeItem = obFinaleItem;
               // GIORNALIERO dell'articolo = stessa funzione usata per il totale di linea, così
@@ -3001,13 +3016,14 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   );
 }
 
-function aggiungiGiorniLavorativi(dataInizio, giorni) {
+function aggiungiGiorniLavorativi(dataInizio, giorni, weekendLav) {
+  var extra = _setFestiviLav(weekendLav);
   var d = new Date(dataInizio);
   var aggiunti = 0;
   while (aggiunti < giorni) {
     d.setDate(d.getDate() + 1);
     var gg = d.getDay();
-    if (gg !== 0 && gg !== 6 && !isFestivitaJS(d)) aggiunti++; // salta sab, dom e festività
+    if ((gg !== 0 && gg !== 6 && !isFestivitaJS(d)) || extra.has(_keyGiorno(d))) aggiunti++; // feriali + weekend/festivi lavorati
   }
   return d;
 }
@@ -3076,18 +3092,18 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
     const dal = r.dal || r.rampaDal;
     const lid = r.linea_id || r.lineaId || "";
     if(r.sku && dal){
-      const g = giorniLavorativiJS(dal);
+      const g = giorniLavorativiJS(dal, r.weekendLavorati);
       const key = r.sku + KEYSEP + lid;
       // Se più record per stessa coppia sku+linea, prendi quello con data più recente
       if(!rampaMap[key] || dal > rampaMap[key].dal) {
-        rampaMap[key] = { sku:r.sku, dal, giorni:g, lineaId:lid, completata: !!r.completata, durata:(r.durata!=null && +r.durata>=2)?+r.durata:15 };
+        rampaMap[key] = { sku:r.sku, dal, giorni:g, lineaId:lid, completata: !!r.completata, durata:(r.durata!=null && +r.durata>=2)?+r.durata:15, weekendLavorati: Array.isArray(r.weekendLavorati)?r.weekendLavorati:[] };
       }
     }
   }
   // Estrai rampe anche dalle sessioni attuali (per coppie sku+linea non ancora in rampeSheets)
   for(const s of sessioni){ let rdal = s.rampaDal||null;
     if(!rdal && (s.skuA||"").includes("__RAMPA__")){ const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime(); }
-    if(rdal){ const sku=s.skuCorrente||s.sku||""; const lid=s.lineaCorrente||""; const key=sku+KEYSEP+lid; if(sku&&!rampaMap[key]){ const g=giorniLavorativiJS(rdal); rampaMap[key]={sku,dal:rdal,giorni:g,lineaId:lid,completata:false,durata:15}; } } }
+    if(rdal){ const sku=s.skuCorrente||s.sku||""; const lid=s.lineaCorrente||""; const key=sku+KEYSEP+lid; if(sku&&!rampaMap[key]){ const _wl=_weekendLav(sku,lid); const g=giorniLavorativiJS(rdal,_wl); rampaMap[key]={sku,dal:rdal,giorni:g,lineaId:lid,completata:false,durata:15,weekendLavorati:_wl}; } } }
   for(const _k in durataOverride){ if(rampaMap[_k]) rampaMap[_k].durata = durataOverride[_k]; }
   const totMap={}, linMap={};
   for(const s of sessioni){ for(const {linea,sku,ms} of tappe(s)){ if(!sku||!ms||isNaN(ms)) continue; totMap[sku]=(totMap[sku]||0)+ms; if(!linMap[sku])linMap[sku]={}; linMap[sku][linea]=(linMap[sku][linea]||0)+ms; } }
@@ -3102,7 +3118,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       const sku = r.sku;
       // Filtro linea di accesso: se entri come linea, vedi SOLO le tue rampe.
       if(lineaFiltro && r.lineaId !== lineaFiltro.id && r.lineaId !== lineaFiltro.nome) return false;
-      const isCompletata = r.completata || rampaCompletata(r.dal, r.durata);
+      const isCompletata = r.completata || rampaCompletata(r.dal, r.durata, r.weekendLavorati);
       // Filtro stato
       if(filtroStato === "attive" && isCompletata) return false;
       if(filtroStato === "completate" && !isCompletata) return false;
@@ -3153,7 +3169,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,padding:"18px 20px",marginBottom:12}}>
       <div style={{fontSize:22,letterSpacing:1,textTransform:"uppercase",color:"#ff6937",marginBottom:24,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><IconaRampa size={26}/> Rampe di Crescita</div>
       {tuttiSku.map(key=>{ const rampa=rampaMap[key]||null; const sku=rampa?rampa.sku:key.split(KEYSEP)[0]; const rampaLinea=rampa?rampa.lineaId:""; const ms=totMap[sku]||0; const g=rampa?rampa.giorni:null; const dur=rampa?(rampa.durata||15):15;
-        const completata=g!==null&&rampaCompletata(rampa.dal,dur); const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
+        const completata=g!==null&&rampaCompletata(rampa.dal,dur,rampa.weekendLavorati); const colRampa=completata?"#22c55e":g!==null?"#f59e0b":"#475569";
         const lineaObj=rampa?getLinea(rampa.lineaId,linee):null;
         return (
           <div key={key} style={{marginBottom:20,paddingBottom:18,borderBottom:"1px solid #f1f5f9"}}>
@@ -3163,7 +3179,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
             </div>
             {rampa&&rampa.dal&&(()=>{
               const dataInizio = new Date(rampa.dal);
-              const dataFine = aggiungiGiorniLavorativi(rampa.dal, dur-1);
+              const dataFine = aggiungiGiorniLavorativi(rampa.dal, dur-1, rampa.weekendLavorati);
               const fmtD = d => d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
               const isoData = `${dataInizio.getFullYear()}-${String(dataInizio.getMonth()+1).padStart(2,"0")}-${String(dataInizio.getDate()).padStart(2,"0")}`;
               return (
@@ -3215,7 +3231,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 const valoriPerGiorno = [];
                 const giorniTrascorsi = Math.min(rampa.giorni || 1, dur);
                 for(let d=1; d<=giorniTrascorsi; d++){
-                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
+                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1, rampa.weekendLavorati);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
                   const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && stessoGiornoData(r.data, fmtG));
                   if(riga && riga.nOperatori > 0) valoriPerGiorno.push(riga.nOperatori);
@@ -3247,7 +3263,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               //  - oggi e FUTURO (d >= oggi): operatori PREVISTI (nOp dalla casella)
               const nOpDelGiorno = (d)=>{
                 if(d < gOggiCalc && rampa && rampa.dal){
-                  const dataG = aggiungiGiorniLavorativi(rampa.dal, d-1);
+                  const dataG = aggiungiGiorniLavorativi(rampa.dal, d-1, rampa.weekendLavorati);
                   const fmtG = `${String(dataG.getDate()).padStart(2,'0')}/${String(dataG.getMonth()+1).padStart(2,'0')}/${dataG.getFullYear()}`;
                   const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && stessoGiornoData(r.data, fmtG));
                   if(riga && riga.nOperatori > 0) return riga.nOperatori;
@@ -3285,7 +3301,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               const borsePerGiorno = [];
               if(rampa&&rampa.dal&&riepilogo.length>0){
                 for(let d=1;d<=dur;d++){
-                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1);
+                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1, rampa.weekendLavorati);
                   const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
                   // Match linea robusto: la linea nel riepilogo può essere id o nome, e per gli
                   // articoli "monoartigiano" la linea È il nome della persona. Confronto tollerante a
@@ -6169,9 +6185,10 @@ function TabOperatori({ operatori, sessioni, linee, isAdmin, lineaFiltro }) { co
                     <span style={{color:linea.colore,fontWeight:600}}>{linea.id} — {linea.nome}</span>
                     <code style={S.sku}>{sessAtt.skuCorrente||sessAtt.sku}</code>
                     {sessAtt.rampaDal&&(()=>{
-                      const gg = giorniLavorativiJS(sessAtt.rampaDal);
+                      const _wlG = _weekendLav(sessAtt.skuCorrente||sessAtt.sku, sessAtt.lineaCorrente);
+                      const gg = giorniLavorativiJS(sessAtt.rampaDal, _wlG);
                       const durG = (sessAtt.rampaDurata && +sessAtt.rampaDurata>=2) ? +sessAtt.rampaDurata : 15;
-                      if(rampaCompletata(sessAtt.rampaDal, durG)) return null;
+                      if(rampaCompletata(sessAtt.rampaDal, durG, _wlG)) return null;
                       return (
                         <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"4px 12px"}}>
                           <IconaRampa size={14} color="#ff6937"/>
@@ -7854,10 +7871,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         // Il campo nel DB è `dal`; supporto anche legacy `rampaDal`.
                         const rDal = (rampaS && (rampaS.dal||rampaS.rampaDal)) || s.rampaDal;
                         if(!rDal) return null;
-                        const gg = giorniLavorativiJS(rDal);
+                        const _wlS = (rampaS && Array.isArray(rampaS.weekendLavorati)) ? rampaS.weekendLavorati : _weekendLav(skuS, lineaS);
+                        const gg = giorniLavorativiJS(rDal, _wlS);
                         const durG = (rampaS && rampaS.durata && +rampaS.durata>=2) ? +rampaS.durata : ((s.rampaDurata && +s.rampaDurata>=2) ? +s.rampaDurata : 15);
                         // Rampa completata solo DOPO l'ultimo giorno (mezzanotte della fine teorica).
-                        if(rampaCompletata(rDal, durG)) return null;
+                        if(rampaCompletata(rDal, durG, _wlS)) return null;
                         return (
                           <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"6px 14px"}}>
                             <IconaRampa size={14} color="#ff6937"/>
