@@ -1418,7 +1418,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const dC=parseData(c.quando); if(!dC) return;
         const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
         const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
-        const cIn=dC.getTime(), cOut=dCe?dCe.getTime():(fin||cIn);
+        // CLIP alla finestra effettiva: per il real-time fin è troncato ad ADESSO, quindi un corso
+        // ancora (anche solo in parte) nel futuro non sottrae nulla finché non è trascorso. Per il
+        // giornaliero (fin = fine turno) resta invariato. Evita che un corso pianificato azzeri l'atteso.
+        const cIn=dC.getTime(); let cOut=dCe?dCe.getTime():(fin||cIn);
+        if(fin!=null) cOut=Math.min(cOut,fin);
         if(cOut>cIn) minPerMat[mat].sottrai += ((cOut-cIn)/60000)/_attiviA(cIn);
       });
       if(s.pause) s.pause.forEach(pz=>{
