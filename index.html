@@ -1368,7 +1368,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       let secFineEff = secFineTurnoAssoluto;
       const _finePianHM = s.orarioFineOggiPian || s.orarioFinePian || "";
       let secFinePianItem = secFineTurnoAssoluto;
-      if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60 + (oreExtra||0)*3600; } // la fine pianificata include lo straordinario
+      const _hasFOggi1 = !!(s.orarioFineOggiPian && s.orarioFineOggiPian.indexOf(":")>-1); // solo-oggi: ha precedenza, niente straordinario
+      if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60 + (_hasFOggi1 ? 0 : (oreExtra||0)*3600); }
       const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
       if(haCk){
         const dF = parseData(s.fine);
@@ -1382,7 +1383,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
           const anticipoSec = secFinePianItem - secCk;
           secFineEff = (anticipoSec > 120) ? secCk : secFinePianItem;
         }
-      } else if(secFinePianItem < secFineTurnoAssoluto){ secFineEff = secFinePianItem; }
+      } else if(_hasFOggi1){ secFineEff = secFinePianItem; } // solo-oggi è DEFINITIVO: non viene cappato dall'8ª ora dall'inizio
+      else if(secFinePianItem < secFineTurnoAssoluto){ secFineEff = secFinePianItem; }
       const _fineOrig = giornoBase.getTime() + secFineEff*1000;
       // Per il calcolo REAL-TIME (finoAMs = adesso) la finestra dell'articolo è troncata
       // all'istante corrente, così l'atteso cresce solo man mano che passa il tempo SUL pezzo.
@@ -1581,7 +1583,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const dF = haCk ? parseData(s.fine) : null;
       let _secFine = secFineTurnoAssoluto;
       const _fpHM = s.orarioFineOggiPian || s.orarioFinePian || "";
-      if(_fpHM.indexOf(":")>-1){ const _pp=_fpHM.split(":").map(Number); const _sp=(_pp[0]||0)*3600+(_pp[1]||0)*60 + (oreExtra||0)*3600; if(_sp<_secFine) _secFine=_sp; } // + straordinario
+      const _hasFOggi2 = !!(s.orarioFineOggiPian && s.orarioFineOggiPian.indexOf(":")>-1); // solo-oggi: ha precedenza, niente straordinario
+      if(_fpHM.indexOf(":")>-1){ const _pp=_fpHM.split(":").map(Number); const _sp=(_pp[0]||0)*3600+(_pp[1]||0)*60 + (_hasFOggi2 ? 0 : (oreExtra||0)*3600); if(_hasFOggi2){ _secFine=_sp; } else if(_sp<_secFine){ _secFine=_sp; } }
       const _fineCapMs = g0.getTime() + _secFine*1000;
       const finReale = dF ? dF.getTime() : Math.min(_nowMs, _fineCapMs);
       const _mat = (s.matricola!=null && s.matricola!=="") ? s.matricola : ("__sid_"+(s.id||""));
@@ -2117,13 +2120,15 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   let sFin = secFineTurnoAssoluto;
                   const _fp = s.orarioFineOggiPian || s.orarioFinePian || "";
                   let sPian = secFineTurnoAssoluto;
-                  if(_fp && _fp.indexOf(":")>-1){ const [ph,pm]=_fp.split(":").map(Number); sPian = (ph||0)*3600+(pm||0)*60 + (oreExtra||0)*3600; } // + straordinario
+                  const _hasFOggi3 = !!(s.orarioFineOggiPian && s.orarioFineOggiPian.indexOf(":")>-1); // solo-oggi: ha precedenza, niente straordinario
+                  if(_fp && _fp.indexOf(":")>-1){ const [ph,pm]=_fp.split(":").map(Number); sPian = (ph||0)*3600+(pm||0)*60 + (_hasFOggi3 ? 0 : (oreExtra||0)*3600); }
                   const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
                   if(haCk){
                     const dF = parseData(s.fine);
                     const sCk = dF ? dF.getHours()*3600+dF.getMinutes()*60+dF.getSeconds() : secFineTurnoAssoluto;
                     sFin = ((sPian - sCk) > 120) ? sCk : sPian;
-                  } else if(sPian < secFineTurnoAssoluto){ sFin = sPian; }
+                  } else if(_hasFOggi3){ sFin = sPian; } // solo-oggi è DEFINITIVO: non viene cappato dall'8ª ora dall'inizio
+                  else if(sPian < secFineTurnoAssoluto){ sFin = sPian; }
                   return giornoBase.getTime() + sFin*1000;
                 };
                 // Segmenti reali [dal,al] su questa linea (gestendo i trasferimenti), dall'inizio
