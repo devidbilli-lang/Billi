@@ -1368,7 +1368,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       let secFineEff = secFineTurnoAssoluto;
       const _finePianHM = s.orarioFineOggiPian || s.orarioFinePian || "";
       let secFinePianItem = secFineTurnoAssoluto;
-      if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60; }
+      if(_finePianHM && _finePianHM.indexOf(":")>-1){ const [ph,pm]=_finePianHM.split(":").map(Number); secFinePianItem = (ph||0)*3600+(pm||0)*60 + (oreExtra||0)*3600; } // la fine pianificata include lo straordinario
       const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
       if(haCk){
         const dF = parseData(s.fine);
@@ -1581,7 +1581,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const dF = haCk ? parseData(s.fine) : null;
       let _secFine = secFineTurnoAssoluto;
       const _fpHM = s.orarioFineOggiPian || s.orarioFinePian || "";
-      if(_fpHM.indexOf(":")>-1){ const _pp=_fpHM.split(":").map(Number); const _sp=(_pp[0]||0)*3600+(_pp[1]||0)*60; if(_sp<_secFine) _secFine=_sp; }
+      if(_fpHM.indexOf(":")>-1){ const _pp=_fpHM.split(":").map(Number); const _sp=(_pp[0]||0)*3600+(_pp[1]||0)*60 + (oreExtra||0)*3600; if(_sp<_secFine) _secFine=_sp; } // + straordinario
       const _fineCapMs = g0.getTime() + _secFine*1000;
       const finReale = dF ? dF.getTime() : Math.min(_nowMs, _fineCapMs);
       const _mat = (s.matricola!=null && s.matricola!=="") ? s.matricola : ("__sid_"+(s.id||""));
@@ -2117,7 +2117,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   let sFin = secFineTurnoAssoluto;
                   const _fp = s.orarioFineOggiPian || s.orarioFinePian || "";
                   let sPian = secFineTurnoAssoluto;
-                  if(_fp && _fp.indexOf(":")>-1){ const [ph,pm]=_fp.split(":").map(Number); sPian = (ph||0)*3600+(pm||0)*60; }
+                  if(_fp && _fp.indexOf(":")>-1){ const [ph,pm]=_fp.split(":").map(Number); sPian = (ph||0)*3600+(pm||0)*60 + (oreExtra||0)*3600; } // + straordinario
                   const haCk = s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null";
                   if(haCk){
                     const dF = parseData(s.fine);
