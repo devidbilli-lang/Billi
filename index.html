@@ -947,7 +947,7 @@ function CodiceFit({ text, max=22, min=9, color="#6d28d9" }){
   );
 }
 
-function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, maxOpOggi, minutiPresenzaLinea=0, minutiFormazioneServer=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false, onObiettiviArticoli }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, borseCoffre, maxOpOggi, minutiPresenzaLinea=0, minutiFormazioneServer=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false, onObiettiviArticoli }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
@@ -1705,7 +1705,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   //  • TURNO TERMINATO: efficienza vera = (borse OK × TC) / minuti presenza linea, dove i minuti
   //    presenza linea arrivano dal foglio "Presenze Linea" sincronizzato in D1 (prop minutiPresenzaLinea).
   const efficienzaPct = (()=>{
-    const borseTot = borseOggi||0;
+    const borseTot = (borseOggi||0) + (borseCoffre||0);
     // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
     // tempo prodotto, sommato alla quota borse, sullo stesso tempo disponibile.
     if(_isRMALinea){
@@ -1737,7 +1737,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(!sk || isSkuSpeciale(sk) || _skuVisti.has(sk)) continue;
       _skuVisti.add(sk);
       const _q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_lNome+"_"+sk] || {};
-      minProd += (Number(_q.ok)||0) * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
+      minProd += ((Number(_q.ok)||0) + (Number(_q.coffre)||0)) * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
     }
     // Fallback robusto: se le borse per-articolo non risolvono (chiavi qualità mancanti) ma ci sono
     // borse totali, uso borse × TC rappresentativo (esatto per linea a un solo articolo).
@@ -1759,6 +1759,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const _minFormaz = (turnoTerminato && minutiFormazioneServer>0) ? minutiFormazioneServer : minutiFormazioneLinea();
   const ko=borseKO||0;
   const migl=borseMigl||0;
+  const coffre=borseCoffre||0;
   const pctQualita = borse>0 ? Math.round((borse-ko-migl)/borse*100) : null;
   const colQualita = pctQualita===null?"#94a3b8":pctQualita>=95?"#22c55e":pctQualita>=85?"#f59e0b":"#ef4444";
   const colBorse=ob60&&borse>=ob60?"#22c55e":ob60&&borse>=ob60*0.8?"#f59e0b":"#ef4444";
@@ -1850,6 +1851,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 <div style={{fontSize:compatto?"clamp(11px,1.5vw,16px)":"clamp(16px,2.5vw,28px)",color:"rgba(239,68,68,0.85)",fontWeight:800,letterSpacing:1,lineHeight:1,textAlign:"center"}}>KO</div>
                 <div style={{fontSize:compatto?"clamp(18px,2.6vw,30px)":"clamp(36px,6vw,72px)",fontWeight:900,color:"#ef4444",lineHeight:1,textAlign:"center"}}>{ko}</div>
               </div>
+            </div>
+            <div style={{width:2,background:"#e2e8f0",height:"60%",borderRadius:1}}/>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",border:"2px solid #ff37ff",borderRadius:12,padding:compatto?"4px 12px":"8px 20px",background:"rgba(255,55,255,0.06)",boxShadow:"0 0 12px 2px rgba(255,55,255,0.3)"}}>
+              <div style={{fontSize:compatto?"clamp(11px,1.5vw,16px)":"clamp(16px,2.5vw,28px)",color:"#ff37ff",fontWeight:800,letterSpacing:1,lineHeight:1,textAlign:"center"}}>COFFRE</div>
+              <div style={{fontSize:compatto?"clamp(18px,2.6vw,30px)":"clamp(36px,6vw,72px)",fontWeight:900,color:"#ff37ff",lineHeight:1,textAlign:"center",marginTop:compatto?2:6}}>{coffre}</div>
             </div>
             <div style={{width:2,background:"#e2e8f0",height:"60%",borderRadius:1}}/>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
@@ -2236,6 +2242,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const _k1 = lineaId+"_"+skuItem;
               const _k2 = _lNome+"_"+skuItem;
               const qData = qualitaPerSku[_k1]||qualitaPerSku[_k2]||{};
+              // Borse buone dell'articolo = OK + COFFRE (entrambe contano come prodotto buono per obiettivo/efficienza).
+              const borseBuoneItem = (Number(qData.ok)||0)+(Number(qData.coffre)||0);
               if(Object.keys(qualitaPerSku).length>0) console.log("[QDATA] cerca:", _k1, "trovato:", !!qualitaPerSku[_k1], "chiavi disp:", Object.keys(qualitaPerSku).slice(0,3));
               // Numero operatori (quota equa) su questo SKU — serve sia in vista normale (header
               // viola) sia in vista compatta. A turno terminato includiamo anche le sessioni chiuse
@@ -2267,7 +2275,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // — titolo sku, badge giorni rampa (se in rampa), n° operatori,
               //   obiettivo grande al centro, KO/MGL piccoli sotto.
               if(compatto){
-                const borseItem = qData.ok||0;
+                const borseItem = borseBuoneItem;
                 return (
                   <div key={skuItem} style={{flex:"1 1 45%",minWidth:0,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:3,textAlign:"center"}}>
                     {/* Titolo SKU + numero operatori sulla stessa riga */}
@@ -2295,6 +2303,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
                       <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ef4444"}}>KO {qData.ko||0}</span>
                       <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#f59e0b"}}>MGL {qData.migl||0}</span>
+                      <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ff37ff"}}>COFFRE {qData.coffre||0}</span>
                     </div>
                   </div>
                 );
@@ -2343,7 +2352,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
 
                     {/* Obiettivo Giornaliero: in vista normale titolo allineato in alto + valore al centro */}
                     {(()=>{
-                      const borseItem = qData.ok||0;
+                      const borseItem = borseBuoneItem;
                       if(compatto){
                         return (
                         <div style={{flex:1,background:"#ffffff",border:"2px solid "+(inRampaItem?"#ff6937":"#7c3aed"),boxShadow:"0 0 10px 3px "+(inRampaItem?"#ff693744":"#7c3aed44"),borderRadius:10,padding:cardPad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
@@ -2362,6 +2371,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                             <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#ef4444",lineHeight:1}}>KO {qData.ko||0}</span>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#f59e0b",lineHeight:1}}>MIGL {qData.migl||0}</span>
+                              <span style={{fontSize:fSep,fontWeight:700,color:"#ff37ff",lineHeight:1}}>COFFRE {qData.coffre||0}</span>
                             </div>
                           </div>
                         </div>
@@ -2400,24 +2410,24 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <span style={{fontSize:fBig,fontWeight:900,color:"#ffff00",lineHeight:1,textShadow:"0 0 8px #ffff00,-1px -1px 0 #7c3aed,1px 1px 0 #7c3aed"}}>{inTurnoItem?borseAProssimaItem:(turnoTerminato?(obFinaleItemRampa||0):"\u2014")}</span>
-                          {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
-                          {!inTurnoItem&&turnoTerminato&&(obFinaleItemRampa||0)>0&&<div style={{width:18,height:18,borderRadius:"50%",background:qData.ok>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${qData.ok>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161"}`}}/>}
+                          {inTurnoItem&&<div style={{width:18,height:18,borderRadius:"50%",background:borseBuoneItem>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${borseBuoneItem>=(borseAProssimaItem||0)?"#61ffa9":"#ff6161"}`}}/>}
+                          {!inTurnoItem&&turnoTerminato&&(obFinaleItemRampa||0)>0&&<div style={{width:18,height:18,borderRadius:"50%",background:borseBuoneItem>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161",flexShrink:0,boxShadow:`0 0 8px 3px ${borseBuoneItem>=(obFinaleItemRampa||0)?"#61ffa9":"#ff6161"}`}}/>}
                         </div>
-                        {inTurnoItem&&(qData.ok||0)!==(borseAProssimaItem||0)&&(
+                        {inTurnoItem&&borseBuoneItem!==(borseAProssimaItem||0)&&(
                           <div style={{display:"flex",alignItems:"center",gap:3}}>
-                            {(qData.ok||0)<(borseAProssimaItem||0)?(
+                            {borseBuoneItem<(borseAProssimaItem||0)?(
                               <>
                                 <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
                                   <path d="M8 3L8 13M8 13L3 8M8 13L13 8" stroke="#ff6161" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <span style={{fontSize:fMid,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-(qData.ok||0)}</span>
+                                <span style={{fontSize:fMid,fontWeight:900,color:"#ff6161",lineHeight:1}}>{(borseAProssimaItem||0)-borseBuoneItem}</span>
                               </>
                             ):(
                               <>
                                 <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
                                   <path d="M8 13L8 3M8 3L3 8M8 3L13 8" stroke="#61ffa9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <span style={{fontSize:fMid,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{(qData.ok||0)-(borseAProssimaItem||0)}</span>
+                                <span style={{fontSize:fMid,fontWeight:900,color:"#61ffa9",lineHeight:1}}>{borseBuoneItem-(borseAProssimaItem||0)}</span>
                               </>
                             )}
                           </div>
@@ -2814,9 +2824,9 @@ function _qualitaArticoliLinea(qualitaPerSku, lineaId){
     .map(k=>({sku:k.slice((lineaId+"_").length), q:qualitaPerSku[k]||{}}))
     .filter(x=>x.sku && !isSkuSpeciale(x.sku))
     .sort((a,b)=>(b.q.ok||0)-(a.q.ok||0));
-  let ok=0,ko=0,migl=0;
-  arts.forEach(({q})=>{ ok+=(Number(q.ok)||0); ko+=(Number(q.ko)||0); migl+=(Number(q.migl)||0); });
-  return {arts, ok, ko, migl};
+  let ok=0,ko=0,migl=0,coffre=0;
+  arts.forEach(({q})=>{ ok+=(Number(q.ok)||0); ko+=(Number(q.ko)||0); migl+=(Number(q.migl)||0); coffre+=(Number(q.coffre)||0); });
+  return {arts, ok, ko, migl, coffre};
 }
 // Card minimale Prototipia in "Entra in Produzione": per ogni articolo solo borse prodotte (OK)
 // + riquadro KO/MIGL. Nessun obiettivo/real-time/efficienza (su questa linea non c'è obiettivo).
@@ -2846,6 +2856,8 @@ function CardProtoQualita({ linea, qualitaPerSku, skuList, compatto=false }){
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M8 15 H16" strokeLinecap="round"/><circle cx="9" cy="10" r="1.1" fill="#f59e0b" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="#f59e0b" stroke="none"/></svg>
                 {q.migl||0}
               </span>
+              <span style={{width:1,height:24,background:"#e5e7eb"}}/>
+              <span style={{display:"inline-flex",alignItems:"center",gap:7,fontSize:compatto?20:22,fontWeight:800,color:"#ff37ff"}}>COFFRE {q.coffre||0}</span>
             </div>
             <div style={{fontSize:compatto?60:84,fontWeight:900,color:"#111827",lineHeight:1}}>{q.ok||0}</div>
           </div>
@@ -2952,6 +2964,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                     <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {_isProto?_aggProto.ko:(d.borseKO||0)}</span>
                     <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {_isProto?_aggProto.migl:(d.borseMigl||0)}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#ff37ff",whiteSpace:"nowrap"}}>COFFRE {_isProto?_aggProto.coffre:(d.borseCoffre||0)}</span>
                   </div>
                 </div>
                 {/* compatto=true riduce font e nasconde card gialla; il contenuto è clippato all'altezza della card */}
@@ -2966,6 +2979,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     borseOggi={d.borseOggi||0}
                     borseKO={d.borseKO||0}
                     borseMigl={d.borseMigl||0}
+                    borseCoffre={d.borseCoffre||0}
                     maxOpOggi={d.maxOpOggi||0}
                     minutiPresenzaLinea={d.minutiPresenzaLinea||0}
                     minutiFormazioneServer={d.minutiFormazioneLinea||0}
@@ -3003,6 +3017,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   borseOggi={d.borseOggi||0}
                   borseKO={d.borseKO||0}
                   borseMigl={d.borseMigl||0}
+                  borseCoffre={d.borseCoffre||0}
                   maxOpOggi={d.maxOpOggi||0}
                   minutiPresenzaLinea={d.minutiPresenzaLinea||0}
                   minutiFormazioneServer={d.minutiFormazioneLinea||0}
@@ -3745,10 +3760,11 @@ function GraficoSettimaneQ({ dati }){
     {key:"ok",label:"OK",colore:"#06e08a"},
     {key:"ko",label:"KO",colore:"#ff2d2d"},
     {key:"mg",label:"Migliorabili",colore:"#ffb31a"},
+    {key:"coffre",label:"COFFRE",colore:"#ff37ff"},
   ];
   const settNum=(ts)=>{ const d=new Date(ts); const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const dayNum=(date.getUTCDay()+6)%7; date.setUTCDate(date.getUTCDate()-dayNum+3); const ft=new Date(Date.UTC(date.getUTCFullYear(),0,4)); const ftd=(ft.getUTCDay()+6)%7; ft.setUTCDate(ft.getUTCDate()-ftd+3); return 1+Math.round((date-ft)/(7*86400000)); };
   if(n===0) return <div style={{padding:30,textAlign:"center",color:"#94a3b8",fontSize:14}}>Nessun dato nel periodo selezionato</div>;
-  const rawMax=Math.max(1, ...dati.map(d=>Math.max(d.ok||0,d.ko||0,d.mg||0)));
+  const rawMax=Math.max(1, ...dati.map(d=>Math.max(d.ok||0,d.ko||0,d.mg||0,d.coffre||0)));
   const rough=rawMax/5, mag=Math.pow(10,Math.floor(Math.log10(rough))), norm=rough/mag;
   const stepRaw=(norm<1.5?1:norm<3?2:norm<7?5:10)*mag;
   const step=Math.max(1, Math.round(stepRaw));
@@ -3898,8 +3914,8 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     if(brandSel!=="__tutti__"){ const b = skuBrand[String(q.sku||"").toUpperCase()]||""; if(b!==brandSel) return false; }
     return true;
   });
-  let tOk=0,tKo=0,tMg=0;
-  recs.forEach(q=>{ tOk+=Number(q.ok)||0; tKo+=Number(q.ko)||0; tMg+=Number(q.migliorabili)||0; });
+  let tOk=0,tKo=0,tMg=0,tCoffre=0;
+  recs.forEach(q=>{ tOk+=Number(q.ok)||0; tKo+=Number(q.ko)||0; tMg+=Number(q.migliorabili)||0; tCoffre+=Number(q.coffre)||0; });
   // Difetti aggregati per SORGENTE (KO/Mgl), con gli SKU coinvolti. Stesso parsing di aggregaDifetti: "Difetto (N pz)".
   const _mappaDif = {}; // fonte|||nome -> {label, fonte, count, skus:Set}
   const _accDif = (str, sku, fonte) => {
@@ -3921,6 +3937,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     {label:"OK", valore:tOk, colore:"#06e08a"},
     {label:"KO", valore:tKo, colore:"#ff2d2d"},
     {label:"Migliorabili", valore:tMg, colore:"#ffb31a"},
+    {label:"COFFRE", valore:tCoffre, colore:"#ff37ff"},
   ];
   const vociD = difetti.map(d=>({ label:d.label, valore:d.count, colore:d.fonte==="KO"?"#ff2d2d":"#ffb31a", fonte:d.fonte, nSku:d.skus.size, skus:Array.from(d.skus).sort() }));
   // Aggregazione per settimana: chiave = lunedì della settimana (mezzanotte locale), somma OK/KO/Mgl.
@@ -3929,10 +3946,11 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     const t=_giornoTs(q.data); if(t==null) return;
     const d=new Date(t); const g=(d.getDay()+6)%7; d.setHours(0,0,0,0); d.setDate(d.getDate()-g);
     const key=d.getTime();
-    if(!_mappaSett[key]) _mappaSett[key]={ts:key, ok:0, ko:0, mg:0};
+    if(!_mappaSett[key]) _mappaSett[key]={ts:key, ok:0, ko:0, mg:0, coffre:0};
     _mappaSett[key].ok += Number(q.ok)||0;
     _mappaSett[key].ko += Number(q.ko)||0;
     _mappaSett[key].mg += Number(q.migliorabili)||0;
+    _mappaSett[key].coffre += Number(q.coffre)||0;
   });
   const datiSett = Object.values(_mappaSett).sort((a,b)=>a.ts-b.ts);
   // Barra filtri: pannello effetto vetro trascinabile su TUTTA la pagina (position:fixed).
@@ -3988,7 +4006,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
           <div style={{fontSize:20,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5}}>Andamento Settimanale</div>
           <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-            {[["OK","#06e08a"],["KO","#ff2d2d"],["Migliorabili","#ffb31a"]].map(([l,c])=>(
+            {[["OK","#06e08a"],["KO","#ff2d2d"],["Migliorabili","#ffb31a"],["COFFRE","#ff37ff"]].map(([l,c])=>(
               <span key={l} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:"#475569"}}>
                 <span style={{width:16,height:4,borderRadius:2,background:c,display:"inline-block"}}/>{l}
               </span>
@@ -4005,7 +4023,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   const [qualita, setQualita] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [editQ, setEditQ] = React.useState(null); // chiave riga in modifica
-  const [tmpQ, setTmpQ] = React.useState({ok:"",ko:"",migl:""});
+  const [tmpQ, setTmpQ] = React.useState({ok:"",ko:"",migl:"",coffre:""});
   const [salvandoQ, setSalvandoQ] = React.useState(false);
   const [vistaQ, setVistaQ] = React.useState("tabella"); // "tabella" | "report"
   // Filtro data + storico (vista Tabella): oggi (live, ogni 60s) + giorni archiviati (storico_qualita).
@@ -4049,7 +4067,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     // Passa la data grezza (es. "22/05/2026" o ISO): il worker normalizza entrambi i formati.
     const giorno = (r.data||"").toString().split(" ")[0].split(",")[0].trim();
     try {
-      await fetch(nexusUrl("modificaQualita",{linea:r.linea,sku:r.sku,data:giorno,ok:tmpQ.ok||0,ko:tmpQ.ko||0,migliorabili:tmpQ.migl||0}),{mode:"cors"});
+      await fetch(nexusUrl("modificaQualita",{linea:r.linea,sku:r.sku,data:giorno,ok:tmpQ.ok||0,ko:tmpQ.ko||0,migliorabili:tmpQ.migl||0,coffre:tmpQ.coffre||0}),{mode:"cors"});
     } catch(e) {}
     setEditQ(null); setSalvandoQ(false);
     setTimeout(caricaQ, 1000);
@@ -4069,10 +4087,11 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     // Usa solo la data (senza ora) come chiave
     const dataGiorno = (q.data||"").split(" ")[0].split(",")[0].trim();
     const k = dataGiorno + "|" + q.linea + "|" + q.sku;
-    if (!aggMap[k]) aggMap[k] = { data: dataGiorno, linea: q.linea, sku: q.sku, ok: 0, ko: 0, migl: 0, noteKo: "", noteMigl: "" };
+    if (!aggMap[k]) aggMap[k] = { data: dataGiorno, linea: q.linea, sku: q.sku, ok: 0, ko: 0, migl: 0, coffre: 0, noteKo: "", noteMigl: "" };
     aggMap[k].ok   += Number(q.ok)||0;
     aggMap[k].ko   += Number(q.ko)||0;
     aggMap[k].migl += Number(q.migliorabili)||0;
+    aggMap[k].coffre += Number(q.coffre)||0;
     if (q.noteKo)   aggMap[k].noteKo   = q.noteKo;
     if (q.noteMigl) aggMap[k].noteMigl = q.noteMigl;
   }
@@ -4108,7 +4127,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table className="tabQ" style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
-          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Borse OK","#10b981"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
+          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Borse OK","#10b981"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["COFFRE","#ff37ff"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
             <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
           ))}</tr>
         </thead>
@@ -4138,6 +4157,9 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#f59e0b",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>
                   {inEdit ? <input type="number" value={tmpQ.migl} onChange={e=>setTmpQ(p=>({...p,migl:e.target.value}))} style={{width:64,padding:"4px",fontSize:15,fontWeight:800,textAlign:"center",border:"2px solid #f59e0b",borderRadius:6,fontFamily:"'Montserrat',sans-serif",color:"#f59e0b"}}/> : (r.migl||"-")}
                 </td>
+                <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ff37ff",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>
+                  {inEdit ? <input type="number" value={tmpQ.coffre} onChange={e=>setTmpQ(p=>({...p,coffre:e.target.value}))} style={{width:64,padding:"4px",fontSize:15,fontWeight:800,textAlign:"center",border:"2px solid #ff37ff",borderRadius:6,fontFamily:"'Montserrat',sans-serif",color:"#ff37ff"}}/> : (r.coffre||"-")}
+                </td>
                 <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteKo||"-"}</td>
                 <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteMigl||"-"}</td>
                 <td style={{padding:"10px 14px",textAlign:"center",whiteSpace:"nowrap"}}>
@@ -4147,7 +4169,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                       <button disabled={salvandoQ} onClick={()=>setEditQ(null)} style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"5px 10px",fontSize:13,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     </div>
                   ) : (_giornoTsQ(r.data)===_giornoTsQ(_oggiISOq)) ? (
-                    <button onClick={()=>{ setEditQ(rowKey); setTmpQ({ok:String(r.ok||0),ko:String(r.ko||0),migl:String(r.migl||0)}); }} title="Modifica valori"
+                    <button onClick={()=>{ setEditQ(rowKey); setTmpQ({ok:String(r.ok||0),ko:String(r.ko||0),migl:String(r.migl||0),coffre:String(r.coffre||0)}); }} title="Modifica valori"
                       style={{background:"#fff",border:"1.5px solid #ff6937",borderRadius:6,padding:"5px 9px",cursor:"pointer",color:"#ff6937"}}><IconaMatita size={14}/></button>
                   ) : (
                     <span style={{color:"#cbd5e1",fontSize:13,fontFamily:"'Montserrat',sans-serif"}} title="Solo i dati di oggi sono modificabili">—</span>
@@ -4282,6 +4304,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [ok, setOk]         = useState("");
   const [ko, setKo]         = useState("");
   const [migl, setMigl]     = useState("");
+  const [coffre, setCoffre] = useState("");
   const [noteKo, setNoteKo]     = useState([{p:"",q:"",cerca:""}]);
   const [noteMigl, setNoteMigl] = useState([{p:"",q:"",cerca:""}]);
   const [sku, setSku]       = useState("");
@@ -4374,14 +4397,16 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     const _okVal = Number(ok)||0;
     const _koVal2 = Number(ko)||0;
     const _miVal2 = Number(migl)||0;
+    const _coffreVal = Number(coffre)||0;
     if(_okVal < 0){ setErr("❌ Borse Prodotte non può essere negativo."); return; }
     if(_koVal2 < 0){ setErr("❌ Borse KO non può essere negativo."); return; }
     if(_miVal2 < 0){ setErr("❌ Migliorabili non può essere negativo."); return; }
+    if(_coffreVal < 0){ setErr("❌ COFFRE non può essere negativo."); return; }
     // Rimosso blocco KO > Prodotte — si può salvare comunque
     // Mostra modal di conferma
     setModalConfermaQ({
       titolo: "Conferma salvataggio",
-      messaggio: "SKU: "+sku+"\nBorse Prodotte: "+_okVal+" | KO: "+_koVal2+" | Migliorabili: "+_miVal2,
+      messaggio: "SKU: "+sku+"\nBorse Prodotte: "+_okVal+" | KO: "+_koVal2+" | Migliorabili: "+_miVal2+" | COFFRE: "+_coffreVal,
       onOk: async () => {
         setModalConfermaQ(null);
         setErr("");
@@ -4390,9 +4415,9 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     setMsg("⏳ Salvataggio in corso...");
     try {
       const qId = "q_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
-      await fetchConRetry(nexusUrl("qualita",{linea:lineaEffettiva||"",sku,ok:ok||0,ko:ko||0,migliorabili:migl||0,noteKo:nKoStr,noteMigl:nMiglStr,obReale:obRealeQ||"",obTeorico:obTeoricoQ||"",qid:qId}), 5, 1000);
+      await fetchConRetry(nexusUrl("qualita",{linea:lineaEffettiva||"",sku,ok:ok||0,ko:ko||0,migliorabili:migl||0,coffre:coffre||0,noteKo:nKoStr,noteMigl:nMiglStr,obReale:obRealeQ||"",obTeorico:obTeoricoQ||"",qid:qId}), 5, 1000);
       setMsg("✓ Salvato!");
-      setOk(""); setKo(""); setMigl(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
+      setOk(""); setKo(""); setMigl(""); setCoffre(""); setNoteKo([{p:"",q:"",cerca:""}]); setNoteMigl([{p:"",q:"",cerca:""}]);
       // Ricarica da D1: è l'UNICA fonte di verità per i totali (evita doppi conteggi).
       // L'INSERT su D1 è già completato (await sopra), quindi la ricarica è subito affidabile.
       caricaQualitaOggi();
@@ -4600,6 +4625,10 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
             <div style={{flex:1}}>
               <label style={{...S.lbl,color:"#f59e0b",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>Migliorabili</label>
               <NumViola min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(245,158,11,0.08)",borderColor:"#f59e0b",color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
+            </div>
+            <div style={{flex:1}}>
+              <label style={{...S.lbl,color:"#ff37ff",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>COFFRE</label>
+              <NumViola min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(255,55,255,0.08)",borderColor:"#ff37ff",color:"#ff37ff"}} value={coffre} onChange={e=>setCoffre(e.target.value)} placeholder="0"/>
             </div>
           </div>
           <div style={{marginBottom:10}}>
@@ -6398,10 +6427,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             const skuQ = q.sku||"";
             const lineaQ = q.linea||"";
             const k = lineaQ+"_"+skuQ;
-            if(!map[k]) map[k]={ok:0,ko:0,migl:0,obReale:0,obTeorico:0,noteKo:[],noteMigl:[]};
+            if(!map[k]) map[k]={ok:0,ko:0,migl:0,coffre:0,obReale:0,obTeorico:0,noteKo:[],noteMigl:[]};
             map[k].ok += Number(q.ok)||0;
             map[k].ko += Number(q.ko)||0;
             map[k].migl += Number(q.migliorabili)||0;
+            map[k].coffre += Number(q.coffre)||0;
             // Accumula le note (possono esserci più registrazioni nel giorno per lo stesso SKU)
             if(q.noteKo && String(q.noteKo).trim()) map[k].noteKo.push(String(q.noteKo).trim());
             if(q.noteMigl && String(q.noteMigl).trim()) map[k].noteMigl.push(String(q.noteMigl).trim());
