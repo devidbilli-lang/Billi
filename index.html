@@ -4354,7 +4354,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const salva = async () => {
     if(isAdminQ&&!lineaSelQ){ setErr("Seleziona una linea."); return; }
     if(!sku){ setErr("Seleziona uno SKU."); return; }
-    if(ok===""&&ko===""&&migl===""){ setErr("Inserisci almeno un valore."); return; }
+    if(ok===""&&ko===""&&migl===""&&coffre===""){ setErr("Inserisci almeno un valore."); return; }
     const _dv=(difettiList||[]).map(d=>d.difetto);
     const _koVal = Number(ko)||0;
     const _miVal = Number(migl)||0;
