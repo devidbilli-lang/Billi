@@ -7653,8 +7653,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const _oggiStrLoc = new Date().toLocaleDateString('it-IT');
                 const _oggiOpLoc = _orariOggiLoc[s.matricola];
                 // Orario fine previsto: odierno se valido per oggi, altrimenti standard
-                const fineOggiValido = (_oggiOpLoc && _oggiOpLoc.data===_oggiStrLoc && _oggiOpLoc.fineOggi) ? _oggiOpLoc.fineOggi : null;
-                const inizioOggiValido = (_oggiOpLoc && _oggiOpLoc.data===_oggiStrLoc && _oggiOpLoc.inizioOggi) ? _oggiOpLoc.inizioOggi : null;
+                // Solo-oggi: prima la memoria locale (feedback immediato se l'hai impostato qui),
+                // poi il dato dal SERVER (orari_operatori, gia' filtrato per oggi dal worker), cosi'
+                // funziona anche su un tablet dove non l'hai impostato tu. Prima leggeva SOLO la
+                // localStorage: su altri dispositivi la riga diventava gialla e l'inizio ripiegava su 06:00.
+                const _fOggiLoc = (_oggiOpLoc && _oggiOpLoc.data===_oggiStrLoc && _oggiOpLoc.fineOggi) ? _oggiOpLoc.fineOggi : null;
+                const _iOggiLoc = (_oggiOpLoc && _oggiOpLoc.data===_oggiStrLoc && _oggiOpLoc.inizioOggi) ? _oggiOpLoc.inizioOggi : null;
+                const fineOggiValido = _fOggiLoc || ((s.orarioFineOggiPian && s.orarioFineOggiPian.indexOf(":")>-1) ? s.orarioFineOggiPian : null);
+                const inizioOggiValido = _iOggiLoc || ((s.orarioInizioOggiPian && s.orarioInizioOggiPian.indexOf(":")>-1) ? s.orarioInizioOggiPian : null);
                 const orarioFinePers = _orariFineLoc[s.matricola];
                 const orarioInizioPers = _orariInizioLoc[s.matricola];
                 const finePrevista = fineOggiValido || orarioFinePers || "14:00";
