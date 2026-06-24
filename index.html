@@ -5301,6 +5301,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 // Leggi orari turno da localStorage
                 // Leggi orari da localStorage (già sincronizzati con D1 all'avvio)
                 const _orariTurno = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_turno')||'{}'); } catch(e){ return {}; } })();
+                const _orariFineT = (() => { try { return JSON.parse(localStorage.getItem('nexus_orari_fine_turno')||'{}'); } catch(e){ return {}; } })();
 
                 const oraAttuale = new Date();
                 // Orari odierni (solo per oggi) hanno precedenza sullo standard
@@ -5327,7 +5328,13 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     const nomeMatch = (x.nome||"").toUpperCase()===(s.nome||"").toUpperCase() && (x.cognome||"").toUpperCase()===(s.cognome||"").toUpperCase();
                     return nomeMatch && x.fine && x.fine!=="" && x.fine!==null && x.fine!=="null";
                   });
-                  if(diffMs > 10 * 60 * 1000 && !giaUscitaOggi) {
+                  // Turno STANDARD 06:00-14:00 (niente solo-oggi, niente personalizzazione): se lo registri
+                  // prima delle 6, NON pianificare alle 6 — registra subito all'ora reale (riga verde, in turno,
+                  // turno che parte dall'ora di registrazione). Gli orari diversi dallo standard restano pianificati.
+                  const _haSoloOggiReg = !!(oggiOp && oggiOp.data===_oggiStr && (oggiOp.inizioOggi || oggiOp.fineOggi));
+                  const _fineStdReg = _orariFineT[s.matricola] || "14:00";
+                  const _isStd0614 = !_haSoloOggiReg && orarioOp === "06:00" && _fineStdReg === "14:00";
+                  if(diffMs > 10 * 60 * 1000 && !giaUscitaOggi && !_isStd0614) {
                     // MODALITÀ 2° TURNO: salva PRIMA (e ASPETTA) l'orario (adesso → +8h) anche per i
                     // check-in PIANIFICATI. Il server li eseguirà con eseguiTickMinuto, che NON
                     // salva l'orario: senza questo, il turno verrebbe chiuso al default delle 14:00.
