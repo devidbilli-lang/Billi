@@ -1863,7 +1863,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             </div>
             <div style={{width:2,background:"#e2e8f0",height:"60%",borderRadius:1}}/>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",border:"2px solid #ff37ff",borderRadius:12,padding:compatto?"3px 8px":"5px 12px",background:"rgba(255,55,255,0.06)",boxShadow:"0 0 12px 2px rgba(255,55,255,0.3)"}}>
-              <div style={{fontSize:compatto?"clamp(10px,1.3vw,14px)":"clamp(11px,1.6vw,18px)",color:"#ff37ff",fontWeight:800,letterSpacing:0.5,lineHeight:1,textAlign:"center"}}>COFFRE</div>
+              <div style={{fontSize:compatto?"clamp(10px,1.3vw,14px)":"clamp(11px,1.6vw,18px)",color:"#ff37ff",fontWeight:800,letterSpacing:0.5,lineHeight:1,textAlign:"center"}}>BNC</div>
               <div style={{fontSize:compatto?"clamp(16px,2.2vw,26px)":"clamp(24px,3.6vw,44px)",fontWeight:900,color:"#ff37ff",lineHeight:1,textAlign:"center",marginTop:compatto?2:4}}>{coffre}</div>
             </div>
             <div style={{width:2,background:"#e2e8f0",height:"60%",borderRadius:1}}/>
@@ -2251,7 +2251,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const _k1 = lineaId+"_"+skuItem;
               const _k2 = _lNome+"_"+skuItem;
               const qData = qualitaPerSku[_k1]||qualitaPerSku[_k2]||{};
-              // Borse buone dell'articolo = OK + COFFRE (entrambe contano come prodotto buono per obiettivo/efficienza).
+              // Borse buone dell'articolo = OK + BNC (entrambe contano come prodotto buono per obiettivo/efficienza).
               const borseBuoneItem = (Number(qData.ok)||0)+(Number(qData.coffre)||0);
               if(Object.keys(qualitaPerSku).length>0) console.log("[QDATA] cerca:", _k1, "trovato:", !!qualitaPerSku[_k1], "chiavi disp:", Object.keys(qualitaPerSku).slice(0,3));
               // Numero operatori (quota equa) su questo SKU — serve sia in vista normale (header
@@ -2312,7 +2312,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
                       <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ef4444"}}>KO {qData.ko||0}</span>
                       <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#f59e0b"}}>MGL {qData.migl||0}</span>
-                      <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ff37ff"}}>COFFRE {qData.coffre||0}</span>
+                      <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ff37ff"}}>BNC {qData.coffre||0}</span>
                     </div>
                   </div>
                 );
@@ -2380,7 +2380,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                             <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#ef4444",lineHeight:1}}>KO {qData.ko||0}</span>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#f59e0b",lineHeight:1}}>MIGL {qData.migl||0}</span>
-                              <span style={{fontSize:fSep,fontWeight:700,color:"#ff37ff",lineHeight:1}}>COFFRE {qData.coffre||0}</span>
+                              <span style={{fontSize:fSep,fontWeight:700,color:"#ff37ff",lineHeight:1}}>BNC {qData.coffre||0}</span>
                             </div>
                           </div>
                         </div>
@@ -2876,7 +2876,7 @@ function CardProtoQualita({ linea, qualitaPerSku, skuList, compatto=false }){
                 {q.migl||0}
               </span>
               <span style={{width:1,height:24,background:"#e5e7eb"}}/>
-              <span style={{display:"inline-flex",alignItems:"center",gap:7,fontSize:compatto?20:22,fontWeight:800,color:"#ff37ff"}}>COFFRE {q.coffre||0}</span>
+              <span style={{display:"inline-flex",alignItems:"center",gap:7,fontSize:compatto?20:22,fontWeight:800,color:"#ff37ff"}}>BNC {q.coffre||0}</span>
             </div>
             <div style={{fontSize:compatto?60:84,fontWeight:900,color:"#111827",lineHeight:1}}>{q.ok||0}</div>
           </div>
@@ -2983,7 +2983,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                     <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {_isProto?_aggProto.ko:(d.borseKO||0)}</span>
                     <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {_isProto?_aggProto.migl:(d.borseMigl||0)}</span>
-                    <span style={{fontSize:11,fontWeight:800,color:"#ff37ff",whiteSpace:"nowrap"}}>COFFRE {_isProto?_aggProto.coffre:(d.borseCoffre||0)}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#ff37ff",whiteSpace:"nowrap"}}>BNC {_isProto?_aggProto.coffre:(d.borseCoffre||0)}</span>
                   </div>
                 </div>
                 {/* compatto=true riduce font e nasconde card gialla; il contenuto è clippato all'altezza della card */}
@@ -3779,7 +3779,7 @@ function GraficoSettimaneQ({ dati }){
     {key:"ok",label:"OK",colore:"#06e08a"},
     {key:"ko",label:"KO",colore:"#ff2d2d"},
     {key:"mg",label:"Migliorabili",colore:"#ffb31a"},
-    {key:"coffre",label:"COFFRE",colore:"#ff37ff"},
+    {key:"coffre",label:"BNC",colore:"#ff37ff"},
   ];
   const settNum=(ts)=>{ const d=new Date(ts); const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const dayNum=(date.getUTCDay()+6)%7; date.setUTCDate(date.getUTCDate()-dayNum+3); const ft=new Date(Date.UTC(date.getUTCFullYear(),0,4)); const ftd=(ft.getUTCDay()+6)%7; ft.setUTCDate(ft.getUTCDate()-ftd+3); return 1+Math.round((date-ft)/(7*86400000)); };
   if(n===0) return <div style={{padding:30,textAlign:"center",color:"#94a3b8",fontSize:14}}>Nessun dato nel periodo selezionato</div>;
@@ -3956,7 +3956,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     {label:"OK", valore:tOk, colore:"#06e08a"},
     {label:"KO", valore:tKo, colore:"#ff2d2d"},
     {label:"Migliorabili", valore:tMg, colore:"#ffb31a"},
-    {label:"COFFRE", valore:tCoffre, colore:"#ff37ff"},
+    {label:"BNC", valore:tCoffre, colore:"#ff37ff"},
   ];
   const vociD = difetti.map(d=>({ label:d.label, valore:d.count, colore:d.fonte==="KO"?"#ff2d2d":"#ffb31a", fonte:d.fonte, nSku:d.skus.size, skus:Array.from(d.skus).sort() }));
   // Aggregazione per settimana: chiave = lunedì della settimana (mezzanotte locale), somma OK/KO/Mgl.
@@ -4025,7 +4025,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
           <div style={{fontSize:20,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",letterSpacing:0.5}}>Andamento Settimanale</div>
           <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-            {[["OK","#06e08a"],["KO","#ff2d2d"],["Migliorabili","#ffb31a"],["COFFRE","#ff37ff"]].map(([l,c])=>(
+            {[["OK","#06e08a"],["KO","#ff2d2d"],["Migliorabili","#ffb31a"],["BNC","#ff37ff"]].map(([l,c])=>(
               <span key={l} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:"#475569"}}>
                 <span style={{width:16,height:4,borderRadius:2,background:c,display:"inline-block"}}/>{l}
               </span>
@@ -4146,7 +4146,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
       <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table className="tabQ" style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
-          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Borse OK","#10b981"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["COFFRE","#ff37ff"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
+          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Borse OK","#10b981"],["✕ KO","#ef4444"],["~ Migliorabili","#f59e0b"],["BNC","#ff37ff"],["📝 Note KO","#ef4444"],["📝 Note Migl.","#f59e0b"],["",""]].map(([h,c],hi,arr)=>(
             <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
           ))}</tr>
         </thead>
@@ -4420,12 +4420,12 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     if(_okVal < 0){ setErr("❌ Borse Prodotte non può essere negativo."); return; }
     if(_koVal2 < 0){ setErr("❌ Borse KO non può essere negativo."); return; }
     if(_miVal2 < 0){ setErr("❌ Migliorabili non può essere negativo."); return; }
-    if(_coffreVal < 0){ setErr("❌ COFFRE non può essere negativo."); return; }
+    if(_coffreVal < 0){ setErr("❌ BNC non può essere negativo."); return; }
     // Rimosso blocco KO > Prodotte — si può salvare comunque
     // Mostra modal di conferma
     setModalConfermaQ({
       titolo: "Conferma salvataggio",
-      messaggio: "SKU: "+sku+"\nBorse Prodotte: "+_okVal+" | KO: "+_koVal2+" | Migliorabili: "+_miVal2+" | COFFRE: "+_coffreVal,
+      messaggio: "SKU: "+sku+"\nBorse Prodotte: "+_okVal+" | KO: "+_koVal2+" | Migliorabili: "+_miVal2+" | BNC: "+_coffreVal,
       onOk: async () => {
         setModalConfermaQ(null);
         setErr("");
@@ -4646,7 +4646,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               <NumViola min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(245,158,11,0.08)",borderColor:"#f59e0b",color:"#f59e0b"}} value={migl} onChange={e=>setMigl(e.target.value)} placeholder="0"/>
             </div>
             <div style={{flex:1}}>
-              <label style={{...S.lbl,color:"#ff37ff",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>COFFRE</label>
+              <label style={{...S.lbl,color:"#ff37ff",textAlign:"center",display:"block",fontFamily:"'Montserrat',sans-serif",fontWeight:700}}>BNC</label>
               <NumViola min="0" style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:800,padding:"14px",background:"rgba(255,55,255,0.08)",borderColor:"#ff37ff",color:"#ff37ff"}} value={coffre} onChange={e=>setCoffre(e.target.value)} placeholder="0"/>
             </div>
           </div>
