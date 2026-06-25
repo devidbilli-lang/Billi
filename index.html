@@ -1060,36 +1060,45 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     const _iv=setInterval(_l,60000);
     return ()=>{_v=false;clearInterval(_iv);};
   },[lineaId]);
-    // Checkout automatico quando il turno finisce
-  const [turnoChiuso, setTurnoChiuso] = React.useState(false);
+    // Checkout automatico quando il turno finisce.
+  // Ogni operatore viene chiuso alla SUA fine: se ha un orario solo-oggi fine usa quello (es. 14:00),
+  // altrimenti la fine di linea (primo check-in + 8h + straordinario). Così chi inizia alle 05:00 con
+  // fine solo-oggi 14:00 chiude alle 14:00 e non a check-in+8 = 13:00 (prima il solo-oggi fine era ignorato qui).
+  const _opChiusiRef = React.useRef(new Set());
   React.useEffect(()=>{
-    if(turnoChiuso) return;
     if(!_primoCheckinTs) return;
     // Taglio DG in 2° turno (o stato non ancora noto = null): non chiudo qui, ci pensa il cron.
     if(String(lineaId||"").toUpperCase().includes("TAGLIO DG") && _secTurnoAttivo!==false) return;
     const secOraAttuale = new Date().getHours()*3600+new Date().getMinutes()*60+new Date().getSeconds();
-    if(secOraAttuale < secFineTurnoAssoluto) return;
-    // Turno scaduto → chiudi tutti gli operatori attivi
     const sessAttiveLinea = sessioni.filter(s=>
       s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")
     );
     if(sessAttiveLinea.length===0) return;
-    setTurnoChiuso(true);
+    // Fine per-operatore in secondi-del-giorno: orario solo-oggi fine se presente, altrimenti fine di linea (invariato).
+    const _fineSecOp = (s)=>{
+      const fo = s.orarioFineOggiPian;
+      if(fo && typeof fo==="string" && fo.indexOf(":")>-1){
+        const _p = fo.split(":").map(Number);
+        return (_p[0]||0)*3600 + (_p[1]||0)*60;
+      }
+      return secFineTurnoAssoluto;
+    };
+    const daChiudere = sessAttiveLinea.filter(s=>{
+      const sid = s.id||s.sessionId||"";
+      return sid && !_opChiusiRef.current.has(sid) && secOraAttuale >= _fineSecOp(s);
+    });
+    if(daChiudere.length===0) return;
+    daChiudere.forEach(s=> _opChiusiRef.current.add(s.id||s.sessionId||""));
     (async()=>{
       const checkoutOp = async(s)=>{
         const url = nexusUrl("evento",{sessionId:s.id||s.sessionId||"",matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""});
         for(let i=0;i<3;i++){
-          try{ await fetchConRetry(url,5,1000); return {ok:true}; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,2000*(i+1))); }
+          try{ await fetchConRetry(url,5,1000); return; }catch(e){ if(i<2) await new Promise(r=>setTimeout(r,2000*(i+1))); }
         }
-        return {ok:false,s};
       };
-      const results = await Promise.all(sessAttiveLinea.map(s=>checkoutOp(s)));
-      const falliti = results.filter(r=>!r.ok);
-      if(falliti.length>0){
-        for(const {s} of falliti){ await checkoutOp(s); }
-      }
+      await Promise.all(daChiudere.map(s=>checkoutOp(s)));
     })();
-  },[tick, turnoChiuso, secFineTurnoAssoluto, _primoCheckinTs, _secTurnoAttivo]);
+  },[tick, secFineTurnoAssoluto, _primoCheckinTs, _secTurnoAttivo]);
   // Calcola primo check-in reale della linea
   const _primoCheckinTs = (()=>{
     const ts = sessioni
