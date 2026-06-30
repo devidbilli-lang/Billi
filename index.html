@@ -1074,14 +1074,20 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")
     );
     if(sessAttiveLinea.length===0) return;
-    // Fine per-operatore in secondi-del-giorno: orario solo-oggi fine se presente, altrimenti fine di linea (invariato).
+    // Fine per-operatore in secondi-del-giorno:
+    //  1) orario solo-oggi fine se presente (precedenza assoluta, senza straordinario);
+    //  2) altrimenti la fine STANDARD del SINGOLO operatore (default 14:00) + straordinario di linea.
+    // Prima si ripiegava sulla fine di LINEA (primo check-in + 8h): se un collega entrava alle 05:00,
+    // chi faceva l'orario normale 06–14 veniva chiuso alle 13:00. Ora ognuno chiude alla SUA fine.
     const _fineSecOp = (s)=>{
       const fo = s.orarioFineOggiPian;
       if(fo && typeof fo==="string" && fo.indexOf(":")>-1){
         const _p = fo.split(":").map(Number);
         return (_p[0]||0)*3600 + (_p[1]||0)*60;
       }
-      return secFineTurnoAssoluto;
+      const _fpHM = (s.orarioFinePian && typeof s.orarioFinePian==="string" && s.orarioFinePian.indexOf(":")>-1) ? s.orarioFinePian : "14:00";
+      const _fp = _fpHM.split(":").map(Number);
+      return (_fp[0]||0)*3600 + (_fp[1]||0)*60 + (oreExtra||0)*3600;
     };
     const daChiudere = sessAttiveLinea.filter(s=>{
       const sid = s.id||s.sessionId||"";
