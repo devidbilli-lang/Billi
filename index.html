@@ -4146,7 +4146,14 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
           {righe.map((r,i)=>{
             const lObj = linee.find(l=>l.id===r.linea)||{colore:"#94a3b8"};
             const skuObj = skuList.find(s=>s&&s.sku===r.sku);
-            const dataFmt = (()=>{ try { const d=new Date(r.data); if(!isNaN(d)) return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); } catch(e){} return r.data; })();
+            // r.data è GIÀ in formato dd/MM/yyyy (scritta così da fmtData nel worker): nessun bisogno
+            // di ripassarla in un Date. Farlo era il bug: new Date("01/07/2026") viene letta da JS
+            // come mese=01 giorno=07 (convenzione USA, sempre, a prescindere dal locale) = 7 gennaio,
+            // non 1 luglio. Il giorno dopo veniva ri-formattato in italiano -> "07/01/2026", invertita.
+            // Il problema si vedeva SOLO quando giorno e mese erano entrambi ≤12 (come oggi 01/07):
+            // se il giorno è >12 (es. "30/06") il mese=30 non esiste, new Date fallisce silenziosamente
+            // (Invalid Date) e il vecchio codice ripiegava sulla stringa originale, corretta per caso.
+            const dataFmt = r.data;
             return (
               <tr key={i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
                 <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{dataFmt}</td>
