@@ -49,7 +49,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7xHgCQ-chyXOH
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -5590,10 +5590,13 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   const [note,setNote] = useState("");
   const [righe,setRighe] = useState([{articolo:"", qta:""}]);   // più articoli+qtà nello stesso blocco
   const [openSug,setOpenSug] = useState(-1);                     // indice riga con suggerimenti aperti
-  // Righe "depennate" solo VISIVAMENTE (spunta accanto al nome linea nei 4 blocchi). Stato locale:
-  // non tocca D1 né il salvataggio, serve solo a barrare la riga per tenere il segno di cosa è fatto.
-  const [depennate,setDepennate] = useState(()=>new Set());
-  const toggleDepenna = (id)=> setDepennate(prev=>{ const n=new Set(prev); if(n.has(id)) n.delete(id); else n.add(id); return n; });
+  // Righe "depennate": segno visivo (barra la riga) PERSISTENTE su D1 (colonna tt_blocchi.depennato),
+  // quindi resta dopo il refresh ed è condiviso tra i tablet. Si azzera col reset notturno.
+  const toggleDepenna = async (id, nuovo)=>{
+    // Aggiornamento ottimistico immediato sulla lista live, poi salva su D1.
+    setLista(l=>l.map(x=>x.id===id?{...x,depennato:nuovo?1:0}:x));
+    try{ await fetch(nexusUrl("depennaTTBlocco",{id, depennato:nuovo?"1":"0"})); }catch(e){}
+  };
   const [fabDrag,setFabDrag] = useState(null);                   // {x,y} offset pulsante flottante
   const fabDragRef = React.useRef(null);
 
@@ -5718,13 +5721,13 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
                 {righe.length===0
                   ? <tr><td colSpan={5} style={{color:"#94a3b8",fontStyle:"italic",padding:18,fontSize:13,textAlign:"center"}}>Nessuna attività in questo blocco</td></tr>
                   : righe.map(a=>{
-                    const _dep = depennate.has(a.id);
-                    const _stileRiga = _dep ? {textDecoration:"line-through", opacity:0.45} : {};
+                    const _dep = !!(+a.depennato);
+                    const _stileRiga = _dep ? {textDecoration:"line-through", background:"#dcfce7", color:"#15803d"} : {};
                     return (
                     <tr key={a.id} style={_stileRiga}>
                       <td style={_td}>
                         <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}>
-                          <input type="checkbox" checked={_dep} onChange={()=>toggleDepenna(a.id)} title={_dep?"Riattiva riga":"Depenna riga"} style={{width:17,height:17,cursor:"pointer",accentColor:"#7c3aed",flexShrink:0}}/>
+                          <input type="checkbox" checked={_dep} onChange={()=>toggleDepenna(a.id, !_dep)} title={_dep?"Riattiva riga":"Depenna riga"} style={{width:17,height:17,cursor:"pointer",accentColor:"#7c3aed",flexShrink:0}}/>
                           <span>{a.reparto||"—"}</span>
                         </span>
                       </td>
