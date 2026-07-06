@@ -5590,6 +5590,10 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
   const [note,setNote] = useState("");
   const [righe,setRighe] = useState([{articolo:"", qta:""}]);   // più articoli+qtà nello stesso blocco
   const [openSug,setOpenSug] = useState(-1);                     // indice riga con suggerimenti aperti
+  // Righe "depennate" solo VISIVAMENTE (spunta accanto al nome linea nei 4 blocchi). Stato locale:
+  // non tocca D1 né il salvataggio, serve solo a barrare la riga per tenere il segno di cosa è fatto.
+  const [depennate,setDepennate] = useState(()=>new Set());
+  const toggleDepenna = (id)=> setDepennate(prev=>{ const n=new Set(prev); if(n.has(id)) n.delete(id); else n.add(id); return n; });
   const [fabDrag,setFabDrag] = useState(null);                   // {x,y} offset pulsante flottante
   const fabDragRef = React.useRef(null);
 
@@ -5713,19 +5717,28 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
               <tbody>
                 {righe.length===0
                   ? <tr><td colSpan={5} style={{color:"#94a3b8",fontStyle:"italic",padding:18,fontSize:13,textAlign:"center"}}>Nessuna attività in questo blocco</td></tr>
-                  : righe.map(a=>(
-                    <tr key={a.id}>
-                      <td style={_td}>{a.reparto||"—"}</td>
+                  : righe.map(a=>{
+                    const _dep = depennate.has(a.id);
+                    const _stileRiga = _dep ? {textDecoration:"line-through", opacity:0.45} : {};
+                    return (
+                    <tr key={a.id} style={_stileRiga}>
+                      <td style={_td}>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}>
+                          <input type="checkbox" checked={_dep} onChange={()=>toggleDepenna(a.id)} title={_dep?"Riattiva riga":"Depenna riga"} style={{width:17,height:17,cursor:"pointer",accentColor:"#7c3aed",flexShrink:0}}/>
+                          <span>{a.reparto||"—"}</span>
+                        </span>
+                      </td>
                       <td style={_td}>{a.articolo ? <code style={{...S.sku,minWidth:80,fontSize:13}}>{a.articolo}</code> : "—"}</td>
                       <td style={{...(_td),fontWeight:800,color:"#7c3aed"}}>{(+a.qta||0)}</td>
                       <td style={{...(_td),color:"#64748b"}}>{a.note||"—"}</td>
-                      <td style={{...(_td),whiteSpace:"nowrap"}}>
+                      <td style={{...(_td),whiteSpace:"nowrap",textDecoration:"none",opacity:1}}>
                         {!filtroAttivo && <button onClick={()=>apriModifica(a)} title="Modifica attività" style={{background:"#fff",color:"#7c3aed",border:"1.5px solid #7c3aed",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginRight:6,display:"inline-flex",alignItems:"center",verticalAlign:"middle"}}><IconaMatita size={13}/></button>}
                         {!filtroAttivo && <button onClick={()=>elimina(a.id)} title="Elimina attività" style={{background:"#fff",color:"#dc2626",border:"1.5px solid #dc2626",borderRadius:6,padding:"2px 10px",fontWeight:900,fontSize:14,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",verticalAlign:"middle"}}>−</button>}
                         {filtroAttivo && <span style={{color:"#cbd5e1"}}>—</span>}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 }
               </tbody>
             </table>
