@@ -49,7 +49,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7xHgCQ-chyXOH
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare"];
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -947,7 +947,7 @@ function CodiceFit({ text, max=22, min=9, color="#6d28d9" }){
   );
 }
 
-function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, borseCoffre, maxOpOggi, minutiPresenzaLinea=0, minutiFormazioneServer=0, coloreLinea, qualitaPerSku={}, linee=[], compatto=false, onObiettiviArticoli }) {
+function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, borseCoffre, maxOpOggi, minutiPresenzaLinea=0, minutiFormazioneServer=0, coloreLinea, qualitaPerSku={}, bncRecupero={}, linee=[], compatto=false, onObiettiviArticoli }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
   const skuList = (_skuList||[]).filter(Boolean);
@@ -1714,13 +1714,53 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     fetch(nexusUrl("salvaObiettivoCongelato",{linea:lineaId,obiettivo:obDaCongelare,perArticolo:obPerArticoloJson})).catch(()=>{});
   },[obDaCongelare, turnoTerminato, obCongelato, lineaId]);
   const ob60 = obFinaleEffettivo!=null&&oreTotali>0 ? Math.round(obFinaleEffettivo/oreTotali) : null;
+
+  // ── BNC DA RECUPERARE ────────────────────────────────────────────────────────────────────
+  // Le BNC lasciate nell'ULTIMO giorno in cui l'articolo ha girato su questa linea vengono
+  // SCALATE dalle borse OK di oggi: quelle borse erano già state prodotte allora, oggi gli
+  // operatori le finiscono soltanto. Non è produzione nuova, quindi non deve gonfiare
+  // obiettivo ed efficienza di oggi (che invece contano già i minuti spesi oggi su di esse).
+  // Il netto può andare in NEGATIVO a inizio turno (es. -10): è voluto. La lancetta resta a 0%.
+  // Se oggi l'articolo non gira, non c'è card e il debito resta in sospeso (nessuna sottrazione
+  // su altri articoli). Il residuo non si trascina: domani si guarderanno le BNC di oggi.
+  // Nessun dato viene modificato: né lo storico, né la qualità di oggi, né i fogli.
+  const _nomeLineaBnc = (linee ? (linee.find(l=>l&&l.id===lineaId)||{}).nome : null) || lineaId;
+  const bncDa = (sk)=> Number((bncRecupero||{})[lineaId+"|"+sk] ?? (bncRecupero||{})[_nomeLineaBnc+"|"+sk] ?? 0) || 0;
+  // Debito totale della linea: SOLO gli articoli attivi oggi qui (sessione in corso/chiusa oggi
+  // oppure qualità già registrata oggi). Ogni articolo contato una volta sola.
+  const _bncTotLinea = (()=>{
+    const skuAttivi = new Set();
+    sessioni.forEach(s=>{
+      if(s._pianificato) return;
+      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) return;
+      const sk = s.skuCorrente||s.sku||"";
+      if(sk && !isSkuSpeciale(sk)) skuAttivi.add(sk);
+    });
+    const pref1 = lineaId+"|", pref2 = _nomeLineaBnc+"|";
+    const visti = new Set();
+    let tot = 0;
+    Object.keys(bncRecupero||{}).forEach(k=>{
+      let sk = null;
+      if(k.indexOf(pref1)===0) sk = k.slice(pref1.length);
+      else if(pref2!==pref1 && k.indexOf(pref2)===0) sk = k.slice(pref2.length);
+      if(!sk || visti.has(sk)) return;
+      const attivoOggi = skuAttivi.has(sk) || !!qualitaPerSku[lineaId+"_"+sk] || !!qualitaPerSku[_nomeLineaBnc+"_"+sk];
+      if(!attivoOggi) return;
+      visti.add(sk);
+      tot += bncDa(sk);
+    });
+    return tot;
+  })();
+
   // EFFICIENZA — due regole, a seconda dello stato del turno:
   //  • TURNO IN CORSO: efficacia sull'obiettivo real-time = borse / obiettivo atteso a quest'ora
   //    (come stamattina). È il "quanto sei avanti sul piano", stabile durante il turno.
   //  • TURNO TERMINATO: efficienza vera = (borse OK × TC) / minuti presenza linea, dove i minuti
   //    presenza linea arrivano dal foglio "Presenze Linea" sincronizzato in D1 (prop minutiPresenzaLinea).
   const efficienzaPct = (()=>{
-    const borseTot = (borseOggi||0); // BNC esclusa dal calcolo efficienza
+    // Borse nette: OK di oggi meno le BNC recuperate (già prodotte in un giorno precedente).
+    // Può essere negativo a inizio turno: l'efficienza risultante viene poi azzerata a 0%.
+    const borseTot = (borseOggi||0) - _bncTotLinea;
     // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
     // tempo prodotto, sommato alla quota borse, sullo stesso tempo disponibile.
     if(_isRMALinea){
@@ -1752,7 +1792,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(!sk || isSkuSpeciale(sk) || _skuVisti.has(sk)) continue;
       _skuVisti.add(sk);
       const _q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_lNome+"_"+sk] || {};
-      minProd += (Number(_q.ok)||0) * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
+      // Netto: le BNC recuperate non sono produzione di oggi.
+      minProd += ((Number(_q.ok)||0) - bncDa(sk)) * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
     }
     // Fallback robusto: se le borse per-articolo non risolvono (chiavi qualità mancanti) ma ci sono
     // borse totali, uso borse × TC rappresentativo (esatto per linea a un solo articolo).
@@ -1825,7 +1866,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
           {/* Efficienza */}
           <div style={{flex:2,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,padding:compatto?"8px":"12px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
             <div style={{fontSize:compatto?"clamp(11px,1.4vw,15px)":"clamp(16px,2vw,22px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:compatto?2:6}}>Efficienza</div>
-            {(()=>{const pct=efficienzaPct||0; const arcCol = compatto ? (coloreLinea||"#7c3aed") : "#7c3aed"; return(
+            {/* Con BNC da recuperare il netto può essere negativo: la lancetta resta a 0%, non disegna archi al contrario. */}
+            {(()=>{const pct=Math.max(0, efficienzaPct||0); const arcCol = compatto ? (coloreLinea||"#7c3aed") : "#7c3aed"; return(
               <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
                 <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
                 {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={arcCol} strokeWidth="16" strokeLinecap="round"
@@ -2252,9 +2294,13 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               const _k1 = lineaId+"_"+skuItem;
               const _k2 = _lNome+"_"+skuItem;
               const qData = qualitaPerSku[_k1]||qualitaPerSku[_k2]||{};
-              // Borse buone dell'articolo = solo OK. La BNC NON conta per obiettivo/efficienza
-              // (resta salvata e visibile in storico/dashboard, ma non gonfia i numeri di produzione).
-              const borseBuoneItem = (Number(qData.ok)||0); // BNC esclusa da obiettivo/efficienza
+              // Borse buone dell'articolo = OK di oggi MENO le BNC lasciate l'ultimo giorno in cui
+              // questo articolo ha girato qui (già prodotte allora: oggi vengono solo finite).
+              // Le BNC di OGGI non contano comunque per obiettivo/efficienza (restano in storico/dashboard).
+              // Il valore può essere NEGATIVO a inizio turno: è voluto (lancetta comunque a 0%).
+              const _bncItem = bncDa(skuItem);
+              const _okLordoItem = Number(qData.ok)||0;
+              const borseBuoneItem = _okLordoItem - _bncItem;
               if(Object.keys(qualitaPerSku).length>0) console.log("[QDATA] cerca:", _k1, "trovato:", !!qualitaPerSku[_k1], "chiavi disp:", Object.keys(qualitaPerSku).slice(0,3));
               // Numero operatori (quota equa) su questo SKU — serve sia in vista normale (header
               // viola) sia in vista compatta. A turno terminato includiamo anche le sessioni chiuse
@@ -2306,10 +2352,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     )}
                     {/* Obiettivo grande (stile valore Operatori) */}
                     <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:4}}>
-                      <span style={{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
+                      <span style={{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:900,color:borseItem<0?"#ef4444":"#111827",lineHeight:1}}>{borseItem}</span>
                       <span style={{fontSize:"clamp(22px,3.2vw,38px)",fontWeight:300,color:"#94a3b8",lineHeight:1}}>/</span>
                       <span style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
                     </div>
+                    {/* Netto = OK di oggi meno le BNC recuperate dal giorno precedente */}
+                    {_bncItem>0 && (
+                      <div style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ff37ff",whiteSpace:"nowrap"}}>{_okLordoItem} − {_bncItem} BNC</div>
+                    )}
                     {/* KO/MGL piccoli */}
                     <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
                       <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ef4444"}}>KO {qData.ko||0}</span>
@@ -2376,7 +2426,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                             <div style={{fontSize:fSep,color:"#6d28d9",fontWeight:800,letterSpacing:1,lineHeight:1.15,marginBottom:8,textAlign:"center",textTransform:"uppercase"}}>Obiettivo Giornaliero</div>
                           )}
                           <div style={{display:"flex",alignItems:"baseline",gap:6}}>
-                            <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
+                            <span style={{fontSize:fBig,fontWeight:900,color:borseItem<0?"#ef4444":"#111827",lineHeight:1}}>{borseItem}</span>
                             <span style={{fontSize:fSep,fontWeight:300,color:"#94a3b8"}}>/</span>
                             <span style={{fontSize:fMid,fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
                             <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
@@ -2385,6 +2435,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                               
                             </div>
                           </div>
+                          {_bncItem>0 && (
+                            <div style={{fontSize:fSep,fontWeight:700,color:"#ff37ff",lineHeight:1,whiteSpace:"nowrap"}}>{_okLordoItem} − {_bncItem} BNC</div>
+                          )}
                         </div>
                         );
                       }
@@ -2399,12 +2452,16 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                           </span>
                         )}
                       </div>
-                      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>
                         <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-                          <span style={{fontSize:fBig,fontWeight:900,color:"#111827",lineHeight:1}}>{borseItem}</span>
+                          <span style={{fontSize:fBig,fontWeight:900,color:borseItem<0?"#ef4444":"#111827",lineHeight:1}}>{borseItem}</span>
                           <span style={{fontSize:fSlash,fontWeight:300,color:"#94a3b8"}}>/</span>
                           <span style={{fontSize:fMid,fontWeight:900,color:inRampaItem?"#ff6937":"#6d28d9",lineHeight:1}}>{obFinaleItemRampa||0}</span>
                         </div>
+                        {/* Da dove nasce il netto: OK inserite oggi meno le BNC recuperate dal giorno precedente. */}
+                        {_bncItem>0 && (
+                          <div style={{fontSize:fSep,fontWeight:700,color:"#ff37ff",lineHeight:1,whiteSpace:"nowrap"}}>{_okLordoItem} − {_bncItem} BNC</div>
+                        )}
                       </div>
                     </div>
                       );
@@ -2878,7 +2935,7 @@ function CardProtoQualita({ linea, qualitaPerSku, skuList, compatto=false }){
     </div>
   );
 }
-function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
+function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, bncRecupero={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
   const [lineaSel, setLineaSel] = React.useState("");
   // Larghezza del dispositivo, per adattare il layout (telefono / tablet / monitor-TV).
   const [vpW, setVpW] = React.useState(typeof window!=="undefined" ? window.innerWidth : 1280);
@@ -2996,6 +3053,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                     minutiFormazioneServer={d.minutiFormazioneLinea||0}
                     coloreLinea={l.colore||"#7c3aed"}
                     qualitaPerSku={qualitaPerSku||{}}
+                    bncRecupero={bncRecupero||{}}
                     linee={linee||[]}
                     compatto={true}
                   />
@@ -3034,6 +3092,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   minutiFormazioneServer={d.minutiFormazioneLinea||0}
                   coloreLinea={l.colore||"#7c3aed"}
                   qualitaPerSku={qualitaPerSku||{}}
+                  bncRecupero={bncRecupero||{}}
                   linee={linee||[]}
                 />
                 )}
@@ -6435,12 +6494,22 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [loadingMsg, setLoadingMsg] = React.useState("");
   const [datiProd, setDatiProd] = React.useState(null);
   const [qualitaPerSku, setQualitaPerSku] = React.useState({});
+  // BNC da recuperare: mappa "linea|sku" -> n° BNC lasciate l'ultimo giorno in cui quell'articolo
+  // ha girato su quella linea. Vengono SCALATE dalle borse OK di oggi (le borse erano già state
+  // prodotte allora: oggi gli operatori le finiscono, non è produzione nuova). Solo un calcolo:
+  // i dati grezzi di oggi e lo storico non vengono toccati.
+  const [bncRecupero, setBncRecupero] = React.useState({});
   React.useEffect(()=>{
     const caricaProd = async () => {
       try {
         const r = await fetch(nexusUrl("produzione",{}));
         const j = await r.json();
         if(j.ok&&j.data){ const d=j.data.dati||j.data; setDatiProd(d); }
+      } catch(e){}
+      try {
+        const rB = await fetch(nexusUrl("bncDaRecuperare",{}));
+        const jB = await rB.json();
+        if(jB && jB.ok && jB.data && jB.data.mappa) setBncRecupero(jB.data.mappa);
       } catch(e){}
       // Carica anche qualità per avere borse per SKU
       try {
@@ -8040,7 +8109,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList} lineaFiltro={lineaFiltro}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro}/></div>}
       {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
-      {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
+      {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} bncRecupero={bncRecupero} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
       {tab==="attivita"&&(()=>{ const _rt=repartoTipoLinea(lineaFiltro&&lineaFiltro.id, lineaFiltro&&lineaFiltro.nome) || "taglio"; return _rt==="tt" ? <TabAttivitaTT linee={linee} skuList={skuList}/> : <TabAttivita repTipo={_rt}/>; })()}
       {tab==="note"&&<TabNote lineaFiltro={lineaFiltro} linee={linee} skuList={skuList} sessioni={sessioni}/>}
       {tab==="trasferimenti"&&<TabTrasferimenti linee={linee} onRiepilogo={setPopupRiepilogoOp}/>}
