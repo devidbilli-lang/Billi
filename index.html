@@ -5127,7 +5127,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               }
               setRis({tipo:"corso",sess:sf});setMode("result");
             }} onPianifica={async(oraInizioHM,oraFineHM,nomeCorso)=>{
-              const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+              const hmToIso=(hm)=>{if(!hm||typeof hm!=="string"||hm.indexOf(":")<0)return null;const [h,m]=hm.split(":").map(Number);if(isNaN(h)||isNaN(m))return null;const d=new Date();d.setHours(h,m,0,0);return d.toISOString();};
               try{ await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([sf.matricola]),oraInizio:hmToIso(oraInizioHM),oraFine:oraFineHM?hmToIso(oraFineHM):"",nomeCorso:nomeCorso||"CORSO"}),{mode:"cors"}); }catch(e){}
               if(aggiornaSessioni) setTimeout(aggiornaSessioni,1500);
               setRis({tipo:"corso",sess:sf});setMode("result");
@@ -6186,7 +6186,7 @@ function TabOperatori({ operatori, sessioni, linee, isAdmin, lineaFiltro }) { co
       const op = (operatori||[]).find(o=>o.matricola===matricola);
       const chiave = op ? (op.nome.toUpperCase()+"-"+op.cognome.toUpperCase()) : null;
       const oggi0 = new Date(); oggi0.setHours(0,0,0,0);
-      const hmToIso = (hm, base) => { if(!hm) return null; const [h,m]=hm.split(":").map(Number); const d=base?new Date(base):new Date(); d.setHours(h||0,m||0,0,0); return d.toISOString(); };
+      const hmToIso = (hm, base) => { if(!hm||typeof hm!=="string"||hm.indexOf(":")<0) return null; const [h,m]=hm.split(":").map(Number); if(isNaN(h)||isNaN(m)) return null; const d=base?new Date(base):new Date(); d.setHours(h,m,0,0); return d.toISOString(); };
       (sessioni||[]).filter(s=>{
         if(s._pianificato) return false;
         const matchMat = s.matricola===matricola || (chiave && s.matricola===chiave);
@@ -6408,7 +6408,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const pianificaCorsoMultiplo = async (matricoleSet, nomeCorso, oraInizioHM, oraFineHM) => {
     if(!matricoleSet || matricoleSet.size===0 || !oraInizioHM) return;
     setLoading(true); setLoadingMsg("Pianificazione corso...");
-    const hmToIso = (hm) => { const [h,m]=hm.split(":").map(Number); const d=new Date(); d.setHours(h||0,m||0,0,0); return d.toISOString(); };
+    const hmToIso = (hm) => { if(!hm||typeof hm!=="string"||hm.indexOf(":")<0)return null; const [h,m]=hm.split(":").map(Number); if(isNaN(h)||isNaN(m))return null; const d=new Date(); d.setHours(h,m,0,0); return d.toISOString(); };
     try {
       const matArr = Array.from(matricoleSet);
       await fetch(nexusUrl("pianificaCorso",{
@@ -7079,7 +7079,12 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             <div style={{display:"flex",gap:8}}>
               {modCorsoMulti.modificaOrari ? (
                 <button style={{flex:1,padding:11,background:"#0891b2",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
-                  const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+                  const hmToIso=(hm)=>{if(!hm||typeof hm!=="string"||hm.indexOf(":")<0)return null;const [h,m]=hm.split(":").map(Number);if(isNaN(h)||isNaN(m))return null;const d=new Date();d.setHours(h,m,0,0);return d.toISOString();};
+                  const isoIn = hmToIso(modCorsoMulti.oraEntrataMod||"10:00");
+                  if(!isoIn){ alert("Orario di entrata corso non valido (HH:MM)."); return; }
+                  const isoOut = modCorsoMulti.oraUscitaMod ? hmToIso(modCorsoMulti.oraUscitaMod) : "";
+                  if(modCorsoMulti.oraUscitaMod && !isoOut){ alert("Orario di uscita corso non valido."); return; }
+                  const _fineFutura = !!(isoOut && new Date(isoOut).getTime() > Date.now());
                   setLoading(true); setLoadingMsg("Aggiornamento orari corso...");
                   const matsSel = modCorsoMulti.matricole;
                   const sessInCorso = sessioni.filter(s=>{
@@ -7087,11 +7092,22 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     if(!(matsSel.has(s.matricola)||matsSel.has(s.nome))) return false;
                     return (s.corsi||[]).length>0;
                   });
+                  const idsInCorso = new Set(sessInCorso.map(s=>s.id));
                   await Promise.all(sessInCorso.map(s=>
-                    fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:hmToIso(modCorsoMulti.oraEntrataMod||"10:00"),oraUscita:modCorsoMulti.oraUscitaMod?hmToIso(modCorsoMulti.oraUscitaMod):""}),{mode:"cors"}).catch(e=>{})
+                    fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:isoIn,oraUscita:isoOut}),{mode:"cors"}).catch(e=>{})
                   ));
+                  // Aggiornamento OTTIMISTICO su tutte le sessioni modificate (niente refresh manuale).
+                  if(setSessioni) setSessioni(prev=>(prev||[]).map(s=>{
+                    if(!idsInCorso.has(s.id)) return s;
+                    const corsi=[...(s.corsi||[])];
+                    if(corsi.length>0){
+                      corsi[corsi.length-1]={...corsi[corsi.length-1], tipo:"sospendi", quando:new Date(isoIn).toLocaleString("it-IT"), ts:new Date(isoIn).getTime()};
+                      if(!_fineFutura && isoOut){ corsi[corsi.length-1].tipo="rientrato"; corsi[corsi.length-1].rientro=new Date(isoOut).toLocaleString("it-IT"); }
+                    }
+                    return {...s, corsi};
+                  }));
                   setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
-                  if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,600);
+                  if(onAggiornaSessioni) onAggiornaSessioni();
                 }}>✓ Salva orari</button>
               ) : modCorsoMulti.pianifica ? (
                 <button style={{flex:1,padding:11,background:"#0891b2",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>{
@@ -7121,19 +7137,40 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             <div style={{display:"flex",gap:8,marginBottom:10}}>
               <button style={{flex:2,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
                 const mat = modCorsoPian.sess.matricola;
-                const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+                const hmToIso=(hm)=>{if(!hm||typeof hm!=="string"||hm.indexOf(":")<0)return null;const [h,m]=hm.split(":").map(Number);if(isNaN(h)||isNaN(m))return null;const d=new Date();d.setHours(h,m,0,0);return d.toISOString();};
+                // Blocco a monte: un orario di inizio non valido non deve MAI diventare mezzanotte
+                // e finire a riscrivere il corso a 00:00 (era la causa dell'inizio corso "sballato").
+                const isoIn = hmToIso(modCorsoPian.oraInizio);
+                if(!isoIn){ alert("Inserisci un orario di inizio corso valido (HH:MM)."); return; }
+                const isoOut = modCorsoPian.oraFine ? hmToIso(modCorsoPian.oraFine) : "";
+                if(modCorsoPian.oraFine && !isoOut){ alert("L'orario di fine corso non è valido."); return; }
+                const _sid = modCorsoPian.sess.id;
+                const _fineFutura = !!(isoOut && new Date(isoOut).getTime() > Date.now());
                 try{
                   if(modCorsoPian.inAtto){
                     // Corso GIÀ in esecuzione: modifico gli orari reali (entrata/uscita). Se la fine è
                     // nel futuro il worker tiene il rientro come pianificato (la riga resta al corso/ciano)
                     // e lo esegue all'ora prevista — rientro, oppure checkout se oltre il fine turno.
-                    await fetch(nexusUrl("modificaOrarioCorso",{sessionId:modCorsoPian.sess.id,oraEntrata:hmToIso(modCorsoPian.oraInizio),oraUscita:modCorsoPian.oraFine?hmToIso(modCorsoPian.oraFine):""}),{mode:"cors"});
+                    await fetch(nexusUrl("modificaOrarioCorso",{sessionId:_sid,oraEntrata:isoIn,oraUscita:isoOut}),{mode:"cors"});
+                    // Aggiornamento OTTIMISTICO: la modifica si vede subito, senza dover ricaricare la pagina.
+                    // Aggiorno l'orario del corso in atto; se la fine è nel futuro la riga resta AL CORSO
+                    // (nessun rientro reale ora, coerente col worker), altrimenti registro il rientro.
+                    if(setSessioni) setSessioni(prev=>(prev||[]).map(s=>{
+                      if(s.id!==_sid) return s;
+                      const corsi=[...(s.corsi||[])];
+                      if(corsi.length>0){
+                        const _q=new Date(isoIn).toLocaleString("it-IT");
+                        corsi[corsi.length-1]={...corsi[corsi.length-1], tipo:"sospendi", quando:_q, ts:new Date(isoIn).getTime(), nomeCorso:(modCorsoPian.nome||corsi[corsi.length-1].nomeCorso||"CORSO")};
+                        if(!_fineFutura && isoOut){ corsi[corsi.length-1].tipo="rientrato"; corsi[corsi.length-1].rientro=new Date(isoOut).toLocaleString("it-IT"); }
+                      }
+                      return {...s, corsi};
+                    }));
                   } else {
-                    await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([mat]),oraInizio:hmToIso(modCorsoPian.oraInizio),oraFine:modCorsoPian.oraFine?hmToIso(modCorsoPian.oraFine):"",nomeCorso:modCorsoPian.nome||"CORSO"}),{mode:"cors"});
+                    await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([mat]),oraInizio:isoIn,oraFine:isoOut,nomeCorso:modCorsoPian.nome||"CORSO"}),{mode:"cors"});
                   }
                 }catch(e){}
                 setModCorsoPian(null);
-                if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,1500);
+                if(onAggiornaSessioni) onAggiornaSessioni();
               }}>✓ Salva modifiche</button>
               <button style={{flex:1,padding:11,background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
                 const mat = modCorsoPian.sess.matricola;
@@ -7583,7 +7620,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           if(onAggiornaSessioni) onAggiornaSessioni();
         }}
         onPianifica={async(oraInizioHM,oraFineHM,nomeCorso)=>{
-          const hmToIso=(hm)=>{const [h,m]=hm.split(":").map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d.toISOString();};
+          const hmToIso=(hm)=>{if(!hm||typeof hm!=="string"||hm.indexOf(":")<0)return null;const [h,m]=hm.split(":").map(Number);if(isNaN(h)||isNaN(m))return null;const d=new Date();d.setHours(h,m,0,0);return d.toISOString();};
           setLoading(true); setLoadingMsg("Pianificazione corso...");
           try{ await fetch(nexusUrl("pianificaCorso",{matricole:JSON.stringify([modCorso.matricola]),oraInizio:hmToIso(oraInizioHM),oraFine:oraFineHM?hmToIso(oraFineHM):"",nomeCorso:nomeCorso||"CORSO"}),{mode:"cors"}); }catch(e){}
           setModCorso(null);
@@ -8446,11 +8483,12 @@ function App() { const [view,setView]             = useState("login");
       {view==="dashboard"&&accesso&&(
         <Dashboard
           sessioni={sessSheets}
+          setSessioni={setSessSheets}
           linee={linee} skuList={skuList} operatori={operatori}
           isAdmin={accesso.ruolo==="admin"}
           lineaFiltro={accesso.ruolo==="linea"?accesso.linea:null}
           onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr}
-          onAggiornaSessioni={()=>setTimeout(caricaSessioni,3000)}
+          onAggiornaSessioni={caricaSessioni}
           rampeSheets={rampeSheets}
           editOrario={true}
           onTornaIndietro={()=>setView("checkin")}/>
