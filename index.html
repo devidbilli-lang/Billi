@@ -4156,8 +4156,11 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     aggMap[k].ko   += Number(q.ko)||0;
     aggMap[k].migl += Number(q.migliorabili)||0;
     aggMap[k].coffre += Number(q.coffre)||0;
-    if (q.noteKo)   aggMap[k].noteKo   = q.noteKo;
-    if (q.noteMigl) aggMap[k].noteMigl = q.noteMigl;
+    // Le note vanno ACCUMULATE: nella stessa giornata lo stesso articolo può avere più inserimenti
+    // (mattina, pomeriggio...). Con "=" vinceva solo l'ultimo e le note precedenti sparivano dalla
+    // vista. Concateno con " | " evitando di riscrivere una nota identica già presente.
+    if (q.noteKo)   { const _e=aggMap[k].noteKo;   aggMap[k].noteKo   = _e ? (_e.split(" | ").includes(q.noteKo)   ? _e : _e+" | "+q.noteKo)   : q.noteKo; }
+    if (q.noteMigl) { const _e=aggMap[k].noteMigl; aggMap[k].noteMigl = _e ? (_e.split(" | ").includes(q.noteMigl) ? _e : _e+" | "+q.noteMigl) : q.noteMigl; }
   }
   const righe = Object.values(aggMap).sort((a,b) => {
     // 1) Data decrescente (più recente in alto)
