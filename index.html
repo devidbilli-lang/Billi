@@ -2306,7 +2306,6 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // Può essere NEGATIVO a inizio turno: è voluto (lancetta comunque a 0%).
               const _bncItem = bncDa(skuItem);
               const borseBuoneItem = (Number(qData.ok)||0) + (Number(qData.coffre)||0) - _bncItem;
-              if(Object.keys(qualitaPerSku).length>0) console.log("[QDATA] cerca:", _k1, "trovato:", !!qualitaPerSku[_k1], "chiavi disp:", Object.keys(qualitaPerSku).slice(0,3));
               // Numero operatori (quota equa) su questo SKU — serve sia in vista normale (header
               // viola) sia in vista compatta. A turno terminato includiamo anche le sessioni chiuse
               // di oggi, altrimenti il conteggio crollerebbe a 0 appena tutti escono.
