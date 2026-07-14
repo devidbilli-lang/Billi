@@ -7159,19 +7159,31 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           </div>
         </div>
       )}
-      {modCorsoPian&&(
+      {modCorsoPian&&(()=>{
+        // Stessa finestra per CORSO e FORMAZIONE, ma con l'identità visiva giusta:
+        // formazione → GIALLO (#ffc946, lo stesso della riga in tabella), corso → CIANO.
+        // Si riconosce dal nome (come fa la tabella: nomeCorso che inizia per "FORMAZIONE"),
+        // quindi cambia colore anche mentre lo si digita.
+        const _isForm = String(modCorsoPian.nome||"").toUpperCase().split("@@")[0]==="FORMAZIONE";
+        const CM = _isForm ? "#ffc946"   : "#06b6d4";   // bordi, timepicker, sfondo pulsante
+        const CT = _isForm ? "#b45309"   : "#0891b2";   // titolo ed etichette
+        const CG = _isForm ? "#fde68a"   : "#67e8f9";   // anello esterno
+        const CS = _isForm ? "#ffc94666" : "#06b6d466"; // alone
+        const CB = _isForm ? "#78350f"   : "#fff";      // testo del pulsante (su giallo serve scuro)
+        const ET = _isForm ? "formazione" : "corso";
+        return (
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #67e8f9, 0 0 40px 12px #06b6d466",fontFamily:"'Montserrat',sans-serif"}}>
-            <div style={{fontSize:18,fontWeight:800,color:"#0891b2",marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={20}/> Modifica corso</div>
+          <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px "+CG+", 0 0 40px 12px "+CS,fontFamily:"'Montserrat',sans-serif"}}>
+            <div style={{fontSize:18,fontWeight:800,color:CT,marginBottom:4,display:"flex",alignItems:"center",gap:6}}><IconaMatita size={20}/> Modifica {ET}</div>
             <div style={{fontSize:14,fontWeight:700,color:"#1e293b",marginBottom:16}}>{modCorsoPian.sess.nome} {modCorsoPian.sess.cognome}</div>
-            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800}}>Nome corso</div>
-            <input value={modCorsoPian.nome} onChange={e=>setModCorsoPian({...modCorsoPian, nome:e.target.value})} placeholder="Es. Sicurezza, Formazione..." style={{width:"100%",padding:"12px 14px",fontSize:15,border:"2px solid #06b6d4",borderRadius:10,marginBottom:16,fontFamily:"'Montserrat',sans-serif",background:"#fff",color:"#1e293b",boxSizing:"border-box"}}/>
-            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio corso</div>
-            <div style={{marginBottom:12}}><TimePicker value={modCorsoPian.oraInizio} color="#06b6d4" onChange={v=>setModCorsoPian({...modCorsoPian, oraInizio:v})}/></div>
-            <div style={{fontSize:12,color:"#0891b2",marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine corso (opzionale)</div>
-            <div style={{marginBottom:16}}><TimePicker value={modCorsoPian.oraFine||"12:00"} color="#06b6d4" onChange={v=>setModCorsoPian({...modCorsoPian, oraFine:v})}/></div>
+            <div style={{fontSize:12,color:CT,marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800}}>Nome {ET}</div>
+            <input value={modCorsoPian.nome} onChange={e=>setModCorsoPian({...modCorsoPian, nome:e.target.value})} placeholder="Es. Sicurezza, Formazione..." style={{width:"100%",padding:"12px 14px",fontSize:15,border:"2px solid "+CM,borderRadius:10,marginBottom:16,fontFamily:"'Montserrat',sans-serif",background:"#fff",color:"#1e293b",boxSizing:"border-box"}}/>
+            <div style={{fontSize:12,color:CT,marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Inizio {ET}</div>
+            <div style={{marginBottom:12}}><TimePicker value={modCorsoPian.oraInizio} color={CM} onChange={v=>setModCorsoPian({...modCorsoPian, oraInizio:v})}/></div>
+            <div style={{fontSize:12,color:CT,marginBottom:6,letterSpacing:1,textTransform:"uppercase",fontWeight:800,textAlign:"center"}}>Fine {ET} (opzionale)</div>
+            <div style={{marginBottom:16}}><TimePicker value={modCorsoPian.oraFine||"12:00"} color={CM} onChange={v=>setModCorsoPian({...modCorsoPian, oraFine:v})}/></div>
             <div style={{display:"flex",gap:8,marginBottom:10}}>
-              <button style={{flex:2,padding:11,background:"#06b6d4",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
+              <button style={{flex:2,padding:11,background:CM,color:CB,border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={async()=>{
                 const mat = modCorsoPian.sess.matricola;
                 const hmToIso=(hm)=>{if(!hm||typeof hm!=="string"||hm.indexOf(":")<0)return null;const [h,m]=hm.split(":").map(Number);if(isNaN(h)||isNaN(m))return null;const d=new Date();d.setHours(h,m,0,0);return d.toISOString();};
                 // Blocco a monte: un orario di inizio non valido non deve MAI diventare mezzanotte
@@ -7224,7 +7236,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             <button style={{width:"100%",padding:11,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModCorsoPian(null)}>Annulla</button>
           </div>
         </div>
-      )}
+        );
+      })()}
       {modOrario&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#ffffff",borderRadius:16,padding:"32px 28px",width:"90%",maxWidth:420,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
