@@ -3185,6 +3185,11 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
   }
   // Estrai rampe anche dalle sessioni attuali (per coppie sku+linea non ancora in rampeSheets)
   for(const s of sessioni){ let rdal = s.rampaDal||null;
+    // La rampa appartiene all'ARTICOLO, non alla persona: se l'articolo della sessione è stato
+    // azzerato (trasferimento su un reparto: Preparazione/Taglio/RMA/...), NON va registrata alcuna
+    // rampa. Senza questa guardia il fallback "s.skuCorrente || s.sku" ripescava l'articolo VECCHIO
+    // e creava una rampa fantasma "articolo-di-partenza @ reparto".
+    if(s.skuCorrente==="" || s.skuCorrente===null) continue;
     if(!rdal && (s.skuA||"").includes("__RAMPA__")){ const p=(s.skuA||"").split("__RAMPA__"); const d=new Date(p[1]); if(!isNaN(d)) rdal=d.getTime(); }
     if(rdal){ const sku=s.skuCorrente||s.sku||""; const lid=s.lineaCorrente||""; const key=sku+KEYSEP+lid; if(sku&&!rampaMap[key]){ const _wl=_weekendLav(sku,lid); const g=giorniLavorativiJS(rdal,_wl); rampaMap[key]={sku,dal:rdal,giorni:g,lineaId:lid,completata:false,durata:15,weekendLavorati:_wl}; } } }
   for(const _k in durataOverride){ if(rampaMap[_k]) rampaMap[_k].durata = durataOverride[_k]; }
