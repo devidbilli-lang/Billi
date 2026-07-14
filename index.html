@@ -7130,7 +7130,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   });
                   const idsInCorso = new Set(sessInCorso.map(s=>s.id));
                   await Promise.all(sessInCorso.map(s=>
-                    fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:isoIn,oraUscita:isoOut}),{mode:"cors"}).catch(e=>{})
+                    fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:isoIn,oraUscita:isoOut,nomeCorso:(modCorsoMulti.nome||"")}),{mode:"cors"}).catch(e=>{})
                   ));
                   // Aggiornamento OTTIMISTICO su tutte le sessioni modificate (niente refresh manuale).
                   if(setSessioni) setSessioni(prev=>(prev||[]).map(s=>{
@@ -7199,7 +7199,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     // Corso GIÀ in esecuzione: modifico gli orari reali (entrata/uscita). Se la fine è
                     // nel futuro il worker tiene il rientro come pianificato (la riga resta al corso/ciano)
                     // e lo esegue all'ora prevista — rientro, oppure checkout se oltre il fine turno.
-                    await fetch(nexusUrl("modificaOrarioCorso",{sessionId:_sid,oraEntrata:isoIn,oraUscita:isoOut}),{mode:"cors"});
+                    // nomeCorso: senza questo il nome modificato NON veniva salvato su D1 (l'azione
+                    // riceveva solo gli orari) e alla ricarica tornava quello vecchio.
+                    await fetch(nexusUrl("modificaOrarioCorso",{sessionId:_sid,oraEntrata:isoIn,oraUscita:isoOut,nomeCorso:(modCorsoPian.nome||"")}),{mode:"cors"});
                     // Aggiornamento OTTIMISTICO: la modifica si vede subito, senza dover ricaricare la pagina.
                     // Aggiorno l'orario del corso in atto; se la fine è nel futuro la riga resta AL CORSO
                     // (nessun rientro reale ora, coerente col worker), altrimenti registro il rientro.
