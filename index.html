@@ -6878,7 +6878,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             ss._skuPianificati.forEach(skP=>{ if(!skP) return; if(!skuMap[skP]) skuMap[skP]={...ss,sku:skP,skuCorrente:skP,_attiva:false,_pianificato:true}; });
             return;
           }
+          // Sui REPARTI (Preparazione/Taglio/RMA/Track&Trace/Prototipia) non esiste articolo: il
+          // worker azzera skuCorrente. Il fallback "skuCorrente || sku" qui sotto ripescherebbe
+          // l'articolo di PARTENZA (o il suffisso tecnico "#<ts>" degli eventi ripetibili con sku
+          // vuoto) e lo mostrerebbe come articolo su una linea che non ne ha.
+          if(ss.skuCorrente==="" || ss.skuCorrente===null) return;
           const k=ss.skuCorrente||ss.sku; if(!k) return;
+          // "#1784007270176" non è uno sku: è il suffisso tecnico anti-collisione. Gli sku veri non contengono "#".
+          if(String(k).charAt(0)==="#") return;
           const aperta=!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null";
           // Verde SOLO se aperta E sulla stessa linea
           const attiva = aperta && matchLinea(ss);
