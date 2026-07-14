@@ -6401,7 +6401,9 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     } catch(e){
     } finally {
       setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
-      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 800);
+      // era "aggiornaSessioni": prop di CheckIn, NON di Dashboard -> ReferenceError silenzioso e
+      // ricarica mai eseguita. Nome corretto + immediata.
+      if(onAggiornaSessioni) onAggiornaSessioni();
     }
   };
   // Pianifica un corso per piu' operatori: il worker crea i pianificati CORSO (inizio) e
@@ -6422,7 +6424,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     } catch(e){
     } finally {
       setLoading(false); setModCorsoMulti(null); setSelezionati(new Set());
-      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 2000);
+      // stesso bug: nome prop errato -> nessuna ricarica. Corretto e reso immediato.
+      if(onAggiornaSessioni) onAggiornaSessioni();
     }
   };
   // RIENTRO MULTIPLO: riporta in produzione le persone selezionate che sono al corso.
@@ -6445,46 +6448,53 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     } catch(e){
     } finally {
       setLoading(false); setSelezionati(new Set());
-      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 800);
+      // stesso bug del nome prop: nessuna ricarica. Corretto + immediata.
+      if(onAggiornaSessioni) onAggiornaSessioni();
     }
   };
   const aggiungiArticoloLavorazione = async (matricoleSet, skuNuovo, lineaId) => {
     if(!skuNuovo || !matricoleSet || matricoleSet.size===0) return;
-    setLoading(true); setLoadingMsg("Aggiunta articolo...");
-    try {
-      const matArr = Array.from(matricoleSet);
-      for(const mat of matArr){
-        // Trova la sessione attiva di questa matricola per recuperare nome/cognome/linea/inizio
-        const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
-                     sessioni.find(s => s.matricola===mat && !s.fine);
-        if(!sAtt) continue; // nessuna sessione attiva: non ha senso aggiungere un articolo
-        const nome = sAtt.nome||""; const cognome = sAtt.cognome||"";
-        // Linea: la lineaCorrente della sessione attiva (id normalizzato), più affidabile del valore passato.
-        const lineaUsa = sAtt.lineaCorrente || lineaId || "";
-        // Orario di inizio del turno della persona: l'articolo aggiunto si considera lavorato
-        // DALL'INIZIO TURNO (compatibile coi calcoli: stesso tsInizio → multi-SKU simultaneo).
-        let tsInizioTurno = null;
-        try { tsInizioTurno = (sAtt.tsInizio && sAtt.tsInizio>0) ? sAtt.tsInizio : (parseData(sAtt.inizio)?(parseData(sAtt.inizio).getTime()):null); } catch(e){ tsInizioTurno = null; }
-        // sessionId univoco: sotto-sessione distinta, non collide col dedup (sku diverso).
-        const nuovoSid = "ADD_"+mat+"_"+skuNuovo+"_"+Date.now();
+    const nuoveSess = [];
+    const lavori = [];
+    const matArr = Array.from(matricoleSet);
+    for(const mat of matArr){
+      const sAtt = sessioni.find(s => (s.matricola===mat) && !s.fine && !s._pianificato) ||
+                   sessioni.find(s => s.matricola===mat && !s.fine);
+      if(!sAtt) continue; // nessuna sessione attiva: non ha senso aggiungere un articolo
+      const nome = sAtt.nome||""; const cognome = sAtt.cognome||"";
+      const lineaUsa = sAtt.lineaCorrente || lineaId || "";
+      // L'articolo aggiunto si considera lavorato DALL'INIZIO TURNO (stesso tsInizio → multi-SKU simultaneo).
+      let tsInizioTurno = null;
+      try { tsInizioTurno = (sAtt.tsInizio && sAtt.tsInizio>0) ? sAtt.tsInizio : (parseData(sAtt.inizio)?(parseData(sAtt.inizio).getTime()):null); } catch(e){ tsInizioTurno = null; }
+      const nuovoSid = "ADD_"+mat+"_"+skuNuovo+"_"+Date.now();
+      lavori.push({mat, nome, cognome, lineaUsa, tsInizioTurno, nuovoSid});
+      // Riga ottimistica: stesso id di quella vera → alla ricarica viene sostituita, niente doppioni.
+      nuoveSess.push({...sAtt, id:nuovoSid, sku:skuNuovo, skuCorrente:skuNuovo,
+                      trasferimenti:[], corsi:[], pause:[], fine:null});
+    }
+    // 1) OTTIMISTICO + 2) CHIUDI SUBITO: nessuno spinner, nessuna attesa di rete.
+    if(setSessioni && nuoveSess.length) setSessioni(prev=>[...(prev||[]), ...nuoveSess]);
+    setModAddSku(null); setSelezionati(new Set());
+    // 3) SCRITTURE IN BACKGROUND e IN PARALLELO fra operatori. Prima era un ciclo sequenziale con
+    //    600ms di attesa PER OGNI operatore (su 14 persone ~14 secondi di blocco): ora l'attesa,
+    //    necessaria al commit del checkin su D1 prima di correggerne l'orario, si paga una volta sola.
+    (async()=>{
+      await Promise.all(lavori.map(async (w)=>{
         try {
-          // 1) Crea il CHECKIN extra (nasce con l'ora corrente lato worker)
-          const r = await fetch(nexusUrl("evento",{sessionId:nuovoSid, matricola:mat, nome, cognome, sku:skuNuovo, tipo:"CHECKIN", lineaDa:lineaUsa, lineaA:"", skuDa:skuNuovo, skuA:skuNuovo}),{mode:"cors"});
+          const r = await fetch(nexusUrl("evento",{sessionId:w.nuovoSid, matricola:w.mat, nome:w.nome, cognome:w.cognome, sku:skuNuovo, tipo:"CHECKIN", lineaDa:w.lineaUsa, lineaA:"", skuDa:skuNuovo, skuA:skuNuovo}),{mode:"cors"});
           let creato = true;
           try { const j = await r.json(); if(j && j.data && j.data.scritto===false) creato = false; } catch(e){}
-          // 2) Se creato e conosciamo l'inizio turno, allinea l'orario del nuovo checkin all'inizio turno
-          if(creato && tsInizioTurno){
-            await new Promise(res=>setTimeout(res, 600)); // breve attesa: commit del checkin in D1
-            try { await fetch(nexusUrl("modificaorario",{sessionId:nuovoSid, campo:"inizio", valore:new Date(tsInizioTurno).toISOString()}),{mode:"cors"}); } catch(e){}
+          if(creato && w.tsInizioTurno){
+            await new Promise(res=>setTimeout(res, 600)); // commit del checkin su D1
+            try { await fetch(nexusUrl("modificaorario",{sessionId:w.nuovoSid, campo:"inizio", valore:new Date(w.tsInizioTurno).toISOString()}),{mode:"cors"}); } catch(e){}
           }
         } catch(e){}
-      }
-    } catch(e){
-      // qualunque errore imprevisto: non lasciare lo spinner appeso
-    } finally {
-      setLoading(false); setModAddSku(null); setSelezionati(new Set());
-      if(aggiornaSessioni) setTimeout(aggiornaSessioni, 3000);
-    }
+      }));
+      // BUG STORICO: qui c'era "aggiornaSessioni", che in Dashboard NON esiste (la prop è
+      // onAggiornaSessioni). Lanciava un ReferenceError silenzioso e la ricarica non partiva MAI:
+      // l'articolo aggiunto restava invisibile fino al polling successivo.
+      if(onAggiornaSessioni) onAggiornaSessioni();
+    })();
   };
   const [loading, setLoading] = React.useState(false);
   const [loadingMsg, setLoadingMsg] = React.useState("");
@@ -6891,11 +6901,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       <button type="button" title={"Rimuovi articolo "+(ss.skuCorrente||ss.sku||"")+" — chiude la sessione e i minuti smettono di contare"}
                         onClick={async()=>{
                           if(!window.confirm("Rimuovere l'articolo "+(ss.skuCorrente||ss.sku||"")+" da "+(op?op.nome+" "+op.cognome:"questo operatore")+"? La sessione su questo SKU verrà chiusa e i minuti smettono di contare.")) return;
+                          const _sid = ss.id;
+                          // Ottimistico: la sessione si chiude subito a schermo.
+                          if(setSessioni) setSessioni(prev=>(prev||[]).map(x=> x.id===_sid ? {...x, fine:new Date().toLocaleString("it-IT")} : x));
                           try{ await api.evento({sessionId:ss.id,matricola:ss.matricola,nome:ss.nome,cognome:ss.cognome,sku:ss.skuCorrente||ss.sku,tipo:"CHECKOUT",lineaDa:ss.lineaCorrente,lineaA:"",skuDa:ss.skuCorrente||ss.sku,skuA:""}); }catch(e){}
                           // Se era l'unico articolo attivo, chiudi il popup
                           const attiviRimasti = skuOp.filter(x=>x._attiva && !x._pianificato && (x.skuCorrente||x.sku)!==(ss.skuCorrente||ss.sku));
                           if(attiviRimasti.length===0) setPopupSkuOp(null);
-                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
+                          if(onAggiornaSessioni) onAggiornaSessioni();
                         }}
                         style={{marginLeft:"auto",background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"2px 12px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>−</button>
                     )}
@@ -6903,11 +6916,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                       <button type="button" title={"Elimina l'articolo "+(ss.skuCorrente||ss.sku||"")+" da questa linea: rimuove la sessione e azzera l'obiettivo residuo"}
                         onClick={async()=>{
                           if(!window.confirm("Eliminare l'articolo "+(ss.skuCorrente||ss.sku||"")+" da "+(op?(op.nome+" "+op.cognome):"questo operatore")+" su "+lin+"?\n\nVengono rimossi i dati di questa sessione e l'obiettivo residuo rimasto in memoria. Operazione non reversibile.")) return;
+                          const _sid = ss.id;
+                          // Ottimistico: la riga sparisce subito dalla tabella.
+                          if(setSessioni) setSessioni(prev=>(prev||[]).filter(x=>x.id!==_sid));
                           try{ await fetchConRetry(nexusUrl("eliminasessione",{sessionId:ss.id}), 4, 800); }catch(e){}
                           try{ fetch(nexusUrl("invalidaObiettivoCongelato",{})).catch(()=>{}); }catch(e){}
                           const rimasti = skuOp.filter(x=>(x.id||x.sessionId)!==(ss.id||ss.sessionId));
                           if(rimasti.length===0) setPopupSkuOp(null);
-                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
+                          if(onAggiornaSessioni) onAggiornaSessioni();
                         }}
                         style={{marginLeft:0,background:"#fff",color:"#ef4444",border:"2px solid #ef4444",borderRadius:6,padding:"3px 9px",fontWeight:700,fontSize:14,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",flexShrink:0}}>🗑</button>
                     )}
@@ -6949,17 +6965,32 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 if(!chk.valida){setModMultipla({...modMultipla,_err:chk.messaggio+"."});return;}
                 const [yy,mo,gg] = dataStr.split("-").map(n=>parseInt(n,10));
                 const nd = new Date(yy, mo-1, gg, hh, mm, 0, 0);
-                setLoading(true); setLoadingMsg("Aggiornamento "+selezionati.size+" operatori...");
                 const toUpdate = fil.filter(s=>selezionati.has(s.matricola||s.nome));
-                for(const s of toUpdate){
-                  try{ await fetch(nexusUrl("modificaorario",{sessionId:s.id,campo:modMultipla.campo,valore:nd.toISOString()}),{mode:"cors"}); }catch(e){}
-                }
-                // Invalida gli obiettivi congelati del giorno: la modifica multipla può toccare
-                // operatori di linee diverse, quindi si ricalcola tutto sul nuovo orario.
+                const _ids = new Set(toUpdate.map(s=>s.id));
+                const _campo = modMultipla.campo;
+                const _nuovoTxt = nd.toLocaleString("it-IT");
+                const _iso = nd.toISOString();
+                // 1) OTTIMISTICO: gli orari cambiano in tabella immediatamente.
+                if(setSessioni) setSessioni(prev=>(prev||[]).map(s=>{
+                  if(!_ids.has(s.id)) return s;
+                  return _campo==="inizio" ? {...s, inizio:_nuovoTxt, tsInizio:nd.getTime()} : {...s, fine:_nuovoTxt};
+                }));
+                // 2) CHIUDI SUBITO: niente spinner, nessuna attesa di rete. Prima il modal restava
+                //    aperto per DUE ondate di rete (i modificaorario e poi invalidaObiettivoCongelato):
+                //    era quello a farlo sembrare lento rispetto alla modifica singola.
                 try{ localStorage.setItem("nexus_ult_modifica_orario", String(Date.now())); }catch(e){}
-                try{ await fetch(nexusUrl("invalidaObiettivoCongelato",{}),{mode:"cors"}); }catch(e){}
-                setLoading(false); setModMultipla(null); setSelezionati(new Set());
-                if(onAggiornaSessioni) onAggiornaSessioni();
+                setModMultipla(null); setSelezionati(new Set());
+                // 3) SCRITTURE IN BACKGROUND, in parallelo: l'utente ha già il controllo e vede già
+                //    il risultato. A scritture atterrate si riconcilia con D1 (se una fallisse, la
+                //    ricarica rimette i valori veri). Il polling sessioni è a 90s: nessun rischio
+                //    che una lettura intermedia sovrascriva l'ottimistico.
+                (async()=>{
+                  await Promise.all(toUpdate.map(s=>
+                    fetch(nexusUrl("modificaorario",{sessionId:s.id,campo:_campo,valore:_iso}),{mode:"cors"}).catch(e=>{})
+                  ));
+                  try{ await fetch(nexusUrl("invalidaObiettivoCongelato",{}),{mode:"cors"}); }catch(e){}
+                  if(onAggiornaSessioni) onAggiornaSessioni();
+                })();
               }}>✓ Salva</button>
               <button style={{flex:1,padding:10,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}} onClick={()=>setModMultipla(null)}>Annulla</button>
             </div>
@@ -6993,11 +7024,14 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         <button type="button" title={"Rimuovi "+sk+" — chiude la sessione su quell'articolo"} onClick={async()=>{
                           if(!window.confirm("Rimuovere l'articolo "+sk+" da "+perSku[sk].length+" operator"+(perSku[sk].length===1?"e":"i")+"? La sessione su questo SKU verrà chiusa e i minuti smettono di contare.")) return;
                           setLoading(true); setLoadingMsg("Rimozione "+sk+"...");
+                          const _ids = new Set(perSku[sk].map(x=>x.id));
+                          // Ottimistico: le righe si chiudono subito.
+                          if(setSessioni) setSessioni(prev=>(prev||[]).map(x=> _ids.has(x.id) ? {...x, fine:new Date().toLocaleString("it-IT")} : x));
                           await Promise.all(perSku[sk].map(s=>
                             api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}).catch(e=>{})
                           ));
                           setLoading(false);
-                          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,600);
+                          if(onAggiornaSessioni) onAggiornaSessioni();
                         }} style={{background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:6,padding:"3px 12px",fontWeight:900,fontSize:18,lineHeight:1,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>−</button>
                       </div>
                     ))}
@@ -7593,14 +7627,25 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       {modCambioSku&&<CambioSkuInline sess={modCambioSku} skuList={skuList} linee={linee}
         tutteSessioniOp={sessioni.filter(s=>(s.matricola===modCambioSku.matricola||s.nome===modCambioSku.nome)&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&!s._pianificato&&!isSkuSpeciale(s.skuCorrente||s.sku||""))}
         onClose={()=>setModCambioSku(null)} onRimuoviArticolo={async(s)=>{
+          const _sid = s.id;
+          // Ottimistico: la riga si chiude subito, senza aspettare la ricarica da D1.
+          if(setSessioni) setSessioni(prev=>(prev||[]).map(x=> x.id===_sid ? {...x, fine:new Date().toLocaleString("it-IT")} : x));
           try{ await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); }catch(e){}
-          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,800);
-        }} onOk={(ns)=>{
+          if(onAggiornaSessioni) onAggiornaSessioni();
+        }} onOk={async(ns)=>{
           const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
-          if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
-          api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn});
-          if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,3000);
+          const _sid = sf.id;
           setModCambioSku(null);
+          // Ottimistico: l'articolo cambia SUBITO in tabella e il trasferimento compare nello storico
+          // della riga. Prima si aspettavano 3 secondi di ricarica e nel frattempo si vedeva il vecchio.
+          if(setSessioni) setSessioni(prev=>(prev||[]).map(x=>{
+            if(x.id!==_sid) return x;
+            return {...x, skuCorrente:sn,
+              trasferimenti:[...(x.trasferimenti||[]), {quando:new Date().toLocaleString("it-IT"), ts:Date.now(), lineaDa:x.lineaCorrente, lineaA:x.lineaCorrente, skuDa:sp, skuA:sn}]};
+          }));
+          if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
+          try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn}); }catch(e){}
+          if(onAggiornaSessioni) onAggiornaSessioni();
         }}/>}
       {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
         onOk={async(tipo,nomeCorso)=>{
