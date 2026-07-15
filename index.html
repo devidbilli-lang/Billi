@@ -5421,7 +5421,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 const _fin2T = new Date(oraAttuale.getTime() + 8*60*60*1000);
                 const _inizio2T = String(oraAttuale.getHours()).padStart(2,"0")+":"+String(oraAttuale.getMinutes()).padStart(2,"0");
                 const _fine2T = (_fin2T.getDate()!==oraAttuale.getDate()) ? "23:59" : (String(_fin2T.getHours()).padStart(2,"0")+":"+String(_fin2T.getMinutes()).padStart(2,"0"));
-                for (const s of registrati) {
+                // Elaboro tutti gli operatori IN PARALLELO invece che in sequenza. Prima il ciclo
+                // era `for...of` con `await` per ciascuno: su molti operatori i tempi delle fetch
+                // (salvaOrarioOggi + pianificaCheckin) si sommavano. Ora ogni operatore produce una
+                // Promise e partono tutte insieme; i check-in immediati (onSuccess) sono già
+                // ottimistici (add fa setSess subito), quindi la UI si aggiorna all'istante.
+                await Promise.all(registrati.map(async (s) => {
                   // Controlla orario inizio turno per questa matricola (odierno se valido, altrimenti standard)
                   const oggiOp = _orariOggi[s.matricola];
                   const orarioOp = (oggiOp && oggiOp.data===_oggiStr && oggiOp.inizioOggi) ? oggiOp.inizioOggi : (_orariTurno[s.matricola] || "06:00");
@@ -5467,7 +5472,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     // setSess + api.evento, quindi UNA sola chiamata di check-in (non più la doppia).
                     onSuccess(s);
                   }
-                }
+                }));
               })();
               setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
               setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
