@@ -48,8 +48,21 @@ const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7xHgCQ-chyXOHhItbAZoXrWWzi7s-M_5T4UX_-lMuZDBiBrrVmPzmV34b8Je0rqKx_w/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
+// GUARD SOLA VISUALIZZAZIONE (ruolo admin-view): quando attivo, QUALSIASI azione di scrittura verso
+// il worker viene bloccata a monte, indipendentemente da quale dei ~40 punti del codice la invochi
+// (props, api.evento, fetch diretti). È l'unico punto sicuro per garantire "vedi tutto, tocchi
+// niente": basta che una scrittura passi da nexusUrl per essere fermata. Le LETTURE restano libere.
+window.__NEXUS_SOLA_VISTA__ = false;
+// Azioni di sola lettura: consentite anche in sola-vista. Tutto il resto (evento, reset, modifica*,
+// elimina*, salva*, pianifica*, depenna*, archivia*, invalida*) è scrittura → bloccato.
+const NEXUS_READ_ACTIONS = new Set(["sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi"]);
+function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
+
 function nexusUrl(action, params) {
   const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare"];
+  // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
+  // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
+  if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
@@ -72,7 +85,12 @@ function isRepartoLinea(lineaId, lineaNome){ return repartoTipoLinea(lineaId, li
 // Linee a efficienza "a tempo" come RMA (RMA + track&trace).
 function isLineaRMAlike(lineaId, lineaNome){ const r=repartoTipoLinea(lineaId, lineaNome); return r==="rma"||r==="tt"; }
 
-const ADMIN_PWD = "Nexus2026!";
+const ADMIN_PWD = "Nexus2026&&!";
+// Password di SOLA VISUALIZZAZIONE: dà la stessa vista completa dell'admin (tutte le linee, tutti i
+// dati) ma SENZA possibilità di modifica. Utile per chi deve consultare senza rischio di alterare
+// dati. Chi la usa entra con ruolo "admin-view": isAdmin resta true (vede tutto) ma le azioni di
+// scrittura vengono neutralizzate a monte (vedi dove si monta la Dashboard).
+const ADMIN_VIEW_PWD = "NXS2026!";
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
 ];
@@ -6439,7 +6457,7 @@ function TabOperatori({ operatori, sessioni, linee, isAdmin, lineaFiltro }) { co
     </div>
   );
 }
-function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onTornaIndietro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false }) {
+function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeSheets, isAdmin, lineaFiltro, onTornaIndietro, onReset, onCO, onCOSheets, onTr, onAggiornaSessioni, editOrario=false, soloVista=false }) {
   // Ricarica sessioni finché la condizione attesa è vera (max 15 tentativi ogni 2s)
   const aspettaConfermaSheets = async (verificaFn, onDone) => {
     // Timeout garantito: dopo 20s chiude lo spinner comunque
@@ -6771,6 +6789,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
+      {soloVista&&(
+        <div style={{position:"sticky",top:0,zIndex:500,background:"linear-gradient(135deg,#f59e0b,#d97706)",color:"#fff",padding:"8px 20px",textAlign:"center",fontWeight:800,fontSize:13,fontFamily:"'Montserrat',sans-serif",letterSpacing:0.5,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>
+          👁 SOLA VISUALIZZAZIONE — puoi consultare tutti i dati ma non modificarli
+        </div>
+      )}
       {loading&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999}}>
           <div style={{width:56,height:56,border:"6px solid rgba(255,255,255,0.3)",borderTop:"6px solid #ffffff",borderRadius:"50%",animation:"spin 0.8s linear infinite",marginBottom:16}}/>
@@ -8328,6 +8351,8 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
   };
   const tentaAdmin = () => {
     if(pwd===ADMIN_PWD){ onLogin("admin",null); return; }
+    // Password di sola visualizzazione: stessa vista completa, ruolo diverso (nessuna modifica).
+    if(pwd===ADMIN_VIEW_PWD){ onLogin("admin-view",null); return; }
     setErr("Password admin errata."); setPwd("");
   };
 
@@ -8637,24 +8662,34 @@ function App() { const [view,setView]             = useState("login");
         </div>
       )}
       {view==="checkin"&&(
-        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,1000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ sessioneLinea.pulisci(); setAccesso(null); setView("login"); }} rampeSheets={rampeSheets} onQualita={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }}/>
+        <CheckIn onSuccess={add} onCheckout={co} onTrasf={tr} sessioni={sess} sessSheets={sessSheets} coSheets={coFromSheets} aggiornaSessioni={()=>setTimeout(caricaSessioni,1000)} linee={linee} operatori={operatori} skuList={skuList} syncCfg={syncCfg} dashCfg={dashCfg} ultimoSync2={ultimoSync2} lineaFiltro={accesso&&accesso.ruolo==="linea"?accesso.linea:null} onGoToDashboard={()=>setView("dashboard")} onEsci={()=>{ sessioneLinea.pulisci(); try{ window.__NEXUS_SOLA_VISTA__ = false; }catch(e){} setAccesso(null); setView("login"); }} rampeSheets={rampeSheets} onQualita={(l)=>{ setLineaQualita(l); setViewQualita("dashboard"); }}/>
       )}
       {view==="login"&&(
-        <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); if(ruolo==="linea"&&linea) sessioneLinea.salva(linea.id); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>
+        <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); try{ window.__NEXUS_SOLA_VISTA__ = (ruolo==="admin-view"); }catch(e){} if(ruolo==="linea"&&linea) sessioneLinea.salva(linea.id); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>
       )}
-      {view==="dashboard"&&accesso&&(
+      {view==="dashboard"&&accesso&&(()=>{
+        // SOLA VISUALIZZAZIONE: isAdmin resta true (vista completa identica all'admin), ma tutte le
+        // funzioni di scrittura vengono sostituite con no-op, così nessuna modifica raggiunge D1.
+        // I ~70 pulsanti restano visibili ma inerti: nessun checkout, trasferimento, reset, modifica
+        // orario/corso/articolo o aggiornamento ottimistico. setSessioni no-op blocca anche gli
+        // ottimistici locali, così l'utente non vede cambi fittizi che poi la ricarica smentirebbe.
+        const _isView = accesso.ruolo==="admin-view";
+        const _noop = ()=>{};
+        return (
         <Dashboard
           sessioni={sessSheets}
-          setSessioni={setSessSheets}
+          setSessioni={_isView ? _noop : setSessSheets}
           linee={linee} skuList={skuList} operatori={operatori}
-          isAdmin={accesso.ruolo==="admin"}
+          isAdmin={accesso.ruolo==="admin"||accesso.ruolo==="admin-view"}
           lineaFiltro={accesso.ruolo==="linea"?accesso.linea:null}
-          onReset={rst} onCO={co} onCOSheets={coFromSheets} onTr={tr}
+          onReset={_isView ? _noop : rst} onCO={_isView ? _noop : co} onCOSheets={_isView ? _noop : coFromSheets} onTr={_isView ? _noop : tr}
           onAggiornaSessioni={caricaSessioni}
           rampeSheets={rampeSheets}
-          editOrario={true}
+          editOrario={!_isView}
+          soloVista={_isView}
           onTornaIndietro={()=>setView("checkin")}/>
-      )}
+        );
+      })()}
     </div>
   );
 }
