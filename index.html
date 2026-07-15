@@ -741,14 +741,34 @@ function ModalCorso({ sess, linee, onOk, onClose, onPianifica }) { const [nomeCo
   );
 }
 function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDest]   = useState(null);
-  const [nSku,setNSku]   = useState("");
+  // MULTI-ARTICOLO: lista degli articoli da avere sulla destinazione (prima era un solo nSku).
+  // Pre-carico gli articoli che la persona ha già attivi (una sessione = un articolo), così il
+  // default è "porta con te quelli che hai"; l'utente può aggiungerne o toglierne.
+  const _artiAttuali = (() => {
+    const set = new Set();
+    const matKey = sess.matricola || (sess.nome+"-"+sess.cognome);
+    (sess._tutteSessioniOp || []).forEach(x=>{
+      const k = x.matricola || (x.nome+"-"+x.cognome);
+      if(k!==matKey) return;
+      if(x.fine && x.fine!=="" && x.fine!==null && x.fine!=="null") return;
+      if(x._pianificato) return;
+      const a = x.skuCorrente || x.sku; if(a && String(a).charAt(0)!=="#") set.add(a);
+    });
+    if(set.size===0){ const a=sess.skuCorrente||sess.sku; if(a) set.add(a); }
+    return Array.from(set);
+  })();
+  const [articoli,setArticoli] = useState(_artiAttuali);   // array di SKU per la destinazione
   const [cSku,setCSku]   = useState("");
   const [cLinea,setCLinea] = useState("");
   const destObj = dest ? linee.find(l=>l.id===dest) : null;
   const _ud = destObj ? ((destObj.id||"")+" "+(destObj.nome||"")).toUpperCase() : "";
   const destReparto = !!destObj && (_ud.includes("RMA")||_ud.includes("PREPARAZIONE DG")||_ud.includes("TAGLIO DG")||_ud.includes("TRACK")||_ud.includes("PROTOTIP")||_ud.includes("LOGISTICA")||_ud.includes("INDUSTRIALIZZAZIONE")||_ud.includes("QUALIT")||_ud.includes("PRODUZIONE")||_ud.includes("MIGLIORAMENTO"));
-  const articoloMancante = !!dest && !destReparto && !nSku;
-  const conferma = () => { if(!dest||articoloMancante) return; onOk(dest, destReparto?null:nSku); };
+  const aggiungiArt = (a) => { const v=(a||"").toUpperCase().trim(); if(!v) return; setArticoli(prev=> prev.includes(v)?prev:[...prev,v]); setCSku(""); };
+  const rimuoviArt = (a) => setArticoli(prev=>prev.filter(x=>x!==a));
+  const articoloMancante = !!dest && !destReparto && articoli.length===0;
+  // onOk riceve ora la LISTA di articoli (o null per i reparti). Retro-compatibile: gli handler
+  // aggiornati leggono un array; passo sempre un array.
+  const conferma = () => { if(!dest||articoloMancante) return; onOk(dest, destReparto?null:articoli); };
   return (
     <div style={MS.ov}>
       <div style={MS.md}>
@@ -772,13 +792,26 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
           </div>
           {!destReparto&&(
             <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
-              <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Articolo sulla linea di destinazione</div>
-              <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca articolo..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
-              <SugSku val={cSku} list={skuList} onSel={s=>{setNSku(s.sku);setCSku("");}}/>
-              <input style={{...S.inp,marginTop:8}} placeholder="Articolo selezionato" value={nSku} onChange={e=>setNSku(e.target.value.toUpperCase())}/>
+              <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#64748b",marginBottom:8}}>Articoli sulla linea di destinazione</div>
+              {/* Chip degli articoli scelti, ognuno rimovibile */}
+              {articoli.length>0&&(
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+                  {articoli.map(a=>(
+                    <span key={a} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff7ed",border:"1px solid #f59e0b66",borderRadius:16,padding:"4px 10px",fontSize:13,fontWeight:700,color:"#b45309"}}>
+                      {a}
+                      <button onClick={()=>rimuoviArt(a)} style={{border:"none",background:"transparent",color:"#dc2626",cursor:"pointer",fontWeight:800,fontSize:15,lineHeight:1,padding:0}} title="Togli">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="Cerca articolo da aggiungere..." value={cSku} onChange={e=>setCSku(e.target.value.toUpperCase())}/>
+              <SugSku val={cSku} list={skuList} onSel={s=>aggiungiArt(s.sku)}/>
+              {cSku.trim()&&(
+                <button onClick={()=>aggiungiArt(cSku)} style={{marginTop:8,padding:"8px 12px",background:"#f59e0b",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13}}>+ Aggiungi "{cSku.trim()}"</button>
+              )}
               {articoloMancante&&(
                 <div style={{marginTop:8,padding:"6px 10px",background:"#fef3c7",border:"1px solid #f59e0b66",borderRadius:6,fontSize:12,color:"#b45309",fontWeight:700}}>
-                  ⚠ Seleziona l'articolo per continuare
+                  ⚠ Aggiungi almeno un articolo per continuare
                 </div>
               )}
             </div>
@@ -5091,12 +5124,21 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
             {err&&<div style={S.err}>{err}</div>}
             {mode==="checkout"&&sf&&<button style={S.bCO} onClick={()=>{ if(coSheets&&!sessioni.find(s=>s.id===sf.id)){ coSheets(sf); if(aggiornaSessioni)setTimeout(aggiornaSessioni,3000); } else onCheckout(sf.id);
               setRis({tipo:"checkout",sess:sf});setMode("result"); }}>Fine Turno</button>}
-            {mode==="transfer"&&sf&&<ModalTrasf sess={sf} linee={linee} skuList={skuList} onOk={async(ld,ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+            {mode==="transfer"&&sf&&<ModalTrasf sess={{...sf, _tutteSessioniOp:sessioni}} linee={linee} skuList={skuList} onOk={async(ld,arts)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===ld); const _u=((ld||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP")||_u.includes("LOGISTICA")||_u.includes("INDUSTRIALIZZAZIONE")||_u.includes("QUALIT")||_u.includes("PRODUZIONE")||_u.includes("MIGLIORAMENTO"); })();
-              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||""; const sn=_dRep?"":(ns||sp);
-                try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:sn}); }catch(e){}
-                if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,ld,ns);
-              setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:ns});setMode("result"); }} onClose={reset}/>}
+              // arts = lista articoli per la destinazione (o null per reparto). Il primo articolo
+              // trasferisce la sessione corrente; gli eventuali articoli in più diventano nuove
+              // sessioni (checkin) sulla destinazione, così il multi-articolo è preservato.
+              const lista = _dRep ? [""] : (Array.isArray(arts)&&arts.length? arts : [ (sf.skuCorrente||sf.sku||"") ]);
+              const primo = lista[0];
+              if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
+                try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:primo,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:ld,skuDa:sp,skuA:primo}); }catch(e){}
+              } else onTrasf(sf.id,ld,primo);
+              // Articoli aggiuntivi → nuove sessioni sulla destinazione
+              for(let i=1;i<lista.length;i++){ const sk=lista[i]; const nid=crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now();
+                try{ await api.evento({sessionId:nid,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sk,tipo:"CHECKIN",trasf:"1",lineaDa:ld,lineaA:ld,skuDa:sk,skuA:sk}); }catch(e){} }
+              if(aggiornaSessioni) aggiornaSessioni();
+              setRis({tipo:"transfer",sess:sf,lDest:ld,nSku:lista.join(", ")});setMode("result"); }} onClose={reset}/>}
             {mode==="rientro"&&sf&&(()=>{
               // Leggi direttamente da D1 per avere i corsi aggiornati
               const sfAggiornato = sessioni.find(s=>s.id===sf.id) || sf;
@@ -6707,15 +6749,19 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           <div style={{color:"#ffffff",fontSize:16,fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{loadingMsg||"Operazione in corso..."}</div>
         </div>
       )}
-      {mod&&<ModalTrasf sess={mod} linee={linee} skuList={skuList} onOk={async(d,ns)=>{
+      {mod&&<ModalTrasf sess={{...mod, _tutteSessioniOp:sessioni}} linee={linee} skuList={skuList} onOk={async(d,arts)=>{
         const destId = d&&d.id ? d.id : d;
         const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===destId); const _u=((destId||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP")||_u.includes("LOGISTICA")||_u.includes("INDUSTRIALIZZAZIONE")||_u.includes("QUALIT")||_u.includes("PRODUZIONE")||_u.includes("MIGLIORAMENTO"); })();
-        const skuNuovo = _dRep ? "" : (ns || mod.skuCorrente || mod.sku || "");
+        // arts è ora una LISTA di articoli (o null per i reparti). Per un reparto: un solo checkin
+        // senza articolo. Per una linea: UN CHECKIN PER OGNI articolo scelto (multi-SKU), così se
+        // porti due articoli sulla destinazione vedrai due sessioni. Prima si faceva un solo
+        // checkin con un unico articolo: è ciò che faceva "sparire" il secondo articolo.
+        const listaArticoli = _dRep ? [""] : (Array.isArray(arts)&&arts.length? arts : [ (mod.skuCorrente||mod.sku||"") ]);
         const lineaPartenza = mod.lineaCorrente||mod.lineaInizio||"";
         const matKey = mod.matricola||mod.nome+"-"+mod.cognome;
         setMod(null);
         // 1. CHECKOUT di TUTTE le sessioni aperte della persona sulla linea di PARTENZA
-        //    (chiude i minuti su ogni articolo che faceva lì).
+        //    (chiude i minuti su ogni articolo che faceva lì — restano nello storico per articolo).
         const apertePartenza = sessioni.filter(ss=>{
           const k = ss.matricola||ss.nome+"-"+ss.cognome;
           if(k!==matKey) return false;
@@ -6727,9 +6773,11 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         await Promise.all(apertePartenza.map(ss=>
           api.evento({sessionId:ss.id,matricola:ss.matricola,nome:ss.nome,cognome:ss.cognome,sku:ss.skuCorrente||ss.sku||"",tipo:"CHECKOUT",lineaDa:ss.lineaCorrente,lineaA:"",skuDa:ss.skuCorrente||ss.sku||"",skuA:""}).catch(e=>{})
         ));
-        // 2. CHECKIN nuovo sulla linea di DESTINAZIONE col nuovo articolo (riparte da zero).
-        const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
-        try{ await api.evento({sessionId:newId,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:skuNuovo,tipo:"CHECKIN",trasf:"1",lineaDa:destId,lineaA:destId,skuDa:skuNuovo,skuA:skuNuovo}); }catch(e){}
+        // 2. Un CHECKIN sulla DESTINAZIONE per OGNI articolo scelto (una sessione per articolo).
+        await Promise.all(listaArticoli.map(async (sk)=>{
+          const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now();
+          try{ await api.evento({sessionId:newId,matricola:mod.matricola,nome:mod.nome,cognome:mod.cognome,sku:sk,tipo:"CHECKIN",trasf:"1",lineaDa:destId,lineaA:destId,skuDa:sk,skuA:sk}); }catch(e){}
+        }));
         if(onAggiornaSessioni) onAggiornaSessioni();
       }} onClose={()=>setMod(null)}/>}
       {popupRiepilogoOp&&(()=>{
