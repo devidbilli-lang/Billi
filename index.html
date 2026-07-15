@@ -8434,6 +8434,13 @@ function App() { const [view,setView]             = useState("login");
     const t = setInterval(caricaSessioni, 90000); // 90s invece di 30s: riduce di 3x le letture D1
     return ()=>clearInterval(t); },[caricaSessioni]);
   const add = s => { setSess(p=>[s,...p]);
+    // La TABELLA sessioni legge da sessSheets, NON da sess: senza questo inserimento ottimistico il
+    // nuovo check-in restava invisibile in tabella finché caricaSessioni non ricaricava da D1 (l'arco
+    // temporale tra "Presenza Registrata" e il nome che compare). Lo aggiungo subito anche qui, con
+    // gli stessi campi che avrà dopo la ricarica, così appare all'istante. Guardia anti-doppione:
+    // se una riga con lo stesso id c'è già (ricarica arrivata nel frattempo), non la duplico.
+    setSessSheets(p=>{ const arr=p||[]; if(arr.some(x=>x.id===s.id)) return arr;
+      return [{...s, skuCorrente:s.sku, lineaCorrente:s.lineaCorrente, fine:null, trasferimenti:s.trasferimenti||[], corsi:[], pause:[]}, ...arr]; });
     api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku,tipo:"CHECKIN",lineaDa:s.lineaCorrente,lineaA:s.lineaCorrente,skuDa:s.sku,skuA:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):"")}); };
   const co = id => { setSess(p=>p.map(s=>{ if(s.id!==id)return s; api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); return {...s,fine:now().toISOString()}; }));
     setTimeout(caricaSessioni,3000); };
