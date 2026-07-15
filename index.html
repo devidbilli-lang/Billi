@@ -4428,6 +4428,17 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [obPerArticolo, setObPerArticolo] = React.useState({}); // {linea:{sku:obiettivo}} dalla card Entra in Produzione
   const [obPerArticoloLocal, setObPerArticoloLocal] = React.useState({}); // {sku:obiettivo} riportato DIRETTAMENTE dalla card-mirror (no D1)
   const [showRiepilogoQ, setShowRiepilogoQ] = useState(false);
+  // BNC da recuperare (mappa "linea|sku" -> BNC del giorno lavorativo precedente). È la STESSA fonte
+  // usata dalla card Entra in Produzione: serve per far partire le borse OK del riquadro OGGI con il
+  // "-" quando il giorno prima c'erano BNC su quell'articolo, identico alla card.
+  const [bncRecupero, setBncRecupero] = React.useState({});
+  React.useEffect(()=>{
+    let vivo=true;
+    const _caricaBnc=()=>{ fetch(nexusUrl("bncDaRecuperare",{})).then(r=>r.json()).then(j=>{ if(vivo&&j&&j.ok&&j.data&&j.data.mappa) setBncRecupero(j.data.mappa); }).catch(()=>{}); };
+    _caricaBnc();
+    const _iv=setInterval(_caricaBnc, 900000); // ogni 15 min, come la Dashboard
+    return ()=>{ vivo=false; clearInterval(_iv); };
+  },[]);
   // Carica dati qualità di oggi per mostrare totali per SKU (richiamabile dopo ogni registrazione)
   const caricaQualitaOggi = React.useCallback(()=>{
     fetch(nexusUrl("leggiqualita",{})).then(r=>r.json()).then(j=>{
@@ -4552,18 +4563,27 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         // Calcola totali per SKU della linea oggi
         const lineaId2 = linea?.id || lineaSelQ;
         const righe = qualitaOggi.filter(q=>!lineaId2||q.linea===lineaId2);
+        // bncDa(sku): BNC del giorno lavorativo precedente per questo articolo su questa linea.
+        // Stessa lettura della card Entra in Produzione (chiave "linea|sku", con fallback sul nome linea).
+        const _nomeLineaBncQ = (linea?.nome)||"";
+        const bncDa = (sk)=> Number((bncRecupero||{})[lineaId2+"|"+sk] ?? (bncRecupero||{})[_nomeLineaBncQ+"|"+sk] ?? 0) || 0;
         const skuMap = {};
         righe.forEach(q=>{
           const k = q.sku;
-          if(!skuMap[k]) skuMap[k]={sku:k,ok:0,ko:0,migl:0};
+          if(!skuMap[k]) skuMap[k]={sku:k,ok:0,ko:0,migl:0,coffre:0};
           skuMap[k].ok += Number(q.ok)||0;
           skuMap[k].ko += Number(q.ko)||0;
           skuMap[k].migl += Number(q.migliorabili)||0;
+          skuMap[k].coffre += Number(q.borse_coffre)||0;   // BNC di oggi
         });
-        const lista = Object.values(skuMap).sort((a,b)=>b.ok-a.ok);
-        const totOk = lista.reduce((a,r)=>a+r.ok,0);
+        // Borse OK "nette" come sulla card: OK di oggi + BNC di oggi − BNC del giorno prima.
+        // Così il riquadro parte in negativo se ieri c'erano BNC non ancora recuperate, identico
+        // alla card Entra in Produzione, e sale man mano che si registrano le buone.
+        const lista = Object.values(skuMap).map(r=>({...r, okNette: r.ok + r.coffre - bncDa(r.sku)})).sort((a,b)=>b.okNette-a.okNette);
+        const totOk = lista.reduce((a,r)=>a+r.okNette,0);
         const totKo = lista.reduce((a,r)=>a+r.ko,0);
         const totMigl = lista.reduce((a,r)=>a+r.migl,0);
+        const totCoffre = lista.reduce((a,r)=>a+r.coffre,0);
         return (
           <div
             style={{position:"fixed",top:120,left:"50%",transform:"translateX(-50%)",zIndex:2000,width:"calc(100vw - 32px)",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none",cursor:"default"}}
@@ -4624,6 +4644,10 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   <div style={{fontSize:10,color:"#f59e0b",fontWeight:600,marginBottom:2}}>Migl.</div>
                   <div style={{fontSize:24,fontWeight:900,color:"#f59e0b"}}>0</div>
                 </div>
+                <div style={{flex:1,background:"rgba(168,85,247,0.08)",borderRadius:12,padding:"8px 4px",textAlign:"center"}}>
+                  <div style={{fontSize:10,color:"#a855f7",fontWeight:600,marginBottom:2}}>BNC</div>
+                  <div style={{fontSize:24,fontWeight:900,color:"#a855f7"}}>0</div>
+                </div>
               </div>}
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s&&s.sku===r.sku);
@@ -4643,7 +4667,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   <div style={{display:"flex",gap:8,marginTop:6}}>
                     <div style={{flex:1,background:"rgba(16,185,129,0.08)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
                       <div style={{fontSize:10,color:"#10b981",fontWeight:600,marginBottom:2}}>OK</div>
-                      <div style={{fontSize:20,fontWeight:900,color:"#10b981"}}>{r.ok}</div>
+                      <div style={{fontSize:20,fontWeight:900,color:(r.okNette<0?"#ef4444":"#10b981")}}>{r.okNette}</div>
                     </div>
                     <div style={{flex:1,background:"rgba(239,68,68,0.08)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
                       <div style={{fontSize:10,color:"#ef4444",fontWeight:600,marginBottom:2}}>KO</div>
@@ -4652,6 +4676,10 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                     <div style={{flex:1,background:"rgba(245,158,11,0.08)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
                       <div style={{fontSize:10,color:"#f59e0b",fontWeight:600,marginBottom:2}}>Migl.</div>
                       <div style={{fontSize:20,fontWeight:900,color:"#f59e0b"}}>{r.migl||0}</div>
+                    </div>
+                    <div style={{flex:1,background:"rgba(168,85,247,0.08)",borderRadius:10,padding:"6px 4px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#a855f7",fontWeight:600,marginBottom:2}}>BNC</div>
+                      <div style={{fontSize:20,fontWeight:900,color:"#a855f7"}}>{r.coffre||0}</div>
                     </div>
                   </div>
                 </div>;
