@@ -3426,17 +3426,9 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               const W = 280, H = 110, PL = 28, PR = 8, PT = 14, PB = 18;
               const iW = W-PL-PR, iH = H-PT-PB;
               const xStep = iW / Math.max(1,(dur-1));
-              // L'asse Y si scala sul massimo tra l'obiettivo previsto e i valori effettivi della
-              // curva (un giorno passato con piu operatori puo superare obMax): cosi nulla viene tagliato.
-              const yRef = Math.max(obMax, ...curvaOb.filter(v=>typeof v==="number"));
-              const yMax = (yRef>0?yRef:obMax) * 1.05;
-              const px = i => PL + i * xStep;
-              const py = v => PT + iH - (v / yMax * iH);
-              // Linea teorica
-              const pts = curvaOb.map((v,i) => px(i)+","+py(v)).join(" ");
-              // Giorno corrente
-              const gOggi = Math.min((g||0), dur);
-              // Borse prodotte per giorno (riusato per disegno e per etichette)
+              // Borse prodotte per giorno (serve PRIMA di calcolare yMax: un giorno può superare
+              // l'obiettivo teorico e senza includerlo la linea verde uscirebbe dal grafico —
+              // con overflow visibile schizzava fino in cima alla pagina).
               const borsePerGiorno = [];
               if(rampa&&rampa.dal&&riepilogo.length>0){
                 for(let d=1;d<=dur;d++){
@@ -3463,6 +3455,20 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                   }
                 }
               }
+              // L'asse Y si scala sul massimo tra obiettivo previsto, curva teorica E borse reali
+              // prodotte: così nessuna delle due linee esce mai dal riquadro, anche quando la
+              // produzione supera di molto l'obiettivo (es. rampa completata a pieno regime).
+              const _borseNum = borsePerGiorno.filter(v=>typeof v==="number"&&isFinite(v));
+              const yRef = Math.max(obMax, ...curvaOb.filter(v=>typeof v==="number"), ...(_borseNum.length?_borseNum:[0]));
+              const yMax = (yRef>0?yRef:(obMax||1)) * 1.08;
+              const px = i => PL + i * xStep;
+              // Clamp difensivo: qualunque valore anomalo resta comunque dentro l'area del grafico
+              // invece di volare fuori (nessun NaN/Infinity, nessuna y negativa).
+              const py = v => { const n=Number(v); if(!isFinite(n)) return PT+iH; const y = PT + iH - (n / yMax * iH); return Math.max(PT, Math.min(PT+iH, y)); };
+              // Linea teorica
+              const pts = curvaOb.map((v,i) => px(i)+","+py(v)).join(" ");
+              // Giorno corrente
+              const gOggi = Math.min((g||0), dur);
               return (
                 <div style={{
                   marginTop:10,
@@ -3501,12 +3507,14 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                         </feMerge>
                       </filter>
                     </defs>
-                    {/* Griglia Y */}
+                    {/* Griglia Y - scalata su yMax (il massimo effettivo tra obiettivo, curva e borse),
+                        così le tacche coprono tutta l'altezza e i numeri corrispondono ai punti disegnati */}
                     {[0,25,50,75,100].map(p=>{
-                      const y = py(obMax*p/100);
+                      const val = yMax*p/100;
+                      const y = py(val);
                       return <g key={p}>
                         <line x1={PL} y1={y} x2={W-PR} y2={y} stroke="#e2e8f0" strokeWidth="0.5"/>
-                        <text x={PL-3} y={y+2} fontSize="6" textAnchor="end" fill="#94a3b8">{Math.round(obMax*p/100)}</text>
+                        <text x={PL-3} y={y+2} fontSize="6" textAnchor="end" fill="#94a3b8">{Math.round(val)}</text>
                       </g>;
                     })}
                     {/* Asse X - tutti i giorni di rampa */}
