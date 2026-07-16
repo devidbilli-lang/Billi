@@ -4602,6 +4602,21 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           skuMap[k].migl += Number(q.migliorabili)||0;
           skuMap[k].coffre += Number(q.borse_coffre)||0;   // BNC di oggi
         });
+        // Includi ANCHE gli articoli che hanno BNC da recuperare dal giorno prima ma che oggi non
+        // hanno ancora righe di qualità: senza questo, un articolo con -10 di ieri non comparirebbe
+        // (nessuna riga oggi) e il totale resterebbe 0, mentre la card Entra in Produzione lo mostra
+        // già a -10. Aggancio le chiavi "linea|sku" di bncRecupero relative a questa linea.
+        (function(){
+          const pref1 = lineaId2+"|", pref2 = _nomeLineaBncQ+"|";
+          Object.keys(bncRecupero||{}).forEach(key=>{
+            let sk=null;
+            if(pref1 && key.indexOf(pref1)===0) sk=key.slice(pref1.length);
+            else if(pref2 && _nomeLineaBncQ && key.indexOf(pref2)===0) sk=key.slice(pref2.length);
+            if(sk && !skuMap[sk] && (Number(bncRecupero[key])||0)>0){
+              skuMap[sk]={sku:sk,ok:0,ko:0,migl:0,coffre:0};
+            }
+          });
+        })();
         // Borse OK "nette" come sulla card: OK di oggi + BNC di oggi − BNC del giorno prima.
         // Così il riquadro parte in negativo se ieri c'erano BNC non ancora recuperate, identico
         // alla card Entra in Produzione, e sale man mano che si registrano le buone.
