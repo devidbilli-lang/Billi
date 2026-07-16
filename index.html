@@ -55,11 +55,11 @@ const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 window.__NEXUS_SOLA_VISTA__ = false;
 // Azioni di sola lettura: consentite anche in sola-vista. Tutto il resto (evento, reset, modifica*,
 // elimina*, salva*, pianifica*, depenna*, archivia*, invalida*) è scrittura → bloccato.
-const NEXUS_READ_ACTIONS = new Set(["sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi"]);
+const NEXUS_READ_ACTIONS = new Set(["sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
 function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
 
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee"];
   // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
   // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
   if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
@@ -2981,6 +2981,46 @@ function CardProtoQualita({ linea, qualitaPerSku, skuList, compatto=false }){
 }
 function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, bncRecupero={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
   const [lineaSel, setLineaSel] = React.useState("");
+  // Ordine personalizzato delle card-linea nella griglia (array di id linea), condiviso via D1.
+  // Le linee non presenti in questo array vengono mostrate in coda nel loro ordine naturale.
+  const [ordineLinee, setOrdineLinee] = React.useState([]);
+  const [dragLinea, setDragLinea] = React.useState(null); // id della card che si sta trascinando
+  // In sola visualizzazione il riordino è disabilitato (comunque il salvataggio sarebbe bloccato dal
+  // guard, ma è più chiaro non permettere proprio il trascinamento). Uso il flag globale sola-vista.
+  const _solaVista = (typeof window!=="undefined" && window.__NEXUS_SOLA_VISTA__===true);
+  const _puoRiordinare = isAdmin && !_solaVista;
+  React.useEffect(()=>{
+    let vivo=true;
+    fetch(nexusUrl("leggiOrdineLinee",{})).then(r=>r.json()).then(j=>{ if(vivo&&j&&j.ok&&Array.isArray(j.data&&j.data.ordine)) setOrdineLinee(j.data.ordine); }).catch(()=>{});
+    return ()=>{ vivo=false; };
+  },[]);
+  // Salva il nuovo ordine su D1 (condiviso) e aggiorna subito lo stato locale (ottimistico).
+  const salvaOrdine = (nuovoOrdine)=>{
+    setOrdineLinee(nuovoOrdine);
+    fetch(nexusUrl("salvaOrdineLinee",{ordine:JSON.stringify(nuovoOrdine)}),{mode:"cors"}).catch(()=>{});
+  };
+  // Riordina una lista di linee secondo ordineLinee; gli id non elencati restano in coda.
+  const applicaOrdine = (arr)=>{
+    if(!ordineLinee||ordineLinee.length===0) return arr;
+    const pos = {}; ordineLinee.forEach((id,i)=>{ pos[id]=i; });
+    return [...arr].sort((a,b)=>{
+      const pa = pos[a.id]!==undefined ? pos[a.id] : 1e9;
+      const pb = pos[b.id]!==undefined ? pos[b.id] : 1e9;
+      if(pa!==pb) return pa-pb;
+      return 0; // stabile: mantiene l'ordine naturale tra i non-elencati
+    });
+  };
+  // Drop: sposta dragLinea nella posizione di targetId e salva.
+  const onDropSu = (targetId)=>{
+    if(!dragLinea || dragLinea===targetId){ setDragLinea(null); return; }
+    const base = (ordineLinee&&ordineLinee.length) ? ordineLinee.slice() : lineeGrigliaOrdinata.map(l=>l.id);
+    const senza = base.filter(id=>id!==dragLinea);
+    const idx = senza.indexOf(targetId);
+    if(idx<0){ setDragLinea(null); return; }
+    senza.splice(idx, 0, dragLinea);
+    salvaOrdine(senza);
+    setDragLinea(null);
+  };
   // Larghezza del dispositivo, per adattare il layout (telefono / tablet / monitor-TV).
   const [vpW, setVpW] = React.useState(typeof window!=="undefined" ? window.innerWidth : 1280);
   React.useEffect(()=>{
@@ -3009,6 +3049,8 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   const lineeVis = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : (lineaSel ? _lineeNoRep.filter(l=>l.id===lineaSel) : _lineeNoRep);
   // In vista griglia il filtro singola linea non ha senso: mostra tutte (reparti esclusi)
   const lineeGriglia = lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : _lineeNoRep;
+  // Versione riordinata secondo l'ordine personalizzato (drag&drop). Usata dalla griglia.
+  const lineeGrigliaOrdinata = applicaOrdine(lineeGriglia);
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
@@ -3053,7 +3095,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
           : {display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gap:12,gridAutoRows:vpW<640?"72vh":"56vh",padding:"6px",boxSizing:"border-box"};
         return (
         <div style={_gridStyle}>
-          {lineeGriglia.map(l=>{
+          {lineeGrigliaOrdinata.map(l=>{
             const d=perLinea[l.id]; const _isProto=repartoTipoLinea(l.id,l.nome)==="prototip"; if(!d && !_isProto) return null;
             const _aggProto = _isProto ? _qualitaArticoliLinea(qualitaPerSku||{}, l.id) : null;
             // Numero di articoli attivi sulla linea (SKU distinti): più card a destra =
@@ -3067,9 +3109,19 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
             const _zoomCard = _grandeSchermo
               ? (_nArtCard<=2 ? 0.5 : _nArtCard<=4 ? 0.44 : _nArtCard<=6 ? 0.37 : 0.32)
               : (_nArtCard<=2 ? 0.95 : _nArtCard<=4 ? 0.8 : _nArtCard<=6 ? 0.68 : 0.58);
+            const _inDrag = dragLinea===l.id;
             return (
-              <div key={l.id} style={{minHeight:0,background:"#fff",border:"4px solid "+(l.colore||"#7c3aed"),borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+(l.colore||"#7c3aed")+"99, 0 0 4px "+(l.colore||"#7c3aed")+", inset 0 0 8px "+(l.colore||"#7c3aed")+"22",display:"flex",flexDirection:"column"}}>
-                <div style={{padding:"5px 10px",borderBottom:"1px solid "+(l.colore||"#7c3aed")+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+              <div key={l.id}
+                onDragOver={_puoRiordinare?(e)=>{ e.preventDefault(); e.dataTransfer.dropEffect="move"; }:undefined}
+                onDrop={_puoRiordinare?(e)=>{ e.preventDefault(); onDropSu(l.id); }:undefined}
+                style={{minHeight:0,background:"#fff",border:"4px solid "+(l.colore||"#7c3aed"),borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+(l.colore||"#7c3aed")+"99, 0 0 4px "+(l.colore||"#7c3aed")+", inset 0 0 8px "+(l.colore||"#7c3aed")+"22",display:"flex",flexDirection:"column",opacity:_inDrag?0.4:1,transition:"opacity 0.15s",outline:dragLinea&&!_inDrag?"2px dashed "+(l.colore||"#7c3aed")+"66":"none",outlineOffset:"-2px"}}>
+                <div
+                  draggable={_puoRiordinare}
+                  onDragStart={_puoRiordinare?(e)=>{ setDragLinea(l.id); e.dataTransfer.effectAllowed="move"; try{ e.dataTransfer.setData("text/plain", l.id); }catch(_e){} }:undefined}
+                  onDragEnd={_puoRiordinare?()=>setDragLinea(null):undefined}
+                  title={_puoRiordinare?"Trascina per riordinare le linee":undefined}
+                  style={{padding:"5px 10px",borderBottom:"1px solid "+(l.colore||"#7c3aed")+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0,cursor:_puoRiordinare?"grab":"default"}}>
+                  {_puoRiordinare&&(<span style={{color:(l.colore||"#7c3aed")+"aa",fontSize:13,lineHeight:1,flexShrink:0,userSelect:"none"}} title="Trascina">⠿</span>)}
                   <div style={{width:9,height:9,borderRadius:"50%",background:l.colore||"#7c3aed",flexShrink:0}}/>
                   <div style={{fontSize:12,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{l.id}</div>
                   {/* Totale KO + MIGL della linea, sulla stessa riga del nome, allineati a destra */}
@@ -4586,13 +4638,13 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           Le linee Prototipia non hanno obiettivo (nessuna assegnazione operatori-articolo): la card OGGI
           mostra solo OK/KO/MIGL, senza riquadro obiettivo. */}
       {(()=>{
-        // Calcola totali per SKU della linea oggi
+        // Calcola totali per SKU della linea oggi.
+        // NOTA: questo riquadro OGGI è INDIPENDENTE dalla card Entra in Produzione. Qui le borse OK
+        // partono da 0 e contano SOLO le buone registrate oggi, senza sottrarre le BNC del giorno
+        // precedente. Il conteggio "netto" col recupero BNC (che può partire in negativo) resta
+        // esclusivamente sulla card. Il riquadro BNC qui sotto mostra le BNC di oggi, a parte.
         const lineaId2 = linea?.id || lineaSelQ;
         const righe = qualitaOggi.filter(q=>!lineaId2||q.linea===lineaId2);
-        // bncDa(sku): BNC del giorno lavorativo precedente per questo articolo su questa linea.
-        // Stessa lettura della card Entra in Produzione (chiave "linea|sku", con fallback sul nome linea).
-        const _nomeLineaBncQ = (linea?.nome)||"";
-        const bncDa = (sk)=> Number((bncRecupero||{})[lineaId2+"|"+sk] ?? (bncRecupero||{})[_nomeLineaBncQ+"|"+sk] ?? 0) || 0;
         const skuMap = {};
         righe.forEach(q=>{
           const k = q.sku;
@@ -4600,27 +4652,10 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
           skuMap[k].ok += Number(q.ok)||0;
           skuMap[k].ko += Number(q.ko)||0;
           skuMap[k].migl += Number(q.migliorabili)||0;
-          skuMap[k].coffre += Number(q.borse_coffre)||0;   // BNC di oggi
+          skuMap[k].coffre += Number(q.borse_coffre)||0;   // BNC di oggi (mostrate nel riquadro BNC)
         });
-        // Includi ANCHE gli articoli che hanno BNC da recuperare dal giorno prima ma che oggi non
-        // hanno ancora righe di qualità: senza questo, un articolo con -10 di ieri non comparirebbe
-        // (nessuna riga oggi) e il totale resterebbe 0, mentre la card Entra in Produzione lo mostra
-        // già a -10. Aggancio le chiavi "linea|sku" di bncRecupero relative a questa linea.
-        (function(){
-          const pref1 = lineaId2+"|", pref2 = _nomeLineaBncQ+"|";
-          Object.keys(bncRecupero||{}).forEach(key=>{
-            let sk=null;
-            if(pref1 && key.indexOf(pref1)===0) sk=key.slice(pref1.length);
-            else if(pref2 && _nomeLineaBncQ && key.indexOf(pref2)===0) sk=key.slice(pref2.length);
-            if(sk && !skuMap[sk] && (Number(bncRecupero[key])||0)>0){
-              skuMap[sk]={sku:sk,ok:0,ko:0,migl:0,coffre:0};
-            }
-          });
-        })();
-        // Borse OK "nette" come sulla card: OK di oggi + BNC di oggi − BNC del giorno prima.
-        // Così il riquadro parte in negativo se ieri c'erano BNC non ancora recuperate, identico
-        // alla card Entra in Produzione, e sale man mano che si registrano le buone.
-        const lista = Object.values(skuMap).map(r=>({...r, okNette: r.ok + r.coffre - bncDa(r.sku)})).sort((a,b)=>b.okNette-a.okNette);
+        // Borse OK = solo le buone di oggi (nessun -BNC): il riquadro parte sempre da 0.
+        const lista = Object.values(skuMap).map(r=>({...r, okNette: r.ok})).sort((a,b)=>b.okNette-a.okNette);
         const totOk = lista.reduce((a,r)=>a+r.okNette,0);
         const totKo = lista.reduce((a,r)=>a+r.ko,0);
         const totMigl = lista.reduce((a,r)=>a+r.migl,0);
