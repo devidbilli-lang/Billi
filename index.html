@@ -6534,6 +6534,33 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
     onDone(null); // timeout
   };
   const [modOrario, setModOrario] = React.useState(null);
+  // Ordine personalizzato delle linee (STESSO ordine condiviso su D1 usato dalla griglia
+  // Entra in Produzione): riordinare i pulsanti-filtro qui aggiorna anche la griglia, e viceversa.
+  const [ordineLineeFiltro, setOrdineLineeFiltro] = React.useState([]);
+  const [dragLineaFiltro, setDragLineaFiltro] = React.useState(null);
+  const _solaVistaDash = (typeof window!=="undefined" && window.__NEXUS_SOLA_VISTA__===true);
+  const _puoRiordinareFiltro = isAdmin && !_solaVistaDash;
+  React.useEffect(()=>{
+    let vivo=true;
+    fetch(nexusUrl("leggiOrdineLinee",{})).then(r=>r.json()).then(j=>{ if(vivo&&j&&j.ok&&Array.isArray(j.data&&j.data.ordine)) setOrdineLineeFiltro(j.data.ordine); }).catch(()=>{});
+    return ()=>{ vivo=false; };
+  },[]);
+  const _salvaOrdineFiltro = (nuovo)=>{ setOrdineLineeFiltro(nuovo); fetch(nexusUrl("salvaOrdineLinee",{ordine:JSON.stringify(nuovo)}),{mode:"cors"}).catch(()=>{}); };
+  const _applicaOrdineFiltro = (arr)=>{
+    if(!ordineLineeFiltro||ordineLineeFiltro.length===0) return arr;
+    const pos={}; ordineLineeFiltro.forEach((id,i)=>{pos[id]=i;});
+    return [...arr].sort((a,b)=>{ const pa=pos[a.id]!==undefined?pos[a.id]:1e9, pb=pos[b.id]!==undefined?pos[b.id]:1e9; return pa-pb; });
+  };
+  const _onDropFiltro = (targetId, listaCorrente)=>{
+    if(!dragLineaFiltro || dragLineaFiltro===targetId){ setDragLineaFiltro(null); return; }
+    const base = (ordineLineeFiltro&&ordineLineeFiltro.length) ? ordineLineeFiltro.slice() : listaCorrente.map(l=>l.id);
+    const senza = base.filter(id=>id!==dragLineaFiltro);
+    const idx = senza.indexOf(targetId);
+    if(idx<0){ setDragLineaFiltro(null); return; }
+    senza.splice(idx,0,dragLineaFiltro);
+    _salvaOrdineFiltro(senza);
+    setDragLineaFiltro(null);
+  };
   const [selezionati, setSelezionati] = React.useState(new Set()); // matricole selezionate
   const [modMultipla, setModMultipla] = React.useState(null); // {campo, valore}
   const [modCorsoPian, setModCorsoPian] = React.useState(null); // {sess, nome, oraInizio, oraFine} per modificare corso pianificato
@@ -7980,9 +8007,20 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             <button onClick={()=>setFL("ALL")} style={{padding:"8px 16px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:700,background:fL==="ALL"?"#00d4aa22":"transparent",color:fL==="ALL"?"#00d4aa":"#475569",border:"2px solid "+(fL==="ALL"?"#00d4aa":"#e2e8f0"),borderRadius:8,display:lineaFiltro?"none":"inline-block"}}>Tutte</button>
-            {(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>(
-              <button key={l.id} onClick={()=>setFL(l.id)} style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore}}>{l.id}</button>
-            ))}
+            {_applicaOrdineFiltro(lineaFiltro ? linee.filter(l=>l.id===lineaFiltro.id) : linee).map(l=>{
+              const _inDragF = dragLineaFiltro===l.id;
+              return (
+              <button key={l.id}
+                draggable={_puoRiordinareFiltro}
+                onDragStart={_puoRiordinareFiltro?(e)=>{ setDragLineaFiltro(l.id); e.dataTransfer.effectAllowed="move"; try{ e.dataTransfer.setData("text/plain", l.id); }catch(_e){} }:undefined}
+                onDragEnd={_puoRiordinareFiltro?()=>setDragLineaFiltro(null):undefined}
+                onDragOver={_puoRiordinareFiltro?(e)=>{ e.preventDefault(); e.dataTransfer.dropEffect="move"; }:undefined}
+                onDrop={_puoRiordinareFiltro?(e)=>{ e.preventDefault(); _onDropFiltro(l.id, lineaFiltro ? linee.filter(x=>x.id===lineaFiltro.id) : linee); }:undefined}
+                onClick={()=>setFL(l.id)}
+                title={_puoRiordinareFiltro?"Trascina per riordinare":undefined}
+                style={{padding:"8px 16px",border:"2px solid "+(fL===l.id?l.colore:l.colore+"66"),borderRadius:8,cursor:_puoRiordinareFiltro?"grab":"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,background:fL===l.id?(l.colore+"22"):"transparent",color:l.colore,opacity:_inDragF?0.4:1,outline:dragLineaFiltro&&!_inDragF?"2px dashed "+l.colore+"66":"none",outlineOffset:"1px"}}>{l.id}</button>
+              );
+            })}
           </div>
           {isAdmin && (
             <button onClick={async()=>{
