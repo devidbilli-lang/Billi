@@ -4218,14 +4218,13 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   const [storicoQ, setStoricoQ] = React.useState([]);
   const [dalQ, setDalQ] = React.useState(_oggiISOq);
   const [alQ, setAlQ]   = React.useState(_oggiISOq);
-  React.useEffect(()=>{
-    let vivo=true;
-    (async()=>{
-      try { const r=await fetch(nexusUrl("leggiStoricoQualita",{})); const j=await r.json(); if(vivo && j && j.ok && j.data && Array.isArray(j.data.qualita)) setStoricoQ(j.data.qualita); }
-      catch(e){}
-    })();
-    return ()=>{ vivo=false; };
+  // Caricamento storico (foglio) estratto in funzione, così si può RI-lanciare dopo un'eliminazione
+  // o una modifica: la tabella unisce qualita(D1)+storicoQ(foglio), e le righe passate stanno qui.
+  const caricaStoricoQ = React.useCallback(async ()=>{
+    try { const r=await fetch(nexusUrl("leggiStoricoQualita",{})); const j=await r.json(); if(j && j.ok && j.data && Array.isArray(j.data.qualita)) setStoricoQ(j.data.qualita); }
+    catch(e){}
   },[]);
+  React.useEffect(()=>{ let vivo=true; caricaStoricoQ(); return ()=>{ vivo=false; }; },[caricaStoricoQ]);
   // Normalizza la data del record (DD/MM/YYYY, YYYY-MM-DD o con orario) alla mezzanotte locale.
   const _giornoTsQ = (raw)=>{
     const day = String(raw||"").split(" ")[0].split(",")[0].split("T")[0].trim();
@@ -4257,7 +4256,10 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
       await fetch(nexusUrl("modificaQualita",{linea:r.linea,sku:r.sku,data:giorno,ok:tmpQ.ok||0,ko:tmpQ.ko||0,migliorabili:tmpQ.migl||0,coffre:tmpQ.coffre||0}),{mode:"cors"});
     } catch(e) {}
     setEditQ(null); setSalvandoQ(false);
-    setTimeout(caricaQ, 1000);
+    // Ricarica D1 subito e lo storico (foglio) anche in ritardo, per dare tempo alla propagazione.
+    setTimeout(caricaQ, 800);
+    setTimeout(caricaStoricoQ, 800);
+    setTimeout(caricaStoricoQ, 3500);
   };
   // Apre il modal di conferma (stesso stile della chiusura turno). L'eliminazione vera è in _eseguiEliminaQ.
   const eliminaQualitaRiga = (r) => {
@@ -4276,7 +4278,11 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
       await fetch(nexusUrl("eliminaQualita",{linea:r.linea,sku:r.sku,data:giorno}),{mode:"cors"});
     } catch(e) {}
     setEditQ(null); setSalvandoQ(false);
-    setTimeout(caricaQ, 1000);
+    // D1 è immediato; il foglio (storico) impiega qualche secondo a propagare via Apps Script,
+    // quindi lo storico va ricaricato con più ritardo, altrimenti riporterebbe la riga appena tolta.
+    setTimeout(caricaQ, 800);
+    setTimeout(caricaStoricoQ, 800);
+    setTimeout(caricaStoricoQ, 3500);
   };
   // Tabella: unisce oggi (live) + storico, filtra per linea e per intervallo [dalQ, alQ].
   const _dalTsQ = dalQ ? new Date(dalQ+"T00:00:00").getTime() : -Infinity;
