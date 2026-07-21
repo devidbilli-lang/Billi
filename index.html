@@ -4210,6 +4210,8 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   const [editQ, setEditQ] = React.useState(null); // chiave riga in modifica
   const [tmpQ, setTmpQ] = React.useState({ok:"",ko:"",migl:"",coffre:""});
   const [salvandoQ, setSalvandoQ] = React.useState(false);
+  // Modal di conferma per l'eliminazione riga (stesso componente ModalConferma della chiusura turno).
+  const [modalConfQ, setModalConfQ] = React.useState(null);
   const [vistaQ, setVistaQ] = React.useState("tabella"); // "tabella" | "report"
   // Filtro data + storico (vista Tabella): oggi (live, ogni 60s) + giorni archiviati (storico_qualita).
   const _oggiISOq = (()=>{ const d=new Date(); const l=new Date(d.getTime()-d.getTimezoneOffset()*60000); return l.toISOString().slice(0,10); })();
@@ -4257,10 +4259,18 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     setEditQ(null); setSalvandoQ(false);
     setTimeout(caricaQ, 1000);
   };
-  // Elimina l'intera riga (giorno+linea+sku) dalla qualità, con conferma. Funziona anche su date passate.
-  const eliminaQualitaRiga = async (r) => {
+  // Apre il modal di conferma (stesso stile della chiusura turno). L'eliminazione vera è in _eseguiEliminaQ.
+  const eliminaQualitaRiga = (r) => {
     const giorno = (r.data||"").toString().split(" ")[0].split(",")[0].trim();
-    if(!window.confirm("Eliminare la registrazione di qualità di "+giorno+" — "+r.linea+" — "+r.sku+"?\nL'operazione rimuove tutte le borse OK/KO/Migl/BNC di quel giorno per questo articolo e non è reversibile.")) return;
+    setModalConfQ({
+      titolo: "Elimina registrazione qualità",
+      messaggio: giorno+" — "+r.linea+"\nSKU: "+r.sku+"\nBorse OK: "+(r.ok||0)+" | KO: "+(r.ko||0)+" | Migl: "+(r.migl||0)+" | BNC: "+(r.coffre||0)+"\n\nVuoi eliminare questa riga? L'operazione non è reversibile.",
+      r
+    });
+  };
+  const _eseguiEliminaQ = async (r) => {
+    const giorno = (r.data||"").toString().split(" ")[0].split(",")[0].trim();
+    setModalConfQ(null);
     setSalvandoQ(true);
     try {
       await fetch(nexusUrl("eliminaQualita",{linea:r.linea,sku:r.sku,data:giorno}),{mode:"cors"});
@@ -4392,6 +4402,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
       </table>
     </div>
       )}
+      {modalConfQ&&<ModalConferma titolo={modalConfQ.titolo} messaggio={modalConfQ.messaggio} colorBtn="ef4444" testoBtn="Elimina" onConferma={()=>_eseguiEliminaQ(modalConfQ.r)} onAnnulla={()=>setModalConfQ(null)}/>}
     </div>
   );
 }
