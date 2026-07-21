@@ -4275,8 +4275,12 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     setModalConfQ(null);
     setSalvandoQ(true);
     try {
-      await fetch(nexusUrl("eliminaQualita",{linea:r.linea,sku:r.sku,data:giorno}),{mode:"cors"});
-    } catch(e) {}
+      const _url = nexusUrl("eliminaQualita",{linea:r.linea,sku:r.sku,data:giorno});
+      const _resp = await fetch(_url,{mode:"cors"});
+      const _txt = await _resp.text();
+      // DEBUG TEMPORANEO: mostra cosa è stato chiamato e cosa ha risposto il worker.
+      alert("DEBUG eliminazione\n\nlinea: "+r.linea+"\nsku: "+r.sku+"\ndata: "+giorno+"\n\nrisposta worker:\n"+_txt);
+    } catch(e) { alert("DEBUG errore fetch: "+e.message); }
     setEditQ(null); setSalvandoQ(false);
     // D1 è immediato; il foglio (storico) impiega qualche secondo a propagare via Apps Script,
     // quindi lo storico va ricaricato con più ritardo, altrimenti riporterebbe la riga appena tolta.
