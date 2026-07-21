@@ -59,7 +59,7 @@ const NEXUS_READ_ACTIONS = new Set(["sessioni","leggiqualita","leggiStoricoQuali
 function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
 
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee"];
+  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
   // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
   // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
   if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
@@ -4257,6 +4257,17 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     setEditQ(null); setSalvandoQ(false);
     setTimeout(caricaQ, 1000);
   };
+  // Elimina l'intera riga (giorno+linea+sku) dalla qualità, con conferma. Funziona anche su date passate.
+  const eliminaQualitaRiga = async (r) => {
+    const giorno = (r.data||"").toString().split(" ")[0].split(",")[0].trim();
+    if(!window.confirm("Eliminare la registrazione di qualità di "+giorno+" — "+r.linea+" — "+r.sku+"?\nL'operazione rimuove tutte le borse OK/KO/Migl/BNC di quel giorno per questo articolo e non è reversibile.")) return;
+    setSalvandoQ(true);
+    try {
+      await fetch(nexusUrl("eliminaQualita",{linea:r.linea,sku:r.sku,data:giorno}),{mode:"cors"});
+    } catch(e) {}
+    setEditQ(null); setSalvandoQ(false);
+    setTimeout(caricaQ, 1000);
+  };
   // Tabella: unisce oggi (live) + storico, filtra per linea e per intervallo [dalQ, alQ].
   const _dalTsQ = dalQ ? new Date(dalQ+"T00:00:00").getTime() : -Infinity;
   const _alTsQ  = alQ  ? new Date(alQ +"T00:00:00").getTime() :  Infinity;
@@ -4363,11 +4374,14 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                       <button disabled={salvandoQ} onClick={()=>salvaModificaQ(r)} style={{background:"#ff6937",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>{salvandoQ?"...":"✓"}</button>
                       <button disabled={salvandoQ} onClick={()=>setEditQ(null)} style={{background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,padding:"5px 10px",fontSize:13,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>✕</button>
                     </div>
-                  ) : (_giornoTsQ(r.data)===_giornoTsQ(_oggiISOq)) ? (
-                    <button onClick={()=>{ setEditQ(rowKey); setTmpQ({ok:String(r.ok||0),ko:String(r.ko||0),migl:String(r.migl||0),coffre:String(r.coffre||0)}); }} title="Modifica valori"
-                      style={{background:"#fff",border:"1.5px solid #ff6937",borderRadius:6,padding:"5px 9px",cursor:"pointer",color:"#ff6937"}}><IconaMatita size={14}/></button>
                   ) : (
-                    <span style={{color:"#cbd5e1",fontSize:13,fontFamily:"'Montserrat',sans-serif"}} title="Solo i dati di oggi sono modificabili">—</span>
+                    // Modifica + Elimina, disponibili su QUALSIASI data (anche passata).
+                    <div style={{display:"inline-flex",gap:6}}>
+                      <button onClick={()=>{ setEditQ(rowKey); setTmpQ({ok:String(r.ok||0),ko:String(r.ko||0),migl:String(r.migl||0),coffre:String(r.coffre||0)}); }} title="Modifica valori"
+                        style={{background:"#fff",border:"1.5px solid #ff6937",borderRadius:6,padding:"5px 9px",cursor:"pointer",color:"#ff6937"}}><IconaMatita size={14}/></button>
+                      <button disabled={salvandoQ} onClick={()=>eliminaQualitaRiga(r)} title="Elimina riga"
+                        style={{background:"#fff",border:"1.5px solid #ef4444",borderRadius:6,padding:"5px 9px",cursor:salvandoQ?"default":"pointer",color:"#ef4444",opacity:salvandoQ?0.5:1}}>🗑</button>
+                    </div>
                   )}
                 </td>
                 </>); })()}
