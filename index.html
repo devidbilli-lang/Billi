@@ -1181,7 +1181,13 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     ? String(_primoCheckinDate.getHours()).padStart(2,"0")+":"+String(_primoCheckinDate.getMinutes()).padStart(2,"0")
     : "06:00";
   const _oreInizio = _secInizioTurno / 3600;
-  const secFineTurnoAssoluto = _secInizioTurno + oreTotali*3600;
+  // FINE TURNO DI LINEA per l'obiettivo. DEVE essere un orario FISSO (default 14:00 + eventuale
+  // straordinario di linea), NON "inizio + 8h": altrimenti spostando SOLO l'inizio (es. 06→07) la
+  // fine slittava con lui (07→15) e il turno restava sempre di 8h, così l'obiettivo non calava mai.
+  // Coerente con la chiusura per-operatore (_fineSecOp, riga ~1139) che già usa 14:00 fisso: se non
+  // c'è una fine pianificata diversa, la fine è le 14:00 e spostando l'inizio il turno si accorcia.
+  const _FINE_STD_SEC = 14*3600; // 14:00 standard di stabilimento
+  const secFineTurnoAssoluto = _FINE_STD_SEC + (oreExtra||0)*3600;
   const _hFine = Math.floor(secFineTurnoAssoluto/3600)%24;
   const _mFine = Math.round((secFineTurnoAssoluto%3600)/60);
   const labelFine = String(_hFine).padStart(2,"0")+":"+String(_mFine).padStart(2,"0");
