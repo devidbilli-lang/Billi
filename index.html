@@ -95,6 +95,9 @@ const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
 ];
 const now     = () => new Date();
+// Epoch (ms) di oggi alle HH:MM in ora locale del dispositivo. Solo per la vista ottimistica del
+// cambio articolo; l'orario autorevole lo ricalcola il worker in fuso Italia.
+const hmToTsLocal = (hm) => { if(!hm||typeof hm!=="string"||hm.indexOf(":")<0) return Date.now(); const [h,m]=hm.split(":").map(Number); if(isNaN(h)||isNaN(m)) return Date.now(); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
 const fmt     = d => d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 const fmtFull = d => d.toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
 // Calcola la data di Pasqua (calendario gregoriano) per un dato anno. Restituisce un oggetto Date.
@@ -267,7 +270,7 @@ function codaRimuovi(chiave) {
 }
 
 async function inviaEvento(p) {
-  const url = nexusUrl("evento",{sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||"",trasf:p.trasf||""});
+  const url = nexusUrl("evento",{sessionId:p.sessionId||"",matricola:p.matricola||"",nome:p.nome||"",cognome:p.cognome||"",sku:p.sku||"",tipo:p.tipo||"",lineaDa:p.lineaDa||"",lineaA:p.lineaA||"",skuDa:p.skuDa||"",skuA:p.skuA||"",trasf:p.trasf||"",oraEvento:p.oraEvento||""});
   const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(),12000);
   const r = await fetch(url,{mode:"cors",signal:ctrl.signal}).finally(()=>clearTimeout(tid));
@@ -588,6 +591,7 @@ function SugSku({ val, list, onSel }) { if(!val||val.length<1||!list||!list.leng
 function CambioSkuInline({ sess, skuList, linee, onOk, onClose, onRimuoviArticolo, tutteSessioniOp }) { const [nSku,setNSku]   = useState(sess.skuCorrente||sess.sku||"");
   const [cSku,setCSku]   = useState("");
   const [err,setErr]     = useState("");
+  const [oraCambio,setOraCambio] = useState(()=>{ const d=new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); });
   // Tutti gli articoli aperti dell'operatore (se forniti); altrimenti solo quello corrente.
   const _articoli = (tutteSessioniOp && tutteSessioniOp.length>0)
     ? tutteSessioniOp
@@ -629,11 +633,16 @@ function CambioSkuInline({ sess, skuList, linee, onOk, onClose, onRimuoviArticol
           <input style={{...S.inp,borderColor:"#f59e0b44"}} placeholder="es. AS5293..."
             value={nSku} onChange={e=>{setNSku(e.target.value.toUpperCase());setErr("");}}/>
           {err&&<div style={{...S.err,marginTop:8}}>{err}</div>}
+          <label style={{...S.lbl,marginTop:14}}>Orario del cambio</label>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+            <TimePicker value={oraCambio} onChange={setOraCambio} color="#f59e0b"/>
+            <span style={{fontSize:11,color:"#64748b",lineHeight:1.3}}>Precompilato con l'ora attuale. Modificalo se registri un cambio avvenuto prima, così l'obiettivo si calcola sull'ora giusta.</span>
+          </div>
           <div style={{display:"flex",gap:10,marginTop:16}}>
             <button style={MS.an} onClick={onClose}>Annulla</button>
             <button style={{...MS.cf,background:"linear-gradient(135deg,#f59e0b,#d97706)"}} onClick={()=>{ if(!nSku.trim()){setErr("Inserisci lo SKU.");return;}
               if(nSku.trim()===( sess.skuCorrente||sess.sku)){setErr("Articolo identico a quello attuale.");return;}
-              onOk(nSku.trim()); }}>Conferma</button>
+              onOk(nSku.trim(), oraCambio); }}>Conferma</button>
           </div>
         </div>
       </div>
@@ -5325,10 +5334,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               if(aggiornaSessioni) setTimeout(aggiornaSessioni,1500);
               setRis({tipo:"corso",sess:sf});setMode("result");
             }} onClose={reset}/>}
-            {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={async(ns)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
+            {mode==="cambiosku"&&sf&&<CambioSkuInline sess={sf} skuList={skuList} linee={linee} onOk={async(ns,oraCambio)=>{ const isDaSheets = !sessioni.find(s=>s.id===sf.id);
               if(isDaSheets){ const sp=sf.skuCorrente||sf.sku||"";
-                try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns}); }catch(e){}
-                if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,sf.lineaCorrente,ns);
+                try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:ns,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:ns,oraEvento:oraCambio||""}); }catch(e){}
+                if(aggiornaSessioni) aggiornaSessioni(); } else onTrasf(sf.id,sf.lineaCorrente,ns,oraCambio);
               setRis({tipo:"cambiosku",sess:sf,lDest:sf.lineaCorrente,nSku:ns});setMode("result"); }} onClose={reset}/>}
             <button style={{...S.bBk,marginTop:16,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
           </div>
@@ -7890,7 +7899,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           if(setSessioni) setSessioni(prev=>(prev||[]).map(x=> x.id===_sid ? {...x, fine:new Date().toLocaleString("it-IT")} : x));
           try{ await api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.skuCorrente||s.sku,tipo:"CHECKOUT",lineaDa:s.lineaCorrente,lineaA:"",skuDa:s.skuCorrente||s.sku,skuA:""}); }catch(e){}
           if(onAggiornaSessioni) onAggiornaSessioni();
-        }} onOk={async(ns)=>{
+        }} onOk={async(ns,oraCambio)=>{
           const sf=modCambioSku; const sp=sf.skuCorrente||sf.sku; const sn=ns;
           const _sid = sf.id;
           setModCambioSku(null);
@@ -7899,10 +7908,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           if(setSessioni) setSessioni(prev=>(prev||[]).map(x=>{
             if(x.id!==_sid) return x;
             return {...x, skuCorrente:sn,
-              trasferimenti:[...(x.trasferimenti||[]), {quando:new Date().toLocaleString("it-IT"), ts:Date.now(), lineaDa:x.lineaCorrente, lineaA:x.lineaCorrente, skuDa:sp, skuA:sn}]};
+              trasferimenti:[...(x.trasferimenti||[]), {quando:new Date(hmToTsLocal(oraCambio)).toLocaleString("it-IT"), ts:hmToTsLocal(oraCambio), lineaDa:x.lineaCorrente, lineaA:x.lineaCorrente, skuDa:sp, skuA:sn}]};
           }));
-          if(onTr) onTr(sf.id,sf.lineaCorrente,sn);
-          try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn}); }catch(e){}
+          if(onTr) onTr(sf.id,sf.lineaCorrente,sn,oraCambio);
+          try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn,oraEvento:oraCambio||""}); }catch(e){}
           if(onAggiornaSessioni) onAggiornaSessioni();
         }}/>}
       {modCorso&&<ModalCorso sess={modCorso} linee={linee} onClose={()=>setModCorso(null)}
@@ -8685,11 +8694,11 @@ function App() { const [view,setView]             = useState("login");
     setTimeout(caricaSessioni,3000); };
   const coFromSheets = s => { if(!s||!s.id) return;
     api.evento({sessionId:s.id,matricola:s.matricola||"",nome:s.nome||"",cognome:s.cognome||"",sku:s.skuCorrente||s.sku||"",tipo:"CHECKOUT",lineaDa:s.lineaCorrente||"",lineaA:"",skuDa:s.skuCorrente||s.sku||"",skuA:""}); };
-  const tr = (id,dest,nSku) => {
+  const tr = (id,dest,nSku,oraCambio) => {
     const _dRep=(()=>{ const _o=(linee||[]).find(l=>l.id===dest); const _u=((dest||"")+" "+((_o&&_o.nome)||"")).toUpperCase(); return _u.includes("RMA")||_u.includes("PREPARAZIONE DG")||_u.includes("TAGLIO DG")||_u.includes("TRACK")||_u.includes("PROTOTIP")||_u.includes("LOGISTICA")||_u.includes("INDUSTRIALIZZAZIONE")||_u.includes("QUALIT")||_u.includes("PRODUZIONE")||_u.includes("MIGLIORAMENTO"); })();
-    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:now().toISOString()}]}; }));
+    setSess(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); api.evento({sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:s.lineaCorrente,lineaA:dest,skuDa:sp,skuA:sn,oraEvento:oraCambio||""}); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...s.trasferimenti,{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date(hmToTsLocal(oraCambio)).toISOString()}]}; }));
     // Aggiorna anche sessSheets immediatamente per visualizzazione Dashboard
-    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date().toISOString()}]}; }));
+    setSessSheets(p=>p.map(s=>{ if(s.id!==id)return s; const sp=s.skuCorrente||s.sku; const sn=_dRep?"":(nSku||sp); return {...s,lineaCorrente:dest,skuCorrente:sn,trasferimenti:[...(s.trasferimenti||[]),{da:s.lineaCorrente,a:dest,skuDa:sp,skuA:sn,quando:new Date(hmToTsLocal(oraCambio)).toISOString()}]}; }));
     setTimeout(caricaSessioni,1000); };
   const rst = () => { setSess([]); api.reset(); setTimeout(caricaSessioni,1500); };
   const syncCfg = {ok:{c:"#22c55e",t:"Sheets connesso"},caricamento:{c:"#f59e0b",t:"Connessione..."},errore:{c:"#ef4444",t:"Sheets non raggiungibile"}}[sync]||{c:"#475569",t:"Offline"};
