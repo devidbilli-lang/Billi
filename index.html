@@ -5158,6 +5158,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
   const cOpRef                   = React.useRef(null);
   const [cSku,setCSku]           = useState("");
   const [opSelezionati,setOpSelezionati] = useState([]);
+  // Matricole rimosse a mano dal capolinea: l'auto-aggiunta degli operatori di ieri NON deve
+  // re-inserirle, altrimenti chi togli come assente rientra al tocco successivo sull'articolo.
+  const opRimossiRef = React.useRef(new Set());
   const [rampa,setRampa]                 = useState(false);
   const [rampaPerSku,setRampaPerSku]     = useState({}); // {sku: true/false}
   const [lineaCheckinSel,setLineaCheckinSel] = useState(lineaFiltro||null); // linea selezionata nel form check-in (default: linea di accesso)
@@ -5189,7 +5192,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           const full = operatori.find(x=>x.matricola===o.matricola);
           return full || {matricola:o.matricola, nome:o.nome, cognome:o.cognome};
         });
-        setOpSelezionati(matched);
+        setOpSelezionati(matched.filter(o=>!opRimossiRef.current.has(o.matricola)));
       }
     }).catch(()=>{});
   },[mode, lineaCheckinSel, lineaFiltro, operatori]);
@@ -5199,7 +5202,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     if(sessSheets&&sessSheets.length>0){ const sh = sessSheets.find(s=>s.matricola===key&&isAttiva(s)); if(sh) return sh; }
     return sessioni.find(s=>s.matricola===key&&isAttiva(s))||null; };
   const matricoleAbilitate = new Set(operatori.map(o=>o.matricola));
-  const reset = () => { setNome("");setCogn("");setSku("");setSkuMulti([]);setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setRampaPerSku({});setMode("menu"); };
+  const reset = () => { opRimossiRef.current.clear();setNome("");setCogn("");setSku("");setSkuMulti([]);setLinea(null);setMats("");setMatsNome("");setErr("");setRis(null);setCOp("");setCSku("");setOpSelezionati([]);setPwdLinea("");setPwdOk(false);setErrPwd("");setRampa(false);setRampaPerSku({});setMode("menu"); };
   if(modQualita) return null;
   if(mode==="result"&&ris){ const {tipo,sess,lDest,nSku}=ris;
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
@@ -5409,7 +5412,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                                     .filter(Boolean);
                                   setOpSelezionati(prev=>{
                                     const esistenti = new Set(prev.map(o=>o.matricola));
-                                    const daAggiungere = daIeri.filter(o=>!esistenti.has(o.matricola));
+                                    const daAggiungere = daIeri.filter(o=>!esistenti.has(o.matricola) && !opRimossiRef.current.has(o.matricola));
                                     return [...prev, ...daAggiungere];
                                   });
                                   // Memorizza quali operatori sono stati aggiunti da questo SKU
@@ -5485,8 +5488,10 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     const sel=opSelezionati.some(x=>x.matricola===o.matricola);
                     return (<div key={o.matricola} onClick={()=>{
                       if(sel){
+                        opRimossiRef.current.add(o.matricola);   // rimozione volontaria: non ri-aggiungerlo in automatico
                         setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola));
                       } else {
+                        opRimossiRef.current.delete(o.matricola); // ri-aggiunta esplicita: torna candidabile all'auto-aggiunta
                         setOpSelezionati(p=>[...p,o]);
                         setCOp("");
                         setTimeout(()=>{ if(cOpRef.current) cOpRef.current.focus(); }, 0);
@@ -5504,7 +5509,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 <>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,marginBottom:2}}>
                   <span style={{fontSize:12,color:"#047857",fontWeight:700}}>{opSelezionati.length} operator{opSelezionati.length===1?"e":"i"} selezionat{opSelezionati.length===1?"o":"i"}</span>
-                  <button type="button" onClick={()=>setOpSelezionati([])} style={{background:"transparent",border:"1px solid #ef444466",color:"#ef4444",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:4}}>× Rimuovi tutti</button>
+                  <button type="button" onClick={()=>{ opSelezionati.forEach(o=>opRimossiRef.current.add(o.matricola)); setOpSelezionati([]); }} style={{background:"transparent",border:"1px solid #ef444466",color:"#ef4444",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:4}}>× Rimuovi tutti</button>
                 </div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:6}}>
                   {opSelezionati.map(o=>{
@@ -5516,7 +5521,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     <div key={o.matricola} style={{background:"#06d6a012",border:"1px solid #06d6a055",borderRadius:10,padding:"6px 10px",display:"flex",flexDirection:"column",gap:5}}>
                       <span style={{fontSize:12,color:"#047857",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
                         {o.nome} {o.cognome}
-                        <span onClick={()=>setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola))} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
+                        <span onClick={()=>{ opRimossiRef.current.add(o.matricola); setOpSelezionati(p=>p.filter(x=>x.matricola!==o.matricola)); }} style={{cursor:"pointer",color:"#ef4444",fontWeight:700,fontSize:14,lineHeight:1}}>×</span>
                       </span>
                       <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
                         <button type="button" onClick={()=>setModOrarioOp({op:o, tipo:"oggi", inizio:(haOggi?oggiO.inizioOggi:iniStd)||"06:00", fine:(haOggi?oggiO.fineOggi:finStd)||"14:00"})}
@@ -5633,9 +5638,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     // MODALITÀ 2° TURNO: salva PRIMA (e ASPETTA) l'orario (adesso → +8h) anche per i
                     // check-in PIANIFICATI. Il server li eseguirà con eseguiTickMinuto, che NON
                     // salva l'orario: senza questo, il turno verrebbe chiuso al default delle 14:00.
-                    if(_secondoTurnoEff){ try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),{mode:'cors'}); }catch(e){} }
+                    if(_secondoTurnoEff){ try{ await fetchConRetry(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),5,1000); }catch(e){} }
                     // Orario futuro (>10 min) e persona NON ancora uscita oggi — pianifica il check-in
-                    await fetch(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):""),lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),{mode:"cors"}).catch(()=>{});
+                    try{ await fetchConRetry(nexusUrl("pianificaCheckin",{sessionId:s.id,matricola:s.matricola,nome:s.nome,cognome:s.cognome,sku:s.sku+(s.rampa&&s.rampaDal?("__RAMPA__"+new Date(s.rampaDal).toISOString()):""),lineaDa:s.lineaCorrente,oraPrevista:oraOp.toISOString()}),5,1000); }catch(e){}
                     // Non chiamare onSuccess — verrà registrato in automatico
                   } else {
                     // MODALITÀ 2° TURNO (Taglio DG): salva PRIMA (e ASPETTA) l'orario solo-oggi
@@ -5644,7 +5649,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                     // delle 14:00. Salvarlo dopo (non atteso) lasciava una finestra in cui il cron
                     // trovava ancora le 14:00 e chiudeva subito il turno.
                     if(_secondoTurnoEff){
-                      try{ await fetch(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),{mode:'cors'}); }catch(e){}
+                      try{ await fetchConRetry(nexusUrl('salvaOrarioOggi',{matricola:s.matricola,orarioInizioOggi:_inizio2T,orarioFineOggi:_fine2T}),5,1000); }catch(e){}
                       // Allineo solo il localStorage (serve al calcolo della prossima registrazione e
                       // alla UI). NIENTE propagaOrarioASessioni/aggiornaSessioni qui: il check-in è già
                       // all'ora attuale (=_inizio2T) e ricaricare tutte le sessioni a ogni operatore era
