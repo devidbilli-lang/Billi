@@ -4457,7 +4457,6 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
 function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [obRealeQ, setObRealeQ]   = React.useState(null);
   const [obTeoricoQ, setObTeoricoQ] = React.useState(null);
-  const [skuAttiviOggi, setSkuAttiviOggi] = React.useState(null); // null = caricamento, [] = nessuno
   const [sessioniQ, setSessioniQ] = React.useState([]); // sessioni grezze per la card-mirror nascosta (alimenta obPerArticolo su D1)
 
   // Carica automaticamente gli obiettivi dalla sezione produzione
@@ -4472,11 +4471,6 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         setSessioniQ(sessioni); // alimenta la card-mirror nascosta
         const lineaId = linea?.id||"";
         const skuConSpecialiList = [...SKU_SPECIALI,...(skuList||[])];
-        // SKU attivi oggi su questa linea
-        const skuAttiviSet = new Set(sessioni
-          .filter(s=>s.lineaCorrente===lineaId&&(!s.fine||s.fine===""||s.fine===null||s.fine==="null")&&s.skuCorrente&&!isSkuSpeciale(s.skuCorrente))
-          .map(s=>s.skuCorrente||s.sku));
-        setSkuAttiviOggi([...skuAttiviSet]);
 
         // Calcola primo check-in e fine turno
         const ts = sessioni
@@ -4582,6 +4576,26 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const lineaEffettiva = isAdminQ ? lineaSelQ : linea?.id;
   const lObj = linea ? (linee.find(l=>l.id===linea.id)||linea) : {id:"Admin",colore:"#7c3aed"};
   const _isPrototipLine = repartoTipoLinea((lineaEffettiva||""), "")==="prototip"; // Prototipia: nessuna card di produzione → l'obiettivo qui si calcola in autonomia
+  // Articoli da proporre nell'inserimento qualità: SOLO quelli effettivamente registrati oggi su questa
+  // linea. Prima si guardavano le sole sessioni ANCORA APERTE: a fine turno l'insieme si svuotava e la
+  // lista tornava a mostrare tutto il catalogo, proprio nel momento in cui la qualità viene inserita.
+  // Ora conta ogni sessione di oggi sulla linea (aperta o chiusa) e anche gli articoli poi trasferiti
+  // altrove (lineaInizio). Se non risulta nulla di registrato si mostra tutto, per non bloccare mai
+  // l'inserimento.
+  const skuAttiviOggi = React.useMemo(()=>{
+    const lid = lineaEffettiva||"";
+    if(!lid) return [];
+    const set = new Set();
+    (sessioniQ||[]).forEach(s=>{
+      if(s._pianificato) return;
+      if(!s.inizio) return;
+      if(s.lineaCorrente!==lid && s.lineaInizio!==lid) return;
+      const sk = s.skuCorrente||s.sku||"";
+      if(!sk || isSkuSpeciale(sk)) return;
+      set.add(sk);
+    });
+    return [...set];
+  },[sessioniQ, lineaEffettiva]);
   const skuFiltrati = skuConSpeciali(skuList).filter(s=>{
     // Se abbiamo SKU attivi oggi, mostra solo quelli (+ RIPARAZIONE). Prototipia: nessuna assegnazione → mostra TUTTI.
     if(!_isPrototipLine && skuAttiviOggi!==null && skuAttiviOggi.length>0 && !s.speciale && !skuAttiviOggi.includes(s.sku)) return false;
