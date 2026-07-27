@@ -3882,7 +3882,7 @@ function TabTrasferimenti({ linee=[], onRiepilogo }) {
 }
 
 // Torta SVG (nessuna libreria) con legenda + percentuali. voci: [{label, valore, colore}].
-function TortaQ({ titolo, voci, totaleLabel, overlay }){
+function TortaQ({ titolo, voci, totaleLabel, overlay, mostraTutte }){
   const vis = (voci||[]).filter(v=>(v.valore||0)>0);
   const tot = vis.reduce((s,v)=>s+v.valore,0);
   const [sel, setSel] = React.useState(0);
@@ -3918,6 +3918,30 @@ function TortaQ({ titolo, voci, totaleLabel, overlay }){
             return <path key={i} d={"M "+(cx+ox).toFixed(2)+" "+(cy+oy).toFixed(2)+" L "+x0.toFixed(2)+" "+y0.toFixed(2)+" A "+r+" "+r+" 0 "+lg+" 1 "+x1.toFixed(2)+" "+y1.toFixed(2)+" Z"} fill={s.v.colore} stroke="#fff" strokeWidth={isSel?3:2} onClick={()=>setSel(i)} style={{cursor:"pointer"}}/>;
           })}
         </svg>
+        {mostraTutte ? (
+          // Legenda completa: tutti i valori leggibili insieme, senza dover selezionare una voce alla
+          // volta. Include anche le voci a zero (che nella torta non hanno spicchio) così il quadro
+          // resta sempre completo. Il click evidenzia la fetta corrispondente.
+          <div style={{marginTop:10,display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+            {(voci||[]).map((v,i)=>{
+              const iv = vis.indexOf(v);
+              const isSel = iv>=0 && iv===sel;
+              const val = v.valore||0;
+              return (
+                <button key={i} type="button" onClick={()=>{ if(iv>=0) setSel(iv); }} style={{display:"flex",alignItems:"center",gap:8,textAlign:"left",minWidth:0,background:isSel?(v.colore+"1f"):"#f8fafc",border:"2px solid "+(isSel?v.colore:"#eef2f7"),borderRadius:10,padding:"8px 10px",cursor:iv>=0?"pointer":"default",fontFamily:"'Montserrat',sans-serif",transition:"background 0.2s, border-color 0.2s"}}>
+                  <span style={{width:12,height:12,borderRadius:4,background:v.colore,flexShrink:0}}/>
+                  <span style={{minWidth:0,flex:1}}>
+                    <span style={{display:"block",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.label}</span>
+                    <span style={{display:"flex",alignItems:"baseline",gap:5}}>
+                      <span style={{fontWeight:900,color:v.colore,fontSize:19,lineHeight:1.15}}>{val}</span>
+                      <span style={{fontWeight:700,color:"#94a3b8",fontSize:11}}>{tot>0?Math.round(val/tot*100):0}%</span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (<>
         <div ref={wrapRef} style={{position:"relative",display:"flex",flexWrap:"nowrap",overflowX:"auto",background:"#f1f5f9",borderRadius:10,padding:4,marginTop:6}}>
           <div style={{position:"absolute",top:4,bottom:4,left:thumb.left,width:thumb.width,background:(vis[sel]&&vis[sel].colore)||"#7c3aed",borderRadius:8,transition:"left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1)",zIndex:0}}/>
           {vis.map((v,i)=>(
@@ -3933,7 +3957,7 @@ function TortaQ({ titolo, voci, totaleLabel, overlay }){
             {vis[sel].skus && vis[sel].skus.slice(0,16).map(sk=>(<code key={sk} style={{...S.sku,fontSize:15,padding:"3px 10px"}}>{sk}</code>))}
             {vis[sel].skus && vis[sel].skus.length>16 && <span style={{fontSize:12,color:"#94a3b8",fontWeight:700}}>+{vis[sel].skus.length-16}</span>}
           </div>
-        )}
+        )}</>)}
         <div style={{borderTop:"1px solid #f1f5f9",marginTop:12,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:800,color:"#64748b"}}>
           <span>{totaleLabel||"Totale"}</span><span>{tot}</span>
         </div>
@@ -4191,7 +4215,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
         )}
       </div>
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
-        <TortaQ titolo="Qualità" voci={vociQ} totaleLabel="Totale borse"/>
+        <TortaQ titolo="Qualità" voci={vociQ} totaleLabel="Totale borse" mostraTutte/>
         <TortaQ titolo="Dettaglio Difetti" voci={vociD} totaleLabel="Totale difetti" overlay={vociD.length>0?(<React.Fragment>
           <Top5DifettiVetro difetti={vociD} titolo="Top 5 difetti" ancora="tr"/>
           {vociD.some(d=>d.fonte==="KO") && <Top5DifettiVetro difetti={vociD.filter(d=>d.fonte==="KO")} titolo="Top 5 difetti KO" ancora="tl"/>}
