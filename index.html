@@ -908,13 +908,21 @@ function skuConSpeciali(list) { return [...SKU_SPECIALI,...(list||[])]; }
 // articoli lavorati IN PARALLELO (stesso inizio) da quelli lavorati IN SEQUENZA (uno dopo
 // l'altro), che NON vanno divisi tra loro. Per le sessioni normali si usa tsInizio/inizio.
 function tsInizioRealeSessione(s){
+  // L'inizio effettivo è quello REGISTRATO sulla sessione: è il valore che il capolinea imposta
+  // nel campo "Orario inizio articolo" e che viene salvato su presenze (data_ora e ts).
+  if(s && s.tsInizio && s.tsInizio>0) return Number(s.tsInizio);
+  const d = parseData(s && s.inizio); if(d) return d.getTime();
+  // Ripiego per le sessioni create da "Aggiungi articolo": il loro id contiene il momento della
+  // creazione (ADD_<matricola>_<articolo>_<timestamp>). Va usato SOLO se manca l'orario registrato:
+  // prima veniva anteposto ad esso e sovrascriveva l'orario scelto, facendo risultare l'articolo
+  // partito dal momento del click invece che dall'ora indicata. Con due articoli aperti la
+  // ripartizione dei minuti ne usciva sbilanciata e l'obiettivo del secondo crollava.
   const id = (s && s.id) ? String(s.id) : "";
   if(id.indexOf("ADD_")===0){
     const m = id.match(/_(\d{10,})$/);
     if(m){ const t = Number(m[1]); if(t>0) return t; }
   }
-  if(s && s.tsInizio && s.tsInizio>0) return Number(s.tsInizio);
-  const d = parseData(s && s.inizio); return d ? d.getTime() : null;
+  return null;
 }
 // ── RIPARTIZIONE MINUTI PER PERIODO ───────────────────────────────────────────
 // Ripartisce l'intervallo [dalMs, alMs] (un segmento di lavoro su un articolo) contando,
