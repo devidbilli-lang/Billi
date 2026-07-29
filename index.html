@@ -3456,14 +3456,27 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               // Se la rampa non è iniziata o non ci sono dati storici, fallback a sessioni attive.
               let nOpReale;
               if(rampa && rampa.dal){
-                // Calcola giorni della rampa passati (lavorativi) e raccogli nOp per ognuno
+                // Media operatori nell'ARCO della rampa. Prima si mappava ogni giorno-rampa su una data
+                // esatta e si cercava esattamente quella: bastava che avessero lavorato un sabato o un
+                // festivo (giorni che la mappatura non prevede), o che l'etichetta della linea differisse
+                // anche solo per una maiuscola o uno spazio, perché non trovasse nulla. Si ricadeva
+                // allora sulle sessioni attive — zero per una rampa conclusa — e quindi sul minimo di
+                // 1 persona, con un obiettivo teorico assurdamente basso.
+                // Ora si prendono tutti i giorni CON DATI che cadono nella finestra della rampa,
+                // confrontando la linea in modo tollerante.
+                const _norm = (x)=>String(x==null?"":x).trim().toLowerCase();
+                const _fineR = aggiungiGiorniLavorativi(rampa.dal, dur-1, rampa.weekendLavorati);
+                const _iniTs = (()=>{ const d=new Date(rampa.dal); d.setHours(0,0,0,0); return d.getTime(); })();
+                const _finTs = (()=>{ const d=(_fineR&&!isNaN(_fineR.getTime()))?new Date(_fineR):new Date(); d.setHours(23,59,59,999); return d.getTime(); })();
                 const valoriPerGiorno = [];
-                const giorniTrascorsi = Math.min(rampa.giorni || 1, dur);
-                for(let d=1; d<=giorniTrascorsi; d++){
-                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1, rampa.weekendLavorati);
-                  const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
-                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && stessoGiornoData(r.data, fmtG));
-                  if(riga && riga.nOperatori > 0) valoriPerGiorno.push(riga.nOperatori);
+                for(const r of (operatoriPerGiorno||[])){
+                  if(!r || r.sku!==sku) continue;
+                  if(rampaLinea && _norm(r.linea)!==_norm(rampaLinea)) continue;
+                  if(!(r.nOperatori>0)) continue;
+                  const _p=_gma(r.data); if(!_p) continue;
+                  const _ts=new Date(_p.a, _p.m-1, _p.g, 12, 0, 0).getTime();
+                  if(_ts<_iniTs || _ts>_finTs) continue;   // fuori dall'arco della rampa
+                  valoriPerGiorno.push(r.nOperatori);
                 }
                 if(valoriPerGiorno.length > 0){
                   // Media arrotondata al numero intero più vicino
@@ -3494,7 +3507,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 if(d < gOggiCalc && rampa && rampa.dal){
                   const dataG = aggiungiGiorniLavorativi(rampa.dal, d-1, rampa.weekendLavorati);
                   const fmtG = `${String(dataG.getDate()).padStart(2,'0')}/${String(dataG.getMonth()+1).padStart(2,'0')}/${dataG.getFullYear()}`;
-                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||r.linea===rampaLinea) && stessoGiornoData(r.data, fmtG));
+                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||String(r.linea==null?"":r.linea).trim().toLowerCase()===String(rampaLinea).trim().toLowerCase()) && stessoGiornoData(r.data, fmtG));
                   if(riga && riga.nOperatori > 0) return riga.nOperatori;
                   return nOp; // se manca il dato storico del giorno, ripiega sulla previsione
                 }
