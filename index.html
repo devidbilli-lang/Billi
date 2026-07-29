@@ -3289,6 +3289,20 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
   const rampaMap = {};
   // Chiave composita SKU|||LINEA: ogni linea ha la SUA rampa indipendente.
   const KEYSEP = "|||";
+  // Durata per RAMPA (stesso articolo + stessa data di inizio): la durata impostata a mano viene
+  // scritta solo su alcune righe della tabella, e le righe della stessa rampa su un'altra linea
+  // restano vuote. Senza questa condivisione una rampa da 5 giorni continua a mostrarsi come 15 e
+  // quindi a risultare "ancora attiva" ben oltre la sua fine. Stesso articolo + stessa data = stessa
+  // rampa, quindi la durata è la stessa; è lo stesso ripiego che applica già il worker.
+  const durataPerRampa = {};
+  for(const r of (rampeSheets||[])){
+    const _d = r.dal || r.rampaDal;
+    if(!r.sku || !_d) continue;
+    if(r.durata!=null && +r.durata>=2){
+      const _k = r.sku + "|" + _d;
+      if(!durataPerRampa[_k] || +r.durata > durataPerRampa[_k]) durataPerRampa[_k] = +r.durata;
+    }
+  }
   // Leggi rampe da rampeSheets (tabella rampe del DB). Il campo è `dal`, supporto anche legacy `rampaDal`.
   for(const r of (rampeSheets||[])){
     const dal = r.dal || r.rampaDal;
@@ -3302,7 +3316,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
       // una con durata vuota, ricadere sul default di 15 giorni e mostrare come "ancora attiva" una
       // rampa in realtà conclusa. A parità di data si preferisce quindi il record che ha una durata
       // realmente impostata.
-      const _durReale = (r.durata!=null && +r.durata>=2) ? +r.durata : null;
+      const _durReale = (r.durata!=null && +r.durata>=2) ? +r.durata : (durataPerRampa[r.sku+"|"+dal] || null);
       const _ex = rampaMap[key];
       const _prendi = !_ex || dal > _ex.dal || (dal === _ex.dal && _durReale!=null && _ex._durReale==null);
       if(_prendi) {
