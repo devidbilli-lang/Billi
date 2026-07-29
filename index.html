@@ -966,33 +966,44 @@ function aggregaDifetti(note){
 function contaNote(str){
   return aggregaDifetti([str]).reduce((s,kv)=>s+kv[1],0);
 }
-// Modale di riepilogo dei difetti: aggrega le note KO e migliorabili delle righe passate.
-// Usato dal pulsante "Riepilogo" nell'inserimento qualità (per articolo) e nella sezione
-// qualità (per linea), così lo stesso prospetto è raggiungibile da entrambe le viste.
-function ModaleNoteRiepilogo({ titolo, righe, onClose }){
-  const noteKo = [], noteMigl = [];
-  (righe||[]).forEach(r=>{ if(r){ if(r.noteKo) noteKo.push(r.noteKo); if(r.noteMigl) noteMigl.push(r.noteMigl); } });
-  const aggKo = aggregaDifetti(noteKo), aggMi = aggregaDifetti(noteMigl);
-  const totKo = aggKo.reduce((s,kv)=>s+kv[1],0), totMi = aggMi.reduce((s,kv)=>s+kv[1],0);
-  const blocco = (tit, agg, tot, colore) => (
-    <div style={{marginBottom:16}}>
-      <div style={{fontSize:12,fontWeight:800,color:colore,textTransform:"uppercase",letterSpacing:0.4,marginBottom:6}}>{tit} ({tot})</div>
-      {agg.length===0 ? <div style={{fontSize:13,color:"#94a3b8"}}>Nessun difetto annotato.</div> :
-        agg.map(([d,n])=>(
-          <div key={d} style={{display:"flex",justifyContent:"space-between",gap:12,padding:"5px 0",borderBottom:"1px solid #f1f5f9",fontSize:13}}>
-            <span style={{color:"#1e293b"}}>{d}</span>
-            <span style={{fontWeight:800,color:colore}}>{n}</span>
-          </div>))}
-    </div>
-  );
+// Modale di riepilogo degli INSERIMENTI: elenca le singole registrazioni con Borse OK e BNC.
+// Usata dal pulsante "Riepilogo" nell'inserimento qualità (per articolo) e nella sezione qualità
+// (per linea): serve a vedere come si è composto il totale della giornata, inserimento per
+// inserimento, invece del solo valore aggregato.
+function ModaleRiepilogoInserimenti({ titolo, voci, onClose }){
+  const lista = (voci||[]).filter(Boolean);
+  const totOk = lista.reduce((s,v)=>s+(Number(v.ok)||0),0);
+  const totBnc = lista.reduce((s,v)=>s+(Number(v.bnc)||0),0);
   return (
     <div onClick={onClose} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:460,width:"calc(100vw - 32px)",maxHeight:"80vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-        <div style={{fontSize:17,fontWeight:900,color:"#7c3aed",marginBottom:4}}>Riepilogo difetti</div>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:520,width:"calc(100vw - 32px)",maxHeight:"80vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{fontSize:17,fontWeight:900,color:"#7c3aed",marginBottom:4}}>Riepilogo inserimenti</div>
         <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{titolo}</div>
-        {blocco("KO", aggKo, totKo, "#ef4444")}
-        {blocco("Migliorabili", aggMi, totMi, "#f59e0b")}
-        <button onClick={onClose} style={{marginTop:4,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"9px 18px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Chiudi</button>
+        {lista.length===0 ? <div style={{fontSize:13,color:"#94a3b8",marginBottom:16}}>Nessun inserimento registrato.</div> : (
+          <table style={{width:"100%",borderCollapse:"collapse",marginBottom:14}}>
+            <thead><tr style={{background:"#f8fafc"}}>
+              <th style={{textAlign:"left",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3}}>Quando</th>
+              <th style={{textAlign:"left",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3}}>Voce</th>
+              <th style={{textAlign:"right",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#06b981",textTransform:"uppercase",letterSpacing:0.3}}>Borse OK</th>
+              <th style={{textAlign:"right",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#c026d3",textTransform:"uppercase",letterSpacing:0.3}}>BNC</th>
+            </tr></thead>
+            <tbody>
+              {lista.map((v,i)=>(
+                <tr key={i} style={{borderBottom:"1px solid #f1f5f9"}}>
+                  <td style={{padding:"7px 8px",fontSize:12,color:"#64748b",whiteSpace:"nowrap"}}>{v.quando||"-"}</td>
+                  <td style={{padding:"7px 8px",fontSize:12,color:"#1e293b"}}>{v.etichetta||"-"}</td>
+                  <td style={{padding:"7px 8px",fontSize:13,fontWeight:800,color:"#06b981",textAlign:"right"}}>{Number(v.ok)||0}</td>
+                  <td style={{padding:"7px 8px",fontSize:13,fontWeight:800,color:"#c026d3",textAlign:"right"}}>{Number(v.bnc)||0}</td>
+                </tr>))}
+            </tbody>
+            <tfoot><tr style={{borderTop:"2px solid #e2e8f0"}}>
+              <td colSpan={2} style={{padding:"9px 8px",fontSize:12,fontWeight:800,color:"#1e293b"}}>Totale ({lista.length} inserimenti)</td>
+              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#06b981",textAlign:"right"}}>{totOk}</td>
+              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#c026d3",textAlign:"right"}}>{totBnc}</td>
+            </tr></tfoot>
+          </table>
+        )}
+        <button onClick={onClose} style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"9px 18px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Chiudi</button>
       </div>
     </div>
   );
@@ -4453,8 +4464,10 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
           </div>
         )}
       </div>
-      {riepLinea && <ModaleNoteRiepilogo titolo={"Linea "+riepLinea+" \u00b7 periodo selezionato"}
-        righe={righe.filter(x=>x.linea===riepLinea)} onClose={()=>setRiepLinea(null)}/>}
+      {riepLinea && <ModaleRiepilogoInserimenti titolo={"Linea "+riepLinea+" \u00b7 periodo selezionato"}
+        voci={(qualita||[]).filter(q=>q&&q.linea===riepLinea).map(q=>({
+          quando:(q.data||"").toString(), etichetta:q.sku||"", ok:q.ok, bnc:(q.coffre!=null?q.coffre:q.borse_coffre)
+        }))} onClose={()=>setRiepLinea(null)}/>}
       {vistaQ==="report" ? (
         <ReportQualita qualita={qualita} skuList={skuList} lineaFiltro={lineaFiltro} linee={linee}/>
       ) : righe.length === 0 ? (
@@ -4912,9 +4925,11 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   <div style={{fontSize:24,fontWeight:900,color:"#ff37ff"}}>0</div>
                 </div>
               </div>}
-              {riepSku && <ModaleNoteRiepilogo titolo={"Articolo "+riepSku+" \u00b7 oggi"}
-                righe={righe.filter(q=>q.sku===riepSku).map(q=>({noteKo:q.note_ko||q.noteKo||"", noteMigl:q.note_migl||q.noteMigl||""}))}
-                onClose={()=>setRiepSku(null)}/>}
+              {riepSku && <ModaleRiepilogoInserimenti titolo={"Articolo "+riepSku+" \u00b7 oggi"}
+                voci={righe.filter(q=>q.sku===riepSku).map(q=>({
+                  quando:(q.data_ora||q.data||"").toString().split(" ").slice(-1)[0]||"-",
+                  etichetta:q.linea||riepSku, ok:q.ok, bnc:(q.borse_coffre!=null?q.borse_coffre:q.coffre)
+                }))} onClose={()=>setRiepSku(null)}/>}
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s&&s.sku===r.sku);
                 return <div key={r.sku} style={{marginBottom:10,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
