@@ -3296,9 +3296,17 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
     if(r.sku && dal){
       const g = giorniLavorativiJS(dal, r.weekendLavorati);
       const key = r.sku + KEYSEP + lid;
-      // Se più record per stessa coppia sku+linea, prendi quello con data più recente
-      if(!rampaMap[key] || dal > rampaMap[key].dal) {
-        rampaMap[key] = { sku:r.sku, dal, giorni:g, lineaId:lid, completata: !!r.completata, durata:(r.durata!=null && +r.durata>=2)?+r.durata:15, weekendLavorati: Array.isArray(r.weekendLavorati)?r.weekendLavorati:[] };
+      // La tabella rampe può contenere PIÙ RECORD per la stessa coppia sku+linea e la stessa data
+      // (le righe vengono reinserite dai marcatori sui trasferimenti). La durata impostata a mano
+      // finisce solo su alcune di esse: se qui si prendesse una riga a caso si rischia di pescarne
+      // una con durata vuota, ricadere sul default di 15 giorni e mostrare come "ancora attiva" una
+      // rampa in realtà conclusa. A parità di data si preferisce quindi il record che ha una durata
+      // realmente impostata.
+      const _durReale = (r.durata!=null && +r.durata>=2) ? +r.durata : null;
+      const _ex = rampaMap[key];
+      const _prendi = !_ex || dal > _ex.dal || (dal === _ex.dal && _durReale!=null && _ex._durReale==null);
+      if(_prendi) {
+        rampaMap[key] = { sku:r.sku, dal, giorni:g, lineaId:lid, completata: !!r.completata, durata:(_durReale!=null)?_durReale:15, weekendLavorati: Array.isArray(r.weekendLavorati)?r.weekendLavorati:[], _durReale };
       }
     }
   }
