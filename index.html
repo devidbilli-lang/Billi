@@ -8439,10 +8439,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         let voci = [];
                         if(s._pianificato){
                           const skuPian = Array.isArray(s._skuPianificati)&&s._skuPianificati.length>0 ? s._skuPianificati : [s.sku].filter(Boolean);
-                          voci = skuPian.map(sk=>({sku:sk, dal:s.rampaDal}));
+                          voci = skuPian.map(sk=>({sku:sk, dal:s.rampaDal, dur:s.rampaDurata}));
                         } else {
                           const sessAttivi = sessioni.filter(ss=>(ss.matricola||ss.nome+"-"+ss.cognome)===(s.matricola||s.nome+"-"+s.cognome)&&ss.lineaCorrente===s.lineaCorrente&&(!ss.fine||ss.fine===""||ss.fine===null||ss.fine==="null"));
-                          voci = (sessAttivi.length>0?sessAttivi:[s]).map(ss=>({sku:ss.skuCorrente||ss.sku||"", dal:ss.rampaDal}));
+                          voci = (sessAttivi.length>0?sessAttivi:[s]).map(ss=>({sku:ss.skuCorrente||ss.sku||"", dal:ss.rampaDal, dur:ss.rampaDurata}));
                         }
                         const visti = new Set();
                         const pillole = [];
@@ -8450,16 +8450,20 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           const skuS = v.sku;
                           if(!skuS || visti.has(skuS)) continue;
                           visti.add(skuS);
-                          // Cerca la rampa per sku+linea (la stessa coppia). Se non c'è una matching
-                          // per linea precisa, accetta anche un match solo per sku come fallback.
+                          // Le rampe sono PER LINEA (chiave sku+linea_id): il record di un'altra linea non
+                          // vale qui. Si ripiega quindi solo sui record privi di linea (storici), mai su
+                          // quelli appartenenti a una linea diversa, altrimenti un articolo in rampa
+                          // altrove farebbe comparire una pillola su questa linea con la durata sbagliata.
                           let rampaS = rampe.find(r=>r.sku===skuS && (r.linea_id===lineaS||r.lineaId===lineaS));
-                          if(!rampaS) rampaS = rampe.find(r=>r.sku===skuS);
+                          if(!rampaS) rampaS = rampe.find(r=>r.sku===skuS && !(r.linea_id||r.lineaId));
                           // Il campo nel DB è `dal`; supporto anche legacy `rampaDal`.
                           const rDal = (rampaS && (rampaS.dal||rampaS.rampaDal)) || v.dal;
                           if(!rDal) continue;
                           const _wlS = (rampaS && Array.isArray(rampaS.weekendLavorati)) ? rampaS.weekendLavorati : _weekendLav(skuS, lineaS);
                           const gg = giorniLavorativiJS(rDal, _wlS);
-                          const durG = (rampaS && rampaS.durata && +rampaS.durata>=2) ? +rampaS.durata : ((s.rampaDurata && +s.rampaDurata>=2) ? +s.rampaDurata : 15);
+                          // La durata deve venire dalla STESSA fonte della data: dal record se c'è, altrimenti
+                          // dalla sessione di QUESTO articolo (non da quella rappresentativa della riga).
+                          const durG = (rampaS && rampaS.durata && +rampaS.durata>=2) ? +rampaS.durata : ((v.dur && +v.dur>=2) ? +v.dur : 15);
                           // Rampa completata solo DOPO l'ultimo giorno (mezzanotte della fine teorica).
                           if(rampaCompletata(rDal, durG, _wlS)) continue;
                           pillole.push(
