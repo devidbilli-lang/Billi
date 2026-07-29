@@ -3464,7 +3464,11 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 // 1 persona, con un obiettivo teorico assurdamente basso.
                 // Ora si prendono tutti i giorni CON DATI che cadono nella finestra della rampa,
                 // confrontando la linea in modo tollerante.
-                const _norm = (x)=>String(x==null?"":x).trim().toLowerCase();
+                // Confronto linea tollerante: ignora maiuscole e TUTTI gli spazi, anche interni. Le
+                // linee vengono rinominate nel tempo e la stessa può comparire con grafie diverse
+                // ("Gian Marco" / "Gianmarco"): senza questo, una rampa la cui finestra cade nel
+                // periodo della grafia vecchia non trova alcun dato e la media crolla a 1 persona.
+                const _norm = (x)=>String(x==null?"":x).toLowerCase().replace(/\s+/g,"");
                 const _fineR = aggiungiGiorniLavorativi(rampa.dal, dur-1, rampa.weekendLavorati);
                 const _iniTs = (()=>{ const d=new Date(rampa.dal); d.setHours(0,0,0,0); return d.getTime(); })();
                 const _finTs = (()=>{ const d=(_fineR&&!isNaN(_fineR.getTime()))?new Date(_fineR):new Date(); d.setHours(23,59,59,999); return d.getTime(); })();
@@ -3507,7 +3511,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 if(d < gOggiCalc && rampa && rampa.dal){
                   const dataG = aggiungiGiorniLavorativi(rampa.dal, d-1, rampa.weekendLavorati);
                   const fmtG = `${String(dataG.getDate()).padStart(2,'0')}/${String(dataG.getMonth()+1).padStart(2,'0')}/${dataG.getFullYear()}`;
-                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||String(r.linea==null?"":r.linea).trim().toLowerCase()===String(rampaLinea).trim().toLowerCase()) && stessoGiornoData(r.data, fmtG));
+                  const riga = (operatoriPerGiorno||[]).find(r=>r&&r.sku===sku && (!rampaLinea||String(r.linea==null?"":r.linea).toLowerCase().replace(/\s+/g,"")===String(rampaLinea).toLowerCase().replace(/\s+/g,"")) && stessoGiornoData(r.data, fmtG));
                   if(riga && riga.nOperatori > 0) return riga.nOperatori;
                   return nOp; // se manca il dato storico del giorno, ripiega sulla previsione
                 }
