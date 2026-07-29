@@ -960,6 +960,43 @@ function aggregaDifetti(note){
   });
   return Object.entries(agg).sort((a,b)=>b[1]-a[1]);
 }
+// Numero di pezzi elencati in una stringa di note ("Difetto (3 pz) | Altro (2 pz)" → 5). Serve a
+// verificare che le annotazioni restino coerenti con la quantità di KO o di migliorabili: se si
+// modifica la quantità senza aggiornare le note si generano righe con 3 KO e 5 difetti elencati.
+function contaNote(str){
+  return aggregaDifetti([str]).reduce((s,kv)=>s+kv[1],0);
+}
+// Modale di riepilogo dei difetti: aggrega le note KO e migliorabili delle righe passate.
+// Usato dal pulsante "Riepilogo" nell'inserimento qualità (per articolo) e nella sezione
+// qualità (per linea), così lo stesso prospetto è raggiungibile da entrambe le viste.
+function ModaleNoteRiepilogo({ titolo, righe, onClose }){
+  const noteKo = [], noteMigl = [];
+  (righe||[]).forEach(r=>{ if(r){ if(r.noteKo) noteKo.push(r.noteKo); if(r.noteMigl) noteMigl.push(r.noteMigl); } });
+  const aggKo = aggregaDifetti(noteKo), aggMi = aggregaDifetti(noteMigl);
+  const totKo = aggKo.reduce((s,kv)=>s+kv[1],0), totMi = aggMi.reduce((s,kv)=>s+kv[1],0);
+  const blocco = (tit, agg, tot, colore) => (
+    <div style={{marginBottom:16}}>
+      <div style={{fontSize:12,fontWeight:800,color:colore,textTransform:"uppercase",letterSpacing:0.4,marginBottom:6}}>{tit} ({tot})</div>
+      {agg.length===0 ? <div style={{fontSize:13,color:"#94a3b8"}}>Nessun difetto annotato.</div> :
+        agg.map(([d,n])=>(
+          <div key={d} style={{display:"flex",justifyContent:"space-between",gap:12,padding:"5px 0",borderBottom:"1px solid #f1f5f9",fontSize:13}}>
+            <span style={{color:"#1e293b"}}>{d}</span>
+            <span style={{fontWeight:800,color:colore}}>{n}</span>
+          </div>))}
+    </div>
+  );
+  return (
+    <div onClick={onClose} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:460,width:"calc(100vw - 32px)",maxHeight:"80vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{fontSize:17,fontWeight:900,color:"#7c3aed",marginBottom:4}}>Riepilogo difetti</div>
+        <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{titolo}</div>
+        {blocco("KO", aggKo, totKo, "#ef4444")}
+        {blocco("Migliorabili", aggMi, totMi, "#f59e0b")}
+        <button onClick={onClose} style={{marginTop:4,background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"9px 18px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Chiudi</button>
+      </div>
+    </div>
+  );
+}
 // Stepper numerico con frecce VIOLA grandi e ben cliccabili. Lo spinner nativo non è ricolorabile,
 // quindi lo nascondo (classe .nviola-inp) e affianco due bottoni ▲▼. Inoltra tutti i prop dell'input
 // (value, onChange, style, min/max, placeholder, ...); rispetta flex/width dello style originale.
@@ -4289,6 +4326,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
   const [qualita, setQualita] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [editQ, setEditQ] = React.useState(null); // chiave riga in modifica
+  const [riepLinea, setRiepLinea] = React.useState(null); // linea di cui mostrare il riepilogo difetti
   const [tmpQ, setTmpQ] = React.useState({ok:"",ko:"",migl:"",coffre:""});
   const [salvandoQ, setSalvandoQ] = React.useState(false);
   // Modal di conferma per l'eliminazione riga (stesso componente ModalConferma della chiusura turno).
@@ -4334,7 +4372,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     // Passa la data grezza (es. "22/05/2026" o ISO): il worker normalizza entrambi i formati.
     const giorno = (r.data||"").toString().split(" ")[0].split(",")[0].trim();
     try {
-      await fetch(nexusUrl("modificaQualita",{linea:r.linea,sku:r.sku,data:giorno,ok:tmpQ.ok||0,ko:tmpQ.ko||0,migliorabili:tmpQ.migl||0,coffre:tmpQ.coffre||0}),{mode:"cors"});
+      await fetch(nexusUrl("modificaQualita",{linea:r.linea,sku:r.sku,data:giorno,ok:tmpQ.ok||0,ko:tmpQ.ko||0,migliorabili:tmpQ.migl||0,coffre:tmpQ.coffre||0,noteKo:tmpQ.noteKo!==undefined?tmpQ.noteKo:(r.noteKo||""),noteMigl:tmpQ.noteMigl!==undefined?tmpQ.noteMigl:(r.noteMigl||"")}),{mode:"cors"});
     } catch(e) {}
     setEditQ(null); setSalvandoQ(false);
     // Ricarica D1 subito e lo storico (foglio) anche in ritardo, per dare tempo alla propagazione.
@@ -4415,6 +4453,8 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
           </div>
         )}
       </div>
+      {riepLinea && <ModaleNoteRiepilogo titolo={"Linea "+riepLinea+" \u00b7 periodo selezionato"}
+        righe={righe.filter(x=>x.linea===riepLinea)} onClose={()=>setRiepLinea(null)}/>}
       {vistaQ==="report" ? (
         <ReportQualita qualita={qualita} skuList={skuList} lineaFiltro={lineaFiltro} linee={linee}/>
       ) : righe.length === 0 ? (
@@ -4442,7 +4482,10 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
             return (
               <tr key={i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
                 <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center"}}>{dataFmt}</td>
-                <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:"#ffffff",color:lObj.colore,border:"2px solid "+lObj.colore,padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap",display:"inline-block"}}>{r.linea}</span></td>
+                <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:"#ffffff",color:lObj.colore,border:"2px solid "+lObj.colore,padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap",display:"inline-block"}}>{r.linea}</span>
+                  <button onClick={()=>setRiepLinea(r.linea)} title={"Riepilogo difetti della linea "+r.linea}
+                    style={{marginLeft:6,background:"#fff",border:"1.5px solid #7c3aed",color:"#7c3aed",borderRadius:6,padding:"3px 8px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>Riepilogo</button>
+                </td>
                 <td style={{padding:"10px 14px",textAlign:"center"}}>
                   <code style={S.sku}>{r.sku}</code>
                   {skuObj&&skuObj.descrizione&&<div style={{fontSize:11,color:"#f59e0b",marginTop:6,fontFamily:"'Montserrat',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
@@ -4463,8 +4506,20 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                 <td style={{padding:"10px 14px",fontSize:16,fontWeight:800,color:"#ff37ff",textAlign:"center",fontFamily:"'Montserrat',sans-serif",minWidth:100,width:"10%"}}>
                   {inEdit ? <input type="number" value={tmpQ.coffre} onChange={e=>setTmpQ(p=>({...p,coffre:e.target.value}))} style={{width:64,padding:"4px",fontSize:15,fontWeight:800,textAlign:"center",border:"2px solid #ff37ff",borderRadius:6,fontFamily:"'Montserrat',sans-serif",color:"#ff37ff"}}/> : (r.coffre||"-")}
                 </td>
-                <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteKo||"-"}</td>
-                <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>{r.noteMigl||"-"}</td>
+                <td style={{padding:"10px 14px",fontSize:12,color:"#ef4444",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>
+                  {inEdit ? (()=>{ const n=contaNote(tmpQ.noteKo), q=Number(tmpQ.ko)||0; return (<div>
+                    <textarea value={tmpQ.noteKo||""} onChange={e=>setTmpQ(p=>({...p,noteKo:e.target.value}))} rows={2}
+                      style={{width:"100%",fontSize:11,padding:"4px 6px",border:"2px solid #ef4444",borderRadius:6,fontFamily:"'Montserrat',sans-serif",color:"#ef4444",resize:"vertical"}}/>
+                    <div style={{fontSize:10,fontWeight:700,marginTop:2,color:n===q?"#22c55e":"#ef4444"}}>{n} difetti / {q} KO {n===q?"✓":"⚠"}</div>
+                  </div>); })() : (r.noteKo||"-")}
+                </td>
+                <td style={{padding:"10px 14px",fontSize:12,color:"#f59e0b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",maxWidth:200,minWidth:150,whiteSpace:"normal",wordBreak:"break-word",lineHeight:1.5}}>
+                  {inEdit ? (()=>{ const n=contaNote(tmpQ.noteMigl), q=Number(tmpQ.migl)||0; return (<div>
+                    <textarea value={tmpQ.noteMigl||""} onChange={e=>setTmpQ(p=>({...p,noteMigl:e.target.value}))} rows={2}
+                      style={{width:"100%",fontSize:11,padding:"4px 6px",border:"2px solid #f59e0b",borderRadius:6,fontFamily:"'Montserrat',sans-serif",color:"#f59e0b",resize:"vertical"}}/>
+                    <div style={{fontSize:10,fontWeight:700,marginTop:2,color:n===q?"#22c55e":"#f59e0b"}}>{n} difetti / {q} MGL {n===q?"✓":"⚠"}</div>
+                  </div>); })() : (r.noteMigl||"-")}
+                </td>
                 <td style={{padding:"10px 14px",textAlign:"center",whiteSpace:"nowrap"}}>
                   {inEdit ? (
                     <div style={{display:"inline-flex",gap:4}}>
@@ -4474,7 +4529,7 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
                   ) : (
                     // Modifica + Elimina, disponibili su QUALSIASI data (anche passata).
                     <div style={{display:"inline-flex",gap:6}}>
-                      <button onClick={()=>{ setEditQ(rowKey); setTmpQ({ok:String(r.ok||0),ko:String(r.ko||0),migl:String(r.migl||0),coffre:String(r.coffre||0)}); }} title="Modifica valori"
+                      <button onClick={()=>{ setEditQ(rowKey); setTmpQ({ok:String(r.ok||0),ko:String(r.ko||0),migl:String(r.migl||0),coffre:String(r.coffre||0),noteKo:String(r.noteKo||""),noteMigl:String(r.noteMigl||"")}); }} title="Modifica valori"
                         style={{background:"#fff",border:"1.5px solid #ff6937",borderRadius:6,padding:"5px 9px",cursor:"pointer",color:"#ff6937"}}><IconaMatita size={14}/></button>
                       <button disabled={salvandoQ} onClick={()=>eliminaQualitaRiga(r)} title="Elimina riga"
                         style={{background:"#fff",border:"1.5px solid #ef4444",borderRadius:6,padding:"5px 9px",cursor:salvandoQ?"default":"pointer",color:"#ef4444",opacity:salvandoQ?0.5:1}}>🗑</button>
@@ -4615,6 +4670,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   const [modalConfermaQ, setModalConfermaQ] = useState(null);
   const [lineaSelQ, setLineaSelQ] = useState("");
   const [qualitaOggi, setQualitaOggi] = useState([]);
+  const [riepSku, setRiepSku] = useState(null); // articolo di cui mostrare il riepilogo difetti
   const [obPerArticolo, setObPerArticolo] = React.useState({}); // {linea:{sku:obiettivo}} dalla card Entra in Produzione
   const [obPerArticoloLocal, setObPerArticoloLocal] = React.useState({}); // {sku:obiettivo} riportato DIRETTAMENTE dalla card-mirror (no D1)
   const [showRiepilogoQ, setShowRiepilogoQ] = useState(false);
@@ -4794,8 +4850,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         const totCoffre = lista.reduce((a,r)=>a+r.coffre,0);
         return (
           <div
-            style={{position:"fixed",top:120,left:"50%",transform:"translateX(-50%)",zIndex:2000,width:"calc(100vw - 32px)",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none",cursor:"default"}}
-            onMouseDown={e=>{
+            style={{position:"fixed",top:120,left:"50%",transform:"translateX(-50%)",zIndex:2000,width:"calc(100vw - 32px)",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none",cursor:"default"}}            onMouseDown={e=>{
               const el = e.currentTarget;
               const rect = el.getBoundingClientRect();
               const startX = e.clientX - rect.left;
@@ -4857,12 +4912,17 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                   <div style={{fontSize:24,fontWeight:900,color:"#ff37ff"}}>0</div>
                 </div>
               </div>}
+              {riepSku && <ModaleNoteRiepilogo titolo={"Articolo "+riepSku+" \u00b7 oggi"}
+                righe={righe.filter(q=>q.sku===riepSku).map(q=>({noteKo:q.note_ko||q.noteKo||"", noteMigl:q.note_migl||q.noteMigl||""}))}
+                onClose={()=>setRiepSku(null)}/>}
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s&&s.sku===r.sku);
                 return <div key={r.sku} style={{marginBottom:10,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
                     <div style={{display:"inline-flex",flexDirection:"column",alignItems:"flex-start",gap:1,background:"#ffffff",border:"2px solid #ff6937",borderRadius:8,padding:"4px 12px"}}>
                       <span style={{fontSize:12,fontWeight:800,color:"#ff6937",lineHeight:1.2}}>{r.sku}</span>
+                      <button onClick={()=>setRiepSku(r.sku)} title={"Riepilogo difetti di "+r.sku}
+                        style={{marginLeft:6,background:"rgba(255,255,255,0.7)",border:"1.5px solid #7c3aed",color:"#7c3aed",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>Riepilogo</button>
                       {skuObj?.descrizione&&<span style={{fontSize:10,color:"#ff6937cc",lineHeight:1.2}}>{skuObj.descrizione}</span>}
                     </div>
                     {(()=>{ const _ob=_isPrototipLine ? ((obPerArticoloLocal||{})[r.sku]) : ((obPerArticolo[lineaEffettiva]||{})[r.sku]); return (_ob!=null) ? (
