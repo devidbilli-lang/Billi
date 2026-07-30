@@ -3554,12 +3554,37 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               // nOp finale: usa override personalizzato se impostato, altrimenti il numero reale (media)
               const nOp = nOpOverride[sku] !== undefined ? nOpOverride[sku] : nOpReale;
               const isOverride = nOpOverride[sku] !== undefined && nOpOverride[sku] !== nOpReale;
+              // RAMPA CONCLUSA E ARCHIVIATA → valori CONGELATI. La card ricostruiva sempre curva e
+              // obiettivo dai dati correnti (tempo ciclo e conteggio operatori di oggi): bastava che
+              // uno dei due cambiasse perché l'obiettivo di una rampa già chiusa si spostasse
+              // all'indietro. Nell'archivio curva, obiettivo e TC dell'epoca sono cristallizzati:
+              // se l'archivio esiste ed è coerente con la durata, si usa quello e non si ricalcola.
+              const _normL = (x)=>String(x==null?"":x).toLowerCase().replace(/\s+/g,"");
+              const rsArch = (rampeStorico||[]).find(x=> x && x.sku===sku
+                && (!rampaLinea || _normL(x.linea_id||x.lineaId)===_normL(rampaLinea))
+                && rampa && rampa.dal && Math.abs(Number(x.dal||0)-Number(rampa.dal)) < 86400000);
+              let curvaCongelata = null, tcCongelato = 0, obCongelato = 0;
+              if(rsArch){
+                try{ const _a=JSON.parse(rsArch.curva_teorica||rsArch.curvaTeorica||"[]"); if(Array.isArray(_a)&&_a.length===dur) curvaCongelata=_a; }catch(e){}
+                tcCongelato = Number(rsArch.tc)||0;
+                obCongelato = Number(rsArch.ob_pieno!=null?rsArch.ob_pieno:rsArch.obPieno)||0;
+              }
+              const congelata = !!curvaCongelata;
               const minTurno = nOp * 8 * 60; // minuti totali turno (previsione, dalla casella)
-              // Obiettivo teorico a pieno regime (giorno 15) con gli operatori PREVISTI (casella)
-              const obMax = tc > 0 ? Math.floor(minTurno / tc) : 0;
-              // Giorno corrente della rampa (oggi). I giorni < gOggiCalc sono passati (consuntivo),
-              // da gOggiCalc in poi sono previsione (usano nOp della casella).
-              const gOggiCalc = Math.min((g||1), dur);
+              // Obiettivo teorico a pieno regime (ultimo giorno): dall'archivio se congelata.
+              const obMax = (congelata && obCongelato > 0) ? obCongelato : (tc > 0 ? Math.floor(minTurno / tc) : 0);
+              // Giorno corrente della rampa. Finché il turno è aperto, OGGI è previsione: usa la media
+              // nella casella, che si muove man mano che arrivano i dati della giornata. A turno CHIUSO
+              // i dati di oggi sono completi, quindi oggi diventa consuntivo come gli altri giorni
+              // passati e l'obiettivo smette di cambiare. Senza questo, il valore continuava a
+              // spostarsi fino a mezzanotte pur essendo il turno finito.
+              const turnoChiusoLinea = (()=>{
+                const dellaLinea = (sessioni||[]).filter(s=> s && !s._pianificato
+                  && (!rampaLinea || s.lineaCorrente===rampaLinea || s.lineaInizio===rampaLinea));
+                if(dellaLinea.length === 0) return false;
+                return dellaLinea.every(s=> s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null");
+              })();
+              const gOggiCalc = Math.min((g||1) + (turnoChiusoLinea ? 1 : 0), dur);
               // Operatori da usare per il giorno d della rampa:
               //  - giorno PASSATO (d < oggi): operatori REALI di quel giorno specifico (da operatoriPerGiorno)
               //  - oggi e FUTURO (d >= oggi): operatori PREVISTI (nOp dalla casella)
@@ -3573,8 +3598,9 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 }
                 return nOp; // oggi e futuro: previsione dalla casella
               };
-              // Curva teorica: per ogni giorno l'obiettivo dipende dagli operatori di QUEL giorno.
-              const curvaOb = PERC.map((p, i) => {
+              // Curva teorica: dall'archivio se la rampa è congelata, altrimenti ricalcolata
+              // giorno per giorno con gli operatori di quel giorno.
+              const curvaOb = congelata ? curvaCongelata : PERC.map((p, i) => {
                 const d = i+1;
                 const nOpG = nOpDelGiorno(d);
                 const obMaxG = tc > 0 ? Math.floor(nOpG * 8 * 60 / tc) : 0;
@@ -3653,7 +3679,9 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                       onChange={e=>{ const v=parseInt(e.target.value,10); if(!isNaN(v)&&v>=1&&v<=999) setNOpOverride(prev=>({...prev,[sku]:v})); else if(e.target.value==="") setNOpOverride(prev=>({...prev,[sku]:""})); }}
                       onBlur={e=>{ if(e.target.value==="") setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;}); }}
                       style={{width:56,padding:"4px 6px",fontSize:17,fontWeight:800,textAlign:"center",border:"1.5px solid #ff6937",borderRadius:6,color:isOverride?"#ff6937":"#000000",fontFamily:"'Montserrat',sans-serif",background:"#fff",outline:"none"}}/>
-                    <span>- TC {tc ? tc.toFixed(1).replace('.', ',') : "?"} min -</span>
+                    <span>- TC {(congelata&&tcCongelato>0?tcCongelato:tc) ? (congelata&&tcCongelato>0?tcCongelato:tc).toFixed(1).replace('.', ',') : "?"} min -</span>
+                    {congelata && <span title="Rampa conclusa e archiviata: curva, obiettivo e tempo ciclo sono quelli dell'epoca e non vengono più ricalcolati"
+                      style={{background:"rgba(6,182,212,0.18)",border:"1px solid rgba(6,182,212,0.45)",color:"#0e7490",borderRadius:999,padding:"2px 10px",fontSize:11,fontWeight:800,whiteSpace:"nowrap"}}>congelata</span>}
                     <button onClick={()=>setNOpOverride(prev=>{const cp={...prev}; delete cp[sku]; return cp;})}
                       disabled={!isOverride}
                       style={{background:isOverride?"#ff6937":"#e2e8f0",color:isOverride?"#fff":"#94a3b8",border:"none",borderRadius:6,padding:"4px 10px",fontSize:15,fontWeight:800,cursor:isOverride?"pointer":"default",fontFamily:"'Montserrat',sans-serif"}}
