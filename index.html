@@ -4928,7 +4928,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
               {riepSku && <ModaleRiepilogoInserimenti titolo={"Articolo "+riepSku+" \u00b7 oggi"}
                 voci={righe.filter(q=>q.sku===riepSku).map(q=>({
                   quando:(q.data_ora||q.data||"").toString().split(" ").slice(-1)[0]||"-",
-                  etichetta:q.linea||riepSku, ok:q.ok, bnc:(q.borse_coffre!=null?q.borse_coffre:q.coffre)
+                  etichetta:q.sku||riepSku, ok:q.ok, bnc:(q.borse_coffre!=null?q.borse_coffre:q.coffre)
                 }))} onClose={()=>setRiepSku(null)}/>}
               {lista.map(r=>{
                 const skuObj = (skuList||[]).find(s=>s&&s.sku===r.sku);
