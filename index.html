@@ -982,24 +982,24 @@ function ModaleRiepilogoInserimenti({ titolo, voci, onClose }){
         {lista.length===0 ? <div style={{fontSize:13,color:"#94a3b8",marginBottom:16}}>Nessun inserimento registrato.</div> : (
           <table style={{width:"100%",borderCollapse:"collapse",marginBottom:14}}>
             <thead><tr style={{background:"#f8fafc"}}>
-              <th style={{textAlign:"left",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3}}>Quando</th>
-              <th style={{textAlign:"left",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3}}>Voce</th>
-              <th style={{textAlign:"right",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#06b981",textTransform:"uppercase",letterSpacing:0.3}}>Borse OK</th>
-              <th style={{textAlign:"right",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#c026d3",textTransform:"uppercase",letterSpacing:0.3}}>BNC</th>
+              <th style={{textAlign:"center",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3}}>Data/Ora</th>
+              <th style={{textAlign:"center",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3}}>Articolo</th>
+              <th style={{textAlign:"center",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#06b981",textTransform:"uppercase",letterSpacing:0.3}}>Borse OK</th>
+              <th style={{textAlign:"center",padding:"7px 8px",fontSize:11,fontWeight:800,color:"#c026d3",textTransform:"uppercase",letterSpacing:0.3}}>BNC</th>
             </tr></thead>
             <tbody>
               {lista.map((v,i)=>(
                 <tr key={i} style={{borderBottom:"1px solid #f1f5f9"}}>
-                  <td style={{padding:"7px 8px",fontSize:12,color:"#64748b",whiteSpace:"nowrap"}}>{v.quando||"-"}</td>
-                  <td style={{padding:"7px 8px",fontSize:12,color:"#1e293b"}}>{v.etichetta||"-"}</td>
-                  <td style={{padding:"7px 8px",fontSize:13,fontWeight:800,color:"#06b981",textAlign:"right"}}>{Number(v.ok)||0}</td>
-                  <td style={{padding:"7px 8px",fontSize:13,fontWeight:800,color:"#c026d3",textAlign:"right"}}>{Number(v.bnc)||0}</td>
+                  <td style={{padding:"7px 8px",fontSize:12,color:"#64748b",whiteSpace:"nowrap",textAlign:"center"}}>{v.quando||"-"}</td>
+                  <td style={{padding:"7px 8px",fontSize:12,color:"#1e293b",textAlign:"center"}}>{v.etichetta||"-"}</td>
+                  <td style={{padding:"7px 8px",fontSize:13,fontWeight:800,color:"#06b981",textAlign:"center"}}>{Number(v.ok)||0}</td>
+                  <td style={{padding:"7px 8px",fontSize:13,fontWeight:800,color:"#c026d3",textAlign:"center"}}>{Number(v.bnc)||0}</td>
                 </tr>))}
             </tbody>
             <tfoot><tr style={{borderTop:"2px solid #e2e8f0"}}>
-              <td colSpan={2} style={{padding:"9px 8px",fontSize:12,fontWeight:800,color:"#1e293b"}}>Totale ({lista.length} inserimenti)</td>
-              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#06b981",textAlign:"right"}}>{totOk}</td>
-              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#c026d3",textAlign:"right"}}>{totBnc}</td>
+              <td colSpan={2} style={{padding:"9px 8px",fontSize:12,fontWeight:800,color:"#1e293b",textAlign:"center"}}>Totale ({lista.length} inserimenti)</td>
+              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#06b981",textAlign:"center"}}>{totOk}</td>
+              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#c026d3",textAlign:"center"}}>{totBnc}</td>
             </tr></tfoot>
           </table>
         )}
