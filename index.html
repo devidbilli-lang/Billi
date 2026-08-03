@@ -3622,28 +3622,57 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
               // con overflow visibile schizzava fino in cima alla pagina).
               const borsePerGiorno = [];
               if(rampa&&rampa.dal&&riepilogo.length>0){
-                for(let d=1;d<=dur;d++){
-                  const dataGiorno = aggiungiGiorniLavorativi(rampa.dal, d-1, rampa.weekendLavorati);
-                  const fmtG = `${String(dataGiorno.getDate()).padStart(2,'0')}/${String(dataGiorno.getMonth()+1).padStart(2,'0')}/${dataGiorno.getFullYear()}`;
-                  // Match linea robusto: la linea nel riepilogo può essere id o nome, e per gli
-                  // articoli "monoartigiano" la linea È il nome della persona. Confronto tollerante a
-                  // spazi/maiuscole (es. "Gianmarco" vs "Gian Marco" = stessa linea).
-                  const _normL = (x) => (x||"").toString().trim().toLowerCase().replace(/\s+/g,"");
-                  const matchLinea = (rl) => {
-                    if(!rampaLinea) return true;
-                    if(!rl) return false;
-                    const n = _normL(rl);
-                    if(n===_normL(rampaLinea)) return true;
-                    if(lineaObj && (n===_normL(lineaObj.id) || n===_normL(lineaObj.nome))) return true;
-                    return false;
-                  };
-                  // Somma le borse di tutte le righe del giorno per questo sku+linea (possono esserci più righe)
-                  const righeGiorno = riepilogo.filter(r=>r&&r.sku===sku&&matchLinea(r.linea)&&stessoGiornoData(r.data, fmtG));
-                  if(righeGiorno.length>0){
-                    borsePerGiorno.push(righeGiorno.reduce((a,r)=>a+Number(r.borseProdotte||0),0));
-                  } else {
-                    borsePerGiorno.push(null);
+                const _normL = (x) => (x||"").toString().trim().toLowerCase().replace(/\s+/g,"");
+                const matchLinea = (rl) => {
+                  if(!rampaLinea) return true;
+                  if(!rl) return false;
+                  const n = _normL(rl);
+                  if(n===_normL(rampaLinea)) return true;
+                  if(lineaObj && (n===_normL(lineaObj.id) || n===_normL(lineaObj.nome))) return true;
+                  return false;
+                };
+                // Le borse si assegnano al giorno di rampa RICAVANDOLO dalla data della registrazione,
+                // invece di calcolare la data attesa di ogni giorno e cercarla. La mappatura in avanti
+                // salta weekend e festivi: se la linea ha lavorato un sabato non registrato fra i
+                // weekend lavorati, le date si sfasano e il giorno non veniva più trovato — la linea
+                // verde restava senza il punto pur essendoci le borse. Contando invece i giorni
+                // lavorativi che separano l'inizio rampa dalla data della registrazione, ogni giornata
+                // finisce sul suo indice corretto. Il valore così ottenuto è la somma delle borse OK
+                // di quel giorno per articolo+linea: lo stesso numero mostrato dalla card di
+                // produzione, che aggrega le stesse registrazioni di qualità.
+                const _extra = _setFestiviLav(rampa.weekendLavorati);
+                const _giornoRampaDi = (dataStr)=>{
+                  const p = _gma(dataStr); if(!p) return 0;
+                  const fine = new Date(p.a, p.m-1, p.g); fine.setHours(0,0,0,0);
+                  const cur = new Date(rampa.dal); cur.setHours(0,0,0,0);
+                  if(fine.getTime() < cur.getTime()) return 0;
+                  let gg = 0;
+                  while(cur.getTime() <= fine.getTime()){
+                    const dow = cur.getDay();
+                    if((dow !== 0 && dow !== 6 && !isFestivitaJS(cur)) || _extra.has(_keyGiorno(cur))) gg++;
+                    cur.setDate(cur.getDate()+1);
                   }
+                  return gg;   // 1 = primo giorno di rampa
+                };
+                const somme = new Array(dur).fill(null);
+                const sommeBnc = new Array(dur).fill(0);
+                for(const r of riepilogo){
+                  if(!r || r.sku!==sku || !matchLinea(r.linea)) continue;
+                  const idx = _giornoRampaDi(r.data);
+                  if(idx < 1 || idx > dur) continue;          // fuori dall'arco della rampa
+                  somme[idx-1] = (somme[idx-1]||0) + (Number(r.borseProdotte)||0);
+                  sommeBnc[idx-1] = (sommeBnc[idx-1]||0) + (Number(r.bnc)||0);
+                }
+                // Produzione netta con la stessa logica della card di produzione:
+                //   OK del giorno + BNC del giorno − BNC dell'ultimo giorno con produzione.
+                // Le non conformi sono borse comunque prodotte, ma il giorno dopo vengono recuperate
+                // e rientrano fra le OK: senza la sottrazione verrebbero contate due volte.
+                let bncPrec = 0;
+                for(let d=0; d<dur; d++){
+                  if(somme[d]===null){ borsePerGiorno.push(null); continue; }  // giorno senza dati
+                  const netto = (somme[d]||0) + (sommeBnc[d]||0) - bncPrec;
+                  borsePerGiorno.push(Math.max(0, netto));   // mai negativo sul grafico
+                  bncPrec = sommeBnc[d]||0;
                 }
               }
               // L'asse Y si scala sul massimo tra obiettivo previsto, curva teorica E borse reali
