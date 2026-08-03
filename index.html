@@ -3327,21 +3327,23 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
   const [operatoriPerGiorno, setOperatoriPerGiorno] = useState([]); // [{sku, data:dd/MM/yyyy, nOperatori}]
   const [rampeStorico, setRampeStorico] = useState([]); // rampe completate archiviate
   const [storicoAperto, setStoricoAperto] = useState(null); // chiave sku|||linea della rampa storica espansa
-  useEffect(()=>{
-    // Carica riepilogo da Apps Script per dati storici borse prodotte
+  // Dati della sezione rampe. Vanno RICARICATI nel tempo: prima venivano letti una sola volta
+  // all'apertura e il timer sottostante si limitava a ridisegnare, così la linea verde delle borse
+  // restava ferma alla fotografia iniziale e le registrazioni di qualità fatte dopo non comparivano
+  // finché non si ricaricava la pagina.
+  const caricaDatiRampe = React.useCallback(()=>{
     fetch(nexusUrl("leggiRiepilogo",{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data&&j.data.righe) setRiepilogo((j.data.righe||[]).filter(Boolean));
     }).catch(()=>{});
-    // Carica operatori unici per giorno+sku per media rampa
     fetch(nexusUrl("leggiOperatoriPerGiorno",{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data&&j.data.righe) setOperatoriPerGiorno((j.data.righe||[]).filter(Boolean));
     }).catch(()=>{});
-    // Carica rampe completate archiviate (storico curve teorica vs reale)
     fetch(nexusUrl("leggiRampeStorico",{})).then(r=>r.json()).then(j=>{
       if(j.ok&&j.data&&j.data.storico) setRampeStorico((j.data.storico||[]).filter(Boolean));
     }).catch(()=>{});
   },[]);
-  useEffect(()=>{const t=setInterval(()=>setTick(x=>x+1),60000);return()=>clearInterval(t);},[]);
+  useEffect(()=>{ caricaDatiRampe(); },[caricaDatiRampe]);
+  useEffect(()=>{const t=setInterval(()=>{ setTick(x=>x+1); caricaDatiRampe(); },60000);return()=>clearInterval(t);},[caricaDatiRampe]);
   const rampaMap = {};
   // Chiave composita SKU|||LINEA: ogni linea ha la SUA rampa indipendente.
   const KEYSEP = "|||";
