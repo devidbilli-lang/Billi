@@ -8469,10 +8469,26 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                 const pause = s.pause||[];
                 const ultimaPausa = pause.length>0?pause[pause.length-1]:null;
                 const inPausa = !s.fine && ultimaPausa && ultimaPausa.tipo==="pausa";
+                // Turno non ancora cominciato secondo l'orario personalizzato di oggi: la persona è
+                // già registrata (sessione reale, non pianificata) ma il suo orario "solo oggi" parte
+                // più tardi. Fino a quel momento la riga resta ARANCIONE come le pianificate: mostrarla
+                // verde direbbe che è in produzione quando invece non ha ancora iniziato.
+                const _primaDelSuoInizio = (()=>{
+                  if(!att2) return false;                    // sessione chiusa: prevale il rosso
+                  // Orario di inizio odierno: dal dato condiviso del worker, con ripiego sulla
+                  // copia locale del dispositivo (valida solo se riferita a oggi).
+                  let hm = s.orarioInizioOggiPian || _iOggiLoc || "";
+                  if(!hm || typeof hm!=="string" || hm.indexOf(":")<0) return false;
+                  const [h,m] = hm.split(":").map(Number);
+                  if(isNaN(h)||isNaN(m)) return false;
+                  const ora = new Date(); ora.setHours(h,m,0,0);
+                  return Date.now() < ora.getTime();
+                })();
                 return (
                   <tr key={s.id} style={{borderBottom:"1px solid #d1d5db",background:
                     (!att2) ? "#fee2e2" :                                   // chiuso → ROSSO
                     isPianificato ? (haSoloOggi ? "#ffedd5" : "#fef3c7") :   // pianificato non arrivato → ARANCIONE (solo oggi) / GIALLO (standard)
+                    _primaDelSuoInizio ? "#ffedd5" :                         // orario "solo oggi" non ancora iniziato → ARANCIONE
                     inPausa ? "#fecaca" :                                    // in pausa
                     inFormazione ? "#ffc94622" :                             // in formazione → ARANCIONE
                     inCorsoReale ? "#06b6d422" :                             // al corso
