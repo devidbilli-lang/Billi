@@ -5442,6 +5442,20 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
           <div style={{width:80,height:80,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 20px",background:cfg.bg,animation:"pulse 0.6s ease"}}>{cfg.i}</div>
           <h2 style={{fontSize:24,fontWeight:800,marginBottom:8,color:cfg.c}}>{cfg.t}</h2>
           {ris.multiCount>1 ? <p style={{color:"#475569",marginBottom:12}}>{ris.multiCount} operatori registrati</p> : <p style={{color:"#475569",marginBottom:12}}>{sess.nome} {sess.cognome}</p>}
+          {/* Operatori scartati durante una registrazione comunque riuscita per gli altri. Prima
+              l'avviso compariva solo se NESSUNO veniva registrato: bastava che uno passasse perché
+              gli scarti sparissero in silenzio, e in tabella ne comparivano meno di quelli indicati
+              senza sapere chi mancasse né perché. */}
+          {Array.isArray(ris.scartati) && ris.scartati.length>0 && (
+            <div style={{background:"#fef3c7",border:"2px solid #f59e0b",borderRadius:10,padding:"10px 14px",marginBottom:12,textAlign:"left"}}>
+              <div style={{fontSize:12,fontWeight:800,color:"#b45309",textTransform:"uppercase",letterSpacing:0.3,marginBottom:5}}>
+                {ris.scartati.length===1 ? "1 operatore non registrato" : ris.scartati.length+" operatori non registrati"}
+              </div>
+              {ris.scartati.map((m,i)=>(
+                <div key={i} style={{fontSize:13,color:"#78350f",lineHeight:1.45}}>{m}</div>
+              ))}
+            </div>
+          )}
           {tipo!=="checkout"&&<code style={{...S.sku,fontSize:14,display:"inline-block",marginBottom:12}}>{nSku||sess.skuCorrente||sess.sku}</code>}
           <div style={{display:"inline-block",padding:"8px 20px",borderRadius:20,background:l.colore,color:"#050a14",fontWeight:700,fontSize:14,marginBottom:12,marginLeft:8}}>{l.id}</div>
           <p style={{color:"#475569",fontSize:10,marginBottom:8}}>Ore {fmt(now())}</p>
@@ -5792,9 +5806,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
               });
               const haSessioneAttiva = mieSessioni.length>0 && mieSessioni.some(s=> !s.fine || s.fine==="" || s.fine===null || s.fine==="null");
               if(haSessioneAttiva){
-                // DEBUG temporaneo: mostra cosa vede l'app, per capire perché blocca.
-                const dettaglio = mieSessioni.map(s=>"["+(s.lineaCorrente||"?")+" fine:"+(s.fine||"APERTA")+" sid:"+(s.id||"").slice(0,8)+"]").join(" ");
-                errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva → vede "+mieSessioni.length+" sess: "+dettaglio);
+                errori.push(op.nome+" "+op.cognome+" ha già una sessione attiva");
                 return;
               }
               const rampaDalTs = now().getTime(); // timestamp base, usato se rampaPerSku[sku] è true
@@ -5891,7 +5903,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                   }
                 }));
               })();
-              setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length});
+              setRis({tipo:"checkin",sess:registrati[0],multiCount:registrati.length,scartati:errori.slice()});
               setMode("result"); } }}>{opSelezionati.length>1?"Registra "+opSelezionati.length+" Operatori":"Registra Presenza"}</button>
           <button style={{...S.bBk,marginTop:12,display:"block",width:"100%",textAlign:"center"}} onClick={reset}>Indietro</button>
           </div>
