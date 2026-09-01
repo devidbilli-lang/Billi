@@ -1921,7 +1921,13 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       _skuVisti.add(sk);
       const _q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_lNome+"_"+sk] || {};
       // Netto per articolo: OK di oggi + BNC di oggi − BNC dell'ultimo giorno in cui è girato qui.
-      const _nettoSk = (Number(_q.ok)||0) + (Number(_q.coffre)||0) - bncDa(sk);
+      // Ai fini dei MINUTI PRODOTTI un netto negativo vale ZERO, non minuti in meno: un debito BNC
+      // più grande della produzione odierna significa che su quell'articolo oggi non è stato
+      // completato nulla, non che il tempo lavorato sugli altri articoli vada tolto. Sottraendolo,
+      // un articolo fermo con un debito arretrato abbatteva l'efficienza dell'intera linea pur non
+      // avendo assorbito un solo minuto della giornata.
+      // Il conteggio dei PEZZI resta libero di andare in negativo: lì il debito è un'informazione utile.
+      const _nettoSk = Math.max(0, (Number(_q.ok)||0) + (Number(_q.coffre)||0) - bncDa(sk));
       minProd += _nettoSk * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
     }
     // Fallback robusto: se le borse per-articolo non risolvono (chiavi qualità mancanti) ma ci sono
