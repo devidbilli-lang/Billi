@@ -4894,6 +4894,14 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
     if(_koVal2 < 0){ setErr("❌ Borse KO non può essere negativo."); return; }
     if(_miVal2 < 0){ setErr("❌ Migliorabili non può essere negativo."); return; }
     if(_coffreVal < 0){ setErr("❌ BNC non può essere negativo."); return; }
+    // Riga interamente a zero: non porta informazione e sporca i dati. Resta comunque visibile
+    // nelle viste che elencano gli articoli con qualità registrata (per esempio la card Prototipia),
+    // facendo comparire articoli che nessuno ha lavorato. Per azzerare una registrazione sbagliata
+    // la strada corretta è eliminarla, non salvarla con tutti i campi a zero.
+    if(_okVal === 0 && _koVal2 === 0 && _miVal2 === 0 && _coffreVal === 0){
+      setErr("❌ Inserisci almeno un valore: una riga con tutti i campi a zero non viene registrata. Per annullare una registrazione, eliminala dalla sezione Qualità.");
+      return;
+    }
     // Rimosso blocco KO > Prodotte — si può salvare comunque
     // Mostra modal di conferma
     setModalConfermaQ({
