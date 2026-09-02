@@ -1857,8 +1857,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // Debito totale della linea: SOLO gli articoli attivi oggi qui (sessione in corso/chiusa oggi
   // oppure qualità già registrata oggi). Ogni articolo contato una volta sola.
   const _bncTotLinea = (()=>{
-    const skuAttivi = new Set();
-    sessioni.forEach(s=>{
+    const skuAttivi = new Set();    sessioni.forEach(s=>{
       if(s._pianificato) return;
       if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) return;
       const sk = s.skuCorrente||s.sku||"";
@@ -1888,7 +1887,34 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const efficienzaPct = (()=>{
     // Borse nette (ledger simmetrico): OK di oggi + BNC di oggi − BNC dell'ultimo giorno utile.
     // Può essere negativo a inizio turno: l'efficienza risultante viene poi azzerata a 0%.
-    const borseTot = (borseOggi||0) + (borseCoffre||0) - _bncTotLinea;
+    // Borse nette per l'efficienza: per OGNI articolo si fa OK + BNC di oggi − debito BNC, e il
+    // risultato non scende sotto zero. Prima il debito veniva sottratto dal TOTALE di linea:
+    // bastava un articolo molto in debito per portare in negativo l'intera linea e azzerare
+    // l'efficienza, anche quando gli altri articoli avevano prodotto davvero. Ora un articolo in
+    // debito vale zero e non cancella il lavoro fatto sugli altri.
+    // Il debito resta visibile in negativo sulle card: qui si limita solo ciò che entra nel calcolo.
+    const borseTot = (()=>{
+      const visti = new Set();
+      let tot = 0;
+      const aggiungi = (sk)=>{
+        if(!sk || isSkuSpeciale(sk) || visti.has(sk)) return;
+        visti.add(sk);
+        const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaBnc+"_"+sk] || {};
+        tot += Math.max(0, (Number(q.ok)||0) + (Number(q.coffre)||0) - bncDa(sk));
+      };
+      sessioni.forEach(s=>{
+        if(s._pianificato) return;
+        if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) return;
+        aggiungi(s.skuCorrente||s.sku||"");
+      });
+      // Articoli con qualità registrata oggi ma senza più una sessione aperta.
+      const p1 = lineaId+"_", p2 = _nomeLineaBnc+"_";
+      for(const k in qualitaPerSku){
+        if(k.indexOf(p1)===0) aggiungi(k.slice(p1.length));
+        else if(k.indexOf(p2)===0) aggiungi(k.slice(p2.length));
+      }
+      return tot;
+    })();
     // RMA: efficienza a TEMPO. Il tempo speso sulle attività (rilavorazioni, campioni) conta come
     // tempo prodotto, sommato alla quota borse, sullo stesso tempo disponibile.
     if(_isRMALinea){
