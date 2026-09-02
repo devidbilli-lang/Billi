@@ -4903,20 +4903,20 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
       return;
     }
     // Rimosso blocco KO > Prodotte — si può salvare comunque
-    // Articolo mai assegnato a nessuno oggi su questa linea: si avvisa e si chiede conferma, senza
-    // bloccare. Serve a intercettare la registrazione fatta per distrazione sulla linea sbagliata —
-    // è così che sono nate le righe fantasma su Prototipia — lasciando però passare i casi
-    // legittimi, per esempio la qualità inserita a posteriori a turno già chiuso.
-    // skuAttiviOggi comprende le sessioni di oggi APERTE E CHIUSE, quindi una squadra che ha finito
-    // il turno non fa scattare l'avviso. Se l'elenco è vuoto (dati non ancora caricati) non si avvisa.
-    const _nonAssegnato = !isSkuSpeciale(sku)
-      && Array.isArray(skuAttiviOggi) && skuAttiviOggi.length > 0
-      && !skuAttiviOggi.includes(sku);
+    // Articolo mai assegnato a nessuno oggi su questa linea: registrazione BLOCCATA.
+    // È così che sono nate le righe fantasma su Prototipia — qualità inserita per distrazione sulla
+    // linea sbagliata. skuAttiviOggi comprende le sessioni di oggi APERTE E CHIUSE, quindi una
+    // squadra che ha finito il turno può ancora registrare. Se l'elenco è vuoto (dati non ancora
+    // caricati) non si blocca: meglio lasciar passare che impedire un inserimento legittimo.
+    if(!isSkuSpeciale(sku) && Array.isArray(skuAttiviOggi) && skuAttiviOggi.length > 0
+       && !skuAttiviOggi.includes(sku)){
+      setErr("❌ "+sku+" oggi non risulta assegnato a nessun operatore su questa linea: la registrazione non viene salvata. Verifica di aver scelto la linea giusta, oppure assegna l'articolo agli operatori dalla tabella sessioni.");
+      return;
+    }
     // Mostra modal di conferma
     setModalConfermaQ({
-      titolo: _nonAssegnato ? "⚠️ Articolo non assegnato" : "Conferma salvataggio",
-      messaggio: (_nonAssegnato ? "Questo articolo oggi non risulta assegnato a nessun operatore su questa linea.\nControlla di aver scelto la linea giusta.\n\n" : "")
-        + "SKU: "+sku+"\nBorse Prodotte: "+_okVal+" | KO: "+_koVal2+" | Migliorabili: "+_miVal2+" | BNC: "+_coffreVal,
+      titolo: "Conferma salvataggio",
+      messaggio: "SKU: "+sku+"\nBorse Prodotte: "+_okVal+" | KO: "+_koVal2+" | Migliorabili: "+_miVal2+" | BNC: "+_coffreVal,
       onOk: async () => {
         setModalConfermaQ(null);
         setErr("");
