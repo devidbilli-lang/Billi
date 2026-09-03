@@ -4903,14 +4903,22 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
       return;
     }
     // Rimosso blocco KO > Prodotte — si può salvare comunque
-    // Articolo mai assegnato a nessuno oggi su questa linea: registrazione BLOCCATA.
-    // È così che sono nate le righe fantasma su Prototipia — qualità inserita per distrazione sulla
-    // linea sbagliata. skuAttiviOggi comprende le sessioni di oggi APERTE E CHIUSE, quindi una
-    // squadra che ha finito il turno può ancora registrare. Se l'elenco è vuoto (dati non ancora
-    // caricati) non si blocca: meglio lasciar passare che impedire un inserimento legittimo.
-    if(!isSkuSpeciale(sku) && Array.isArray(skuAttiviOggi) && skuAttiviOggi.length > 0
-       && !skuAttiviOggi.includes(sku)){
-      setErr("❌ "+sku+" oggi non risulta assegnato a nessun operatore su questa linea: la registrazione non viene salvata. Verifica di aver scelto la linea giusta, oppure assegna l'articolo agli operatori dalla tabella sessioni.");
+    // Articolo non assegnato a nessuno oggi su questa linea: registrazione BLOCCATA.
+    // skuAttiviOggi comprende le sessioni di oggi APERTE E CHIUSE, quindi una squadra che ha finito
+    // il turno può ancora registrare.
+    // Serve distinguere "elenco vuoto perché i dati non sono ancora arrivati" da "elenco vuoto
+    // perché su questa linea non c'è registrato nessuno": nel primo caso bloccare sarebbe sbagliato,
+    // nel secondo è proprio il caso da fermare — ed è il più grave, perché significa registrare
+    // produzione su una linea ferma. Il discriminante è se sono state caricate sessioni in generale:
+    // se ce ne sono per altre linee, i dati ci sono e questa linea è davvero senza operatori.
+    const _sessioniCaricate = Array.isArray(sessioniQ) && sessioniQ.length > 0;
+    // Prototipia è esclusa: per come lavora non assegna articoli agli operatori, quindi il controllo
+    // la bloccherebbe sempre. Lì resta attivo il blocco sulle righe con tutti i valori a zero, che
+    // è ciò che aveva generato le sue righe fantasma.
+    if(!_isPrototipLine && !isSkuSpeciale(sku) && _sessioniCaricate && !(skuAttiviOggi||[]).includes(sku)){
+      setErr((skuAttiviOggi||[]).length === 0
+        ? "❌ Su questa linea oggi non risulta registrato nessun operatore: la qualità non può essere salvata. Registra prima la squadra da Inizio Turno, oppure verifica di aver scelto la linea giusta."
+        : "❌ "+sku+" oggi non risulta assegnato a nessun operatore su questa linea: la registrazione non viene salvata. Verifica di aver scelto la linea giusta, oppure assegna l'articolo agli operatori dalla tabella sessioni.");
       return;
     }
     // Mostra modal di conferma
