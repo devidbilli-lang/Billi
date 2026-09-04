@@ -1722,7 +1722,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     const _perMat = {};
     (sessioni||[]).forEach(s=>{
       if(s._pianificato) return;
-      if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) return;
+      // I minuti di formazione appartengono alla linea in cui la persona si trova QUANDO la svolge.
+      // Qui non vale il criterio "linea corrente OPPURE linea di partenza" usato per la produzione:
+      // quello serve a non perdere le borse di chi viene trasferito, ma per la formazione produce un
+      // doppione e la fa comparire anche sulla linea da cui la persona è andata via.
+      if((s.lineaCorrente || s.lineaInizio || "") !== lineaId) return;
       const dIni = tsInizioRealeSessione(s); if(!dIni) return;
       const g0 = new Date(dIni); g0.setHours(0,0,0,0); if(g0.getTime() < _oggi0.getTime()) return;
       // Fine effettiva della sessione: checkout se c'è; altrimenti NON oltre la fine pianificata/fine turno,
