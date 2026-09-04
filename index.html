@@ -1288,12 +1288,16 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const skuPiu=Object.entries(skuCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
   // Conta operatori in riparazione separatamente
   const nRiparazione=sessAttiveUniche.filter(s=>isSkuSpeciale(s.skuCorrente||s.sku||"")).length;
-  const nCorso=sessAttiveUniche.filter(s=>s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")).length;
+  // Corsi e formazione contano solo per la linea in cui la persona si trova ORA: chi è stato
+  // trasferito compare in sessGiornata anche sulla linea di partenza (serve per non perderne la
+  // produzione), ma il corso appartiene alla linea dove viene effettivamente svolto.
+  const _suQuestaLinea = (s)=> (s.lineaCorrente || s.lineaInizio || "") === lineaId;
+  const nCorso=sessAttiveUniche.filter(s=>_suQuestaLinea(s)&&s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")).length;
   const _ultimaSospFormazione=(s)=>{ if(!s.corsi) return false; const sosp=s.corsi.filter(c=>c.tipo==="sospendi"); if(!sosp.length) return false; return (sosp[sosp.length-1].nomeCorso||"").toString().toUpperCase().split("@@")[0]==="FORMAZIONE"; };
   // Un singolo corso/sospensione è FORMAZIONE? La formazione NON va più sottratta dai minuti lavorati/
   // obiettivo (conta come tempo-linea); i corsi normali sì. Marcata da nomeCorso "FORMAZIONE@@tipologia".
   const _isFormaz = (c)=> !!c && (c.nomeCorso||"").toString().toUpperCase().split("@@")[0]==="FORMAZIONE";
-  const nFormazione=sessAttiveUniche.filter(s=>s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")&&_ultimaSospFormazione(s)).length;
+  const nFormazione=sessAttiveUniche.filter(s=>_suQuestaLinea(s)&&s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")&&_ultimaSospFormazione(s)).length;
   const nCorsoReale=nCorso-nFormazione;
   const nPausa=sessAttiveUniche.filter(s=>s.pause&&s.pause.some(pz=>pz.tipo==="pausa")&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))).length;
   const nOpProduzione=nOp-nRiparazione-nCorso-nPausa;
@@ -1308,6 +1312,12 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const _matCorsoOggi = {};
   sessGiornata.forEach(s=>{
     if(!_haCorsoOggi(s)) return;
+    // Il corso o la formazione appartiene alla linea in cui la persona si trova QUANDO lo fa, non a
+    // quella da cui è partita. sessGiornata include le sessioni sia per linea corrente sia per linea
+    // di partenza — serve per non perdere la produzione di chi è stato trasferito — ma qui produce
+    // un doppione: un trasferito che poi fa formazione la mostrerebbe anche sulla linea di origine.
+    const _lineaOra = s.lineaCorrente || s.lineaInizio || "";
+    if(_lineaOra !== lineaId) return;
     const mat = s.matricola||s.nome||s.id; if(!mat) return;
     const cc = s.corsi.filter(c=>(c.tipo==="sospendi"||c.tipo==="rientrato")&&!(c._pianificato&&c.tipo==="rientrato"));
     const formaz = cc.length>0 && (cc[cc.length-1].nomeCorso||"").toString().toUpperCase().split("@@")[0]==="FORMAZIONE";
