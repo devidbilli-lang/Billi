@@ -76,6 +76,9 @@ function repartoTipoLinea(lineaId, lineaNome){
   if(u.includes("TRACK")) return "tt";
   if(u.includes("RMA")) return "rma";
   if(u.includes("PREPARAZIONE DG")) return "prep";
+  // Tintura (VT-TIN): reparto che si comporta come Preparazione DG. Il riconoscimento è sul codice
+  // linea, non sull'ID, perché l'ID è il nome del capolinea e può cambiare o essere condiviso.
+  if(u.includes("VT-TIN")) return "tintura";   // si comporta come prep, ma con foglio dati separato
   if(u.includes("LOGISTICA")||u.includes("INDUSTRIALIZZAZIONE")||u.includes("QUALIT")||u.includes("PRODUZIONE")||u.includes("MIGLIORAMENTO")) return "prep"; // reparti senza articolo, identici a Preparazione DG (Logistica_CC/LV, Industrializzazione, Qualità, Produzione, Miglioramento Continuo)
   if(u.includes("PROTOTIP")) return "prototip"; // Prototipia: reparto identico a Preparazione DG ma con foglio dati separato
   if(u.includes("TAGLIO DG")) return "taglio";
@@ -6417,7 +6420,7 @@ function TabAttivitaTT({ linee=[], skuList=[] }) {
 function TabAttivita({ repTipo="taglio" }) {
   const _isRMA = repTipo === "rma" || repTipo === "tt";
   // RMA e track&trace usano gli stessi campi di Preparazione DG (N° Richiesta), _isPrep li copre.
-  const _isPrep = repTipo === "prep" || repTipo === "prototip" || repTipo === "rma" || repTipo === "tt";
+  const _isPrep = repTipo === "prep" || repTipo === "tintura" || repTipo === "prototip" || repTipo === "rma" || repTipo === "tt";
   const oggiISO = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
   const [data,setData] = useState(oggiISO());
   const [brand,setBrand] = useState("");
