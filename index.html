@@ -4545,9 +4545,14 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
     if (q.noteKo)   { const _e=aggMap[k].noteKo;   aggMap[k].noteKo   = _e ? (_e.split(" | ").includes(q.noteKo)   ? _e : _e+" | "+q.noteKo)   : q.noteKo; }
     if (q.noteMigl) { const _e=aggMap[k].noteMigl; aggMap[k].noteMigl = _e ? (_e.split(" | ").includes(q.noteMigl) ? _e : _e+" | "+q.noteMigl) : q.noteMigl; }
   }
+  // Ordinamento per DATA REALE. Il confronto era testuale sul formato dd/MM/yyyy, che mette "31/08"
+  // dopo "07/09" perché guarda prima il giorno: le giornate di settembre finivano in fondo, sotto
+  // quelle di agosto. Convertendo in aaaammgg il confronto torna cronologico.
+  const _ordD = (s) => { const q = String(s||"").split("/"); return (q.length===3) ? (q[2]+q[1]+q[0]) : String(s||""); };
   const righe = Object.values(aggMap).sort((a,b) => {
     // 1) Data decrescente (più recente in alto)
-    if (a.data !== b.data) return b.data > a.data ? 1 : -1;
+    const da = _ordD(a.data), db2 = _ordD(b.data);
+    if (da !== db2) return da < db2 ? 1 : -1;
     // 2) Stessa data: raggruppa per linea (alfabetico)
     if ((a.linea||"") !== (b.linea||"")) return (a.linea||"").localeCompare(b.linea||"");
     // 3) Stessa linea: ordina per SKU
