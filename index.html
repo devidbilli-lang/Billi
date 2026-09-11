@@ -2567,7 +2567,18 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     <div style={{background:"linear-gradient(135deg,#9d6ff7,#8b52e8)",padding:hdrPad,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,flexWrap:"wrap",gap:4}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
                         <span style={{fontSize:hdrFs,fontWeight:900,color:"#ffffff",letterSpacing:1,lineHeight:1.2}}>{skuItem}</span>
-                        {!compatto && skuObjItem?.descrizione&&<span style={{fontSize:hdrFs,fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" · TC "+tcItem+" min":""}</span>}
+                        {!compatto && skuObjItem?.descrizione&&<span style={{fontSize:hdrFs,fontWeight:600,color:"#ede9fe",letterSpacing:0.5}}>{skuObjItem.descrizione}{tcItem>0?" \u00b7 TC ":""}{tcItem>0&&(()=>{
+                          // Confronto fra tempo ciclo ATTUALE (colonna K del registro) e INIZIALE (colonna U).
+                          // Sotto la previsione = abbattuto, verde con freccia giu; sopra = peggiorato, rosso
+                          // con freccia su. Senza un iniziale valido si mostra il solo valore attuale.
+                          const _tcIni = Number(skuObjItem.tcIniziale)||0;
+                          const _mostra = _tcIni>0 && Math.abs(_tcIni-tcItem)>0.005;
+                          const _giu = _mostra && tcItem < _tcIni;
+                          const _col = !_mostra ? "#ede9fe" : (_giu ? "#22c55e" : "#ef4444");
+                          return (<><span style={{color:_col,fontWeight:800}}>{tcItem} min</span>
+                            {_mostra && <span style={{color:_col,fontWeight:800,marginLeft:3}}>{_giu?"\u25bc":"\u25b2"}</span>}
+                            {_mostra && <span style={{color:"#c4b5fd",fontWeight:600,marginLeft:5}}>(iniziale {_tcIni} min)</span>}</>);
+                        })()}</span>}
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                         {skuObjItem?.collezione&&skuObjItem.collezione.trim()&&(
