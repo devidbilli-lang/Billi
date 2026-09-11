@@ -4296,6 +4296,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const [dal, setDal] = React.useState(_oggiISO);
   const [al, setAl]   = React.useState(_oggiISO);
   const [brandSel, setBrandSel] = React.useState("__tutti__");
+  const [skuSel, setSkuSel] = React.useState("__tutti__");   // filtro per articolo
   const [lineaSel, setLineaSel] = React.useState("__tutte__");
   // Storico archiviato (giorni passati) da storico_qualita: fetch una volta sola al mount.
   // Il prop `qualita` copre il giorno corrente (già aggiornato ogni 60s dalla tabella). Unisco i due.
@@ -4313,6 +4314,21 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const tutti = React.useMemo(()=>[...(qualita||[]), ...(storicoQ||[])],[qualita, storicoQ]);
   const skuBrand = React.useMemo(()=>{ const m={}; (skuList||[]).forEach(s=>{ if(s&&s.sku) m[String(s.sku).toUpperCase()]=String(s.brand||"").trim(); }); return m; },[skuList]);
   const brands = React.useMemo(()=>{ const set=new Set(); (skuList||[]).forEach(s=>{ if(s&&s.brand&&String(s.brand).trim()) set.add(String(s.brand).trim()); }); return Array.from(set).sort(); },[skuList]);
+  // Articoli presenti nei dati filtrati per data, linea e brand: la tendina elenca solo ciò che
+  // esiste davvero nel periodo, non l'intera anagrafica.
+  const skuDisponibili = React.useMemo(()=>{
+    const set = new Set();
+    (qualita||[]).forEach(q=>{
+      if(!q || !q.sku) return;
+      const d = (q.data||"").split("/"); const iso = (d.length===3) ? (d[2]+"-"+d[1]+"-"+d[0]) : "";
+      if(dal && iso && iso < dal) return;
+      if(al && iso && iso > al) return;
+      if(lineaFiltro && q.linea !== lineaFiltro.id) return;
+      if(brandSel!=="__tutti__"){ const b = skuBrand[String(q.sku||"").toUpperCase()]||""; if(b!==brandSel) return; }
+      set.add(String(q.sku));
+    });
+    return [...set].sort();
+  },[qualita, dal, al, lineaFiltro, brandSel, skuBrand]);
   // Linee con almeno un record di qualità (oggi o storico) → opzioni del filtro Linea.
   const lineeConDati = React.useMemo(()=>{ const ids=new Set((tutti||[]).map(q=>q.linea).filter(Boolean)); return (linee||[]).filter(l=>l&&ids.has(l.id)).sort((a,b)=>String(a.id||"").localeCompare(String(b.id||""))); },[tutti, linee]);
   // Confronto a livello di GIORNO: normalizza la data del record (DD/MM/YYYY, YYYY-MM-DD o con orario)
@@ -4347,6 +4363,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
     const t = _giornoTs(q.data); if(t==null) return false;
     if(t<_dalTs || t>_alTs) return false;
     if(brandSel!=="__tutti__"){ const b = skuBrand[String(q.sku||"").toUpperCase()]||""; if(b!==brandSel) return false; }
+    if(skuSel!=="__tutti__" && String(q.sku||"")!==skuSel) return false;
     return true;
   });
   let tOk=0,tKo=0,tMg=0,tCoffre=0;
@@ -4419,6 +4436,15 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
           <select value={brandSel} onChange={e=>setBrandSel(e.target.value)} style={{...S.inp,width:150,maxWidth:150,minWidth:0}}>
             <option value="__tutti__">Tutti i brand</option>
             {brands.map(b=><option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        {/* Filtro per articolo. L'elenco contiene solo gli articoli presenti nel periodo e negli
+            altri filtri attivi: elencarli tutti renderebbe la tendina inutilizzabile, visto che
+            l'anagrafica ne conta oltre duecento. */}
+        <div style={{flex:"0 0 auto"}}><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Articolo</label>
+          <select value={skuSel} onChange={e=>setSkuSel(e.target.value)} style={{...S.inp,width:210,maxWidth:210,minWidth:0}}>
+            <option value="__tutti__">Tutti gli articoli</option>
+            {skuDisponibili.map(sk=><option key={sk} value={sk}>{sk}</option>)}
           </select>
         </div>
         {!lineaFiltro && (
