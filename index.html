@@ -2576,7 +2576,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                           const _tcIni = Number(skuObjItem.tcIniziale)||0;
                           const _mostra = _tcIni>0 && Math.abs(_tcIni-tcItem)>0.005;
                           const _giu = _mostra && tcItem < _tcIni;
-                          const _col = !_mostra ? "#ede9fe" : (_giu ? "#22c55e" : "#ef4444");
+                          const _col = !_mostra ? "#ede9fe" : (_giu ? "#60ffa7" : "#ff6161");
                           return (<><span style={{color:_col,fontWeight:800}}>TCU {tcItem} min</span>
                             {_mostra && <span style={{color:_col,fontWeight:800,marginLeft:3}}>{_giu?"\u25bc":"\u25b2"}</span>}
                             {_tcIni>0 && <span style={{color:_col,fontWeight:800,marginLeft:8}}>TCI {_tcIni} min</span>}</>);
