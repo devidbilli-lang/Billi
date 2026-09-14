@@ -6482,7 +6482,12 @@ function TabAttivita({ repTipo="taglio" }) {
   const _mostraPellame = !_isPrep && tipologia !== "Cartelloni"; // pellame solo Taglio DG e NON per Cartelloni
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
   const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO","INFUSTITURE"];
-  const _titoloRep = _isRMA ? "Attività RMA" : (repTipo === "prototip" ? "Attività Prototipia" : (_isPrep ? "Attività Preparazione DG" : "Attività Taglio DG"));
+  // Il titolo segue il reparto: la tintura usa gli stessi campi di Preparazione DG ma ha il suo
+  // nome e il suo foglio, quindi va distinta prima del controllo generico su _isPrep.
+  const _titoloRep = _isRMA ? "Attività RMA"
+    : (repTipo === "tintura" ? "Attività Tingitura"
+    : (repTipo === "prototip" ? "Attività Prototipia"
+    : (_isPrep ? "Attività Preparazione DG" : "Attività Taglio DG")));
 
   const carica = ()=>{
     setCaricando(true);
