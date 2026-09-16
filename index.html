@@ -3731,7 +3731,15 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                 // e rientrano fra le OK: senza la sottrazione verrebbero contate due volte.
                 let bncPrec = 0;
                 for(let d=0; d<dur; d++){
-                  if(somme[d]===null){ borsePerGiorno.push(null); continue; }  // giorno senza dati
+                  if(somme[d]===null){
+                    // Giorno senza registrazioni. Se è GIÀ TRASCORSO vale zero: non è stato prodotto
+                    // nulla, e la linea deve scendere sul fondo. Lasciandolo vuoto veniva saltato e
+                    // il tracciato lo scavalcava con un segmento dritto fra il giorno prima e quello
+                    // dopo, passando alto sopra lo zero come se ci fosse stata produzione.
+                    // I giorni FUTURI restano vuoti: lì non c'è ancora nulla da rappresentare.
+                    borsePerGiorno.push(d < gOggiCalc ? 0 : null);
+                    continue;
+                  }
                   const netto = (somme[d]||0) + (sommeBnc[d]||0) - bncPrec;
                   borsePerGiorno.push(Math.max(0, netto));   // mai negativo sul grafico
                   bncPrec = sommeBnc[d]||0;
