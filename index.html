@@ -3737,7 +3737,10 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                     // il tracciato lo scavalcava con un segmento dritto fra il giorno prima e quello
                     // dopo, passando alto sopra lo zero come se ci fosse stata produzione.
                     // I giorni FUTURI restano vuoti: lì non c'è ancora nulla da rappresentare.
-                    borsePerGiorno.push(d < gOggiCalc ? 0 : null);
+                    // Si riempiono a zero i giorni fino a OGGI compreso. Non si usa gOggiCalc perché
+                    // a turno chiuso vale g+1 — corretto per il conteggio operatori, sbagliato qui:
+                    // farebbe scendere a zero anche il giorno successivo, che non è ancora arrivato.
+                    borsePerGiorno.push(d < Math.min(g||1, dur) ? 0 : null);
                     continue;
                   }
                   const netto = (somme[d]||0) + (sommeBnc[d]||0) - bncPrec;
@@ -3825,7 +3828,7 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
                         <polyline points={ptsBlu} fill="none" stroke="#56e3ab" strokeWidth="1.5" strokeLinejoin="round"/>
                         {borsePerGiorno.map((v,i)=>v!==null?<g key={i}>
                           <circle cx={px(i)} cy={py(v)} r="2" fill="#56e3ab"/>
-                          <text x={px(i)} y={py(v)+8} fontSize="6" textAnchor="middle" fill="#56e3ab" fontWeight="700">{v}</text>
+                          <text x={px(i)} y={(py(v) > PT+iH-12) ? py(v)-5 : py(v)+8} fontSize="6" textAnchor="middle" fill="#56e3ab" fontWeight="700">{v}</text>
                         </g>:null)}
                       </>;
                     })()}
