@@ -5535,7 +5535,12 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     if(mode!=="checkin") { _preselFattaRef.current=""; return; }
     const _l = lineaCheckinSel || lineaFiltro || null;
     const _ln = ((_l&&_l.id)||(_l&&_l.nome)||"").toString();
-    const _lu = _ln.toUpperCase();
+    // Il riconoscimento del reparto guarda ID e NOME insieme. Prima si usava il solo ID, col nome
+    // come ripiego: funzionava per Preparazione DG, il cui ID contiene già la parola chiave, ma non
+    // per la Tingitura, che ha ID "Tingitura" e il codice VT-TIN nel nome. Il reparto non veniva
+    // riconosciuto e gli operatori del giorno prima non si precaricavano.
+    // _ln resta il solo ID perché è la chiave con cui il worker cerca la linea.
+    const _lu = (((_l&&_l.id)||"") + " " + ((_l&&_l.nome)||"")).toUpperCase();
     const isReparto = _lu.includes("TAGLIO DG") || _lu.includes("PREPARAZIONE DG")||_lu.includes("VT-TIN") || _lu.includes("RMA") || _lu.includes("TRACK")||_lu.includes("PROTOTIP")||_lu.includes("LOGISTICA")||_lu.includes("INDUSTRIALIZZAZIONE")||_lu.includes("QUALIT")||_lu.includes("PRODUZIONE")||_lu.includes("MIGLIORAMENTO");
     if(!isReparto) return;
     // Evita di ricaricare/sovrascrivere ripetutamente per la stessa linea nello stesso ingresso.
