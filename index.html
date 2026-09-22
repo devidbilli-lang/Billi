@@ -6538,7 +6538,7 @@ function TabAttivita({ repTipo="taglio" }) {
   const salva = async ()=>{
     setMsg("");
     if(!data){ setMsg("Inserisci la data."); return; }
-    if(!brand){ setMsg("Seleziona il brand."); return; }
+    if(!_isAttTL && !brand){ setMsg("Seleziona il brand."); return; }
     if(!tempo||+tempo<=0){ setMsg("Inserisci un tempo valido (minuti)."); return; }
     if(!tipologia){ setMsg("Seleziona la tipologia."); return; }
     if(!_isPrep && !reparto){ setMsg("Seleziona il reparto."); return; }
@@ -6548,7 +6548,7 @@ function TabAttivita({ repTipo="taglio" }) {
     if(_isPrep && !_isAttTL && !nRichiesta.trim()){ setMsg("Inserisci il N° Richiesta."); return; }
     setSalvando(true);
     try{
-      const _params = {repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():"",pellame:_mostraPellame?pellame:"",articolo:_mostraArticolo?articolo.trim():""};
+      const _params = {repTipo,data,brand:_isAttTL?"":brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:(_isPrep&&!_isAttTL)?nRichiesta.trim():"",pellame:_mostraPellame?pellame:"",articolo:_mostraArticolo?articolo.trim():""};
       const _r = await fetch(nexusUrl(editId ? "modificaAttivita" : "salvaAttivita", editId ? {..._params, id:editId} : _params));
       const _j = await _r.json().catch(()=>null);
       const _ok = editId ? !!(_j && _j.ok && _j.data && _j.data.modificato) : !!(_j && _j.ok);
@@ -6559,7 +6559,7 @@ function TabAttivita({ repTipo="taglio" }) {
       }
       if(editId){
         const _eid = editId;
-        const _upd = {data, brand, tempo:Math.round(+tempo||0), tipologia, reparto:_isPrep?"":reparto, nRichiesta:_isPrep?nRichiesta.trim():"", n_richiesta:_isPrep?nRichiesta.trim():"", pellame:_mostraPellame?pellame:"", articolo:_mostraArticolo?articolo.trim():""};
+        const _upd = {data, brand:_isAttTL?"":brand, tempo:Math.round(+tempo||0), tipologia, reparto:_isPrep?"":reparto, nRichiesta:(_isPrep&&!_isAttTL)?nRichiesta.trim():"", n_richiesta:(_isPrep&&!_isAttTL)?nRichiesta.trim():"", pellame:_mostraPellame?pellame:"", articolo:_mostraArticolo?articolo.trim():""};
         setLista(l=>l.map(x=>x.id===_eid ? {...x, ..._upd} : x));
       }
       setEditId(null);
@@ -6676,6 +6676,7 @@ function TabAttivita({ repTipo="taglio" }) {
                   <label style={lbl}>Data produzione</label>
                   <input type="date" style={{...inp,width:"100%"}} value={data} onChange={e=>setData(e.target.value)}/>
                 </div>
+                {!_isAttTL&&(
                 <div>
                   <label style={lbl}>Brand</label>
                   <select style={{...inp,width:"100%",cursor:"pointer"}} value={brand} onChange={e=>setBrand(e.target.value)}>
@@ -6683,6 +6684,7 @@ function TabAttivita({ repTipo="taglio" }) {
                     {BRANDS.map(b=><option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
+                )}
                 <div>
                   <label style={lbl}>Tempo lavorato [min]</label>
                   <input type="number" min="0" style={{...inp,width:"100%"}} placeholder="es. 480" value={tempo} onChange={e=>setTempo(e.target.value)}/>
@@ -6694,7 +6696,7 @@ function TabAttivita({ repTipo="taglio" }) {
                     {TIPOLOGIE.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-                {_isPrep&&(
+                {_isPrep&&!_isAttTL&&(
                 <div>
                   <label style={lbl}>N° Richiesta</label>
                   <input type="text" style={{...inp,width:"100%"}} placeholder="es. REQ-2026-001" value={nRichiesta} onChange={e=>setNRichiesta(e.target.value)}/>
