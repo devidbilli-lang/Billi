@@ -6493,9 +6493,12 @@ function TabAttivita({ repTipo="taglio" }) {
 
   const BRANDS = ["Chanel","LV"];
   // RMA: Rilavorazione + Campioni/Prototipi. Preparazione DG: solo Rilavorazione. Taglio DG: Rilavorazione+Collaudo+Cartelloni.
-  const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi","Tracolle PH Holder"] : (_isPrep ? ["Rilavorazione"] : ["Rilavorazione","Collaudo","Cartelloni"]);
+  // "Attività TL": attività del team leader, disponibile in tutti i reparti.
+  const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi","Tracolle PH Holder","Attività TL"]
+    : (_isPrep ? ["Rilavorazione","Attività TL"] : ["Rilavorazione","Collaudo","Cartelloni","Attività TL"]);
+  const _isAttTL = tipologia === "Attività TL";
   const _mostraArticolo = _isRMA && tipologia === "Campioni/Prototipi"; // campo Articolo solo RMA + Campioni/Prototipi
-  const _mostraPellame = !_isPrep && tipologia !== "Cartelloni"; // pellame solo Taglio DG e NON per Cartelloni
+  const _mostraPellame = !_isPrep && tipologia !== "Cartelloni" && !_isAttTL; // pellame solo Taglio DG, non per Cartelloni né Attività TL
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
   const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO","INFUSTITURE"];
   // Il titolo segue il reparto: la tintura usa gli stessi campi di Preparazione DG ma ha il suo
@@ -6540,7 +6543,9 @@ function TabAttivita({ repTipo="taglio" }) {
     if(!tipologia){ setMsg("Seleziona la tipologia."); return; }
     if(!_isPrep && !reparto){ setMsg("Seleziona il reparto."); return; }
     if(_mostraPellame && !pellame){ setMsg("Seleziona il tipo di pellame."); return; }
-    if(_isPrep && !nRichiesta.trim()){ setMsg("Inserisci il N° Richiesta."); return; }
+    // L'attività del team leader non nasce da una richiesta di rilavorazione: il N° Richiesta
+    // resta compilabile ma non è obbligatorio, altrimenti la voce non si potrebbe salvare.
+    if(_isPrep && !_isAttTL && !nRichiesta.trim()){ setMsg("Inserisci il N° Richiesta."); return; }
     setSalvando(true);
     try{
       const _params = {repTipo,data,brand,tempo:String(Math.round(+tempo)),tipologia,reparto:_isPrep?"":reparto,nRichiesta:_isPrep?nRichiesta.trim():"",pellame:_mostraPellame?pellame:"",articolo:_mostraArticolo?articolo.trim():""};
