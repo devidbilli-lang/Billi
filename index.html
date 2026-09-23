@@ -4470,12 +4470,17 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   );
 }
 
-function TabQualita({ lineaFiltro, linee, skuList }) {
+function TabQualita({ lineaFiltro, linee, skuList, isAdmin=false }) {
   const [qualita, setQualita] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [editQ, setEditQ] = React.useState(null); // chiave riga in modifica
   const [riepLinea, setRiepLinea] = React.useState(null);
-  const [skuQ, setSkuQ] = React.useState("__tutti__");   // filtro per articolo nella vista Tabella // linea di cui mostrare il riepilogo difetti
+  const [skuQ, setSkuQ] = React.useState("__tutti__");   // filtro per articolo nella vista Tabella
+  // Inserimento manuale di una riga di qualità, riservato all'admin: serve quando una linea si
+  // dimentica di registrare un articolo e il giorno è ormai chiuso.
+  const [nuovaQ, setNuovaQ] = React.useState(null);
+  const [nuovaQMsg, setNuovaQMsg] = React.useState("");
+  const [nuovaQSalva, setNuovaQSalva] = React.useState(false); // linea di cui mostrare il riepilogo difetti
   const [tmpQ, setTmpQ] = React.useState({ok:"",ko:"",migl:"",coffre:""});
   const [salvandoQ, setSalvandoQ] = React.useState(false);
   // Modal di conferma per l'eliminazione riga (stesso componente ModalConferma della chiusura turno).
@@ -4628,7 +4633,110 @@ function TabQualita({ lineaFiltro, linee, skuList }) {
             </select>
           </div>
         )}
+        {isAdmin && vistaQ==="tabella" && (
+          <button onClick={()=>{ setNuovaQMsg(""); setNuovaQ({data:"", linea:(lineaFiltro&&lineaFiltro.id)||"", sku:"", ok:"", ko:"", migl:"", coffre:"", _cerca:""}); }}
+            style={{marginLeft:"auto",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>
+            + Aggiungi riga
+          </button>
+        )}
       </div>
+      {nuovaQ && (()=>{
+        const _lineeSel = (linee||[]).filter(l=>l&&l.id);
+        const _skuFiltr = (skuList||[]).filter(x=>x&&!x.speciale&&nuovaQ._cerca&&(
+          x.sku.includes(nuovaQ._cerca) || (x.descrizione&&x.descrizione.toUpperCase().includes(nuovaQ._cerca)) || (x.collezione&&x.collezione.toUpperCase().includes(nuovaQ._cerca))));
+        const _n = (v)=>Number(v)||0;
+        const salva = async ()=>{
+          setNuovaQMsg("");
+          if(!nuovaQ.data){ setNuovaQMsg("Inserisci la data."); return; }
+          if(!nuovaQ.linea){ setNuovaQMsg("Seleziona la linea."); return; }
+          if(!nuovaQ.sku){ setNuovaQMsg("Seleziona l'articolo."); return; }
+          if(_n(nuovaQ.ok)===0 && _n(nuovaQ.ko)===0 && _n(nuovaQ.migl)===0 && _n(nuovaQ.coffre)===0){
+            setNuovaQMsg("Inserisci almeno un valore: una riga con tutti i campi a zero non viene registrata."); return;
+          }
+          // Riga già presente per giorno+linea+articolo: si modifica quella, non se ne crea un'altra.
+          // È esattamente così che nascono i valori raddoppiati.
+          const [_a,_m,_g] = nuovaQ.data.split("-");
+          const _gIT = _g+"/"+_m+"/"+_a;
+          const _esiste = (qualita||[]).some(q=>q && q.sku===nuovaQ.sku && q.linea===nuovaQ.linea && (q.data||"")===_gIT);
+          if(_esiste){ setNuovaQMsg("Esiste già una registrazione per questa data, linea e articolo: modificala dalla tabella."); return; }
+          setNuovaQSalva(true);
+          try{
+            const r = await fetch(nexusUrl("modificaQualita",{linea:nuovaQ.linea, sku:nuovaQ.sku, data:nuovaQ.data,
+              ok:_n(nuovaQ.ok), ko:_n(nuovaQ.ko), migliorabili:_n(nuovaQ.migl), coffre:_n(nuovaQ.coffre)}),{mode:"cors"});
+            const j = await r.json().catch(()=>({}));
+            if(j && j.ok===false){ setNuovaQMsg("Salvataggio non riuscito: "+(j.error||"errore")); setNuovaQSalva(false); return; }
+            setNuovaQ(null); setNuovaQSalva(false); caricaQ();
+          }catch(e){ setNuovaQMsg("Salvataggio non riuscito: "+e.message); setNuovaQSalva(false); }
+        };
+        const campo = (et,k,col)=>(
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,fontWeight:800,color:col,textTransform:"uppercase",marginBottom:4}}>{et}</div>
+            <input type="number" min="0" value={nuovaQ[k]} onChange={e=>setNuovaQ({...nuovaQ,[k]:e.target.value})}
+              style={{width:"100%",border:"2px solid "+col,borderRadius:8,padding:"7px 9px",fontSize:15,fontWeight:800,textAlign:"center",fontFamily:"'Montserrat',sans-serif",color:col}}/>
+          </div>
+        );
+        return (
+        <div onClick={()=>!nuovaQSalva&&setNuovaQ(null)} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:520,width:"calc(100vw - 32px)",maxHeight:"88vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+            <div style={{fontSize:17,fontWeight:900,color:"#7c3aed",marginBottom:4}}>Aggiungi riga di qualità</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Per registrare un articolo dimenticato in una giornata già chiusa.</div>
+            <div style={{fontSize:11,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",marginBottom:4}}>Data produzione</div>
+            <input type="date" value={nuovaQ.data} onChange={e=>setNuovaQ({...nuovaQ,data:e.target.value})}
+              style={{width:"100%",border:"2px solid #c4b5fd",borderRadius:8,padding:"8px 10px",fontSize:14,fontFamily:"'Montserrat',sans-serif",marginBottom:12}}/>
+            <div style={{fontSize:11,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",marginBottom:4}}>Linea</div>
+            <select value={nuovaQ.linea} onChange={e=>setNuovaQ({...nuovaQ,linea:e.target.value})}
+              style={{width:"100%",border:"2px solid #c4b5fd",borderRadius:8,padding:"8px 10px",fontSize:14,fontFamily:"'Montserrat',sans-serif",marginBottom:12}}>
+              <option value="">— scegli —</option>
+              {_lineeSel.map(l=><option key={l.id} value={l.id}>{l.id}</option>)}
+            </select>
+            <div style={{fontSize:11,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",marginBottom:4}}>Articolo</div>
+            {nuovaQ.sku && !nuovaQ._cerca ? (
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#ede9fe",border:"2px solid #7c3aed",borderRadius:8,marginBottom:12}}>
+                <span style={{flex:1,fontSize:14,fontWeight:800,color:"#5b21b6"}}>{nuovaQ.sku}</span>
+                <button onClick={()=>setNuovaQ({...nuovaQ,sku:"",_cerca:""})} style={{background:"#fff",color:"#5b21b6",border:"1.5px solid #7c3aed",borderRadius:6,padding:"3px 9px",fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Cambia</button>
+              </div>
+            ) : (
+              <div style={{marginBottom:12}}>
+                <input placeholder="Filtra per codice, descrizione o collezione..." value={nuovaQ._cerca||""}
+                  onChange={e=>setNuovaQ({...nuovaQ,_cerca:e.target.value.toUpperCase()})}
+                  style={{width:"100%",border:"2px solid #c4b5fd",borderRadius:8,padding:"8px 10px",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}/>
+                {nuovaQ._cerca && (
+                  <div style={{maxHeight:180,overflowY:"auto",border:"1px solid #c4b5fd",borderRadius:8,marginTop:6}}>
+                    {_skuFiltr.length===0 ? <div style={{padding:"9px 12px",fontSize:13,color:"#94a3b8"}}>Nessun articolo trovato</div> :
+                      _skuFiltr.map(x=>(
+                        <div key={x.sku+"|"+(x.collezione||"")} onClick={()=>setNuovaQ({...nuovaQ,sku:x.sku,_cerca:""})}
+                          style={{display:"flex",gap:8,alignItems:"center",padding:"7px 12px",cursor:"pointer",borderBottom:"1px solid #ede9fe"}}>
+                          <span style={{fontSize:13,fontWeight:800,color:"#5b21b6"}}>{x.sku}</span>
+                          {x.descrizione&&<span style={{fontSize:12,color:"#475569",flex:1,minWidth:0}}>{x.descrizione}</span>}
+                          {x.collezione&&<span style={{fontSize:11,fontWeight:700,color:"#c026d3"}}>{x.collezione}</span>}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{display:"flex",gap:8,marginBottom:14}}>
+              {campo("Borse OK","ok","#06b981")}
+              {campo("KO","ko","#ef4444")}
+              {campo("Migliorabili","migl","#f59e0b")}
+              {campo("BNC","coffre","#c026d3")}
+            </div>
+            {nuovaQMsg && <div style={{background:"#fef2f2",border:"2px solid #ef4444",borderRadius:8,padding:"9px 12px",color:"#b91c1c",fontSize:13,fontWeight:700,marginBottom:12}}>{nuovaQMsg}</div>}
+            <div style={{fontSize:12,color:"#78350f",background:"#fef3c7",border:"1px solid #f59e0b",borderRadius:8,padding:"8px 11px",marginBottom:14,lineHeight:1.45}}>
+              Inserendo una giornata passata il debito BNC di quell\u2019articolo viene ricalcolato anche per i giorni successivi: i valori gi\u00e0 visti potrebbero cambiare.
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={salva} disabled={nuovaQSalva}
+                style={{flex:1,background:nuovaQSalva?"#c4b5fd":"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"11px",fontSize:14,fontWeight:800,cursor:nuovaQSalva?"default":"pointer",fontFamily:"'Montserrat',sans-serif"}}>
+                {nuovaQSalva?"Salvataggio…":"Registra"}
+              </button>
+              <button onClick={()=>!nuovaQSalva&&setNuovaQ(null)}
+                style={{flex:1,background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Annulla</button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
       {riepLinea && <ModaleRiepilogoInserimenti titolo={"Linea "+riepLinea+" \u00b7 periodo selezionato"}
         voci={(qualita||[]).filter(q=>q&&q.linea===riepLinea).map(q=>({
           quando:(q.data||"").toString(), etichetta:q.sku||"", ok:q.ok, bnc:(q.coffre!=null?q.coffre:q.borse_coffre)
@@ -8943,7 +9051,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
       )}
       {tab==="sku"&&<div style={{margin:"0 24px"}}><RiepSku sessioni={sessioni} linee={linee} rampeSheets={rampeSheets||[]} skuList={skuList} lineaFiltro={lineaFiltro}/></div>}
       {tab==="operatori"&&<div style={{margin:"0 24px"}}><TabOperatori operatori={operatori} sessioni={sessioni} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro}/></div>}
-      {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList}/>}
+      {tab==="qualita"&&<TabQualita lineaFiltro={lineaFiltro} linee={linee} skuList={skuList} isAdmin={isAdmin}/>}
       {tab==="produzione"&&<TabProduzione dati={datiProd} linee={linee} isAdmin={isAdmin} lineaFiltro={lineaFiltro} sessioni={sessioni} skuList={skuList} qualitaPerSku={qualitaPerSku} bncRecupero={bncRecupero} vistaGriglia={vistaGrigliaProd} setVistaGriglia={setVistaGrigliaProd}/>}
       {tab==="attivita"&&(()=>{ const _rt=repartoTipoLinea(lineaFiltro&&lineaFiltro.id, lineaFiltro&&lineaFiltro.nome) || "taglio"; return _rt==="tt" ? <TabAttivitaTT linee={linee} skuList={skuList}/> : <TabAttivita repTipo={_rt}/>; })()}
       {tab==="note"&&<TabNote lineaFiltro={lineaFiltro} linee={linee} skuList={skuList} sessioni={sessioni}/>}
