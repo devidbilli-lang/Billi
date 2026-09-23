@@ -2255,12 +2255,17 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             const skuLavorati = new Set();
             sessGiornata.forEach(s=>{ skusSuLinea(s, lineaId).forEach(sk=>skuLavorati.add(sk)); });
             // Candidati = articoli correnti/qualità (grezzi) ∪ tutti gli articoli lavorati oggi
+            // Obiettivi per articolo: servono a scartare i tasselli che non hanno nulla da mostrare.
+            const _obCard = mappaObiettiviArticoli(null) || {};
             const skuAttiviLinea = [...new Set([...skuAttiviLineaRaw, ...skuLavorati])].filter(sk=>{
               // Qualità: se ci sono borse/KO/MIGL registrati, la card va sempre mostrata
               const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
               if((q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0) return true;
-              // Lavorato/assegnato oggi (anche un solo minuto) → mostra sempre
-              if(skuLavorati.has(sk)) return true;
+              // Lavorato/assegnato oggi: si mostra solo se ne è risultato un obiettivo. Un operatore
+              // assegnato e trasferito subito dopo lascia l'articolo fra quelli "lavorati" pur senza
+              // minuti utili: il tassello restava con tutto a zero e nessuno al lavoro.
+              // Se una sessione è ancora aperta qui, il controllo sotto lo mostra comunque.
+              if(skuLavorati.has(sk) && (Number(_obCard[sk])||0) > 0) return true;
               // Sessione APERTA ora su questo (linea, articolo) → mostra (copre check-in appena fatto, ~0 min)
               for(const s of sessioni){
                 const _ap = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
