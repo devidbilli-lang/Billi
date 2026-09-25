@@ -21,19 +21,40 @@
   var BASE_W = 1600, BASE_H = 900;
   var MIN = 1, MAX = 1.6;     // non si rimpicciolisce mai: sotto la base resta 1
   function applica(){
-    var z = 1;
-    if (ATTIVA) {
-      z = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H);
-      z = Math.max(MIN, Math.min(MAX, z));
-      z = Math.round(z * 100) / 100;
+    if (!ATTIVA) {
+      document.documentElement.style.setProperty('--app-zoom', 1);
+      document.body.style.zoom = '';
+      return;
     }
+    // Si misura la pagina a grandezza naturale: l'altezza del contenuto dipende da quanti
+    // articoli ha la linea, non dalla risoluzione. Calcolando il fattore sul solo schermo
+    // si finiva per ingrandire oltre lo spazio disponibile e il contenuto veniva tagliato.
+    document.documentElement.style.setProperty('--app-zoom', 1);
+    document.body.style.zoom = '';
+    var altezzaContenuto = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    var z = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H);
+    if (altezzaContenuto > 0) {
+      // margine del 2% per non arrivare a filo del bordo
+      var zMassimoCheEntra = (window.innerHeight * 0.98) / altezzaContenuto;
+      z = Math.min(z, zMassimoCheEntra);
+    }
+    z = Math.max(MIN, Math.min(MAX, z));
+    z = Math.floor(z * 20) / 20;   // a scatti di 0,05: evita micro-oscillazioni
     document.documentElement.style.setProperty('--app-zoom', z);
     document.body.style.zoom = z === 1 ? '' : z;
   }
+  // Il contenuto cambia quando arrivano i dati o si cambia schermata: si ricalcola.
+  var osservatore = null;
+  function osserva(){
+    if (osservatore || !window.ResizeObserver) return;
+    osservatore = new ResizeObserver(function(){ clearTimeout(t); t = setTimeout(applica, 250); });
+    osservatore.observe(document.body);
+  }
   var t;
   window.addEventListener('resize', function(){ clearTimeout(t); t = setTimeout(applica, 120); });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applica);
-  else applica();
+  function avvia(){ applica(); osserva(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', avvia);
+  else avvia();
 })();
 </script>
 <link rel="icon" type="image/png" href="logo_Nexus.png"/>
