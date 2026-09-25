@@ -4055,6 +4055,9 @@ function TabNote({ lineaFiltro, linee, skuList }) {
   const [dalN, setDalN] = React.useState("");          // filtri: vuoti = tutte le note
   const [alN, setAlN] = React.useState("");
   const [lineaN, setLineaN] = React.useState("__tutte__");
+  // Vista compatta: righe più fitte e senza comandi, pensata per catturare una schermata
+  // da allegare a una mail — più note visibili insieme e nessun elemento di interfaccia.
+  const [compattaN, setCompattaN] = React.useState(false);
   const carica = React.useCallback(async ()=>{
     try{ const r=await fetch(nexusUrl("leggiNoteLinee",{}),{mode:"cors"}); const j=await r.json(); setNoteList((j&&j.ok&&j.data&&Array.isArray(j.data.note))?j.data.note:[]); }catch(e){}
     setLoading(false);
@@ -4098,6 +4101,10 @@ function TabNote({ lineaFiltro, linee, skuList }) {
           {[...new Set(noteList.map(n=>n&&n.linea).filter(Boolean))].sort().map(l=><option key={l} value={l}>{l}</option>)}
         </select>
       </>)}
+      <button onClick={()=>setCompattaN(!compattaN)}
+        style={{background:compattaN?"#7c3aed":"#fff",color:compattaN?"#fff":"#7c3aed",border:"1.5px solid #7c3aed",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>
+        {compattaN?"\u2713 Compatta":"Compatta"}
+      </button>
       {(dalN||alN||lineaN!=="__tutte__") && (
         <button onClick={()=>{setDalN("");setAlN("");setLineaN("__tutte__");}}
           style={{background:"#fff",color:"#7c3aed",border:"1.5px solid #c4b5fd",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Azzera</button>
@@ -4113,8 +4120,8 @@ function TabNote({ lineaFiltro, linee, skuList }) {
     <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
-          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Note","#f59e0b"],["","" ]].map(([h,c],hi,arr)=>(
-            <th key={hi} style={{padding:"14px 14px",fontSize:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
+          <tr>{[["Data","#475569"],["Linea","#475569"],["Articolo","#475569"],["Note","#f59e0b"],...(compattaN?[]:[["","" ]])].map(([h,c],hi,arr)=>(
+            <th key={hi} style={{padding:compattaN?"7px 10px":"14px 14px",fontSize:compattaN?12:13,letterSpacing:1,textTransform:"uppercase",color:c,textAlign:"center",borderBottom:"2.5px solid #7c3aed",background:"linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 6px rgba(124,58,237,0.18), 0 4px 12px -2px #7c3aed66",fontFamily:"'Montserrat',sans-serif",fontWeight:800,borderRight:hi<arr.length-1?"2px dashed #7c3aed66":"none"}}>{h}</th>
           ))}</tr>
         </thead>
         <tbody>
@@ -4124,13 +4131,13 @@ function TabNote({ lineaFiltro, linee, skuList }) {
             const dataFmt = (()=>{ const _s=(n.data||"").toString().trim(); let _m; if(_m=_s.match(/^(\d{4})-(\d{2})-(\d{2})/)) return _m[3]+"/"+_m[2]+"/"+_m[1]; if(_m=_s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)) return _m[1].padStart(2,"0")+"/"+_m[2].padStart(2,"0")+"/"+_m[3]; if(_m=_s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)) return _m[1].padStart(2,"0")+"/"+_m[2].padStart(2,"0")+"/"+_m[3]; try{ const _d=new Date(_s); if(!isNaN(_d)) return _d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"}); }catch(e){} return _s; })();
             return (
               <tr key={i} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"#f8fafc":"#ffffff"}}>
-                <td style={{padding:"10px 14px",fontSize:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",whiteSpace:"nowrap"}}>{dataFmt}</td>
-                <td style={{padding:"10px 14px",textAlign:"center"}}><span style={{background:"#ffffff",color:lObj.colore,border:"2px solid "+lObj.colore,padding:"3px 10px",borderRadius:20,fontSize:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>{n.linea}</span></td>
-                <td style={{padding:"10px 14px",textAlign:"center",fontSize:13,color:"#334155"}}>{n.sku}{skuObj?<span style={{color:"#94a3b8",fontSize:11}}> — {skuObj.descrizione}</span>:""}</td>
-                <td style={{padding:"10px 14px",fontSize:13,color:"#334155",textAlign:"left",wordBreak:"break-word"}}>{n.nota}</td>
-                <td style={{padding:"10px 14px",textAlign:"center"}}>
+                <td style={{padding:compattaN?"5px 9px":"10px 14px",fontSize:compattaN?12:13,color:"#1e293b",fontFamily:"'Montserrat',sans-serif",textAlign:"center",whiteSpace:"nowrap"}}>{dataFmt}</td>
+                <td style={{padding:compattaN?"5px 9px":"10px 14px",textAlign:"center"}}><span style={{background:"#ffffff",color:lObj.colore,border:"2px solid "+lObj.colore,padding:"3px 10px",borderRadius:20,fontSize:compattaN?12:13,fontWeight:700,fontFamily:"'Montserrat',sans-serif",whiteSpace:"nowrap"}}>{n.linea}</span></td>
+                <td style={{padding:compattaN?"5px 9px":"10px 14px",textAlign:"center",fontSize:compattaN?12:13,color:"#334155"}}>{n.sku}{skuObj?<span style={{color:"#94a3b8",fontSize:11}}> — {skuObj.descrizione}</span>:""}</td>
+                <td style={{padding:compattaN?"5px 9px":"10px 14px",fontSize:compattaN?12:13,color:"#334155",textAlign:"left",wordBreak:"break-word"}}>{n.nota}</td>
+                {!compattaN&&(<td style={{padding:compattaN?"5px 9px":"10px 14px",textAlign:"center"}}>
                   <button title="Elimina nota" onClick={()=>elimina(n)} style={{width:32,height:32,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,color:"#ef4444",fontSize:15,fontWeight:900,cursor:"pointer",lineHeight:1}}>✕</button>
-                </td>
+                </td>)}
               </tr>
             );
           })}
