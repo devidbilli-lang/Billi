@@ -4031,6 +4031,9 @@ function RiepSku({ sessioni:_sessioni, linee:_linee, rampeSheets:_rampeSheets, s
 function TabNote({ lineaFiltro, linee, skuList }) {
   const [noteList, setNoteList] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [dalN, setDalN] = React.useState("");          // filtri: vuoti = tutte le note
+  const [alN, setAlN] = React.useState("");
+  const [lineaN, setLineaN] = React.useState("__tutte__");
   const carica = React.useCallback(async ()=>{
     try{ const r=await fetch(nexusUrl("leggiNoteLinee",{}),{mode:"cors"}); const j=await r.json(); setNoteList((j&&j.ok&&j.data&&Array.isArray(j.data.note))?j.data.note:[]); }catch(e){}
     setLoading(false);
@@ -4040,10 +4043,52 @@ function TabNote({ lineaFiltro, linee, skuList }) {
     if(!window.confirm("Eliminare questa nota?")) return;
     try{ await fetchConRetry(nexusUrl("eliminaNotaRiepilogo",{data:n.data,linea:n.linea,sku:n.sku}),5,1000); setTimeout(carica,800); }catch(e){ alert("Errore eliminazione."); }
   };
-  const righe = lineaFiltro ? noteList.filter(n=>n.linea===lineaFiltro.id) : noteList;
+  // Le note arrivano con la data in due formati (aaaa-mm-gg oppure gg/mm/aaaa): si normalizza
+  // in aaaammgg, l'unica forma confrontabile come testo.
+  const _isoN = (d)=>{ const t=(d||"").toString().trim();
+    let m; if(m=t.match(/^(\d{4})-(\d{2})-(\d{2})/)) return m[1]+m[2]+m[3];
+    if(m=t.match(/^(\d{2})\/(\d{2})\/(\d{4})/)) return m[3]+m[2]+m[1];
+    return ""; };
+  const _dalISO = dalN ? dalN.replace(/-/g,"") : "";
+  const _alISO  = alN  ? alN.replace(/-/g,"")  : "";
+  const righe = noteList.filter(n=>{
+    if(!n) return false;
+    if(lineaFiltro){ if(n.linea!==lineaFiltro.id) return false; }
+    else if(lineaN!=="__tutte__" && n.linea!==lineaN) return false;
+    const g=_isoN(n.data);
+    if(_dalISO && g && g < _dalISO) return false;
+    if(_alISO  && g && g > _alISO)  return false;
+    return true;
+  });
+  const _lbl={fontSize:12,fontWeight:800,color:"#6d28d9",fontFamily:"'Montserrat',sans-serif",letterSpacing:0.3};
+  const _inp={border:"1.5px solid #c4b5fd",borderRadius:8,padding:"5px 8px",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#1e293b"};
+  // La barra resta sempre visibile, anche senza risultati: nascondendola non si potrebbe
+  // più allargare un filtro troppo stretto.
+  const barra = (
+    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12,padding:"10px 12px",background:"#faf5ff",border:"1px solid #e9d5ff",borderRadius:10}}>
+      <span style={_lbl}>Dal</span>
+      <input type="date" value={dalN} max={alN||undefined} onChange={e=>setDalN(e.target.value)} style={_inp}/>
+      <span style={_lbl}>Al</span>
+      <input type="date" value={alN} min={dalN||undefined} onChange={e=>setAlN(e.target.value)} style={_inp}/>
+      {!lineaFiltro && (<>
+        <span style={_lbl}>Linea</span>
+        <select value={lineaN} onChange={e=>setLineaN(e.target.value)} style={{..._inp,maxWidth:200}}>
+          <option value="__tutte__">Tutte</option>
+          {[...new Set(noteList.map(n=>n&&n.linea).filter(Boolean))].sort().map(l=><option key={l} value={l}>{l}</option>)}
+        </select>
+      </>)}
+      {(dalN||alN||lineaN!=="__tutte__") && (
+        <button onClick={()=>{setDalN("");setAlN("");setLineaN("__tutte__");}}
+          style={{background:"#fff",color:"#7c3aed",border:"1.5px solid #c4b5fd",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Azzera</button>
+      )}
+      <span style={{marginLeft:"auto",fontSize:12,fontWeight:700,color:"#7c3aed"}}>{righe.length} {righe.length===1?"nota":"note"}</span>
+    </div>
+  );
   if (loading) return <div style={{textAlign:"center",padding:40,color:"#94a3b8"}}>Caricamento...</div>;
-  if (righe.length===0) return <div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14}}>Nessuna nota registrata.</div>;
+  if (righe.length===0) return (<div>{barra}<div style={{textAlign:"center",padding:40,color:"#64748b",fontSize:14,background:"#fff",border:"1px solid #e2e8f0",borderRadius:12}}>Nessuna nota per i filtri selezionati.</div></div>);
   return (
+    <div>
+    {barra}
     <div style={{background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"auto"}}>
       <table style={{width:"100%",borderCollapse:"collapse"}}>
         <thead>
@@ -4070,6 +4115,7 @@ function TabNote({ lineaFiltro, linee, skuList }) {
           })}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }
