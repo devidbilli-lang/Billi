@@ -7,6 +7,35 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Nexus – ProductionTrack</title>
+<script>
+/* ── Scalatura proporzionale dell'interfaccia ────────────────────────────────
+   L'app è disegnata in pixel fissi su una base di circa 1600×900: su una TV o su
+   un monitor molto grande risultava minuta con molto spazio sprecato. Qui si
+   applica un ingrandimento uniforme a tutta la pagina, calcolato sulla dimensione
+   della finestra e limitato dal lato più stretto, così nulla esce dallo schermo.
+   Le misure espresse in vh/vw dividono per --app-zoom e restano quindi corrette:
+   con fattore 1 il risultato è identico a prima, quindi sugli schermi attuali non
+   cambia nulla. Per disattivare tutto basta mettere ATTIVA a false.           */
+(function(){
+  var ATTIVA = true;          // false per tornare al comportamento precedente
+  var BASE_W = 1600, BASE_H = 900;
+  var MIN = 1, MAX = 1.6;     // non si rimpicciolisce mai: sotto la base resta 1
+  function applica(){
+    var z = 1;
+    if (ATTIVA) {
+      z = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H);
+      z = Math.max(MIN, Math.min(MAX, z));
+      z = Math.round(z * 100) / 100;
+    }
+    document.documentElement.style.setProperty('--app-zoom', z);
+    document.body.style.zoom = z === 1 ? '' : z;
+  }
+  var t;
+  window.addEventListener('resize', function(){ clearTimeout(t); t = setTimeout(applica, 120); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applica);
+  else applica();
+})();
+</script>
 <link rel="icon" type="image/png" href="logo_Nexus.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -416,7 +445,7 @@ function tappe(s) { const fine = s.fine ? new Date(s.fine) : now();
       cur=ft; } }
   return out;
 }
-const S = { scr:  {minHeight:"100vh",background:"#e2e8f0"}, hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #e2e8f0"}, logo: {display:"flex",alignItems:"center",gap:12}, lt:   {fontSize:18,fontWeight:700,color:"#1e293b",letterSpacing:1}, ls:   {fontSize:11,color:"#64748b",letterSpacing:2,textTransform:"uppercase"}, ora:  {fontSize:22,fontWeight:800,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif",background:"#7c3aed11",padding:"4px 14px",borderRadius:8,border:"1px solid #7c3aed33"}, bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"}, card: {width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}, cT:   {fontSize:22,fontWeight:700,color:"#1e293b",marginBottom:24}, lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#64748b",textTransform:"uppercase",marginBottom:6,fontWeight:600}, inp:  {width:"100%",padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"}, err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}, bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#00d4aa,#0891b2)",border:"none",borderRadius:10,color:"#050a14",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, bCO:  {width:"100%",padding:14,background:"#dc2626",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"2px solid #ff6363",boxShadow:"0 4px 16px rgba(220,38,38,0.4)",color:"#ffffff",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}, bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #cbd5e1",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}, sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"4px 12px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}, tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"}, td:   {padding:"10px 14px",fontSize:15,color:"#1e293b",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:500,textAlign:"center"}, sc:   {background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"14px 16px",marginBottom:16},
+const S = { scr:  {minHeight:"calc(100vh / var(--app-zoom,1))",background:"#e2e8f0"}, hdr:  {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 24px",borderBottom:"1px solid #e2e8f0"}, logo: {display:"flex",alignItems:"center",gap:12}, lt:   {fontSize:18,fontWeight:700,color:"#1e293b",letterSpacing:1}, ls:   {fontSize:11,color:"#64748b",letterSpacing:2,textTransform:"uppercase"}, ora:  {fontSize:22,fontWeight:800,color:"#7c3aed",fontFamily:"'Montserrat',sans-serif",background:"#7c3aed11",padding:"4px 14px",borderRadius:8,border:"1px solid #7c3aed33"}, bod:  {display:"flex",justifyContent:"center",padding:"32px 16px 80px"}, card: {width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:16,padding:"32px 28px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}, cT:   {fontSize:22,fontWeight:700,color:"#1e293b",marginBottom:24}, lbl:  {display:"block",fontSize:11,letterSpacing:2,color:"#64748b",textTransform:"uppercase",marginBottom:6,fontWeight:600}, inp:  {width:"100%",padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:15,fontFamily:"'Montserrat',sans-serif",transition:"border-color 0.2s"}, err:  {background:"#ef444422",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}, bCI:  {width:"100%",padding:14,background:"linear-gradient(135deg,#00d4aa,#0891b2)",border:"none",borderRadius:10,color:"#050a14",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, bCO:  {width:"100%",padding:14,background:"#dc2626",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"2px solid #ff6363",boxShadow:"0 4px 16px rgba(220,38,38,0.4)",color:"#ffffff",borderRadius:10,color:"white",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginBottom:10}, bBk:  {padding:"10px 28px",background:"transparent",border:"1px solid #cbd5e1",borderRadius:8,color:"#64748b",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}, sku:  {background:"#f59e0b18",color:"#f59e0b",border:"1px solid #f59e0b44",padding:"4px 12px",borderRadius:4,fontSize:13,fontFamily:"'Montserrat',sans-serif",fontWeight:700}, tag:  {padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:700,border:"1px solid",display:"inline-block"}, td:   {padding:"10px 14px",fontSize:15,color:"#1e293b",whiteSpace:"nowrap",fontFamily:"'Montserrat',sans-serif",fontWeight:500,textAlign:"center"}, sc:   {background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"14px 16px",marginBottom:16},
 };
 const MS = { ov: {position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}, md: {background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:18,width:"90%",maxWidth:460,overflow:"hidden",animation:"fadeUp 0.3s ease"}, mh: {display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px",borderBottom:"1px solid #e2e8f0"}, mt: {fontWeight:700,fontSize:16,color:"#a855f7"}, mx: {background:"transparent",border:"none",color:"#64748b",cursor:"pointer",fontSize:18,fontFamily:"'Montserrat',sans-serif"}, an: {flex:1,padding:10,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,color:"#475569",cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}, cf: {flex:2,padding:10,background:"linear-gradient(135deg,#a855f7,#7c3aed)",border:"none",borderRadius:8,color:"white",fontWeight:700,fontFamily:"'Montserrat',sans-serif",cursor:"pointer"},
 };
@@ -804,7 +833,7 @@ function ModalTrasf({ sess, linee, skuList, onOk, onClose }) { const [dest,setDe
     <div style={MS.ov}>
       <div style={MS.md}>
         <div style={MS.mh}><span style={MS.mt}>Trasferimento</span><button style={MS.mx} onClick={onClose}>X</button></div>
-        <div style={{padding:22,maxHeight:"80vh",overflowY:"auto"}}>
+        <div style={{padding:22,maxHeight:"calc(80vh / var(--app-zoom,1))",overflowY:"auto"}}>
           <div style={S.sc}>
             <div style={{fontWeight:700,fontSize:15,color:"#1e293b",marginBottom:6}}>{sess.nome} {sess.cognome}</div>
             <code style={S.sku}>{sess.skuCorrente||sess.sku||"-"}</code>
@@ -979,7 +1008,7 @@ function ModaleRiepilogoInserimenti({ titolo, voci, onClose }){
   const totBnc = lista.reduce((s,v)=>s+(Number(v.bnc)||0),0);
   return (
     <div onClick={onClose} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:520,width:"calc(100vw - 32px)",maxHeight:"80vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:520,width:"calc((100vw - 32px) / var(--app-zoom,1))",maxHeight:"calc(80vh / var(--app-zoom,1))",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
         <div style={{fontSize:17,fontWeight:900,color:"#7c3aed",marginBottom:4}}>Riepilogo inserimenti</div>
         <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{titolo}</div>
         {lista.length===0 ? <div style={{fontSize:13,color:"#94a3b8",marginBottom:16}}>Nessun inserimento registrato.</div> : (
@@ -2145,7 +2174,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             })()}
             {showNoteRiepilogo && (
               <div onClick={()=>setShowNoteRiepilogo(false)} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
-                <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:"24px",width:"90%",maxWidth:480,maxHeight:"80vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 10px 50px rgba(0,0,0,0.3)"}}>
+                <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:"24px",width:"90%",maxWidth:480,maxHeight:"calc(80vh / var(--app-zoom,1))",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 10px 50px rgba(0,0,0,0.3)"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
                     <span style={{fontSize:18,fontWeight:800,color:"#1e293b"}}>Riepilogo note</span>
                     <button onClick={()=>setShowNoteRiepilogo(false)} style={{background:"#f1f5f9",border:"none",borderRadius:8,width:32,height:32,fontSize:16,cursor:"pointer",color:"#64748b",fontWeight:700}}>✕</button>
@@ -3192,7 +3221,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
   const lineeGrigliaOrdinata = applicaOrdine(lineeGriglia);
 
   return (
-    <div style={{minHeight:"100vh",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
       <div style={{display:"flex",gap:10,marginBottom:vistaGriglia?6:14,alignItems:"center"}}>
         {isAdmin && !lineaFiltro && !vistaGriglia && (
           <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{flex:1,padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}>
@@ -3230,7 +3259,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         // Monitor/TV: tutto in una schermata ad altezza fissa (niente scroll). Telefono/tablet:
         // meno colonne e scroll verticale, con celle di altezza fissa abbastanza grande da leggere.
         const _gridStyle = _grandeSchermo
-          ? {display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gridTemplateRows:`repeat(${nRighe}, 1fr)`,gap:12,height:"calc(100vh - 160px)",maxHeight:"calc(100vh - 160px)",overflow:"hidden",padding:"6px",boxSizing:"border-box"}
+          ? {display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gridTemplateRows:`repeat(${nRighe}, 1fr)`,gap:12,height:"calc((100vh - 160px) / var(--app-zoom,1))",maxHeight:"calc((100vh - 160px) / var(--app-zoom,1))",overflow:"hidden",padding:"6px",boxSizing:"border-box"}
           : {display:"grid",gridTemplateColumns:`repeat(${nCol}, 1fr)`,gap:12,gridAutoRows:vpW<640?"72vh":"56vh",padding:"6px",boxSizing:"border-box"};
         return (
         <div style={_gridStyle}>
@@ -4427,7 +4456,7 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
   const _fp = filtriPos||{x:24,y:118};
   return (
     <div>
-      <div ref={barraRef} style={{position:"fixed",left:0,top:0,transform:`translate(${_fp.x}px, ${_fp.y}px)`,zIndex:50,maxWidth:"calc(100vw - 32px)",display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",background:"rgba(255,255,255,0.80)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",border:"2px solid #7c3aed",borderRadius:16,padding:"12px 16px",boxShadow:"0 8px 28px rgba(124,58,237,0.30), inset 0 1px 0 rgba(255,255,255,0.55)"}}>
+      <div ref={barraRef} style={{position:"fixed",left:0,top:0,transform:`translate(${_fp.x}px, ${_fp.y}px)`,zIndex:50,maxWidth:"calc((100vw - 32px) / var(--app-zoom,1))",display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",background:"rgba(255,255,255,0.80)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",border:"2px solid #7c3aed",borderRadius:16,padding:"12px 16px",boxShadow:"0 8px 28px rgba(124,58,237,0.30), inset 0 1px 0 rgba(255,255,255,0.55)"}}>
         <div onMouseDown={(e)=>{e.preventDefault(); startDragBarra(e.clientX,e.clientY);}} onTouchStart={(e)=>{ if(e.touches[0]) startDragBarra(e.touches[0].clientX,e.touches[0].clientY); }} title="Trascina i filtri" style={{cursor:"grab",display:"flex",alignItems:"center",alignSelf:"stretch",padding:"0 6px",marginRight:2,color:"#a78bfa",fontSize:22,fontWeight:900,letterSpacing:-3,touchAction:"none",userSelect:"none"}}>⠿</div>
         <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Dal</label><input type="date" value={dal} max={al} onChange={e=>setDal(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
         <div><label style={{...S.lbl,display:"block",marginBottom:4,color:"#6d28d9"}}>Al</label><input type="date" value={al} min={dal} onChange={e=>setAl(e.target.value)} style={{...S.inp,maxWidth:175}}/></div>
@@ -4677,7 +4706,7 @@ function TabQualita({ lineaFiltro, linee, skuList, isAdmin=false }) {
         );
         return (
         <div onClick={()=>!nuovaQSalva&&setNuovaQ(null)} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:520,width:"calc(100vw - 32px)",maxHeight:"88vh",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:24,maxWidth:520,width:"calc((100vw - 32px) / var(--app-zoom,1))",maxHeight:"calc(88vh / var(--app-zoom,1))",overflowY:"auto",fontFamily:"'Montserrat',sans-serif",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
             <div style={{fontSize:17,fontWeight:900,color:"#7c3aed",marginBottom:4}}>Aggiungi riga di qualità</div>
             <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Per registrare un articolo dimenticato in una giornata già chiusa.</div>
             <div style={{fontSize:11,fontWeight:800,color:"#6d28d9",textTransform:"uppercase",marginBottom:4}}>Data produzione</div>
@@ -4838,7 +4867,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState("");
   if(sync==="caricamento") return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
       <LogoSpinner size={200}/>
       <span style={{fontSize:100,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
     </div>
@@ -4851,7 +4880,7 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
     setErr("Password non riconosciuta."); setPwd("");
   };
   return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
       <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",textAlign:"center",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,marginBottom:8}}><LogoSpinner size={52}/><span style={{fontSize:32,fontWeight:800,color:"#7c3aed",letterSpacing:3,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span><div style={{fontSize:15,fontWeight:700,color:"#1e293b"}}>ProductionTrack</div></div>
         <div style={{fontSize:20,fontWeight:800,color:"#7c3aed",marginBottom:20}}>Dashboard Qualità</div>
@@ -5130,7 +5159,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
   };
 
   return (
-    <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",background:"#f0f2f5"}}>
       {/* OBIETTIVO QUALITÀ = lo stesso valore per articolo calcolato dalla card di produzione,
           letto da D1 (obPerArticolo). Nessun ricalcolo locale qui: il vecchio mirror nascosto
           ricalcolava per conto suo e driftava rispetto alla produzione (es. 58 invece di 65),
@@ -5162,7 +5191,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
         const totCoffre = lista.reduce((a,r)=>a+r.coffre,0);
         return (
           <div
-            style={{position:"fixed",top:120,left:"50%",transform:"translateX(-50%)",zIndex:2000,width:"calc(100vw - 32px)",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none",cursor:"default"}}            onMouseDown={e=>{
+            style={{position:"fixed",top:120,left:"50%",transform:"translateX(-50%)",zIndex:2000,width:"calc((100vw - 32px) / var(--app-zoom,1))",maxWidth:400,background:"rgba(255,255,255,0.25)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",border:"1px solid rgba(255,255,255,0.5)",borderRadius:20,boxShadow:"0 8px 32px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.6)",fontFamily:"'Montserrat',sans-serif",userSelect:"none",cursor:"default"}}            onMouseDown={e=>{
               const el = e.currentTarget;
               const rect = el.getBoundingClientRect();
               const startX = e.clientX - rect.left;
@@ -5682,7 +5711,7 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
     const l=getLinea(tipo==="transfer"?lDest:sess.lineaCorrente,linee);
     const cfg={checkin:{t:"Presenza Registrata!",i:"✓",bg:"linear-gradient(135deg,#00d4aa,#0891b2)",c:"#00d4aa"},checkout:{t:"Turno Terminato!",i:"■",bg:"linear-gradient(135deg,#ef4444,#b91c1c)",c:"#ef4444"},transfer:{t:"Trasferimento!",i:"⇄",bg:"linear-gradient(135deg,#a855f7,#7c3aed)",c:"#a855f7"},cambiosku:{t:"Articolo Aggiornato!",i:"✓",bg:"linear-gradient(135deg,#f59e0b,#d97706)",c:"#f59e0b"},corso:{t:"Registrato!",i:"🎓",bg:"linear-gradient(135deg,#06b6d4,#0284c7)",c:"#06b6d4"},rientro:{t:"Rientro in Produzione!",i:"▶",bg:"linear-gradient(135deg,#10b981,#059669)",c:"#10b981"}}[tipo];
     return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+      <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
         <div style={{textAlign:"center",padding:40,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,maxWidth:380,width:"90%",animation:"fadeUp 0.4s ease"}}>
           <div style={{width:80,height:80,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 20px",background:cfg.bg,animation:"pulse 0.6s ease"}}>{cfg.i}</div>
           <h2 style={{fontSize:24,fontWeight:800,marginBottom:8,color:cfg.c}}>{cfg.t}</h2>
@@ -7418,7 +7447,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const chi=new Set(sessioni.filter(s=>!!s.fine&&(!lineaFiltro||s.lineaCorrente===lineaFiltro.id)&&!sessioni.some(s2=>!s2.fine&&(s2.matricola||s2.nome)===(s.matricola||s.nome))).map(s=>s.matricola||s.nome)).size;
 
   return (
-    <div style={{minHeight:"100vh",background:"#f0f2f5",paddingBottom:60}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",background:"#f0f2f5",paddingBottom:60}}>
       {soloVista&&(
         <div style={{position:"sticky",top:0,zIndex:500,background:"linear-gradient(135deg,#f59e0b,#d97706)",color:"#fff",padding:"8px 20px",textAlign:"center",fontWeight:800,fontSize:13,fontFamily:"'Montserrat',sans-serif",letterSpacing:0.5,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>
           👁 SOLA VISUALIZZAZIONE — puoi consultare tutti i dati ma non modificarli
@@ -8097,7 +8126,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         const step = modTrasf.step||"selOp";
         return (
           <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-            <div style={{background:"#ffffff",borderRadius:16,padding:"28px 24px",width:"94%",maxWidth:480,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif",maxHeight:"85vh",overflowY:"auto"}}>
+            <div style={{background:"#ffffff",borderRadius:16,padding:"28px 24px",width:"94%",maxWidth:480,boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",fontFamily:"'Montserrat',sans-serif",maxHeight:"calc(85vh / var(--app-zoom,1))",overflowY:"auto"}}>
               <div style={{fontSize:17,fontWeight:800,color:"#a855f7",marginBottom:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>↔ Trasferimento verso <span style={{display:"inline-flex",alignItems:"center",background:"#ffffff",border:"2px solid "+(modTrasf.lineaDest.colore||"#a855f7"),borderRadius:8,padding:"3px 12px",fontSize:15,fontWeight:800,color:modTrasf.lineaDest.colore||"#a855f7",lineHeight:1}}>{modTrasf.lineaDest.id}</span></div>
               <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>Seleziona operatori da trasferire</div>
               {!lineaFiltro && linee.length>1 && step==="selOp" && (
@@ -9086,14 +9115,14 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
   );
 
   if(sync==="caricamento") return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
       <LogoSpinner size={160}/>
       <span style={{fontSize:80,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
     </div>
   );
 
   if(schermata==="linea") return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
       <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
         <Logo/>
         <div style={{fontSize:20,fontWeight:800,color:"#7c3aed",marginBottom:16,textAlign:"center"}}>Accesso Linea</div>
@@ -9107,7 +9136,7 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
   );
 
   if(schermata==="admin") return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
       <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
         <Logo/>
         <div style={{fontSize:20,fontWeight:800,color:"#7c3aed",marginBottom:16,textAlign:"center"}}>Administrator</div>
@@ -9121,7 +9150,7 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
   );
 
   return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
       <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66"}}>
         <Logo/>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -9282,14 +9311,14 @@ function App() { const [view,setView]             = useState("login");
   // Modalità readonly - nessun login, accesso diretto
   if(URL_VIEW==="readonly") {
     if(sync==="caricamento") return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
+      <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5",flexDirection:"column",gap:16}}>
         <LogoSpinner size={200}/>
         <span style={{fontSize:100,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
         <span style={{color:"#f59e0b",fontWeight:700,fontSize:15,fontFamily:"'Montserrat',sans-serif"}}>⟳ Caricamento...</span>
       </div>
     );
     return (
-      <div style={{minHeight:"100vh",background:"#f0f2f5"}}>
+      <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",background:"#f0f2f5"}}>
         <div style={{background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:12}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer"}} onClick={()=>setView("checkin")}>
             <LogoSpinner size={32}/>
@@ -9306,7 +9335,7 @@ function App() { const [view,setView]             = useState("login");
   // Modalità admin da URL
   if(URL_VIEW==="admin") {
     if(!adminUnlocked) return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+      <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
         <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",textAlign:"center"}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,marginBottom:24}}>
             <LogoSpinner size={52}/>
@@ -9326,7 +9355,7 @@ function App() { const [view,setView]             = useState("login");
 
   // Schermata password per autologin da link diretto
   if(autologinLinea && !accesso) return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
       <div style={{width:"100%",maxWidth:520,background:"#ffffff",border:"1px solid #e2e8f0",borderRadius:20,padding:"52px 48px",animation:"fadeUp 0.4s ease",boxShadow:"0 0 0 4px #a78bfa, 0 0 40px 12px #7c3aed66",textAlign:"center"}}>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,marginBottom:20}}>
           <LogoSpinner size={52}/>
@@ -9368,7 +9397,7 @@ function App() { const [view,setView]             = useState("login");
     return <LoginDashboard linee={linee} sync={sync} onLogin={(ruolo,linea)=>{ setAccesso({ruolo,linea}); if(ruolo==="linea"&&linea) sessioneLinea.salva(linea.id); setView("checkin"); }} onQualita={()=>setViewQualita("login")} onQualitaAdmin={()=>{ setLineaQualita(null); setViewQualita("dashboard"); }}/>;
   }
   return (
-    <div style={{minHeight:"100vh",background:"#f0f2f5",color:"#1e293b"}}>
+    <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",background:"#f0f2f5",color:"#1e293b"}}>
       {sync==="errore"&&(
         <div style={{background:"#fee2e2",borderBottom:"1px solid #ef4444",padding:"8px 20px",display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:13,fontWeight:800,color:"#ef4444"}}>Errore</span>
