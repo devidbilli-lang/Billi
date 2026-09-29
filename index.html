@@ -153,6 +153,19 @@ const now     = () => new Date();
 const hmToTsLocal = (hm) => { if(!hm||typeof hm!=="string"||hm.indexOf(":")<0) return Date.now(); const [h,m]=hm.split(":").map(Number); if(isNaN(h)||isNaN(m)) return Date.now(); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
 const nowHM = () => { const d=new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
 const fmt     = d => d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+// Separatore delle migliaia all'italiana (punto) e virgola per i decimali: 1.234 e 1.234,5.
+// Non si usa toLocaleString perché in italiano i numeri di quattro cifre non verrebbero separati
+// (1234 resta 1234, il punto compare solo da 12.345): qui il raggruppamento è sempre applicato.
+const nMig = (n) => {
+  const v = Number(n);
+  if (!isFinite(v)) return n;
+  const neg = v < 0, a = Math.abs(v);
+  const intero = Math.trunc(a);
+  let s = String(intero).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const dec = Math.round((a - intero) * 100);
+  if (dec > 0) s += "," + String(dec).replace(/0$/, "");
+  return (neg ? "-" : "") + s;
+};
 const fmtFull = d => d.toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
 // Calcola la data di Pasqua (calendario gregoriano) per un dato anno. Restituisce un oggetto Date.
 function calcolaPasquaJS(anno) {
@@ -1051,8 +1064,8 @@ function ModaleRiepilogoInserimenti({ titolo, voci, onClose }){
             </tbody>
             <tfoot><tr style={{borderTop:"2px solid #e2e8f0"}}>
               <td colSpan={2} style={{padding:"9px 8px",fontSize:12,fontWeight:800,color:"#1e293b",textAlign:"center"}}>Totale ({lista.length} inserimenti)</td>
-              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#06b981",textAlign:"center"}}>{totOk}</td>
-              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#c026d3",textAlign:"center"}}>{totBnc}</td>
+              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#06b981",textAlign:"center"}}>{nMig(totOk)}</td>
+              <td style={{padding:"9px 8px",fontSize:15,fontWeight:900,color:"#c026d3",textAlign:"center"}}>{nMig(totBnc)}</td>
             </tr></tfoot>
           </table>
         )}
@@ -4268,7 +4281,7 @@ function TortaQ({ titolo, voci, totaleLabel, overlay, mostraTutte }){
                   <span style={{minWidth:0,flex:1}}>
                     <span style={{display:"block",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.label}</span>
                     <span style={{display:"flex",alignItems:"baseline",gap:5}}>
-                      <span style={{fontWeight:900,color:v.colore,fontSize:19,lineHeight:1.15}}>{val}</span>
+                      <span style={{fontWeight:900,color:v.colore,fontSize:19,lineHeight:1.15}}>{nMig(val)}</span>
 
                     </span>
                   </span>
@@ -4295,7 +4308,7 @@ function TortaQ({ titolo, voci, totaleLabel, overlay, mostraTutte }){
           </div>
         )}</>)}
         <div style={{borderTop:"1px solid #f1f5f9",marginTop:12,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:800,color:"#1e293b"}}>
-          <span>{totaleLabel||"Totale"}</span><span>{tot}</span>
+          <span>{totaleLabel||"Totale"}</span><span>{nMig(tot)}</span>
         </div>
       </>)}
       {overlay}
@@ -4553,7 +4566,9 @@ function ReportQualita({ qualita, skuList, lineaFiltro, linee }){
       <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
         <TortaQ titolo="Qualità" voci={vociQ} totaleLabel="Totale borse" mostraTutte/>
         <TortaQ titolo="Dettaglio Difetti" voci={vociD} totaleLabel="Totale difetti" overlay={vociD.length>0?(<React.Fragment>
-          <Top5DifettiVetro difetti={vociD} titolo="Top 5 difetti" ancora="tr"/>
+          {/* I due pannelli sono separati per tipo: a destra i soli migliorabili, a sinistra i soli
+              KO. Prima quello di destra riceveva tutti i difetti e i KO comparivano in entrambi. */}
+          {vociD.some(d=>d.fonte==="MGL") && <Top5DifettiVetro difetti={vociD.filter(d=>d.fonte==="MGL")} titolo="Top 5 difetti MGL" ancora="tr"/>}
           {vociD.some(d=>d.fonte==="KO") && <Top5DifettiVetro difetti={vociD.filter(d=>d.fonte==="KO")} titolo="Top 5 difetti KO" ancora="tl"/>}
         </React.Fragment>):null}/>
       </div>
