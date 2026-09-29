@@ -3238,7 +3238,7 @@ function GaugeFoto({ pct, colore, grande }){
     </svg>
   );
 }
-function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, vistaGriglia, ordine }){
+function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, vistaGriglia, ordine, gridStyle }){
   if(carica) return <div style={{textAlign:"center",padding:50,color:"#94a3b8",fontSize:15}}>Caricamento del {giorno}…</div>;
   const dati = foto || {};
   const elenco = (ordine||linee||[]).filter(l=>l && dati[l.id] && (!lineaFiltro || l.id===lineaFiltro.id));
@@ -3250,16 +3250,16 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, vistaGriglia
   const G = vistaGriglia;
   return (
     <div>
-      <div style={{background:"#ede9fe",border:"1.5px solid #c4b5fd",borderRadius:10,padding:"8px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"#5b21b6",fontFamily:"'Montserrat',sans-serif"}}>
+      <div style={{background:"#ede9fe",border:"1.5px solid #c4b5fd",borderRadius:8,padding:"5px 12px",margin:"0 6px 4px",fontSize:12,fontWeight:700,color:"#5b21b6",fontFamily:"'Montserrat',sans-serif"}}>
         Produzione del {giorno} — valori di fine giornata, in sola lettura
       </div>
-      <div style={{display:"grid",gridTemplateColumns:G?"repeat(auto-fill,minmax(420px,1fr))":"1fr",gap:G?10:16}}>
+      <div style={gridStyle || {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(420px,1fr))",gap:10}}>
         {elenco.map(l=>{
           const d = dati[l.id] || {};
           const col = l.colore || "#7c3aed";
           const arts = d.articoli || [];
           return (
-            <div key={l.id} style={{background:"#fff",border:"4px solid "+col,borderRadius:16,padding:G?"10px":"16px",boxShadow:"0 0 14px "+col+"55",fontFamily:"'Montserrat',sans-serif"}}>
+            <div key={l.id} style={{minHeight:0,height:"100%",boxSizing:"border-box",overflow:"hidden",background:"#fff",border:"4px solid "+col,borderRadius:10,padding:G?"10px":"16px",boxShadow:"0 0 12px 2px "+col+"99, 0 0 4px "+col,fontFamily:"'Montserrat',sans-serif"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:G?8:12}}>
                 <span style={{width:G?11:14,height:G?11:14,borderRadius:"50%",background:col,flexShrink:0}}/>
                 <span style={{fontSize:G?17:24,fontWeight:900,color:"#1e293b",flex:1}}>{l.id}</span>
@@ -3439,10 +3439,19 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         </button>
       </div>
       {/* VISTA GRIGLIA: 3 colonne, ogni card rimpicciolita con zoom */}
-      {(giornoFoto && vistaGriglia) ? (
-        <FotoProduzione foto={foto} carica={fotoCarica} giorno={giornoFoto} linee={linee}
-          lineaFiltro={lineaFiltro} vistaGriglia={vistaGriglia} ordine={lineeGrigliaOrdinata}/>
-      ) : vistaGriglia ? (() => {
+      {(giornoFoto && vistaGriglia) ? (()=>{
+        // Stessa disposizione della griglia in diretta: colonne e righe calcolate allo stesso modo,
+        // card che riempiono lo schermo. Si tolgono 40px all'altezza per la fascia del giorno.
+        const _lf = lineeGrigliaOrdinata.filter(l=>foto && foto[l.id]);
+        const nCardF = Math.max(1, _lf.length);
+        const nColF = Math.max(1, Math.min(_colDisp, nCardF));
+        const nRigheF = Math.ceil(nCardF / nColF) || 1;
+        const gridStyleF = _grandeSchermo
+          ? {display:"grid",gridTemplateColumns:`repeat(${nColF}, 1fr)`,gridTemplateRows:`repeat(${nRigheF}, 1fr)`,gap:12,height:"calc((100vh - 200px) / var(--app-zoom,1))",maxHeight:"calc((100vh - 200px) / var(--app-zoom,1))",overflow:"hidden",padding:"6px",boxSizing:"border-box"}
+          : {display:"grid",gridTemplateColumns:`repeat(${nColF}, 1fr)`,gap:12,gridAutoRows:vpW<640?"72vh":"56vh",padding:"6px",boxSizing:"border-box"};
+        return <FotoProduzione foto={foto} carica={fotoCarica} giorno={giornoFoto} linee={linee}
+          lineaFiltro={lineaFiltro} vistaGriglia={true} ordine={lineeGrigliaOrdinata} gridStyle={gridStyleF}/>;
+      })() : vistaGriglia ? (() => {
         const nCard = lineeGriglia.filter(l=>perLinea[l.id] || repartoTipoLinea(l.id,l.nome)==="prototip").length;
         const nCol = Math.max(1, Math.min(_colDisp, nCard));
         const nRighe = Math.ceil(nCard / nCol) || 1;
