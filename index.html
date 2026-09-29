@@ -3223,22 +3223,10 @@ function CardProtoQualita({ linea, qualitaPerSku, skuList, compatto=false }){
   );
 }
 // ─── Card di un giorno passato, in sola lettura ──────────────────────────────
-// Disegna le linee dai valori fotografati a fine giornata: sono esattamente quelli che la card
-// mostrava, non un ricalcolo. Nessun comando, nessun aggiornamento in tempo reale.
-function GaugeFoto({ pct, colore, grande }){
-  const v = Math.max(0, Math.min(100, Number(pct)||0));
-  const W = grande?180:120, H = grande?100:66, R = grande?78:52, cx=W/2, cy=H-6, sw=grande?16:11;
-  const arco = (a0,a1)=>{ const p=(a)=>[cx+R*Math.cos(Math.PI*(1-a)), cy-R*Math.sin(Math.PI*(1-a))];
-    const [x0,y0]=p(a0),[x1,y1]=p(a1); return "M "+x0+" "+y0+" A "+R+" "+R+" 0 0 1 "+x1+" "+y1; };
-  return (
-    <svg width={W} height={H} viewBox={"0 0 "+W+" "+H}>
-      <path d={arco(0,1)} fill="none" stroke="#e2e8f0" strokeWidth={sw} strokeLinecap="round"/>
-      {v>0&&<path d={arco(0,v/100)} fill="none" stroke={colore} strokeWidth={sw} strokeLinecap="round"/>}
-      <text x={cx} y={cy-4} textAnchor="middle" fontSize={grande?34:24} fontWeight="900" fill="#1e293b" fontFamily="'Montserrat',sans-serif">{pct==null?"—":(Math.round(pct)+"%")}</text>
-    </svg>
-  );
-}
-function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, vistaGriglia, ordine, gridStyle }){
+// Replica fedelmente la card della griglia in diretta — involucro, intestazione, zoom del contenuto,
+// colonna sinistra con Operatori ed Efficienza, articoli a coppie — ma legge i valori fotografati
+// a fine giornata invece delle sessioni. Nessun comando e nessun calcolo in tempo reale.
+function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, ordine, gridStyle, grandeSchermo=true }){
   if(carica) return <div style={{textAlign:"center",padding:50,color:"#94a3b8",fontSize:15}}>Caricamento del {giorno}…</div>;
   const dati = foto || {};
   const elenco = (ordine||linee||[]).filter(l=>l && dati[l.id] && (!lineaFiltro || l.id===lineaFiltro.id));
@@ -3247,7 +3235,7 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, vistaGriglia
       Nessuna fotografia disponibile per il {giorno}.
     </div>
   );
-  const G = vistaGriglia;
+  const box = {background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 18px 4px #7c3aed88, inset 0 0 8px #7c3aed22",borderRadius:16,textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"};
   return (
     <div>
       <div style={{background:"#ede9fe",border:"1.5px solid #c4b5fd",borderRadius:8,padding:"5px 12px",margin:"0 6px 4px",fontSize:12,fontWeight:700,color:"#5b21b6",fontFamily:"'Montserrat',sans-serif"}}>
@@ -3258,59 +3246,76 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, vistaGriglia
           const d = dati[l.id] || {};
           const col = l.colore || "#7c3aed";
           const arts = d.articoli || [];
+          const nArt = arts.length;
+          // stesso zoom della diretta
+          const zoomCard = grandeSchermo
+            ? (nArt<=2 ? 0.5 : nArt<=4 ? 0.44 : nArt<=6 ? 0.37 : 0.32)
+            : (nArt<=2 ? 0.95 : nArt<=4 ? 0.8 : nArt<=6 ? 0.68 : 0.58);
+          const pct = Math.max(0, Number(d.efficienza)||0);
+          const coppie = []; for(let k=0;k<arts.length;k+=2) coppie.push(arts.slice(k,k+2));
           return (
-            <div key={l.id} style={{minHeight:0,height:"100%",boxSizing:"border-box",overflow:"hidden",background:"#fff",border:"4px solid "+col,borderRadius:10,padding:G?"10px":"16px",boxShadow:"0 0 12px 2px "+col+"99, 0 0 4px "+col,fontFamily:"'Montserrat',sans-serif"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:G?8:12}}>
-                <span style={{width:G?11:14,height:G?11:14,borderRadius:"50%",background:col,flexShrink:0}}/>
-                <span style={{fontSize:G?17:24,fontWeight:900,color:"#1e293b",flex:1}}>{l.id}</span>
-                <span style={{fontSize:G?15:20,fontWeight:900,color:"#ef4444"}}>KO {d.ko||0}</span>
-                <span style={{fontSize:G?15:20,fontWeight:900,color:"#f59e0b",marginLeft:8}}>MIGL {d.migl||0}</span>
-              </div>
-              <div style={{display:"flex",gap:G?8:14,alignItems:"flex-start"}}>
-                <div style={{display:"flex",flexDirection:"column",gap:G?6:10,flexShrink:0,width:G?150:220}}>
-                  <div style={{border:"1.5px solid #c4b5fd",borderRadius:10,padding:"6px",textAlign:"center"}}>
-                    <div style={{fontSize:G?10:13,fontWeight:800,color:"#1e293b"}}>Operatori</div>
-                    <div style={{fontSize:G?26:40,fontWeight:900,color:"#1e293b",lineHeight:1.1}}>{d.operatori||0}</div>
-                  </div>
-                  <div style={{border:"1.5px solid #c4b5fd",borderRadius:10,padding:"6px",textAlign:"center"}}>
-                    <div style={{fontSize:G?10:13,fontWeight:800,color:"#1e293b"}}>Efficienza</div>
-                    <GaugeFoto pct={d.efficienza} colore={col} grande={!G}/>
-                  </div>
+            <div key={l.id} style={{minHeight:0,background:"#fff",border:"4px solid "+col,borderRadius:10,overflow:"hidden",boxShadow:"0 0 12px 2px "+col+"99, 0 0 4px "+col+", inset 0 0 8px "+col+"22",display:"flex",flexDirection:"column",fontFamily:"'Montserrat',sans-serif"}}>
+              <div style={{padding:"5px 10px",borderBottom:"1px solid "+col+"33",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                <div style={{width:9,height:9,borderRadius:"50%",background:col,flexShrink:0}}/>
+                <div style={{fontSize:12,fontWeight:800,color:"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{l.id}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                  <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {d.ko||0}</span>
+                  <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {d.migl||0}</span>
                 </div>
-                {/* Articoli con la stessa struttura della card in diretta: a coppie, e con un numero
-                    dispari l'ultimo occupa tutta la larghezza. Dimensioni, caratteri e componenti
-                    (CodiceFit, IconaRampa) sono gli stessi, così i numeri non escono dai riquadri. */}
-                <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:6}}>
-                  {arts.length===0 && <div style={{fontSize:13,color:"#94a3b8",padding:10}}>Nessun articolo registrato.</div>}
-                  {(()=>{ const cp=[]; for(let k=0;k<arts.length;k+=2) cp.push(arts.slice(k,k+2)); return cp; })().map((coppia,ci)=>(
-                    <div key={ci} style={{display:"flex",flexDirection:"row",flexWrap:"wrap",gap:6,flex:"0 0 auto",minHeight:0,minWidth:0}}>
-                      {coppia.map(a=>{
-                        const inR = !!(a.rampa && a.rampa.giorno);
-                        return (
-                        <div key={a.sku} style={{flex:"1 1 45%",minWidth:0,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:3,textAlign:"center"}}>
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minWidth:0}}>
-                            <CodiceFit text={a.sku} max={22} min={9}/>
-                          </div>
-                          {inR && (
-                            <div title="Giorno di rampa" style={{display:"inline-flex",alignItems:"center",gap:5,background:"#fff7ed",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}>
-                              <IconaRampa size={16} color="#ff6937"/>
-                              <span style={{fontSize:"clamp(13px,1.6vw,17px)",fontWeight:800,color:"#ff6937"}}>{a.rampa.giorno}/{a.rampa.durata}</span>
-                            </div>
-                          )}
-                          <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:4}}>
-                            <span style={{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:900,color:a.netto<0?"#ef4444":"#111827",lineHeight:1}}>{a.netto}</span>
-                            <span style={{fontSize:"clamp(22px,3.2vw,38px)",fontWeight:300,color:"#94a3b8",lineHeight:1,margin:"0 4px"}}>/</span>
-                            <span style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:inR?"#ff6937":"#6d28d9",lineHeight:1}}>{a.obiettivo}</span>
-                          </div>
-                          <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
-                            <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ef4444"}}>KO {a.ko||0}</span>
-                            <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#f59e0b"}}>MGL {a.migl||0}</span>
-                          </div>
-                        </div>
-                        );
-                      })}
+              </div>
+              <div style={{flex:1,overflow:"hidden",zoom:zoomCard,padding:"2px 2px"}}>
+                <div style={{padding:"16px 12px",display:"flex",flexDirection:"column",flex:1}}>
+                  <div style={{display:"flex",gap:8,alignItems:"stretch",marginBottom:8}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:8,width:"28%"}}>
+                      <div style={{...box,flex:"0 0 auto",padding:"5px 6px"}}>
+                        <div style={{fontSize:"clamp(9px,1.1vw,12px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:1}}>Operatori</div>
+                        <div style={{fontSize:"clamp(22px,2.8vw,36px)",fontWeight:900,color:"#111827",lineHeight:1}}>{d.operatori||0}</div>
+                      </div>
+                      <div style={{...box,flex:2,padding:"8px"}}>
+                        <div style={{fontSize:"clamp(11px,1.4vw,15px)",color:"#111827",fontWeight:800,letterSpacing:1,marginBottom:2}}>Efficienza</div>
+                        <svg viewBox="0 0 200 110" style={{width:"100%",display:"block"}}>
+                          <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#e2e8f0" strokeWidth="16" strokeLinecap="round"/>
+                          {pct>0&&pct<100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={col} strokeWidth="16" strokeLinecap="round"
+                            strokeDasharray={`${(pct/100)*Math.PI*90} ${Math.PI*90}`} style={{filter:`drop-shadow(0 0 6px ${col})`}}/>}
+                          {pct>=100&&<path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke={col} strokeWidth="16" strokeLinecap="round"
+                            style={{filter:`drop-shadow(0 0 6px ${col})`}}/>}
+                          <text x="100" y="92" textAnchor="middle" fontSize="44" fontWeight="900" fill="#111827" fontFamily="Montserrat,sans-serif">{d.efficienza==null?"—":(pct+"%")}</text>
+                        </svg>
+                      </div>
                     </div>
-                  ))}
+                    <div style={{flex:1,display:"flex",flexDirection:"column",gap:8,minHeight:0,minWidth:0}}>
+                      {arts.length===0 && <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#94a3b8",fontSize:14}}>Nessun articolo registrato.</div>}
+                      {coppie.map((coppia,ci)=>(
+                        <div key={ci} style={{display:"flex",flexDirection:"row",flexWrap:"wrap",gap:6,flex:"0 0 auto",minHeight:0,minWidth:0}}>
+                          {coppia.map(a=>{
+                            const inR = !!(a.rampa && a.rampa.giorno);
+                            return (
+                            <div key={a.sku} style={{flex:"1 1 45%",minWidth:0,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:3,textAlign:"center"}}>
+                              <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minWidth:0}}>
+                                <CodiceFit text={a.sku} max={22} min={9}/>
+                              </div>
+                              {inR && (
+                                <div title="Giorno di rampa" style={{display:"inline-flex",alignItems:"center",gap:5,background:"#fff7ed",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}>
+                                  <IconaRampa size={16} color="#ff6937"/>
+                                  <span style={{fontSize:"clamp(13px,1.6vw,17px)",fontWeight:800,color:"#ff6937"}}>{a.rampa.giorno}/{a.rampa.durata}</span>
+                                </div>
+                              )}
+                              <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:4}}>
+                                <span style={{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:900,color:a.netto<0?"#ef4444":"#111827",lineHeight:1}}>{a.netto}</span>
+                                <span style={{fontSize:"clamp(22px,3.2vw,38px)",fontWeight:300,color:"#94a3b8",lineHeight:1,margin:"0 4px"}}>/</span>
+                                <span style={{fontSize:"clamp(28px,4vw,48px)",fontWeight:900,color:inR?"#ff6937":"#6d28d9",lineHeight:1}}>{a.obiettivo}</span>
+                              </div>
+                              <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
+                                <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#ef4444"}}>KO {a.ko||0}</span>
+                                <span style={{fontSize:"clamp(9px,1.1vw,12px)",fontWeight:700,color:"#f59e0b"}}>MGL {a.migl||0}</span>
+                              </div>
+                            </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3459,7 +3464,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
           ? {display:"grid",gridTemplateColumns:`repeat(${nColF}, 1fr)`,gridTemplateRows:`repeat(${nRigheF}, 1fr)`,gap:12,height:"calc((100vh - 200px) / var(--app-zoom,1))",maxHeight:"calc((100vh - 200px) / var(--app-zoom,1))",overflow:"hidden",padding:"6px",boxSizing:"border-box"}
           : {display:"grid",gridTemplateColumns:`repeat(${nColF}, 1fr)`,gap:12,gridAutoRows:vpW<640?"72vh":"56vh",padding:"6px",boxSizing:"border-box"};
         return <FotoProduzione foto={foto} carica={fotoCarica} giorno={giornoFoto} linee={linee}
-          lineaFiltro={lineaFiltro} vistaGriglia={true} ordine={lineeGrigliaOrdinata} gridStyle={gridStyleF}/>;
+          lineaFiltro={lineaFiltro} ordine={lineeGrigliaOrdinata} gridStyle={gridStyleF} grandeSchermo={_grandeSchermo}/>;
       })() : vistaGriglia ? (() => {
         const nCard = lineeGriglia.filter(l=>perLinea[l.id] || repartoTipoLinea(l.id,l.nome)==="prototip").length;
         const nCol = Math.max(1, Math.min(_colDisp, nCard));
