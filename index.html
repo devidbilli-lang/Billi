@@ -4269,7 +4269,7 @@ function TortaQ({ titolo, voci, totaleLabel, overlay, mostraTutte }){
                     <span style={{display:"block",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.label}</span>
                     <span style={{display:"flex",alignItems:"baseline",gap:5}}>
                       <span style={{fontWeight:900,color:v.colore,fontSize:19,lineHeight:1.15}}>{val}</span>
-                      <span style={{fontWeight:700,color:"#94a3b8",fontSize:11}}>{tot>0?Math.round(val/tot*100):0}%</span>
+                      <span style={{fontWeight:800,color:"#1e293b",fontSize:16}}>{tot>0?Math.round(val/tot*100):0}%</span>
                     </span>
                   </span>
                 </button>
@@ -4293,7 +4293,7 @@ function TortaQ({ titolo, voci, totaleLabel, overlay, mostraTutte }){
             {vis[sel].skus && vis[sel].skus.length>16 && <span style={{fontSize:12,color:"#94a3b8",fontWeight:700}}>+{vis[sel].skus.length-16}</span>}
           </div>
         )}</>)}
-        <div style={{borderTop:"1px solid #f1f5f9",marginTop:12,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:800,color:"#64748b"}}>
+        <div style={{borderTop:"1px solid #f1f5f9",marginTop:12,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:800,color:"#1e293b"}}>
           <span>{totaleLabel||"Totale"}</span><span>{tot}</span>
         </div>
       </>)}
