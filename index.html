@@ -3415,7 +3415,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
 
   return (
     <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",background:"#f0f2f5",padding:vistaGriglia?"4px 4px":"16px 4px"}}>
-      <div style={{display:"flex",gap:10,marginBottom:vistaGriglia?6:14,alignItems:"center"}}>
+      <div style={{display:"flex",gap:10,marginBottom:vistaGriglia?6:14,alignItems:"center",position:"relative"}}>
         {isAdmin && !lineaFiltro && !vistaGriglia && (
           <select value={lineaSel} onChange={e=>setLineaSel(e.target.value)} style={{flex:1,padding:"10px 14px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,color:"#1e293b",fontSize:14,fontFamily:"'Montserrat',sans-serif"}}>
             <option value="">Tutte le linee</option>
@@ -3436,7 +3436,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
           </div>
         )}
         {vistaGriglia && <select value={giornoFoto} onChange={e=>setGiornoFoto(e.target.value)}
-          style={{padding:"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",margin:"0 auto",textAlign:"center",textAlignLast:"center",minWidth:200}}>
+          style={{padding:"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",position:"absolute",left:"50%",transform:"translateX(-50%)",zIndex:2,textAlign:"center",textAlignLast:"center",minWidth:240}}>
           <option value="">Oggi (in diretta)</option>
           {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=>{
             // Etichetta con il giorno della settimana: "lunedì 28/09/2026". Il valore resta la sola data.
@@ -3449,7 +3449,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
           const el=document.documentElement;
           if(!document.fullscreenElement){ el.requestFullscreen&&el.requestFullscreen(); }
           else { document.exitFullscreen&&document.exitFullscreen(); }
-        }} style={{padding:"10px 16px",background:"#7c3aed",border:"none",borderRadius:8,color:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6,marginLeft:vistaGriglia?"auto":0}}>
+        }} style={{marginLeft:vistaGriglia?"auto":0,padding:"10px 16px",background:"#7c3aed",border:"none",borderRadius:8,color:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6,marginLeft:vistaGriglia?"auto":0}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
           Schermo intero
         </button>
