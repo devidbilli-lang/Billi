@@ -105,11 +105,11 @@ const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 window.__NEXUS_SOLA_VISTA__ = false;
 // Azioni di sola lettura: consentite anche in sola-vista. Tutto il resto (evento, reset, modifica*,
 // elimina*, salva*, pianifica*, depenna*, archivia*, invalida*) è scrittura → bloccato.
-const NEXUS_READ_ACTIONS = new Set(["sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
+const NEXUS_READ_ACTIONS = new Set(["leggiFotoProduzione","dateFotoProduzione","sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
 function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
 
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
+  const D1_ACTIONS = ["salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
   // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
   // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
   if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
@@ -2042,6 +2042,39 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     if(minProd<=0) return 0;
     return Math.round(minProd/minLav*100);
   })();
+  // ── Fotografia della card per la consultazione dei giorni passati ──
+  // Si salvano i valori già calcolati — gli stessi che la card mostra — invece di ricalcolarli
+  // dopo: il reset notturno azzera le presenze, e rifare il conto a posteriori darebbe numeri
+  // diversi da quelli visti in reparto. La riga del giorno viene sovrascritta a ogni invio, quindi
+  // l'ultima è lo stato di fine giornata. Si invia solo se qualcosa è cambiato.
+  const _fotoJson = (()=>{
+    try{
+      const obMap = mappaObiettiviArticoli(null) || {};
+      const skus = new Set(Object.keys(obMap));
+      Object.keys(qualitaPerSku||{}).forEach(k=>{
+        const pre = lineaId+"_"; if(k.indexOf(pre)===0) skus.add(k.slice(pre.length));
+      });
+      let koT=0, miglT=0;
+      const articoli = [...skus].sort().map(sk=>{
+        const q = qualitaPerSku[lineaId+"_"+sk] || {};
+        const ko=Number(q.ko)||0, migl=Number(q.migl)||0;
+        koT+=ko; miglT+=migl;
+        const netto = (Number(q.ok)||0) + (Number(q.coffre)||0) - bncDa(sk);
+        const info = (skuList||[]).find(x=>x&&x.sku===sk) || {};
+        return { sku:sk, descrizione:info.descrizione||"", netto, obiettivo:Number(obMap[sk])||0, ko, migl };
+      }).filter(a=> a.obiettivo>0 || a.netto!==0 || a.ko>0 || a.migl>0);
+      return JSON.stringify({ operatori:nOp, efficienza:efficienzaPct, ko:koT, migl:miglT, articoli });
+    }catch(e){ return ""; }
+  })();
+  const _fotoInviata = React.useRef("");
+  React.useEffect(()=>{
+    if(!_fotoJson || _fotoJson===_fotoInviata.current) return;
+    const t = setTimeout(()=>{
+      _fotoInviata.current = _fotoJson;
+      fetch(nexusUrl("salvaFotoProduzione",{linea:lineaId, dati:_fotoJson})).catch(()=>{ _fotoInviata.current=""; });
+    }, 4000);   // attesa breve: evita invii a raffica mentre i dati si stanno caricando
+    return ()=>clearTimeout(t);
+  },[_fotoJson, lineaId]);
   const ob60Reale = tc>0&&nOpProduzione>0 ? Math.floor(nOpProduzione*(60/tc)) : null;
 
   // OBIETTIVO: somma dei minuti di permanenza di ogni operatore SU QUESTA LINEA.
@@ -3181,7 +3214,106 @@ function CardProtoQualita({ linea, qualitaPerSku, skuList, compatto=false }){
     </div>
   );
 }
+// ─── Card di un giorno passato, in sola lettura ──────────────────────────────
+// Disegna le linee dai valori fotografati a fine giornata: sono esattamente quelli che la card
+// mostrava, non un ricalcolo. Nessun comando, nessun aggiornamento in tempo reale.
+function GaugeFoto({ pct, colore, grande }){
+  const v = Math.max(0, Math.min(100, Number(pct)||0));
+  const W = grande?180:120, H = grande?100:66, R = grande?78:52, cx=W/2, cy=H-6, sw=grande?16:11;
+  const arco = (a0,a1)=>{ const p=(a)=>[cx+R*Math.cos(Math.PI*(1-a)), cy-R*Math.sin(Math.PI*(1-a))];
+    const [x0,y0]=p(a0),[x1,y1]=p(a1); return "M "+x0+" "+y0+" A "+R+" "+R+" 0 0 1 "+x1+" "+y1; };
+  return (
+    <svg width={W} height={H} viewBox={"0 0 "+W+" "+H}>
+      <path d={arco(0,1)} fill="none" stroke="#e2e8f0" strokeWidth={sw} strokeLinecap="round"/>
+      {v>0&&<path d={arco(0,v/100)} fill="none" stroke={colore} strokeWidth={sw} strokeLinecap="round"/>}
+      <text x={cx} y={cy-4} textAnchor="middle" fontSize={grande?34:24} fontWeight="900" fill="#1e293b" fontFamily="'Montserrat',sans-serif">{pct==null?"—":(Math.round(pct)+"%")}</text>
+    </svg>
+  );
+}
+function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, vistaGriglia, ordine }){
+  if(carica) return <div style={{textAlign:"center",padding:50,color:"#94a3b8",fontSize:15}}>Caricamento del {giorno}…</div>;
+  const dati = foto || {};
+  const elenco = (ordine||linee||[]).filter(l=>l && dati[l.id] && (!lineaFiltro || l.id===lineaFiltro.id));
+  if(elenco.length===0) return (
+    <div style={{textAlign:"center",padding:50,color:"#64748b",fontSize:15,background:"#fff",borderRadius:14,border:"1px solid #e2e8f0"}}>
+      Nessuna fotografia disponibile per il {giorno}.
+    </div>
+  );
+  const G = vistaGriglia;
+  return (
+    <div>
+      <div style={{background:"#ede9fe",border:"1.5px solid #c4b5fd",borderRadius:10,padding:"8px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"#5b21b6",fontFamily:"'Montserrat',sans-serif"}}>
+        Produzione del {giorno} — valori di fine giornata, in sola lettura
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:G?"repeat(auto-fill,minmax(420px,1fr))":"1fr",gap:G?10:16}}>
+        {elenco.map(l=>{
+          const d = dati[l.id] || {};
+          const col = l.colore || "#7c3aed";
+          const arts = d.articoli || [];
+          return (
+            <div key={l.id} style={{background:"#fff",border:"4px solid "+col,borderRadius:16,padding:G?"10px":"16px",boxShadow:"0 0 14px "+col+"55",fontFamily:"'Montserrat',sans-serif"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:G?8:12}}>
+                <span style={{width:G?11:14,height:G?11:14,borderRadius:"50%",background:col,flexShrink:0}}/>
+                <span style={{fontSize:G?17:24,fontWeight:900,color:"#1e293b",flex:1}}>{l.id}</span>
+                <span style={{fontSize:G?15:20,fontWeight:900,color:"#ef4444"}}>KO {d.ko||0}</span>
+                <span style={{fontSize:G?15:20,fontWeight:900,color:"#f59e0b",marginLeft:8}}>MIGL {d.migl||0}</span>
+              </div>
+              <div style={{display:"flex",gap:G?8:14,alignItems:"flex-start"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:G?6:10,flexShrink:0,width:G?150:220}}>
+                  <div style={{border:"1.5px solid #c4b5fd",borderRadius:10,padding:"6px",textAlign:"center"}}>
+                    <div style={{fontSize:G?10:13,fontWeight:800,color:"#1e293b"}}>Operatori</div>
+                    <div style={{fontSize:G?26:40,fontWeight:900,color:"#1e293b",lineHeight:1.1}}>{d.operatori||0}</div>
+                  </div>
+                  <div style={{border:"1.5px solid #c4b5fd",borderRadius:10,padding:"6px",textAlign:"center"}}>
+                    <div style={{fontSize:G?10:13,fontWeight:800,color:"#1e293b"}}>Efficienza</div>
+                    <GaugeFoto pct={d.efficienza} colore={col} grande={!G}/>
+                  </div>
+                </div>
+                <div style={{flex:1,minWidth:0,display:"grid",gridTemplateColumns:arts.length>1?"1fr 1fr":"1fr",gap:G?6:10}}>
+                  {arts.length===0 && <div style={{fontSize:13,color:"#94a3b8",padding:10}}>Nessun articolo registrato.</div>}
+                  {arts.map(a=>(
+                    <div key={a.sku} style={{border:"1.5px solid #c4b5fd",borderRadius:10,padding:G?"6px":"12px",textAlign:"center",minWidth:0}}>
+                      <div style={{fontSize:G?13:17,fontWeight:900,color:"#7c3aed",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.sku}</div>
+                      {!G && a.descrizione && <div style={{fontSize:13,color:"#64748b",fontWeight:600}}>{a.descrizione}</div>}
+                      <div style={{lineHeight:1.05,marginTop:2}}>
+                        <span style={{fontSize:G?34:56,fontWeight:900,color:a.netto<0?"#ef4444":"#1e293b"}}>{a.netto}</span>
+                        <span style={{fontSize:G?20:32,fontWeight:700,color:"#94a3b8"}}>/</span>
+                        <span style={{fontSize:G?28:44,fontWeight:900,color:"#7c3aed"}}>{a.obiettivo}</span>
+                      </div>
+                      <div style={{fontSize:G?9:12,fontWeight:800}}>
+                        <span style={{color:"#ef4444"}}>KO {a.ko||0}</span>
+                        <span style={{color:"#f59e0b",marginLeft:6}}>MGL {a.migl||0}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, bncRecupero={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
+  // Consultazione di un giorno passato: "" = oggi, in tempo reale; altrimenti gg/mm/aaaa.
+  const [giornoFoto, setGiornoFoto] = React.useState("");
+  const [dateFoto, setDateFoto] = React.useState([]);
+  const [foto, setFoto] = React.useState(null);
+  const [fotoCarica, setFotoCarica] = React.useState(false);
+  React.useEffect(()=>{
+    fetch(nexusUrl("dateFotoProduzione",{})).then(r=>r.json()).then(j=>{
+      if(j&&j.ok&&j.data&&Array.isArray(j.data.date)) setDateFoto(j.data.date);
+    }).catch(()=>{});
+  },[]);
+  React.useEffect(()=>{
+    if(!giornoFoto){ setFoto(null); return; }
+    setFotoCarica(true);
+    fetch(nexusUrl("leggiFotoProduzione",{data:giornoFoto})).then(r=>r.json()).then(j=>{
+      setFoto(j&&j.ok&&j.data ? (j.data.linee||{}) : {});
+    }).catch(()=>setFoto({})).finally(()=>setFotoCarica(false));
+  },[giornoFoto]);
   const [lineaSel, setLineaSel] = React.useState("");
   // Ordine personalizzato delle card-linea nella griglia (array di id linea), condiviso via D1.
   // Le linee non presenti in questo array vengono mostrate in coda nel loro ordine naturale.
@@ -3276,6 +3408,11 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
             </button>
           </div>
         )}
+        <select value={giornoFoto} onChange={e=>setGiornoFoto(e.target.value)}
+          style={{padding:"9px 12px",border:"2px solid #7c3aed",borderRadius:8,fontSize:14,fontWeight:800,color:giornoFoto?"#fff":"#7c3aed",background:giornoFoto?"#7c3aed":"#fff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginLeft:vistaGriglia?"auto":0}}>
+          <option value="">Oggi (in diretta)</option>
+          {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=><option key={d} value={d}>{d}</option>)}
+        </select>
         <button onClick={()=>{
           const el=document.documentElement;
           if(!document.fullscreenElement){ el.requestFullscreen&&el.requestFullscreen(); }
@@ -3286,7 +3423,10 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         </button>
       </div>
       {/* VISTA GRIGLIA: 3 colonne, ogni card rimpicciolita con zoom */}
-      {vistaGriglia ? (() => {
+      {giornoFoto ? (
+        <FotoProduzione foto={foto} carica={fotoCarica} giorno={giornoFoto} linee={linee}
+          lineaFiltro={lineaFiltro} vistaGriglia={vistaGriglia} ordine={lineeGrigliaOrdinata}/>
+      ) : vistaGriglia ? (() => {
         const nCard = lineeGriglia.filter(l=>perLinea[l.id] || repartoTipoLinea(l.id,l.nome)==="prototip").length;
         const nCol = Math.max(1, Math.min(_colDisp, nCard));
         const nRighe = Math.ceil(nCard / nCol) || 1;
