@@ -3434,7 +3434,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
           </div>
         )}
         {vistaGriglia && <select value={giornoFoto} onChange={e=>setGiornoFoto(e.target.value)}
-          style={{padding:"9px 22px",border:"2px solid #7c3aed",borderRadius:999,fontSize:14,fontWeight:800,color:"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",margin:"0 auto",textAlign:"center",textAlignLast:"center",minWidth:200}}>
+          style={{padding:"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",margin:"0 auto",textAlign:"center",textAlignLast:"center",minWidth:200}}>
           <option value="">Oggi (in diretta)</option>
           {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=><option key={d} value={d}>{d}</option>)}
         </select>}
