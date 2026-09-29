@@ -4269,9 +4269,10 @@ function TortaQ({ titolo, voci, totaleLabel, overlay, mostraTutte }){
                     <span style={{display:"block",fontSize:11,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:0.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.label}</span>
                     <span style={{display:"flex",alignItems:"baseline",gap:5}}>
                       <span style={{fontWeight:900,color:v.colore,fontSize:19,lineHeight:1.15}}>{val}</span>
-                      <span style={{fontWeight:800,color:"#1e293b",fontSize:16}}>{tot>0?Math.round(val/tot*100):0}%</span>
+
                     </span>
                   </span>
+                  <span style={{fontWeight:800,color:"#1e293b",fontSize:16,marginLeft:"auto",paddingLeft:8,flexShrink:0}}>{tot>0?Math.round(val/tot*100):0}%</span>
                 </button>
               );
             })}
