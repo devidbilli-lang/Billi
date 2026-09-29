@@ -3438,7 +3438,12 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         {vistaGriglia && <select value={giornoFoto} onChange={e=>setGiornoFoto(e.target.value)}
           style={{padding:"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",margin:"0 auto",textAlign:"center",textAlignLast:"center",minWidth:200}}>
           <option value="">Oggi (in diretta)</option>
-          {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=><option key={d} value={d}>{d}</option>)}
+          {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=>{
+            // Etichetta con il giorno della settimana: "lunedì 28/09/2026". Il valore resta la sola data.
+            const q=d.split("/"); const dt=new Date(+q[2], +q[1]-1, +q[0]);
+            const nome=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"][dt.getDay()];
+            return <option key={d} value={d}>{isNaN(dt.getTime())?d:(nome+" "+d)}</option>;
+          })}
         </select>}
         <button onClick={()=>{
           const el=document.documentElement;
