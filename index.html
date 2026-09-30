@@ -95,7 +95,7 @@ function getUrlParam(name) {
 }
 const URL_VIEW = getUrlParam("view"); // "readonly" | "admin" | null
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTOhAnThRsL537dfHbXeuseFP8aPACl_LxohK2KgJ_UPCEVKmEGR3NcpjNyA31P8GJiA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQE6N3lh1N0-CEVMSPtg_t4A1VYph_2zNnchYgYFiihDLyIRK8jZCu8cjCNKRAUGM3Dg/exec";
 const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 // Azioni veloci su D1, tutto il resto su Apps Script
 // GUARD SOLA VISUALIZZAZIONE (ruolo admin-view): quando attivo, QUALSIASI azione di scrittura verso
@@ -460,7 +460,7 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
     try {
       const r = await fetch(nexusUrl("anagraficaArticoli",{}), {mode:"cors"});
       const j = await r.json();
-      if(j && j.ok && j.data && Array.isArray(j.data.skuList) && j.data.skuList.length > 1) anag = j.data;
+      if(j && j.ok && j.data && Array.isArray(j.data.skuList) && j.data.skuList.length > 1 && j.data.tcDisponibili) anag = j.data;
     } catch(e) {}
     if(anag){ setSkuList(anag.skuList); setDifettiList(anag.difetti||[]); }
     try { const d = await api.config();
