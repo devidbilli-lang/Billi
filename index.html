@@ -3487,13 +3487,13 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
           {/* Pallino rosso "in diretta": respira come l'indicatore LIVE, solo sulla giornata di oggi */}
           {giornoFoto==="" && <span aria-hidden="true" style={{position:"absolute",left:16,top:"50%",marginTop:-5,width:10,height:10,borderRadius:"50%",background:"#ff1f3d",animation:"liveNeon 1.6s ease-in-out infinite",pointerEvents:"none",zIndex:1}}/>}
           <select value={giornoFoto} onChange={e=>setGiornoFoto(e.target.value)}
-          style={{padding:giornoFoto===""?"9px 22px 9px 36px":"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",textAlignLast:"center",minWidth:240}}>
-          <option value="">Oggi (in diretta)</option>
+          style={{padding:giornoFoto===""?"9px 22px 9px 36px":"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:giornoFoto===""?"#ff1f3d":"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",textAlignLast:"center",minWidth:240}}>
+          <option value="" style={{color:"#ff1f3d",fontWeight:800}}>Oggi (in diretta)</option>
           {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=>{
             // Etichetta con il giorno della settimana: "lunedì 28/09/2026". Il valore resta la sola data.
             const q=d.split("/"); const dt=new Date(+q[2], +q[1]-1, +q[0]);
             const nome=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"][dt.getDay()];
-            return <option key={d} value={d}>{isNaN(dt.getTime())?d:(nome+" "+d)}</option>;
+            return <option key={d} value={d} style={{color:"#1e293b"}}>{isNaN(dt.getTime())?d:(nome+" "+d)}</option>;
           })}
         </select>
         </div>}
