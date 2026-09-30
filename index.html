@@ -105,11 +105,11 @@ const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 window.__NEXUS_SOLA_VISTA__ = false;
 // Azioni di sola lettura: consentite anche in sola-vista. Tutto il resto (evento, reset, modifica*,
 // elimina*, salva*, pianifica*, depenna*, archivia*, invalida*) è scrittura → bloccato.
-const NEXUS_READ_ACTIONS = new Set(["leggiFotoProduzione","dateFotoProduzione","sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
+const NEXUS_READ_ACTIONS = new Set(["anagraficaArticoli","leggiFotoProduzione","dateFotoProduzione","sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
 function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
 
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
+  const D1_ACTIONS = ["anagraficaArticoli","salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
   // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
   // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
   if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
@@ -453,12 +453,25 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
     // Solo al primo caricamento mostro il logo. I refresh periodici sono silenziosi
     // per non far "flashare" lo splash screen ogni minuto.
     if(!silenzioso) setSync("caricamento");
+    // Articoli e difetti arrivano da D1, tramite il worker: è la fonte principale. La configurazione
+    // di Apps Script resta il ripiego, finché l'anagrafica non è stata importata o se il worker non
+    // risponde. Linee e operatori, per ora, continuano ad arrivare da Apps Script.
+    let anag = null;
+    try {
+      const r = await fetch(nexusUrl("anagraficaArticoli",{}), {mode:"cors"});
+      const j = await r.json();
+      if(j && j.ok && j.data && Array.isArray(j.data.skuList) && j.data.skuList.length > 1) anag = j.data;
+    } catch(e) {}
+    if(anag){ setSkuList(anag.skuList); setDifettiList(anag.difetti||[]); }
     try { const d = await api.config();
       if(d){ if(d.linee&&d.linee.length) setLinee(d.linee);
         if(d.operatori) setOperatori(d.operatori);
-        if(d.skuList)   setSkuList(d.skuList);
-        if(d.difetti)  setDifettiList(d.difetti||[]);
-        setSync("ok"); setTs(new Date()); } else if(!silenzioso) setSync("errore"); } catch{ if(!silenzioso) setSync("errore"); } },[]);
+        if(!anag && d.skuList)   setSkuList(d.skuList);
+        if(!anag && d.difetti)  setDifettiList(d.difetti||[]);
+        setSync("ok"); setTs(new Date()); }
+      else if(anag){ setSync("ok"); setTs(new Date()); }
+      else if(!silenzioso) setSync("errore"); }
+    catch{ if(anag){ setSync("ok"); setTs(new Date()); } else if(!silenzioso) setSync("errore"); } },[]);
   useEffect(()=>{ load(false); // primo caricamento mostra logo
     const t = setInterval(()=>load(true), 60000); // refresh silenziosi
     return ()=>clearInterval(t);
