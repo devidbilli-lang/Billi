@@ -6957,12 +6957,15 @@ function TabAttivita({ repTipo="taglio" }) {
   const fabDragRef = React.useRef(null);
 
   const BRANDS = ["Chanel","LV"];
-  // RMA: Rilavorazione + Campioni/Prototipi. Preparazione DG: solo Rilavorazione. Taglio DG: Rilavorazione+Collaudo+Cartelloni.
+  // RMA: Rilavorazione + Campioni/Prototipi + Tracolle. Preparazione DG: Rilavorazione + Campioni/Prototipi. Taglio DG: Rilavorazione+Collaudo+Cartelloni.
   // "Attività TL": attività del team leader, disponibile in tutti i reparti.
   const TIPOLOGIE = _isRMA ? ["Rilavorazione","Campioni/Prototipi","Tracolle PH Holder","Attività TL"]
-    : (_isPrep ? ["Rilavorazione","Attività TL"] : ["Rilavorazione","Collaudo","Cartelloni","Attività TL"]);
+    : (repTipo === "prep" ? ["Rilavorazione","Campioni/Prototipi","Attività TL"]   // solo Preparazione DG
+    : (_isPrep ? ["Rilavorazione","Attività TL"] : ["Rilavorazione","Collaudo","Cartelloni","Attività TL"]));
   const _isAttTL = tipologia === "Attività TL";
-  const _mostraArticolo = _isRMA && tipologia === "Campioni/Prototipi"; // campo Articolo solo RMA + Campioni/Prototipi
+  // Campo Articolo per Campioni/Prototipi, in RMA e in Preparazione DG.
+  const _conArticolo = _isRMA || repTipo === "prep";
+  const _mostraArticolo = _conArticolo && tipologia === "Campioni/Prototipi";
   const _mostraPellame = !_isPrep && tipologia !== "Cartelloni" && !_isAttTL; // pellame solo Taglio DG, non per Cartelloni né Attività TL
   const REPARTI = ["Infustiture","Pelle","Collaudo"];
   const PELLAMI = ["AGNELLO","VITELLO","PELLE STAMPATA","TESSUTO","INFUSTITURE"];
@@ -7065,7 +7068,7 @@ function TabAttivita({ repTipo="taglio" }) {
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
               <thead>
-                <tr>{(_isRMA?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta","Articolo",""]:_isPrep?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta",""]:["Data produzione","Brand","Tempo [min]","Tipologia","Reparto","Pellame",""]).map((h,i,arr)=>(
+                <tr>{(_conArticolo?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta","Articolo",""]:_isPrep?["Data produzione","Brand","Tempo [min]","Tipologia","N° Richiesta",""]:["Data produzione","Brand","Tempo [min]","Tipologia","Reparto","Pellame",""]).map((h,i,arr)=>(
                   <th key={i} style={{textAlign:"center",padding:"8px 10px",borderBottom:"2px solid #e2e8f0",color:"#475569",fontWeight:800,fontSize:12,whiteSpace:"nowrap"}}>{h}</th>
                 ))}</tr>
               </thead>
@@ -7079,7 +7082,7 @@ function TabAttivita({ repTipo="taglio" }) {
                     {_isPrep
                       ? <td style={{padding:"8px 10px",fontWeight:600,textAlign:"center"}}>{a.nRichiesta||a.reparto||""}</td>
                       : <td style={{padding:"8px 10px",textAlign:"center"}}>{a.reparto}</td>}
-                    {_isRMA&&<td style={{padding:"8px 10px",textAlign:"center"}}>{a.articolo||""}</td>}
+                    {_conArticolo&&<td style={{padding:"8px 10px",textAlign:"center"}}>{a.articolo||""}</td>}
                     {!_isPrep&&<td style={{padding:"8px 10px",textAlign:"center"}}>{a.pellame||""}</td>}
                     <td style={{padding:"8px 10px",textAlign:"center",whiteSpace:"nowrap"}}>
                       <button onClick={()=>apriModifica(a)} title="Modifica attività" style={{background:"#fff",color:"#7c3aed",border:"1.5px solid #7c3aed",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",marginRight:6,display:"inline-flex",alignItems:"center",verticalAlign:"middle"}}><IconaMatita size={13}/></button>
