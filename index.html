@@ -8806,34 +8806,67 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
         const mp = modPausa, isRip = mp.tipoEv==="RIPRESA";
         const COL = isRip ? "#22c55e" : "#f97316";
         const _hm = (ms)=>{ const d=new Date(ms); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
+        const _msOggi = (hhmm)=>{ const q=String(hhmm||"").split(":"); if(q.length!==2) return NaN; const d=new Date(); d.setHours(+q[0],+q[1],0,0); return d.getTime(); };
+        const _adesso = ()=>_hm(Date.now());
+        // Parametri di un evento per una sessione; "ora" vuota = istante preciso della registrazione.
+        const evP = (sess, tipo, ora)=>({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku,tipo, oraEvento:ora,lineaDa:sess.lineaCorrente,lineaA:sess.lineaCorrente,skuDa:sess.skuCorrente||sess.sku,skuA:sess.skuCorrente||sess.sku});
         const conferma = async ()=>{
-          const q = String(mp.ora||"").split(":");
-          if(q.length!==2){ setModPausa({...mp, err:"Indica un orario."}); return; }
-          const scelto = new Date(); scelto.setHours(+q[0], +q[1], 0, 0);
-          if(scelto.getTime() > Date.now() + 60000){ setModPausa({...mp, err:"L'orario non può essere nel futuro."}); return; }
-          if(mp.minTs && scelto.getTime() < Math.floor(mp.minTs/60000)*60000){
+          const tI = _msOggi(mp.ora);
+          if(isNaN(tI)){ setModPausa({...mp, err:"Indica un orario."}); return; }
+          if(tI > Date.now() + 60000){ setModPausa({...mp, err:"L'orario non può essere nel futuro."}); return; }
+          if(mp.minTs && tI < Math.floor(mp.minTs/60000)*60000){
             setModPausa({...mp, err:(isRip ? "La ripresa non può essere prima dell'inizio della pausa" : "La pausa non può essere prima dell'inizio del turno o dell'ultima pausa")+" ("+_hm(mp.minTs)+")."}); return; }
-          const _d = new Date(), adesso = String(_d.getHours()).padStart(2,"0")+":"+String(_d.getMinutes()).padStart(2,"0");
-          const oraEvento = mp.ora === adesso ? undefined : mp.ora;       // ora attuale: si usa l'istante preciso
-          const s = mp.s, sessioniOp = mp.sessioniOp, tipoEv = mp.tipoEv;
+          const conFine = !isRip && !!mp.oraFine;
+          if(conFine){
+            const tF = _msOggi(mp.oraFine);
+            if(isNaN(tF)){ setModPausa({...mp, err:"Orario di fine non valido."}); return; }
+            if(tF <= tI){ setModPausa({...mp, err:"La fine deve essere dopo l'inizio della pausa."}); return; }
+            if(tF > Date.now() + 60000){ setModPausa({...mp, err:"La fine non può essere nel futuro."}); return; }
+          }
+          const oraI = mp.ora === _adesso() ? "" : mp.ora;          // ora attuale: si usa l'istante preciso
+          const oraF = conFine ? (mp.oraFine === _adesso() ? "" : mp.oraFine) : "";
+          const s = mp.s, sessioniOp = mp.sessioniOp;
           setModPausa(null);
           setLoading(true); setLoadingMsg((isRip?"Ripresa turno ":"Pausa turno ")+s.nome+"...");
-          await Promise.all(sessioniOp.map(sess=>
-            api.evento({sessionId:sess.id,matricola:sess.matricola,nome:sess.nome,cognome:sess.cognome,sku:sess.skuCorrente||sess.sku,tipo:tipoEv, oraEvento,lineaDa:sess.lineaCorrente,lineaA:sess.lineaCorrente,skuDa:sess.skuCorrente||sess.sku,skuA:sess.skuCorrente||sess.sku}).catch(e=>{})
-          ));
+          if(!conFine){
+            // Pausa o ripresa singola: come prima, con la coda di sicurezza.
+            await Promise.all(sessioniOp.map(sess=> api.evento(evP(sess, mp.tipoEv, oraI))));
+          } else {
+            // Pausa già conclusa: prima la pausa, attesa la sua scrittura, poi la ripresa. Se la pausa non
+            // arriva, la ripresa non parte: una ripresa senza pausa renderebbe la sequenza incoerente.
+            let falliti = 0;
+            for(const sess of sessioniOp){
+              let ok = false;
+              try { ok = await inviaEvento(evP(sess, "PAUSA", oraI)); } catch(e) {}
+              if(ok){ try { ok = await inviaEvento(evP(sess, "RIPRESA", oraF)); } catch(e) { ok = false; } }
+              if(!ok) falliti++;
+            }
+            if(falliti) alert("Connessione assente: la pausa non è stata registrata"+(sessioniOp.length>1?" per "+falliti+" articoli":"")+". Riprova.");
+          }
           setLoading(false);
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,600);
         };
+        const _campo = {display:"block",width:"100%",boxSizing:"border-box",marginTop:6,padding:"10px 12px",fontSize:20,fontWeight:700,border:"2px solid #e2e8f0",borderRadius:8,fontFamily:"'Montserrat',sans-serif"};
         return (
           <div style={{position:"fixed",inset:0,background:"#0f172a88",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setModPausa(null)}>
-            <div onClick={e=>e.stopPropagation()} style={{background:"#ffffff",borderRadius:14,padding:"22px 24px",width:340,maxWidth:"92vw",border:"2px solid "+COL,fontFamily:"'Montserrat',sans-serif",boxShadow:"0 10px 40px #0005"}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:"#ffffff",borderRadius:14,padding:"22px 24px",width:360,maxWidth:"92vw",border:"2px solid "+COL,fontFamily:"'Montserrat',sans-serif",boxShadow:"0 10px 40px #0005"}}>
               <div style={{fontSize:17,fontWeight:800,color:COL,marginBottom:4}}>{isRip?"▶ Riprendi turno":"❚❚ Metti in pausa"}</div>
               <div style={{fontSize:14,color:"#1e293b",marginBottom:14}}>{mp.s.nome} {mp.s.cognome}{mp.sessioniOp.length>1?" ("+mp.sessioniOp.length+" articoli)":""}</div>
-              <label style={{fontSize:12,fontWeight:700,color:"#64748b"}}>{isRip?"Orario di ripresa":"Orario di inizio pausa"}</label>
+              {isRip && mp.minTs>0 && <div style={{fontSize:13,color:"#64748b",marginBottom:10}}>Pausa iniziata alle <b>{_hm(mp.minTs)}</b></div>}
+              <label style={{fontSize:12,fontWeight:700,color:"#64748b"}}>{isRip?"Orario di ripresa":"Inizio pausa"}</label>
               <input type="time" value={mp.ora} onChange={e=>setModPausa({...mp, ora:e.target.value, err:""})}
-                onKeyDown={e=>{ if(e.key==="Enter") conferma(); }}
-                style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:6,padding:"10px 12px",fontSize:20,fontWeight:700,border:"2px solid #e2e8f0",borderRadius:8,fontFamily:"'Montserrat',sans-serif"}}/>
-              <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>Precompilato con l'ora attuale: puoi indicare un orario passato di oggi.</div>
+                onKeyDown={e=>{ if(e.key==="Enter") conferma(); }} style={_campo}/>
+              {!isRip && <>
+                <label style={{display:"block",marginTop:14,fontSize:12,fontWeight:700,color:"#64748b"}}>Fine pausa <span style={{fontWeight:500}}>(facoltativa)</span></label>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <input type="time" value={mp.oraFine||""} onChange={e=>setModPausa({...mp, oraFine:e.target.value, err:""})}
+                    onKeyDown={e=>{ if(e.key==="Enter") conferma(); }} style={{..._campo,flex:1}}/>
+                  {mp.oraFine && <button onClick={()=>setModPausa({...mp, oraFine:"", err:""})} title="Togli la fine"
+                    style={{marginTop:6,padding:"10px 12px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontWeight:800}}>✕</button>}
+                </div>
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>Lasciala vuota se la pausa è ancora in corso; compilala per registrare una pausa già conclusa.</div>
+              </>}
+              {isRip && <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>Precompilato con l'ora attuale: puoi indicare un orario passato di oggi.</div>}
               {mp.err && <div style={{marginTop:10,color:"#dc2626",fontSize:13,fontWeight:700}}>{mp.err}</div>}
               <div style={{display:"flex",gap:10,marginTop:18}}>
                 <button onClick={()=>setModPausa(null)} style={{flex:1,padding:"10px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>Annulla</button>
