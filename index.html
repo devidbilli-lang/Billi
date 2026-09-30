@@ -3374,6 +3374,9 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, ordine, grid
 function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, qualitaPerSku={}, bncRecupero={}, vistaGriglia=false, setVistaGriglia=()=>{} }) {
   // Consultazione di un giorno passato: "" = oggi, in tempo reale; altrimenti gg/mm/aaaa.
   const [giornoFoto, setGiornoFoto] = React.useState("");
+  // Produzione attiva = almeno una sessione aperta (check-in fatto, uscita non ancora), anche se in
+  // pausa. Solo allora la giornata di oggi è "in diretta": scritta rossa e pallino che respira.
+  const _produzioneAttiva = (sessioni||[]).some(x=>x && !x.fine);
   const [dateFoto, setDateFoto] = React.useState([]);
   const [foto, setFoto] = React.useState(null);
   const [fotoCarica, setFotoCarica] = React.useState(false);
@@ -3484,11 +3487,11 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
           </div>
         )}
         {vistaGriglia && <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",zIndex:2,display:"inline-flex",alignItems:"center"}}>
-          {/* Pallino rosso "in diretta": respira come l'indicatore LIVE, solo sulla giornata di oggi */}
-          {giornoFoto==="" && <span aria-hidden="true" style={{position:"absolute",left:16,top:"50%",marginTop:-5,width:10,height:10,borderRadius:"50%",background:"#ff1f3d",animation:"liveNeon 1.6s ease-in-out infinite",pointerEvents:"none",zIndex:1}}/>}
+          {/* Pallino rosso "in diretta": respira come l'indicatore LIVE, solo su oggi e a produzione attiva */}
+          {giornoFoto==="" && _produzioneAttiva && <span aria-hidden="true" style={{position:"absolute",left:16,top:"50%",marginTop:-5,width:10,height:10,borderRadius:"50%",background:"#ff1f3d",animation:"liveNeon 1.6s ease-in-out infinite",pointerEvents:"none",zIndex:1}}/>}
           <select value={giornoFoto} onChange={e=>setGiornoFoto(e.target.value)}
-          style={{padding:giornoFoto===""?"9px 22px 9px 36px":"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:giornoFoto===""?"#ff1f3d":"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",textAlignLast:"center",minWidth:240}}>
-          <option value="" style={{color:"#ff1f3d",fontWeight:800}}>Oggi (in diretta)</option>
+          style={{padding:(giornoFoto==="" && _produzioneAttiva)?"9px 22px 9px 36px":"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:(giornoFoto==="" && _produzioneAttiva)?"#ff1f3d":"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",textAlignLast:"center",minWidth:240}}>
+          <option value="" style={{color:_produzioneAttiva?"#ff1f3d":"#1e293b",fontWeight:800}}>{_produzioneAttiva?"In Diretta":"Oggi"}</option>
           {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=>{
             // Etichetta con il giorno della settimana: "lunedì 28/09/2026". Il valore resta la sola data.
             const q=d.split("/"); const dt=new Date(+q[2], +q[1]-1, +q[0]);
