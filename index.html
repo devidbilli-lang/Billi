@@ -110,7 +110,7 @@ const NEXUS_READ_ACTIONS = new Set(["anagraficaOperatori","anagraficaLinee","tip
 function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
 
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["anagraficaOperatori","verificaPassword","autologinToken","anagraficaLinee","tipologieFormazione","anagraficaArticoli","salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
+  const D1_ACTIONS = ["modificaIntervallo","anagraficaOperatori","verificaPassword","autologinToken","anagraficaLinee","tipologieFormazione","anagraficaArticoli","salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
   // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
   // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
   if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
@@ -7673,6 +7673,16 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modCorso,setModCorso]       = useState(null);
   // Finestra di pausa/ripresa con orario (precompilato ad adesso, modificabile all'indietro).
   const [modPausa,setModPausa]       = useState(null);
+  // Elenco pause o corsi della giornata di un operatore, con modifica ed eliminazione (dal badge).
+  const [modIntervalli,setModIntervalli] = useState(null);
+  const apriIntervalli = (s, tipo)=>{
+    const _hm = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
+    const righe = tipo==="pausa"
+      ? (s.pause||[]).map(p=>({ ts:p.ts, inizio:_hm(p.quando), fine:p.ripresa?_hm(p.ripresa):"", aperta:!p.ripresa }))
+      : (s.corsi||[]).filter(c=>!c._pianificato && (c.nomeCorso||"").toUpperCase().split("@@")[0]!=="FORMAZIONE")
+          .map(c=>({ ts:c.ts, inizio:_hm(c.quando), fine:c.rientro?_hm(c.rientro):"", aperta:!c.rientro, nome:c.nomeCorso||"" }));
+    setModIntervalli({ s, tipo, err:"", busy:false, righe: righe.filter(r=>r.ts).map(r=>({...r, orig:{inizio:r.inizio, fine:r.fine}, conferma:false})) });
+  };
   const [modCambioSku,setModCambioSku] = useState(null);
   const [modNoteLinea,setModNoteLinea] = useState(null);
   const [popupSkuOp,setPopupSkuOp] = useState(null);
@@ -8802,6 +8812,61 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           try{ await api.evento({sessionId:sf.id,matricola:sf.matricola,nome:sf.nome,cognome:sf.cognome,sku:sn,tipo:"TRASFERIMENTO",lineaDa:sf.lineaCorrente,lineaA:sf.lineaCorrente,skuDa:sp,skuA:sn,oraEvento:oraCambio||""}); }catch(e){}
           if(onAggiornaSessioni) onAggiornaSessioni();
         }}/>}
+      {modIntervalli&&(()=>{
+        const mi = modIntervalli, isP = mi.tipo==="pausa";
+        const COL = isP ? "#ea580c" : "#0891b2";
+        const aggiorna = (i, campi)=> setModIntervalli({...mi, err:"", righe: mi.righe.map((r,k)=> k===i ? {...r, ...campi} : {...r, conferma:false})});
+        const esegui = async (r, azione)=>{
+          setModIntervalli({...mi, busy:true, err:""});
+          try {
+            const res = await fetch(nexusUrl("modificaIntervallo",{ tipo:mi.tipo, matricola:mi.s.matricola, ts:String(r.ts), azione, inizio:r.inizio||"", fine:r.fine||"" }));
+            const j = await res.json();
+            if(j && j.ok){ setModIntervalli(null); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,300); return; }
+            setModIntervalli({...mi, busy:false, err:(j && j.error) || "Operazione non riuscita."});
+          } catch(e) { setModIntervalli({...mi, busy:false, err:"Connessione assente: riprova."}); }
+        };
+        const _durata = (r)=>{ if(!r.inizio||!r.fine) return ""; const [a,b]=r.inizio.split(":").map(Number), [c,d]=r.fine.split(":").map(Number); const m=(c*60+d)-(a*60+b); return m>0 ? (m>=60 ? Math.floor(m/60)+"h "+(m%60)+"m" : m+"m") : ""; };
+        const _inp = {padding:"7px 8px",fontSize:15,fontWeight:700,border:"2px solid #e2e8f0",borderRadius:7,fontFamily:"'Montserrat',sans-serif",width:108};
+        return (
+          <div style={{position:"fixed",inset:0,background:"#0f172a88",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>!mi.busy&&setModIntervalli(null)}>
+            <div onClick={e=>e.stopPropagation()} style={{background:"#ffffff",borderRadius:14,padding:"22px 24px",width:520,maxWidth:"94vw",maxHeight:"86vh",overflowY:"auto",border:"2px solid "+COL,fontFamily:"'Montserrat',sans-serif",boxShadow:"0 10px 40px #0005"}}>
+              <div style={{fontSize:17,fontWeight:800,color:COL,marginBottom:4}}>{isP ? "❚❚ Pause di oggi" : "C Corsi di oggi"}</div>
+              <div style={{fontSize:14,color:"#1e293b",marginBottom:14}}>{mi.s.nome} {mi.s.cognome}</div>
+              {mi.righe.length===0 && <div style={{color:"#64748b",fontSize:14}}>Nessun elemento da mostrare.</div>}
+              {mi.righe.map((r,i)=>{
+                const cambiato = r.inizio!==r.orig.inizio || r.fine!==r.orig.fine;
+                return (
+                  <div key={r.ts} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 12px",marginBottom:10,background:r.conferma?"#fef2f2":"#ffffff"}}>
+                    {r.nome && <div style={{fontSize:12,fontWeight:700,color:"#64748b",marginBottom:6}}>{r.nome}</div>}
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <input type="time" value={r.inizio} disabled={mi.busy} onChange={e=>aggiorna(i,{inizio:e.target.value})} style={_inp}/>
+                      <span style={{fontWeight:800,color:"#94a3b8"}}>→</span>
+                      {r.aperta
+                        ? <span style={{fontSize:13,fontWeight:700,color:COL,width:108,textAlign:"center"}}>in corso</span>
+                        : <input type="time" value={r.fine} disabled={mi.busy} onChange={e=>aggiorna(i,{fine:e.target.value})} style={_inp}/>}
+                      <span style={{fontSize:12,color:"#64748b",minWidth:44}}>{_durata(r)}</span>
+                      <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+                        {cambiato && <button disabled={mi.busy} onClick={()=>esegui(r,"modifica")}
+                          style={{padding:"7px 12px",background:COL,color:"#ffffff",border:"none",borderRadius:7,cursor:"pointer",fontWeight:800,fontFamily:"'Montserrat',sans-serif"}}>Salva</button>}
+                        {!r.conferma
+                          ? <button disabled={mi.busy} onClick={()=>aggiorna(i,{conferma:true})} title="Elimina"
+                              style={{padding:"7px 10px",background:"#ffffff",border:"1px solid #fecaca",borderRadius:7,cursor:"pointer",color:"#dc2626",fontWeight:800}}>🗑</button>
+                          : <button disabled={mi.busy} onClick={()=>esegui(r,"elimina")}
+                              style={{padding:"7px 12px",background:"#dc2626",color:"#ffffff",border:"none",borderRadius:7,cursor:"pointer",fontWeight:800,fontFamily:"'Montserrat',sans-serif"}}>Conferma eliminazione</button>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {mi.err && <div style={{marginTop:6,color:"#dc2626",fontSize:13,fontWeight:700}}>{mi.err}</div>}
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:8}}>Se l'operatore lavora su più articoli, la modifica vale per tutti.</div>
+              <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}>
+                <button disabled={mi.busy} onClick={()=>setModIntervalli(null)} style={{padding:"9px 18px",background:"#ffffff",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontWeight:700,fontFamily:"'Montserrat',sans-serif"}}>{mi.busy?"Attendi...":"Chiudi"}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {modPausa&&(()=>{
         const mp = modPausa, isRip = mp.tipoEv==="RIPRESA";
         const COL = isRip ? "#22c55e" : "#f97316";
@@ -9330,9 +9395,10 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         // agisce sull'ultimo corso, quindi è sicuro solo quando NON si è attualmente in corso.
                         const _editabile = editOrario && !inCorso;
                         return (
-                          <span style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6}}>
+                          <span onClick={editOrario?()=>apriIntervalli(s,"corso"):undefined} title={editOrario?"Modifica o elimina i corsi":undefined}
+                            style={{background:"#06b6d422",color:"#0891b2",border:"1px solid #06b6d455",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6,cursor:editOrario?"pointer":"default"}}>
                             <span style={{fontWeight:900}}>C</span> {finiti.length===1 ? (_fmtHM(_ult.quando)+"→"+_fmtHM(_ult.rientro)) : (finiti.length+" corsi · "+_totLabel)}
-                            {_editabile&&<span onClick={()=>setModCorsoPian({sess:s, nome:(_ult.nomeCorso||"CORSO"), oraInizio:_fmtHM(_ult.quando)||"10:00", oraFine:_fmtHM(_ult.rientro)||"", inAtto:true})} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title={finiti.length>1?"Modifica l'ultimo corso (per gli altri usa il Riepilogo)":"Modifica orari corso"}><IconaMatita size={13}/></span>}
+                            {_editabile&&<span onClick={e=>{ e.stopPropagation(); setModCorsoPian({sess:s, nome:(_ult.nomeCorso||"CORSO"), oraInizio:_fmtHM(_ult.quando)||"10:00", oraFine:_fmtHM(_ult.rientro)||"", inAtto:true}); }} style={{cursor:"pointer",display:"inline-flex",alignItems:"center",marginLeft:2}} title={finiti.length>1?"Modifica l'ultimo corso (per gli altri usa il Riepilogo)":"Modifica orari corso"}><IconaMatita size={13}/></span>}
                           </span>
                         );
                       })()}
@@ -9349,7 +9415,8 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                         const ult = concluse[concluse.length-1];
                         const dettaglio = "Pause di oggi:\n" + concluse.map(p=>_fmtHM(p.quando)+"→"+_fmtHM(p.ripresa)+" ("+_lbl(_durM(p))+")").join("\n");
                         return (
-                          <span title={dettaglio} style={{background:"#f9731622",color:"#ea580c",border:"1px solid #f9731655",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6,cursor:"default"}}>
+                          <span onClick={editOrario?()=>apriIntervalli(s,"pausa"):undefined} title={dettaglio+(editOrario?"\n\nClicca per modificare o eliminare":"")}
+                            style={{background:"#f9731622",color:"#ea580c",border:"1px solid #f9731655",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6,cursor:editOrario?"pointer":"default"}}>
                             <span style={{fontWeight:900,fontSize:11,letterSpacing:-1}}>❚❚</span> {concluse.length===1 ? (_fmtHM(ult.quando)+"→"+_fmtHM(ult.ripresa)) : (concluse.length+" pause · "+_lbl(tot))}
                           </span>
                         );
