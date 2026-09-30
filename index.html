@@ -105,17 +105,35 @@ const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 window.__NEXUS_SOLA_VISTA__ = false;
 // Azioni di sola lettura: consentite anche in sola-vista. Tutto il resto (evento, reset, modifica*,
 // elimina*, salva*, pianifica*, depenna*, archivia*, invalida*) è scrittura → bloccato.
-const NEXUS_READ_ACTIONS = new Set(["tipologieFormazione","anagraficaArticoli","leggiFotoProduzione","dateFotoProduzione","sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
+const NEXUS_READ_ACTIONS = new Set(["anagraficaLinee","tipologieFormazione","anagraficaArticoli","leggiFotoProduzione","dateFotoProduzione","sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
 function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
 
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["tipologieFormazione","anagraficaArticoli","salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
+  const D1_ACTIONS = ["verificaPassword","autologinToken","anagraficaLinee","tipologieFormazione","anagraficaArticoli","salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
   // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
   // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
   if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
   const base = D1_ACTIONS.includes(action) ? D1_WORKER_URL : APPS_SCRIPT_URL;
   const q = new URLSearchParams({action, ...params});
   return base + "?" + q.toString();
+}
+// ─── VERIFICA DELLE PASSWORD LATO SERVER ────────────────────────────────────
+// Le password non arrivano più al browser: l'app invia quella digitata al worker, che risponde solo
+// se è valida (e con quale ruolo e linea). Viaggia nel corpo della richiesta, non nell'indirizzo.
+async function verificaPassword(tipo, pwd, linea){
+  try {
+    const r = await fetch(nexusUrl("verificaPassword",{}), { method:"POST", headers:{"Content-Type":"text/plain"},
+      body: JSON.stringify({ tipo, pwd: pwd||"", linea: linea||"" }) });
+    const j = await r.json();
+    return (j && j.ok && j.data) ? j.data : { ok:false };
+  } catch(e) { return { ok:false, rete:true }; }
+}
+async function verificaToken(linea, token){
+  try {
+    const r = await fetch(nexusUrl("autologinToken",{ linea: linea||"", token: token||"" }), {mode:"cors"});
+    const j = await r.json();
+    return !!(j && j.ok && j.data && j.data.ok);
+  } catch(e) { return false; }
 }
 
 // Reparti che lavorano "a minuti" (registrazione attività), senza card di produzione a borse.
@@ -138,12 +156,12 @@ function isRepartoLinea(lineaId, lineaNome){ return repartoTipoLinea(lineaId, li
 // Linee a efficienza "a tempo" come RMA (RMA + track&trace).
 function isLineaRMAlike(lineaId, lineaNome){ const r=repartoTipoLinea(lineaId, lineaNome); return r==="rma"||r==="tt"; }
 
-const ADMIN_PWD = "Nexus2026&&!";
+// ADMIN_PWD rimossa: le password admin sono in D1 (tabella anag_accessi) e si verificano sul worker.
 // Password di SOLA VISUALIZZAZIONE: dà la stessa vista completa dell'admin (tutte le linee, tutti i
 // dati) ma SENZA possibilità di modifica. Utile per chi deve consultare senza rischio di alterare
 // dati. Chi la usa entra con ruolo "admin-view": isAdmin resta true (vede tutto) ma le azioni di
 // scrittura vengono neutralizzate a monte (vedi dove si monta la Dashboard).
-const ADMIN_VIEW_PWD = "NXS2026!";
+// ADMIN_VIEW_PWD rimossa: le password admin sono in D1 (tabella anag_accessi) e si verificano sul worker.
 const LINEE_DEFAULT = [
   { id:"L1", nome:"Linea 1 - Assemblaggio", colore:"#00d4aa", icona:"" }, { id:"L2", nome:"Linea 2 - Saldatura", colore:"#ff6b35", icona:"" }, { id:"L3", nome:"Linea 3 - Verniciatura", colore:"#a855f7", icona:"" }, { id:"L4", nome:"Linea 4 - Collaudo", colore:"#3b82f6", icona:"" }, { id:"L5", nome:"Linea 5 - Imballaggio", colore:"#f59e0b", icona:"" },
 ];
@@ -463,8 +481,16 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
       if(j && j.ok && j.data && Array.isArray(j.data.skuList) && j.data.skuList.length > 1 && j.data.tcDisponibili) anag = j.data;
     } catch(e) {}
     if(anag){ setSkuList(anag.skuList); setDifettiList(anag.difetti||[]); }
+    // Linee da D1, senza credenziali: le password si verificano sul worker.
+    let lineeD1 = null;
+    try {
+      const r = await fetch(nexusUrl("anagraficaLinee",{}), {mode:"cors"});
+      const j = await r.json();
+      if(j && j.ok && j.data && Array.isArray(j.data.linee) && j.data.linee.length) lineeD1 = j.data.linee;
+    } catch(e) {}
+    if(lineeD1) setLinee(lineeD1);
     try { const d = await api.config();
-      if(d){ if(d.linee&&d.linee.length) setLinee(d.linee);
+      if(d){ if(!lineeD1 && d.linee&&d.linee.length) setLinee(d.linee);
         if(d.operatori) setOperatori(d.operatori);
         if(!anag && d.skuList)   setSkuList(d.skuList);
         if(!anag && d.difetti)  setDifettiList(d.difetti||[]);
@@ -5156,12 +5182,12 @@ function LoginQualita({ linee, sync, onLogin, onBack }) {
       <span style={{fontSize:100,fontWeight:800,color:"#7c3aed",letterSpacing:4,fontFamily:"'Montserrat',sans-serif"}}>NEXUS</span>
     </div>
   );
-  const tenta = () => {
+  const tenta = async () => {
     // Password admin -> accesso completo a tutte le linee (null = admin)
-    if(pwd.trim()===ADMIN_PWD){ onLogin(null); return; }
-    const l = linee.find(l=>l.pwdQualita&&l.pwdQualita.trim()===pwd.trim());
-    if(l){ onLogin(l); return; }
-    setErr("Password non riconosciuta."); setPwd("");
+    const v = await verificaPassword("qualita", pwd);
+    if(v.ok && v.ruolo==="admin"){ onLogin(null); return; }
+    if(v.ok && v.linea){ onLogin(linee.find(x=>x.id===v.linea.id) || v.linea); return; }
+    setErr(v.rete ? "Connessione assente: riprova." : "Password non riconosciuta."); setPwd("");
   };
   return (
     <div style={{minHeight:"calc(100vh / var(--app-zoom,1))",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f2f5"}}>
@@ -6613,9 +6639,9 @@ function CheckIn({ onSuccess, onCheckout, onTrasf, sessioni, sessSheets, coSheet
                 </div>
                 <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#3b82f6",borderWidth:2,background:"#ffffff",color:"#1e293b"}}
                   placeholder="" value={pwdQualita} onChange={e=>{setPwdQualita(e.target.value);setErrPwdQualita("");}}
-                  onKeyDown={e=>{ if(e.key==="Enter"){ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&((lObj.pwdQualita&&pwdQualita===lObj.pwdQualita)||(lObj.password&&pwdQualita===lObj.password))){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}} autoFocus/>
+                  onKeyDown={e=>{ if(e.key==="Enter"){ verificaPassword("qualita", pwdQualita, lineaFiltro?.id).then(_v=>{ if(_v.ok && _v.ruolo==="admin"){ setModPwdQualita(false); onQualita&&onQualita(null); } else if(_v.ok){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }); }}} autoFocus/>
                 {errPwdQualita&&<div style={{...S.err,marginBottom:12}}>{errPwdQualita}</div>}
-                <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",marginBottom:10}} onClick={()=>{ const lObj=linee.find(l=>l.id===lineaFiltro?.id); if(lObj&&((lObj.pwdQualita&&pwdQualita===lObj.pwdQualita)||(lObj.password&&pwdQualita===lObj.password))){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else if(pwdQualita===ADMIN_PWD){ setModPwdQualita(false); onQualita&&onQualita(null); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }}>Accedi</button>
+                <button style={{...S.bCI,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#ffffff",marginBottom:10}} onClick={()=>{ verificaPassword("qualita", pwdQualita, lineaFiltro?.id).then(_v=>{ if(_v.ok && _v.ruolo==="admin"){ setModPwdQualita(false); onQualita&&onQualita(null); } else if(_v.ok){ setModPwdQualita(false); onQualita&&onQualita(lineaFiltro); } else { setErrPwdQualita("Password non corretta."); setPwdQualita(""); } }); }}>Accedi</button>
                 <button style={{...S.bBk,width:"100%",textAlign:"center"}} onClick={()=>setModPwdQualita(false)}>← Annulla</button>
               </div>
             </div>
@@ -8642,20 +8668,20 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     placeholder="••••••••" value={modTrasf.pwd||""}
                     onChange={e=>setModTrasf({...modTrasf,pwd:e.target.value,errPwd:""})}
                     onKeyDown={e=>{if(e.key==="Enter"){
-                      if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
+                      verificaPassword("trasferimento", modTrasf.pwd, modTrasf.lineaDest && modTrasf.lineaDest.id).then(_v=>{ if(_v.ok){
                         setModTrasf(null);
                         setModalConferma({titolo:"Conferma trasferimento",messaggio:(modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · Articolo: "+modTrasf.skuNuovo:""),colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:eseguiTrasf});
-                      } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
+                      } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); } });
                     }}}/>
                   {modTrasf.errPwd&&<div style={{...S.err,marginBottom:8}}>{modTrasf.errPwd}</div>}
                   <button style={{width:"100%",padding:11,background:coloreLinea,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14,marginBottom:8}}
                     onClick={()=>{
-                      if(modTrasf.pwd===lDestObj?.password||modTrasf.pwd===ADMIN_PWD){
+                      verificaPassword("trasferimento", modTrasf.pwd, modTrasf.lineaDest && modTrasf.lineaDest.id).then(_v=>{ if(_v.ok){
                         const _eseguiTrasf = eseguiTrasf;
                         const _msg = (modTrasf.opSelezionati||[]).length+" operatori → "+modTrasf.lineaDest.id+(modTrasf.skuNuovo?" · Articolo: "+modTrasf.skuNuovo:"");
                         setModTrasf(null);
                         setModalConferma({titolo:"Conferma trasferimento",messaggio:_msg,colorBtn:"a855f7",testoBtn:"↔ Trasferisci",onOk:_eseguiTrasf});
-                      } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); }
+                      } else { setModTrasf({...modTrasf,errPwd:"Password non corretta."}); } });
                     }}>↔ Conferma Trasferimento</button>
                   <button style={{width:"100%",padding:10,background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,color:"#64748b",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontSize:14}}
                     onClick={()=>setModTrasf({...modTrasf,step:"sku",pwd:"",errPwd:""})}>← Indietro</button>
@@ -9379,16 +9405,16 @@ function LoginDashboard({ linee, sync, onLogin, onQualita, onQualitaAdmin }) {
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState("");
 
-  const tentaLinea = () => {
-    const l = linee.find(l=>l.password&&l.password===pwd);
-    if(l){ onLogin("linea",l); return; }
-    setErr("Password non riconosciuta."); setPwd("");
+  const tentaLinea = async () => {
+    const v = await verificaPassword("linea", pwd);
+    if(v.ok && v.linea){ onLogin("linea", linee.find(x=>x.id===v.linea.id) || v.linea); return; }
+    setErr(v.rete ? "Connessione assente: riprova." : "Password non riconosciuta."); setPwd("");
   };
-  const tentaAdmin = () => {
-    if(pwd===ADMIN_PWD){ onLogin("admin",null); return; }
-    // Password di sola visualizzazione: stessa vista completa, ruolo diverso (nessuna modifica).
-    if(pwd===ADMIN_VIEW_PWD){ onLogin("admin-view",null); return; }
-    setErr("Password admin errata."); setPwd("");
+  const tentaAdmin = async () => {
+    // "admin" = accesso completo; "admin-view" = sola visualizzazione (nessuna modifica).
+    const v = await verificaPassword("admin", pwd);
+    if(v.ok && (v.ruolo==="admin" || v.ruolo==="admin-view")){ onLogin(v.ruolo,null); return; }
+    setErr(v.rete ? "Connessione assente: riprova." : "Password admin errata."); setPwd("");
   };
 
   const Logo = () => (
@@ -9506,8 +9532,7 @@ function App() { const [view,setView]             = useState("login");
           // Se c'è un token nell'URL, verifica e logga direttamente
           const autoToken = getUrlParam("token");
           if(autoToken) {
-            const tokenOk = lineaDiretta.tokenLinea && 
-                            autoToken.toUpperCase() === lineaDiretta.tokenLinea.toUpperCase();
+            const tokenOk = await verificaToken(lineaDiretta.id, autoToken);
             if(tokenOk) {
               setAccesso({ruolo:"linea", linea:lineaDiretta});
               setView("checkin");
@@ -9628,9 +9653,9 @@ function App() { const [view,setView]             = useState("login");
           <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Inserisci la password amministratore</div>
           <input type="password" style={{...S.inp,textAlign:"center",fontSize:18,letterSpacing:4,marginBottom:12,borderColor:"#7c3aed",borderWidth:2,background:"#f1f5f9",color:"#1e293b"}}
             placeholder="••••••••" value={adminPwd} onChange={e=>{setAdminPwd(e.target.value);setAdminPwdErr("");}}
-            onKeyDown={e=>{ if(e.key==="Enter"){ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}} autoFocus/>
+            onKeyDown={e=>{ if(e.key==="Enter"){ verificaPassword("admin", adminPwd).then(_v=>{ if(_v.ok && _v.ruolo==="admin"){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }); }}} autoFocus/>
           {adminPwdErr&&<div style={{...S.err,marginBottom:12}}>{adminPwdErr}</div>}
-          <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={()=>{ if(adminPwd===ADMIN_PWD){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }}>Accedi</button>
+          <button style={{...S.bCI,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",color:"#ffffff"}} onClick={()=>{ verificaPassword("admin", adminPwd).then(_v=>{ if(_v.ok && _v.ruolo==="admin"){setAdminUnlocked(true);setAccesso({ruolo:"admin",linea:null});} else {setAdminPwdErr("Password errata.");setAdminPwd("");} }); }}>Accedi</button>
         </div>
       </div>
     );
@@ -9651,17 +9676,17 @@ function App() { const [view,setView]             = useState("login");
           placeholder="••••••••" value={autologinPwd}
           onChange={e=>{setAutologinPwd(e.target.value);setAutologinErr("");}}
           onKeyDown={e=>{ if(e.key==="Enter"){
-            if(autologinPwd===autologinLinea.password||autologinPwd===ADMIN_PWD){
+            verificaPassword("autologin", autologinPwd, autologinLinea.id).then(_v=>{ if(_v.ok){
               setAutologinLoading(true);
               setTimeout(()=>{ setAccesso({ruolo:"linea",linea:autologinLinea}); setView("checkin"); setAutologinLinea(null); setAutologinPwd(""); setAutologinLoading(false); }, 800);
-            } else { setAutologinErr("Password non corretta."); setAutologinPwd(""); }
+            } else { setAutologinErr("Password non corretta."); setAutologinPwd(""); } });
           }}} autoFocus/>
         {autologinErr&&<div style={{...S.err,marginBottom:12}}>{autologinErr}</div>}
         <button style={{...S.bCI,background:"linear-gradient(135deg,"+(autologinLinea.colore||"#7c3aed")+","+(autologinLinea.colore||"#7c3aed")+"cc)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={()=>{
-          if(autologinPwd===autologinLinea.password||autologinPwd===ADMIN_PWD){
+          verificaPassword("autologin", autologinPwd, autologinLinea.id).then(_v=>{ if(_v.ok){
             setAutologinLoading(true);
             setTimeout(()=>{ setAccesso({ruolo:"linea",linea:autologinLinea}); setView("checkin"); setAutologinLinea(null); setAutologinPwd(""); setAutologinLoading(false); }, 800);
-          } else { setAutologinErr("Password non corretta."); setAutologinPwd(""); }
+          } else { setAutologinErr("Password non corretta."); setAutologinPwd(""); } });
         }}>
           {autologinLoading
             ? <><div style={{width:20,height:20,border:"3px solid rgba(255,255,255,0.4)",borderTop:"3px solid #fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Accesso...</>
