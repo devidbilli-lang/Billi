@@ -9336,6 +9336,24 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                           </span>
                         );
                       })()}
+                      {(()=>{
+                        // Pause CONCLUSE della giornata (ripresa registrata): badge arancione accanto al nome, come
+                        // quello dei corsi. Una pausa: intervallo. Più pause: numero e tempo totale. Il dettaglio di
+                        // tutte le pause compare passando il mouse sopra. La pausa in corso ha già il pallino rosso.
+                        const _fmtHM = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
+                        const _durM = (p)=>{ const a=parseData(p.quando), b=parseData(p.ripresa); return (a&&b) ? Math.max(0,(b.getTime()-a.getTime())/60000) : 0; };
+                        const _lbl = (m)=>{ const h=Math.floor(m/60), mm=Math.round(m%60); return h>0 ? (h+"h"+(mm>0?(" "+mm+"m"):"")) : (Math.round(m)+"m"); };
+                        const concluse = (s.pause||[]).filter(p=>p.ripresa);
+                        if(concluse.length===0) return null;
+                        const tot = concluse.reduce((a,p)=>a+_durM(p),0);
+                        const ult = concluse[concluse.length-1];
+                        const dettaglio = "Pause di oggi:\n" + concluse.map(p=>_fmtHM(p.quando)+"→"+_fmtHM(p.ripresa)+" ("+_lbl(_durM(p))+")").join("\n");
+                        return (
+                          <span title={dettaglio} style={{background:"#f9731622",color:"#ea580c",border:"1px solid #f9731655",borderRadius:6,padding:"3px 10px",fontSize:13,fontWeight:800,marginLeft:8,display:"inline-flex",alignItems:"center",gap:6,cursor:"default"}}>
+                            <span style={{fontWeight:900,fontSize:11,letterSpacing:-1}}>❚❚</span> {concluse.length===1 ? (_fmtHM(ult.quando)+"→"+_fmtHM(ult.ripresa)) : (concluse.length+" pause · "+_lbl(tot))}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td style={{...S.td,textAlign:"center"}}>
                       <div style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
