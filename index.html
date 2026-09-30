@@ -105,11 +105,11 @@ const D1_WORKER_URL = "https://nexus-productiontrack.devid-billi.workers.dev";
 window.__NEXUS_SOLA_VISTA__ = false;
 // Azioni di sola lettura: consentite anche in sola-vista. Tutto il resto (evento, reset, modifica*,
 // elimina*, salva*, pianifica*, depenna*, archivia*, invalida*) è scrittura → bloccato.
-const NEXUS_READ_ACTIONS = new Set(["anagraficaLinee","tipologieFormazione","anagraficaArticoli","leggiFotoProduzione","dateFotoProduzione","sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
+const NEXUS_READ_ACTIONS = new Set(["anagraficaOperatori","anagraficaLinee","tipologieFormazione","anagraficaArticoli","leggiFotoProduzione","dateFotoProduzione","sessioni","leggiqualita","leggiStoricoQualita","leggistraordinario","leggiSecondoTurno","presenze_oggi","leggiOrariOperatori","produzione","leggiRiepilogo","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","leggiObiettiviCongelati","leggiOperatoriPerSku","leggiAttivita","leggiTTBlocchi","leggiOperatoriPerLinea","leggiTrasferimenti","riepilogoStorico","bncDaRecuperare","config","leggiObiettivi","leggiOrdineLinee"]);
 function nexusAzioneScrittura(action){ return !NEXUS_READ_ACTIONS.has(action) && action!=="syncSheets"; }
 
 function nexusUrl(action, params) {
-  const D1_ACTIONS = ["verificaPassword","autologinToken","anagraficaLinee","tipologieFormazione","anagraficaArticoli","salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
+  const D1_ACTIONS = ["anagraficaOperatori","verificaPassword","autologinToken","anagraficaLinee","tipologieFormazione","anagraficaArticoli","salvaFotoProduzione","leggiFotoProduzione","dateFotoProduzione","sessioni","evento","qualita","leggiqualita","leggiStoricoQualita","checkoutAutomatico","reset","leggistraordinario","salvastraordinario","modificaorario","eliminasessione","notariepilogo","eliminaNotaRiepilogo","salvaOrariFineTurno","salvaSecondoTurno","leggiSecondoTurno","pianificaCheckin","eseguiPianificati","presenze_oggi","syncSheets","salvaOrarioOperatore","leggiOrariOperatori","eliminaPianificati","produzione","leggiRiepilogo","modificaRampa","eliminaRampa","salvaDurataRampa","leggiOperatoriPerGiorno","leggiNoteLinee","leggiRampeStorico","archiviaRampeManuale","salvaOrarioOggi","rimuoviOrarioOggi","modificaQualita","modificaOrarioSegmento","modificaOrarioCorso","eliminaSegmento","salvaObiettivoCongelato","leggiObiettiviCongelati","invalidaObiettivoCongelato","leggiOperatoriPerSku","pianificaCorso","eliminaCorsoPianificato","eliminaCorsoReale","salvaAttivita","leggiAttivita","eliminaAttivita","modificaAttivita","salvaTTBlocco","salvaTTBlocchiBatch","leggiTTBlocchi","modificaTTBlocco","eliminaTTBlocco","depennaTTBlocco","archiviaVecchie","leggiOperatoriPerLinea","salvaTrasferimento","leggiTrasferimenti","eliminaTrasferimento","riepilogoStorico","bncDaRecuperare","salvaOrdineLinee","leggiOrdineLinee","eliminaQualita"];
   // In sola visualizzazione, blocca ogni scrittura restituendo un URL inerte (about:blank): il fetch
   // fallisce silenziosamente e nessun dato viene alterato. Le letture proseguono normalmente.
   if(window.__NEXUS_SOLA_VISTA__ && nexusAzioneScrittura(action)){ return "about:blank#blocked-"+action; }
@@ -489,9 +489,17 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
       if(j && j.ok && j.data && Array.isArray(j.data.linee) && j.data.linee.length) lineeD1 = j.data.linee;
     } catch(e) {}
     if(lineeD1) setLinee(lineeD1);
+    // Operatori da D1; la configurazione resta il ripiego finché non viene svuotata.
+    let operatoriD1 = null;
+    try {
+      const r = await fetch(nexusUrl("anagraficaOperatori",{}), {mode:"cors"});
+      const j = await r.json();
+      if(j && j.ok && j.data && Array.isArray(j.data.operatori) && j.data.operatori.length) operatoriD1 = j.data.operatori;
+    } catch(e) {}
+    if(operatoriD1) setOperatori(operatoriD1);
     try { const d = await api.config();
       if(d){ if(!lineeD1 && d.linee&&d.linee.length) setLinee(d.linee);
-        if(d.operatori) setOperatori(d.operatori);
+        if(!operatoriD1 && d.operatori && d.operatori.length) setOperatori(d.operatori);
         if(!anag && d.skuList)   setSkuList(d.skuList);
         if(!anag && d.difetti)  setDifettiList(d.difetti||[]);
         setSync("ok"); setTs(new Date()); }
