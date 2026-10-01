@@ -2121,6 +2121,23 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const rampeMap = {};
       const obMap = mappaObiettiviArticoli(null, rampeMap) || {};
       const skus = new Set(Object.keys(obMap));
+      // Anche gli articoli lavorati prima nella giornata e poi lasciati con un cambio articolo: per
+      // ciascuno obiettivo, rampa e minuti si calcolano sui soli tratti lavorati su questa linea.
+      const minMap = {};
+      for(const s of sessioni){
+        if(!s || s._pianificato) continue;
+        const _tr = s.trasferimenti||[];
+        const _qui = s.lineaInizio===lineaId || s.lineaCorrente===lineaId || _tr.some(t=>t.a===lineaId || t.da===lineaId);
+        if(!_qui) continue;                                    // solo sessioni passate da questa linea
+        [s.sku, s.skuCorrente, ..._tr.flatMap(t=>[t.skuA, t.skuDa])]
+          .forEach(x=>{ if(x && !isSkuSpeciale(x)) skus.add(x); });
+      }
+      for(const sk of skus){
+        const _sk = {}; const _o = calcObItemConRampa(sk, null, _sk);
+        minMap[sk] = Math.round(_sk.v||0);
+        if(obMap[sk]==null && _o!=null) obMap[sk] = _o;
+        if(!rampeMap[sk] && _sk.rampa) rampeMap[sk] = _sk.rampa;
+      }
       Object.keys(qualitaPerSku||{}).forEach(k=>{
         const pre = lineaId+"_"; if(k.indexOf(pre)===0) skus.add(k.slice(pre.length));
       });
@@ -2132,7 +2149,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const netto = (Number(q.ok)||0) + (Number(q.coffre)||0) - bncDa(sk);
         const info = (skuList||[]).find(x=>x&&x.sku===sk) || {};
         return { sku:sk, descrizione:info.descrizione||"", netto, obiettivo:Number(obMap[sk])||0, ko, migl, bnc:Number(q.coffre)||0, rampa:rampeMap[sk]||null };
-      }).filter(a=> a.obiettivo>0 || a.netto!==0 || a.ko>0 || a.migl>0 || (a.rampa && (a.rampa.minuti||0) >= 15));
+      }).filter(a=> a.obiettivo>0 || a.netto!==0 || a.ko>0 || a.migl>0 || (minMap[a.sku]||0) >= 15);
       return JSON.stringify({ operatori:nOp, efficienza:efficienzaPct, ko:koT, migl:miglT, articoli });
     }catch(e){ return ""; }
   })();
@@ -2422,8 +2439,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             sessGiornata.forEach(s=>{ skusSuLinea(s, lineaId).forEach(sk=>skuLavorati.add(sk)); });
             // Candidati = articoli correnti/qualità (grezzi) ∪ tutti gli articoli lavorati oggi
             // Obiettivi per articolo: servono a scartare i tasselli che non hanno nulla da mostrare.
-            const _rampeCard = {};
-            const _obCard = mappaObiettiviArticoli(null, _rampeCard) || {};
+            const _obCard = mappaObiettiviArticoli(null) || {};
             const skuAttiviLinea = [...new Set([...skuAttiviLineaRaw, ...skuLavorati])].filter(sk=>{
               // Qualità: se ci sono borse/KO/MIGL registrati, la card va sempre mostrata
               const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
@@ -2433,10 +2449,11 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // minuti utili: il tassello restava con tutto a zero e nessuno al lavoro.
               // Se una sessione è ancora aperta qui, il controllo sotto lo mostra comunque.
               if(skuLavorati.has(sk) && (Number(_obCard[sk])||0) > 0) return true;
-              // In rampa l'obiettivo può valere zero per costruzione (al primo giorno la curva parte da 0%):
-              // l'articolo resta visibile se ci si è lavorato davvero, almeno 15 minuti, anche a sessioni
-              // chiuse. Senza questa regola spariva a fine turno pur avendoci lavorato per ore.
-              if(skuLavorati.has(sk) && _rampeCard[sk] && (_rampeCard[sk].minuti||0) >= 15) return true;
+              // Se ci sono state persone dedicate all'articolo, il tassello si vede sempre, anche con zero
+              // prodotto e zero obiettivo (per esempio una rampa al primo giorno, o un articolo lasciato con
+              // un cambio articolo). Soglia: 15 minuti di lavoro effettivo su questa linea; sotto, è
+              // un'assegnazione sbagliata corretta subito, e il tassello resta nascosto.
+              if(skuLavorati.has(sk)){ const _sk = {}; calcObItemConRampa(sk, null, _sk); if((_sk.v||0) >= 15) return true; }
               // Sessione APERTA ora su questo (linea, articolo) → mostra (copre check-in appena fatto, ~0 min)
               for(const s of sessioni){
                 const _ap = !s.fine||s.fine===""||s.fine===null||s.fine==="null";
