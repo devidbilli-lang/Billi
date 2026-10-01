@@ -660,6 +660,16 @@ function DatePicker({ value, onChange, size }) {
 // Icona matita SVG stile "edit" moderno (lucide square-pen):
 // squadra/foglio in basso a sinistra + matita sovrapposta in alto a destra.
 // size: dimensione in pixel (default 14)
+// Pillola magenta delle BNC registrate nella giornata per un articolo (vista griglia).
+function PillolaBNC({ n }) {
+  return (
+    <span title="BNC registrate oggi" style={{display:"inline-flex",alignItems:"baseline",gap:6,flexShrink:0,background:"#fdf4ff",
+      border:"2px solid #ff37ff",boxShadow:"0 0 8px 1px #ff37ff55",borderRadius:8,padding:"3px 10px",lineHeight:1}}>
+      <span style={{fontSize:"clamp(11px,1.3vw,14px)",fontWeight:800,color:"#c026d3",letterSpacing:0.5}}>BNC</span>
+      <span style={{fontSize:"clamp(16px,2.1vw,24px)",fontWeight:900,color:"#c026d3"}}>{Number(n)||0}</span>
+    </span>
+  );
+}
 function IconaMatita({ size }) {
   const s = size || 14;
   return (
@@ -2117,7 +2127,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         koT+=ko; miglT+=migl;
         const netto = (Number(q.ok)||0) + (Number(q.coffre)||0) - bncDa(sk);
         const info = (skuList||[]).find(x=>x&&x.sku===sk) || {};
-        return { sku:sk, descrizione:info.descrizione||"", netto, obiettivo:Number(obMap[sk])||0, ko, migl, rampa:rampeMap[sk]||null };
+        return { sku:sk, descrizione:info.descrizione||"", netto, obiettivo:Number(obMap[sk])||0, ko, migl, bnc:Number(q.coffre)||0, rampa:rampeMap[sk]||null };
       }).filter(a=> a.obiettivo>0 || a.netto!==0 || a.ko>0 || a.migl>0);
       return JSON.stringify({ operatori:nOp, efficienza:efficienzaPct, ko:koT, migl:miglT, articoli });
     }catch(e){ return ""; }
@@ -2671,10 +2681,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     {/* Titolo SKU + numero operatori sulla stessa riga */}
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,width:"100%"}}>
                       <CodiceFit text={skuItem} max={22} min={9}/>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:5,flexShrink:0,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:8,padding:"2px 9px"}}>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5,flexShrink:0}}>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:5,flexShrink:0,background:"#ffffff",border:"2px solid #7c3aed",borderRadius:8,padding:"2px 9px"}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="#7c3aed" style={{flexShrink:0}}><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5.33 0-8 2.67-8 6v1h16v-1c0-3.33-2.67-6-8-6Z"/></svg>
                         <span style={{fontSize:"clamp(12px,1.5vw,16px)",fontWeight:800,color:"#7c3aed",lineHeight:1}}>{nOpSkuItem}</span>
                       </span>
+                        {/* BNC registrate oggi per questo articolo */}
+                        <PillolaBNC n={qData.coffre}/>
+                      </div>
                     </div>
                     {/* Giorni di rampa (solo se presente) */}
                     {inRampaItem && (
@@ -3336,8 +3350,9 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, ordine, grid
                             const inR = !!(a.rampa && a.rampa.giorno);
                             return (
                             <div key={a.sku} style={{flex:"1 1 45%",minWidth:0,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:3,textAlign:"center"}}>
-                              <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minWidth:0}}>
+                              <div style={{display:"flex",alignItems:"center",justifyContent:a.bnc!==undefined?"space-between":"center",gap:6,width:"100%",minWidth:0}}>
                                 <CodiceFit text={a.sku} max={22} min={9}/>
+                                {a.bnc!==undefined && <PillolaBNC n={a.bnc}/>}
                               </div>
                               {inR && (
                                 <div title="Giorno di rampa" style={{display:"inline-flex",alignItems:"center",gap:5,background:"#fff7ed",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}>
