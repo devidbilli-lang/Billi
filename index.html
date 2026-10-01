@@ -58,7 +58,7 @@
 })();
 </script>
 <link rel="icon" type="image/png" href="logo_Nexus.png"/>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -2192,7 +2192,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     <div style={{padding:"16px 12px",display:"flex",flexDirection:"column",flex:1}}>
       {/* Campo straordinario - nascosto in vista griglia (compatto) */}
       {!compatto && (
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:"rgba(255,255,255,0.08)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(167,139,250,0.8)",borderRadius:10,padding:"10px 14px",boxShadow:"0 8px 32px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(124,58,237,0.2)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(167,139,250,0.8)",borderRadius:10,padding:"10px 14px",boxShadow:"0 8px 32px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(124,58,237,0.2)"}}>
         <span style={{fontSize:13,fontWeight:700,color:"#a78bfa"}}>⏱ Straordinario</span>
         <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
           <button onClick={()=>setOreExtra(Math.max(0,oreExtra-1))} style={{width:28,height:28,borderRadius:6,border:"1px solid rgba(167,139,250,0.8)",background:"rgba(124,58,237,0.3)",cursor:"pointer",fontWeight:900,fontSize:16,color:"#a78bfa"}}>−</button>
@@ -2313,7 +2313,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 onClick={()=>{ if(!noteDragRef.current||!noteDragRef.current.moved) setShowNoteRiepilogo(true); noteDragRef.current=null; }}
                 title="Riepilogo note KO e MIGL — trascinabile"
                 style={{position:"absolute",left:"50%",top:"50%",transform:`translate(calc(-50% + ${(noteDrag?noteDrag.x:0)}px), calc(-50% + ${(noteDrag?noteDrag.y:0)}px))`,
-                  background:"rgba(124,58,237,0.18)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",
+                  background:"rgba(231,220,252,0.97)",   /* stesso lilla del vetro, senza sfocatura: testo nitido */
                   color:"#5b21b6",border:"1.5px solid rgba(124,58,237,0.45)",borderRadius:12,padding:"8px 16px",
                   fontSize:13,fontWeight:800,cursor:"grab",fontFamily:"'Montserrat',sans-serif",
                   display:"inline-flex",alignItems:"center",gap:7,boxShadow:"0 4px 16px rgba(124,58,237,0.25)",
@@ -2921,7 +2921,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       onClick={()=>{ if(!koDragRef.current||!koDragRef.current.moved) setModalKoSku({sku:skuItem,ok:qData.ok||0,ko:qData.ko||0,migl:qData.migl||0,desc:skuObjItem?.descrizione||"",tc:tcItem}); koDragRef.current=null; }}
                       title="KO e Migliorabili - trascinami, tocca per il dettaglio"
                       style={{position:"absolute",left:"50%",top:"30%",transform:`translate(calc(-50% + ${_kd.x}px), calc(-50% + ${_kd.y}px))`,
-                        background:"rgba(255,255,255,0.94)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",
+                        background:"rgba(255,255,255,0.97)",   /* niente effetto vetro: testo nitido */
                         border:"2px solid #e2e8f0",borderRadius:18,padding:"11px 20px",cursor:"grab",
                         fontFamily:"'Montserrat',sans-serif",display:"inline-flex",alignItems:"center",gap:16,
                         boxShadow:"0 6px 20px rgba(0,0,0,0.22)",userSelect:"none",touchAction:"none",zIndex:6,whiteSpace:"nowrap"}}>
