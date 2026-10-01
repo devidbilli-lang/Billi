@@ -3503,9 +3503,9 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
         )}
         {vistaGriglia && <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",zIndex:2,display:"inline-flex",alignItems:"center"}}>
           {/* Pallino rosso "in diretta": respira come l'indicatore LIVE, solo su oggi e a produzione attiva */}
-          {giornoFoto==="" && _produzioneAttiva && <span aria-hidden="true" style={{position:"absolute",left:16,top:"50%",marginTop:-5,width:10,height:10,borderRadius:"50%",background:"#ff1f3d",animation:"liveNeon 1.6s ease-in-out infinite",pointerEvents:"none",zIndex:1}}/>}
+          {giornoFoto==="" && _produzioneAttiva && <span aria-hidden="true" style={{position:"absolute",left:16,top:"50%",marginTop:-6,width:12,height:12,borderRadius:"50%",background:"#ff1f3d",animation:"liveNeon 1.6s ease-in-out infinite",pointerEvents:"none",zIndex:1}}/>}
           <select value={giornoFoto} onChange={e=>setGiornoFoto(e.target.value)}
-          style={{padding:(giornoFoto==="" && _produzioneAttiva)?"9px 22px 9px 36px":"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:14,fontWeight:800,color:(giornoFoto==="" && _produzioneAttiva)?"#ff1f3d":"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",textAlignLast:"center",minWidth:240}}>
+          style={{padding:(giornoFoto==="" && _produzioneAttiva)?"6px 22px 6px 38px":"9px 22px",border:"2px solid #a855f7",boxShadow:"0 0 10px 2px #a855f799, 0 0 4px #a855f7",outline:"none",borderRadius:999,fontSize:(giornoFoto==="" && _produzioneAttiva)?20:14,fontWeight:800,color:(giornoFoto==="" && _produzioneAttiva)?"#ff1f3d":"#1e293b",background:"#ffffff",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",textAlign:"center",textAlignLast:"center",minWidth:240}}>
           <option value="" style={{color:_produzioneAttiva?"#ff1f3d":"#1e293b",fontWeight:800}}>{_produzioneAttiva?"Live":"Oggi"}</option>
           {dateFoto.filter(d=>d!==(()=>{const x=new Date();return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();})()).map(d=>{
             // Etichetta con il giorno della settimana: "lunedì 28/09/2026". Il valore resta la sola data.
