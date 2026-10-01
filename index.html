@@ -1696,6 +1696,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       if(segs.length===0) return;
       if(!minPerMat[mat]) minPerMat[mat]={base:0,sottrai:0};
       const fin = _fineEffMs(s);
+      // Pause e corsi si sottraggono solo per la parte che cade nei tratti in cui l'operatore lavorava
+      // questo articolo su questa linea: non prima che l'articolo iniziasse, né mentre era trasferito
+      // altrove. Il calcolo segue gli orari reali, quindi vale anche per pause e corsi inseriti dopo.
+      const _sovr = (a,b)=>{ let ms=0, primo=null; for(const sg of segs){ const lo=Math.max(a,sg.dal), hi=Math.min(b,sg.al); if(hi>lo){ ms+=hi-lo; if(primo==null||lo<primo) primo=lo; } } return {ms, primo}; };
       // Minuti ripartiti per periodo: articoli simultanei divisi, sequenziali interi.
       for(const seg of segs){ minPerMat[mat].base += ripartisciMsPerPeriodo(seg.dal, seg.al, intervalliPerMat[mat])/60000; }
       // Corsi/pause: sottratti, ripartiti per il n° di articoli attivi al loro orario.
@@ -1710,7 +1714,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         // giornaliero (fin = fine turno) resta invariato. Evita che un corso pianificato azzeri l'atteso.
         const cIn=dC.getTime(); let cOut=dCe?dCe.getTime():(fin||cIn);
         if(fin!=null) cOut=Math.min(cOut,fin);
-        if(cOut>cIn) minPerMat[mat].sottrai += ((cOut-cIn)/60000)/_attiviA(cIn);
+        if(cOut>cIn){ const _o=_sovr(cIn,cOut); if(_o.ms>0) minPerMat[mat].sottrai += (_o.ms/60000)/_attiviA(_o.primo); }
       });
       if(s.pause) s.pause.forEach(pz=>{
         const dP=parseData(pz.quando); if(!dP) return;
@@ -1718,7 +1722,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         if(pz.ripresa){ const dR=parseData(pz.ripresa); pOut=dR?dR.getTime():dP.getTime(); }
         else { pOut=Math.min(fin!=null?fin:Date.now(), Date.now()); }
         const pIn=dP.getTime();
-        if(pOut>pIn) minPerMat[mat].sottrai += ((pOut-pIn)/60000)/_attiviA(pIn);
+        if(pOut>pIn){ const _o=_sovr(pIn,pOut); if(_o.ms>0) minPerMat[mat].sottrai += (_o.ms/60000)/_attiviA(_o.primo); }
       });
     });
     let minTot=0;
@@ -2567,6 +2571,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   if(segs.length===0) return;
                   if(!minPerMat[mat]) minPerMat[mat]={base:0,sottrai:0};
                   const fin = _fineEffMs(s);
+                  // Pause e corsi si sottraggono solo per la parte che cade nei tratti in cui l'operatore lavorava
+                  // questo articolo su questa linea: non prima che l'articolo iniziasse, né mentre era trasferito
+                  // altrove. Il calcolo segue gli orari reali, quindi vale anche per pause e corsi inseriti dopo.
+                  const _sovr = (a,b)=>{ let ms=0, primo=null; for(const sg of segs){ const lo=Math.max(a,sg.dal), hi=Math.min(b,sg.al); if(hi>lo){ ms+=hi-lo; if(primo==null||lo<primo) primo=lo; } } return {ms, primo}; };
                   // Minuti ripartiti per periodo: articoli simultanei divisi, sequenziali interi.
                   for(const seg of segs){ minPerMat[mat].base += ripartisciMsPerPeriodo(seg.dal, seg.al, intervalliPerMat[mat])/60000; }
                   const _attiviA = (ms)=>{ let k=0; for(const iv of (intervalliPerMat[mat]||[])){ if(iv.al>iv.dal&&iv.dal<=ms&&ms<iv.al) k++; } return k<1?1:k; };
@@ -2576,7 +2584,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     const fineCorsoStr = c.rientro || c.fineCorsoPrevista;
                     const dCe = fineCorsoStr?parseData(fineCorsoStr):(fin!=null?new Date(fin):null);
                     const cIn=dC.getTime(), cOut=dCe?dCe.getTime():(fin||cIn);
-                    if(cOut>cIn) minPerMat[mat].sottrai += ((cOut-cIn)/60000)/_attiviA(cIn);
+                    if(cOut>cIn){ const _o=_sovr(cIn,cOut); if(_o.ms>0) minPerMat[mat].sottrai += (_o.ms/60000)/_attiviA(_o.primo); }
                   });
                   if(s.pause) s.pause.forEach(pz=>{
                     const dP=parseData(pz.quando); if(!dP) return;
@@ -2584,7 +2592,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                     if(pz.ripresa){ const dR=parseData(pz.ripresa); pOut=dR?dR.getTime():dP.getTime(); }
                     else { pOut=Math.min(fin!=null?fin:Date.now(), Date.now()); }
                     const pIn=dP.getTime();
-                    if(pOut>pIn) minPerMat[mat].sottrai += ((pOut-pIn)/60000)/_attiviA(pIn);
+                    if(pOut>pIn){ const _o=_sovr(pIn,pOut); if(_o.ms>0) minPerMat[mat].sottrai += (_o.ms/60000)/_attiviA(_o.primo); }
                   });
                 });
                 let minTot=0;
@@ -7702,6 +7710,12 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
   const [modPausa,setModPausa]       = useState(null);
   // Elenco pause o corsi della giornata di un operatore, con modifica ed eliminazione (dal badge).
   const [modIntervalli,setModIntervalli] = useState(null);
+  // Dopo una correzione di pause o corsi l'obiettivo congelato (a turno chiuso) va ricalcolato: si
+  // annulla il congelamento in D1, la card lo ricarica entro 15 secondi e lo ricongela sui dati nuovi.
+  const _invalidaOb = (linea)=>{
+    try{ localStorage.setItem("nexus_ult_modifica_orario", String(Date.now())); }catch(e){}
+    fetch(nexusUrl("invalidaObiettivoCongelato", linea ? {linea} : {}),{mode:"cors"}).catch(()=>{});
+  };
   const apriIntervalli = (s, tipo)=>{
     const _hm = (str)=>{ const d=parseData(str); return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; };
     const righe = tipo==="pausa"
@@ -8325,7 +8339,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                   const idsInCorso = new Set(sessInCorso.map(s=>s.id));
                   await Promise.all(sessInCorso.map(s=>
                     fetch(nexusUrl("modificaOrarioCorso",{sessionId:s.id,oraEntrata:isoIn,oraUscita:isoOut,nomeCorso:(modCorsoMulti.nome||"")}),{mode:"cors"}).catch(e=>{})
-                  ));
+                  )); _invalidaOb();
                   // Aggiornamento OTTIMISTICO su tutte le sessioni modificate (niente refresh manuale).
                   if(setSessioni) setSessioni(prev=>(prev||[]).map(s=>{
                     if(!idsInCorso.has(s.id)) return s;
@@ -8395,7 +8409,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
                     // e lo esegue all'ora prevista — rientro, oppure checkout se oltre il fine turno.
                     // nomeCorso: senza questo il nome modificato NON veniva salvato su D1 (l'azione
                     // riceveva solo gli orari) e alla ricarica tornava quello vecchio.
-                    await fetch(nexusUrl("modificaOrarioCorso",{sessionId:_sid,oraEntrata:isoIn,oraUscita:isoOut,nomeCorso:(modCorsoPian.nome||"")}),{mode:"cors"});
+                    await fetch(nexusUrl("modificaOrarioCorso",{sessionId:_sid,oraEntrata:isoIn,oraUscita:isoOut,nomeCorso:(modCorsoPian.nome||"")}),{mode:"cors"}); _invalidaOb();
                     // Aggiornamento OTTIMISTICO: la modifica si vede subito, senza dover ricaricare la pagina.
                     // Aggiorno l'orario del corso in atto; se la fine è nel futuro la riga resta AL CORSO
                     // (nessun rientro reale ora, coerente col worker), altrimenti registro il rientro.
@@ -8865,7 +8879,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           try {
             const res = await fetch(nexusUrl("modificaIntervallo",{ tipo:mi.tipo, matricola:mi.s.matricola, ts:String(r.ts), azione, inizio:r.inizio||"", fine:r.fine||"" }));
             const j = await res.json();
-            if(j && j.ok){ setModIntervalli(null); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,300); return; }
+            if(j && j.ok){ _invalidaOb(mi.s.lineaCorrente); setModIntervalli(null); if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,300); return; }
             setModIntervalli({...mi, busy:false, err:(j && j.error) || "Operazione non riuscita."});
           } catch(e) { setModIntervalli({...mi, busy:false, err:"Connessione assente: riprova."}); }
         };
@@ -8923,8 +8937,21 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           const tI = _msOggi(mp.ora);
           if(isNaN(tI)){ setModPausa({...mp, err:"Indica un orario."}); return; }
           if(tI > Date.now() + 60000){ setModPausa({...mp, err:"L'orario non può essere nel futuro."}); return; }
-          if(mp.minTs && tI < Math.floor(mp.minTs/60000)*60000){
-            setModPausa({...mp, err:(isRip ? "La ripresa non può essere prima dell'inizio della pausa" : "La pausa non può essere prima dell'inizio del turno o dell'ultima pausa")+" ("+_hm(mp.minTs)+")."}); return; }
+          // Ripresa: vale per le sessioni in pausa, non prima dell'inizio della pausa.
+          if(isRip && mp.minTs && tI < Math.floor(mp.minTs/60000)*60000){
+            setModPausa({...mp, err:"La ripresa non può essere prima dell'inizio della pausa ("+_hm(mp.minTs)+")."}); return; }
+          // Pausa: si applica solo agli articoli che l'operatore stava già lavorando a quell'ora. Un articolo
+          // aggiunto alle 10:00 non riceve una pausa delle 9:00, che lo precederebbe.
+          const _iniSess = (ss)=> Number(ss.tsInizio) || ((parseData(ss.inizio)||{getTime:()=>0}).getTime());
+          const _ultPausa = (ss)=>{ const pp=ss.pause||[]; return pp.length ? (Number(pp[pp.length-1].ts)||0) : 0; };
+          const _bersagli = isRip ? mp.sessioniOp : mp.sessioniOp.filter(ss=> _iniSess(ss) <= tI + 59999);
+          if(!isRip && _bersagli.length===0){
+            const _primo = Math.min(...mp.sessioniOp.map(_iniSess).filter(x=>x>0));
+            setModPausa({...mp, err:"A quell'ora l'operatore non aveva ancora iniziato"+(isFinite(_primo)?" (inizio "+_hm(_primo)+")":"")+"."}); return; }
+          if(!isRip){
+            const _minP = Math.max(0, ..._bersagli.map(_ultPausa));
+            if(_minP && tI < Math.floor(_minP/60000)*60000){ setModPausa({...mp, err:"La pausa non può essere prima dell'ultima pausa registrata ("+_hm(_minP)+")."}); return; }
+          }
           const conFine = !isRip && !!mp.oraFine;
           if(conFine){
             const tF = _msOggi(mp.oraFine);
@@ -8934,7 +8961,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
           }
           const oraI = mp.ora === _adesso() ? "" : mp.ora;          // ora attuale: si usa l'istante preciso
           const oraF = conFine ? (mp.oraFine === _adesso() ? "" : mp.oraFine) : "";
-          const s = mp.s, sessioniOp = mp.sessioniOp;
+          const s = mp.s, sessioniOp = _bersagli;
           setModPausa(null);
           setLoading(true); setLoadingMsg((isRip?"Ripresa turno ":"Pausa turno ")+s.nome+"...");
           if(!conFine){
@@ -8953,6 +8980,7 @@ function Dashboard({ sessioni, setSessioni, linee, skuList, operatori, rampeShee
             if(falliti) alert("Connessione assente: la pausa non è stata registrata"+(sessioniOp.length>1?" per "+falliti+" articoli":"")+". Riprova.");
           }
           setLoading(false);
+          if(oraI || oraF) _invalidaOb(s.lineaCorrente);       // orario passato: l'obiettivo va ricalcolato
           if(onAggiornaSessioni) setTimeout(onAggiornaSessioni,600);
         };
         const _campo = {display:"block",width:"100%",boxSizing:"border-box",marginTop:6,padding:"10px 12px",fontSize:20,fontWeight:700,border:"2px solid #e2e8f0",borderRadius:8,fontFamily:"'Montserrat',sans-serif"};
