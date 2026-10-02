@@ -1452,7 +1452,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   const nFormazione=sessAttiveUniche.filter(s=>_suQuestaLinea(s)&&s.corsi&&s.corsi.some(c=>c.tipo==="sospendi")&&_ultimaSospFormazione(s)).length;
   const nCorsoReale=nCorso-nFormazione;
   const nPausa=sessAttiveUniche.filter(s=>s.pause&&s.pause.some(pz=>pz.tipo==="pausa")&&!(s.corsi&&s.corsi.some(c=>c.tipo==="sospendi"))).length;
-  const nOpProduzione=nOp-nRiparazione-nCorso-nPausa;
+  // Chi è in FORMAZIONE resta nel conteggio: è dedicato alla linea, e il tempo di formazione conta già
+  // come tempo-linea nell'obiettivo. Si escludono solo corsi normali, pause e riparazioni.
+  const nOpProduzione=nOp-nRiparazione-nCorsoReale-nPausa;
   // ─── BADGE CORSO/FORMAZIONE PERSISTENTE ──────────────────────────────────────
   // Il badge corso deve restare visibile sia mentre il corso è IN CORSO, sia quando è CONCLUSO,
   // sia DOPO i checkout. Quindi NON si basa su "chi è in corso adesso" (nCorso, che resta per
@@ -2732,9 +2734,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 } else {
                   if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
                 }
-                // Allinea al conteggio "realmente presenti": escludi chi è in CORSO o in PAUSA.
+                // Allinea al conteggio "realmente presenti": escludi chi è in CORSO o in PAUSA. Chi è in
+                // FORMAZIONE invece resta contato: è dedicato all'articolo (es. 10 persone, 2 in formazione → 10).
                 const _ultCor = (s.corsi||[])[((s.corsi||[]).length||0)-1];
-                if(_ultCor && _ultCor.tipo==="sospendi" && !_ultCor.rientro) return false;
+                if(_ultCor && _ultCor.tipo==="sospendi" && !_ultCor.rientro && !_isFormaz(_ultCor)) return false;
                 const _ultPau = (s.pause||[])[((s.pause||[]).length||0)-1];
                 if(_ultPau && _ultPau.tipo==="pausa") return false;
                 return true;
