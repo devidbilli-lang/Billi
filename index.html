@@ -2761,7 +2761,6 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       </span>
                         {/* BNC registrate oggi per questo articolo */}
                         <PillolaBNC n={qData.coffre}/>
-                        {daRecuperareItem>0 && <PillolaRecupero n={daRecuperareItem}/>}
                       </div>
                     </div>
                     {/* Giorni di rampa (solo se presente) */}
@@ -3394,6 +3393,8 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, ordine, grid
                 <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                   <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {d.ko||0}</span>
                   <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {d.migl||0}</span>
+                  {(()=>{ const n=(d.articoli||[]).reduce((t,a)=>t+(Number(a&&a.daRecuperare)||0),0);
+                    return n>0 ? <span title="Borse arretrate in BNC ancora da controllare a fine giornata" style={{fontSize:11,fontWeight:800,whiteSpace:"nowrap",...STILE_RECUPERO,borderWidth:1.5,borderRadius:6,padding:"1px 7px"}}>Recupero {n}</span> : null; })()}
                 </div>
               </div>
               <div style={{flex:1,overflow:"hidden",zoom:zoomCard,padding:"2px 2px"}}>
@@ -3428,7 +3429,6 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, ordine, grid
                                 <CodiceFit text={a.sku} max={22} min={9}/>
                                 {a.bnc!==undefined && <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
                                   <PillolaBNC n={a.bnc}/>
-                                  {(a.daRecuperare||0)>0 && <PillolaRecupero n={a.daRecuperare}/>}
                                 </div>}
                               </div>
                               {inR && (
