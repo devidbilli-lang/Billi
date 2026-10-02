@@ -5701,9 +5701,9 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                       {skuObj?.descrizione&&<span style={{fontSize:10,color:"#ff6937cc",lineHeight:1.2}}>{skuObj.descrizione}</span>}
                     </div>
                     {(()=>{ const _ob=_isPrototipLine ? ((obPerArticoloLocal||{})[r.sku]) : ((obPerArticolo[lineaEffettiva]||{})[r.sku]); return (_ob!=null) ? (
-                      <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1,background:"#7c3aed14",border:"1.5px solid #7c3aed",borderRadius:8,padding:"4px 14px"}} title="Obiettivo giornaliero (da Entra in Produzione)">
-                        <span style={{fontSize:9,color:"#7c3aed",fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.2}}>Obiettivo</span>
-                        <span style={{fontSize:18,fontWeight:900,color:"#7c3aed",lineHeight:1}}>{_ob}</span>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,alignSelf:"stretch",minWidth:100,boxSizing:"border-box",flexShrink:0,background:"#7c3aed14",border:"2px solid #7c3aed",borderRadius:8,padding:"6px 14px"}} title="Obiettivo giornaliero (da Entra in Produzione)">
+                        <span style={{fontSize:9,color:"#7c3aed",fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.25,textAlign:"center"}}>Obiettivo</span>
+                        <span style={{fontSize:22,fontWeight:900,color:"#7c3aed",lineHeight:1}}>{_ob}</span>
                       </div>
                     ) : null; })()}
                     {(()=>{
@@ -5713,7 +5713,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                       const _rec = daRecuperareBnc(r.ok, _deb);
                       return _rec > 0 ? (
                         <div title="Borse arretrate in BNC ancora da controllare" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,
-                          alignSelf:"stretch",marginLeft:"auto",flexShrink:0,...STILE_RECUPERO,borderRadius:8,padding:"6px 14px"}}>
+                          alignSelf:"stretch",marginLeft:"auto",flexShrink:0,minWidth:100,boxSizing:"border-box",...STILE_RECUPERO,borderRadius:8,padding:"6px 14px"}}>
                           <span style={{fontSize:9,fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.25,textAlign:"center"}}>Recupero</span>
                           <span style={{fontSize:22,fontWeight:900,lineHeight:1}}>{_rec}</span>
                         </div>
