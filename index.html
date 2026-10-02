@@ -2248,7 +2248,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {nRiparazione>0&&<div style={{background:"#fbbf24",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nRiparazione} Riparazione</div>}
                   {nCorsoRealeBadge>0&&<div style={{background:"#06b6d4",color:"#ffffff",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>+{nCorsoRealeBadge} Corso</div>}
-                  {(nFormazioneBadge>0||_minFormaz>0)&&<div style={{background:"#ffc946",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>{nFormazioneBadge>0?"+"+nFormazioneBadge+" ":""}Formazione{_minFormaz>0?" · "+_minFormaz+" min":""}</div>}
+                  {(nFormazioneBadge>0||_minFormaz>0)&&<div style={{background:"#ffc946",color:"#1a1a00",borderRadius:8,padding:compatto?"3px 7px":"6px 10px",fontSize:compatto?"clamp(9px,1vw,12px)":"clamp(11px,1.2vw,14px)",fontWeight:900,whiteSpace:"nowrap"}}>{nFormazioneBadge>0?nFormazioneBadge+" ":""}Formazione{_minFormaz>0?" · "+_minFormaz+" min":""}</div>}
                 </div>
               )}
             </div>
@@ -2798,8 +2798,9 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       if(s.lineaCorrente!==lineaId) return false;
                       if(s.fine && s.fine!=="" && s.fine!==null && s.fine!=="null") return false;
                       if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return false;
+                      // Chi è in FORMAZIONE resta contato sull'articolo, come nella griglia; corsi e pause no.
                       const _ultCor = (s.corsi||[])[((s.corsi||[]).length||0)-1];
-                      if(_ultCor && _ultCor.tipo==="sospendi" && !_ultCor.rientro) return false;
+                      if(_ultCor && _ultCor.tipo==="sospendi" && !_ultCor.rientro && !_isFormaz(_ultCor)) return false;
                       const _ultPau = (s.pause||[])[((s.pause||[]).length||0)-1];
                       if(_ultPau && _ultPau.tipo==="pausa") return false;
                       return true;
