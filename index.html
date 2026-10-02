@@ -661,6 +661,13 @@ function DatePicker({ value, onChange, size }) {
 // squadra/foglio in basso a sinistra + matita sovrapposta in alto a destra.
 // size: dimensione in pixel (default 14)
 // Pillola magenta delle BNC registrate nella giornata per un articolo (vista griglia).
+// ─── CONTO CORRENTE BNC ──────────────────────────────────────────────────────
+// Le borse OK chiudono prima il debito: sono borse già contate nel giorno in cui erano finite in BNC.
+// La produzione del giorno è la BNC di oggi più le OK che avanzano: ogni borsa si conta una volta, il
+// giorno in cui viene fatta. Stessa regola del worker (calcolaQualitaBI), quindi app e Power BI coincidono.
+function nettoConDebito(ok, bncOggi, debito){ return (Number(bncOggi)||0) + Math.max(0, (Number(ok)||0) - (Number(debito)||0)); }
+// Arretrato ancora da controllare: il debito di partenza meno le OK già registrate oggi.
+function daRecuperareBnc(ok, debito){ return Math.max(0, (Number(debito)||0) - (Number(ok)||0)); }
 function PillolaBNC({ n }) {
   return (
     <span title="BNC registrate oggi" style={{display:"inline-flex",alignItems:"baseline",gap:6,flexShrink:0,background:"#fdf4ff",
@@ -2057,7 +2064,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         if(!sk || isSkuSpeciale(sk) || visti.has(sk)) return;
         visti.add(sk);
         const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaBnc+"_"+sk] || {};
-        tot += Math.max(0, (Number(q.ok)||0) + (Number(q.coffre)||0) - bncDa(sk));
+        tot += nettoConDebito(q.ok, q.coffre, bncDa(sk));
       };
       sessioni.forEach(s=>{
         if(s._pianificato) return;
@@ -2110,7 +2117,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       // un articolo fermo con un debito arretrato abbatteva l'efficienza dell'intera linea pur non
       // avendo assorbito un solo minuto della giornata.
       // Il conteggio dei PEZZI resta libero di andare in negativo: lì il debito è un'informazione utile.
-      const _nettoSk = Math.max(0, (Number(_q.ok)||0) + (Number(_q.coffre)||0) - bncDa(sk));
+      const _nettoSk = nettoConDebito(_q.ok, _q.coffre, bncDa(sk));
       minProd += _nettoSk * (tcPerLinea(skuList.find(x=>x&&x.sku===sk)) || 0);
     }
     // Fallback robusto: se le borse per-articolo non risolvono (chiavi qualità mancanti) ma ci sono
@@ -2154,9 +2161,10 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
         const q = qualitaPerSku[lineaId+"_"+sk] || {};
         const ko=Number(q.ko)||0, migl=Number(q.migl)||0;
         koT+=ko; miglT+=migl;
-        const netto = (Number(q.ok)||0) + (Number(q.coffre)||0) - bncDa(sk);
+        const netto = nettoConDebito(q.ok, q.coffre, bncDa(sk));
+        const daRecuperare = daRecuperareBnc(q.ok, bncDa(sk));
         const info = (skuList||[]).find(x=>x&&x.sku===sk) || {};
-        return { sku:sk, descrizione:info.descrizione||"", netto, obiettivo:Number(obMap[sk])||0, ko, migl, bnc:Number(q.coffre)||0, rampa:rampeMap[sk]||null };
+        return { sku:sk, descrizione:info.descrizione||"", netto, obiettivo:Number(obMap[sk])||0, ko, migl, bnc:Number(q.coffre)||0, daRecuperare, rampa:rampeMap[sk]||null };
       }).filter(a=> a.obiettivo>0 || a.netto!==0 || a.ko>0 || a.migl>0 || (minMap[a.sku]||0) >= 15);
       return JSON.stringify({ operatori:nOp, efficienza:efficienzaPct, ko:koT, migl:miglT, articoli });
     }catch(e){ return ""; }
@@ -2687,7 +2695,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               // (contano); domani, reinserite come OK, verranno stornate. Ogni borsa vale 1 una volta.
               // Può essere NEGATIVO a inizio turno: è voluto (lancetta comunque a 0%).
               const _bncItem = bncDa(skuItem);
-              const borseBuoneItem = (Number(qData.ok)||0) + (Number(qData.coffre)||0) - _bncItem;
+              const borseBuoneItem = nettoConDebito(qData.ok, qData.coffre, _bncItem);
+              const daRecuperareItem = daRecuperareBnc(qData.ok, _bncItem);   // arretrato BNC ancora da controllare
               // Numero operatori (quota equa) su questo SKU — serve sia in vista normale (header
               // viola) sia in vista compatta. A turno terminato includiamo anche le sessioni chiuse
               // di oggi, altrimenti il conteggio crollerebbe a 0 appena tutti escono.
@@ -2731,6 +2740,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                       </span>
                         {/* BNC registrate oggi per questo articolo */}
                         <PillolaBNC n={qData.coffre}/>
+                        {daRecuperareItem>0 && <span title="Borse arretrate in BNC ancora da controllare" style={{fontSize:"clamp(10px,1.2vw,13px)",fontWeight:800,color:"#c026d3",whiteSpace:"nowrap",lineHeight:1}}>da recup. {daRecuperareItem}</span>}
                       </div>
                     </div>
                     {/* Giorni di rampa (solo se presente) */}
@@ -2831,6 +2841,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                             <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#ef4444",lineHeight:1}}>KO {qData.ko||0}</span>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#f59e0b",lineHeight:1}}>MIGL {qData.migl||0}</span>
+                              {daRecuperareItem>0 && <span title="Borse arretrate in BNC ancora da controllare" style={{fontSize:fSep,fontWeight:800,color:"#c026d3",lineHeight:1}}>DA RECUP. {daRecuperareItem}</span>}
                               
                             </div>
                           </div>
@@ -3395,7 +3406,10 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, ordine, grid
                             <div key={a.sku} style={{flex:"1 1 45%",minWidth:0,background:"#ffffff",border:"2px solid #7c3aed",boxShadow:"0 0 12px 3px #7c3aed66, inset 0 0 6px #7c3aed22",borderRadius:12,padding:"6px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:3,textAlign:"center"}}>
                               <div style={{display:"flex",alignItems:"center",justifyContent:a.bnc!==undefined?"space-between":"center",gap:6,width:"100%",minWidth:0}}>
                                 <CodiceFit text={a.sku} max={22} min={9}/>
-                                {a.bnc!==undefined && <PillolaBNC n={a.bnc}/>}
+                                {a.bnc!==undefined && <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
+                                  <PillolaBNC n={a.bnc}/>
+                                  {(a.daRecuperare||0)>0 && <span title="Borse arretrate in BNC ancora da controllare a fine giornata" style={{fontSize:"clamp(10px,1.2vw,13px)",fontWeight:800,color:"#c026d3",whiteSpace:"nowrap",lineHeight:1}}>da recup. {a.daRecuperare}</span>}
+                                </div>}
                               </div>
                               {inR && (
                                 <div title="Giorno di rampa" style={{display:"inline-flex",alignItems:"center",gap:5,background:"#fff7ed",border:"2px solid #ff6937",borderRadius:8,padding:"3px 10px"}}>
@@ -3624,6 +3638,20 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                     <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {_isProto?_aggProto.ko:(d.borseKO||0)}</span>
                     <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {_isProto?_aggProto.migl:(d.borseMigl||0)}</span>
+                    {!_isProto && (()=>{
+                      // Arretrato BNC della linea ancora da controllare, sugli articoli attivi oggi (con qualità
+                      // registrata o una sessione), come nella card. Ogni articolo contato una volta.
+                      const _nomeL = l.nome || l.id; let n = 0; const visti = new Set();
+                      Object.keys(bncRecupero||{}).forEach(k=>{
+                        const pf = [l.id+"|", _nomeL+"|"].find(x=>k.indexOf(x)===0); if(!pf) return;
+                        const sk = k.slice(pf.length); if(!sk || visti.has(sk)) return;
+                        const q = (qualitaPerSku||{})[l.id+"_"+sk] || (qualitaPerSku||{})[_nomeL+"_"+sk];
+                        const attivo = !!q || (sessioni||[]).some(x=>x && !x._pianificato && (x.lineaCorrente===l.id||x.lineaInizio===l.id) && (x.skuCorrente||x.sku)===sk);
+                        if(!attivo) return;
+                        visti.add(sk); n += daRecuperareBnc((q||{}).ok, Number(bncRecupero[k])||0);
+                      });
+                      return n>0 ? <span title="Borse arretrate in BNC ancora da controllare" style={{fontSize:11,fontWeight:800,color:"#c026d3",whiteSpace:"nowrap"}}>DA RECUP. {n}</span> : null;
+                    })()}
                     
                   </div>
                 </div>
