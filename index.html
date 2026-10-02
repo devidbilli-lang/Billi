@@ -1191,6 +1191,16 @@ function CodiceFit({ text, max=22, min=9, color="#6d28d9" }){
 function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, borseOggi, borseKO, borseMigl, borseCoffre, maxOpOggi, minutiPresenzaLinea=0, minutiFormazioneServer=0, coloreLinea, qualitaPerSku={}, bncRecupero={}, linee=[], compatto=false, onObiettiviArticoli }) {
   // Difesa: filtra eventuali elementi null negli array (righe vuote da Sheets/worker)
   const sessioni = (_sessioni||[]).filter(Boolean);
+  // Sessioni per il calcolo dell'OBIETTIVO. Come concordato, l'obiettivo della giornata considera già
+  // gli ingressi pianificati, ciascuno dal suo orario previsto (durante il turno contano zero minuti
+  // finché l'orario non arriva). Una persona pianificata su più articoli diventa una sessione per
+  // articolo, così il suo tempo si ripartisce come per gli articoli in parallelo. Il resto della card
+  // (presenze reali, efficienza a fine turno, conteggi) usa le sessioni così come sono.
+  const sessioniOb = sessioni.flatMap(s=>{
+    const sp = (s && s._pianificato && Array.isArray(s._skuPianificati)) ? s._skuPianificati.filter(Boolean) : [];
+    if(sp.length <= 1) return [s];
+    return sp.map(sk=>({...s, id:(s.id||"")+"|"+sk, sku:sk, skuCorrente:sk}));
+  });
   const skuList = (_skuList||[]).filter(Boolean);
   // Tempo ciclo per linea: RMA usa il tc della colonna G (tcRMA), tutte le altre la colonna E (tc).
   const _isLineaRMA = isLineaRMAlike(lineaId, "");
@@ -1630,7 +1640,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       for(const t of trasf){ lc = t.a || lc; sc = t.skuA || sc; if(lc===lineaId && sc===skuItem) return true; }
       return false;
     };
-    const sessioniSku = sessioni.filter(sessTocca);
+    const sessioniSku = sessioniOb.filter(sessTocca);
     // Fine effettiva (ms) di una sessione: checkout reale se uscita anticipata >2min,
     // altrimenti fine pianificata/turno. Parte dall'INIZIO REALE (articoli aggiunti a metà
     // giornata = ora di aggiunta, non inizio turno).
@@ -1678,7 +1688,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
     // Intervalli reali di TUTTE le sessioni di oggi su questa linea, per matricola: dicono
     // quanti articoli sono attivi in parallelo in ogni istante (a prescindere dall'articolo).
     const intervalliPerMat = {};
-    sessioni.forEach(s=>{
+    sessioniOb.forEach(s=>{
       if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
       const dIni = tsInizioRealeSessione(s); if(!dIni) return;
       const g0 = new Date(dIni); g0.setHours(0,0,0,0);
@@ -1760,8 +1770,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // turno); finoAMs=adesso → atteso finora (ogni articolo troncato all'istante corrente).
   const sommaObiettiviArticoli = (finoAMs)=>{
     const skuSet = new Set();
-    for(const s of sessioni){
-      if(s._pianificato) continue;
+    for(const s of sessioniOb){                  // ingressi pianificati compresi
       if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
       const sk = s.skuCorrente||s.sku||"";
       if(!sk || isSkuSpeciale(sk)) continue;
@@ -1776,8 +1785,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
   // salvati su D1 per essere mostrati identici nel riquadro OGGI della tab Qualità.
   const mappaObiettiviArticoli = (finoAMs, rampeOut)=>{
     const skuSet = new Set();
-    for(const s of sessioni){
-      if(s._pianificato) continue;
+    for(const s of sessioniOb){                  // ingressi pianificati compresi
       if(s.lineaCorrente!==lineaId && s.lineaInizio!==lineaId) continue;
       const sk = s.skuCorrente||s.sku||"";
       if(!sk || isSkuSpeciale(sk)) continue;
@@ -2373,10 +2381,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // dalle attive. Così un articolo lavorato e poi chiuso in giornata (es. cambio articolo
             // a metà turno) resta visibile per registrare/correggere le borse. Il filtro sotto
             // (borse o minuti effettivi > 0) garantisce che compaiano solo articoli con attività reale.
-            const skuAttiviLineaRaw=[...new Set(
-              sessGiornata.filter(s=>(s.skuCorrente||s.sku)&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
-              .map(s=>s.skuCorrente||s.sku)
-            )];
+            // Articoli su cui è pianificato l'ingresso di qualcuno: entrano nell'obiettivo, quindi hanno il tassello.
+            const _skuPianificatiQui = new Set(sessioniOb.filter(s=>s._pianificato && (s.lineaCorrente===lineaId||s.lineaInizio===lineaId))
+              .map(s=>s.skuCorrente||s.sku).filter(sk=>sk && !isSkuSpeciale(sk)));
+            const skuAttiviLineaRaw=[...new Set([
+              ...sessGiornata.filter(s=>(s.skuCorrente||s.sku)&&!isSkuSpeciale(s.skuCorrente||s.sku||""))
+                .map(s=>s.skuCorrente||s.sku),
+              ..._skuPianificatiQui
+            ])];
             // Filtra fuori gli SKU "vuoti": nessun operatore della giornata che abbia effettivamente
             // lavorato qui (un segmento di sessione su lineaId+sku, non solo un "passaggio")
             // E nessuna borsa prodotta E nessun KO/MIGL registrato.
@@ -2441,6 +2453,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
             // Obiettivi per articolo: servono a scartare i tasselli che non hanno nulla da mostrare.
             const _obCard = mappaObiettiviArticoli(null) || {};
             const skuAttiviLinea = [...new Set([...skuAttiviLineaRaw, ...skuLavorati])].filter(sk=>{
+              if(_skuPianificatiQui.has(sk)) return true;           // ingresso pianificato su questo articolo
               // Qualità: se ci sono borse/KO/MIGL registrati, la card va sempre mostrata
               const q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaForKey+"_"+sk] || {};
               if((q.ok||0)>0 || (q.ko||0)>0 || (q.migl||0)>0) return true;
@@ -2539,7 +2552,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                   return false;
                 };
                 const filtraSess = sessTocca;
-                const sessioniSku = sessioni.filter(filtraSess);
+                const sessioniSku = sessioniOb.filter(filtraSess);
                 // Conta SKU simultanei per ogni matricola (per divisione equa)
                 // Fine effettiva (ms) di una sessione, dall'INIZIO REALE (articoli aggiunti a
                 // meta giornata = ora di aggiunta), checkout reale se uscita anticipata >2min.
@@ -2575,7 +2588,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                 // Intervalli reali di TUTTE le sessioni di oggi su questa linea, per matricola:
                 // quanti articoli sono attivi in parallelo in ogni istante.
                 const intervalliPerMat = {};
-                sessioni.forEach(s=>{
+                sessioniOb.forEach(s=>{
                   if(isSkuSpeciale(s.skuCorrente||s.sku||"")) return;
                   const dIni = tsInizioRealeSessione(s); if(!dIni) return;
                   const g0 = new Date(dIni); g0.setHours(0,0,0,0);
