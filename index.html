@@ -2038,7 +2038,8 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
       const attivoOggi = skuAttivi.has(sk) || !!qualitaPerSku[lineaId+"_"+sk] || !!qualitaPerSku[_nomeLineaBnc+"_"+sk];
       if(!attivoOggi) return;
       visti.add(sk);
-      tot += bncDa(sk);
+      const _q = qualitaPerSku[lineaId+"_"+sk] || qualitaPerSku[_nomeLineaBnc+"_"+sk] || {};
+      tot += daRecuperareBnc(_q.ok, bncDa(sk));       // arretrato BNC ancora da controllare
     });
     return tot;
   })();
@@ -2287,6 +2288,14 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               </div>
             </div>
             <div style={{width:2,background:"#e2e8f0",height:"60%",borderRadius:1}}/>
+            {_bncTotLinea>0 && (<>
+              {/* Borse arretrate in BNC ancora da controllare, su tutta la linea */}
+              <div title="Borse arretrate in BNC ancora da controllare" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                <div style={{fontSize:compatto?"clamp(10px,1.3vw,14px)":"clamp(11px,1.6vw,18px)",color:"rgba(192,38,211,0.85)",fontWeight:800,letterSpacing:0.5,lineHeight:1,textAlign:"center"}}>DA RECUPERARE</div>
+                <div style={{fontSize:compatto?"clamp(16px,2.2vw,26px)":"clamp(24px,3.6vw,44px)",fontWeight:900,color:"#c026d3",lineHeight:1,textAlign:"center"}}>{_bncTotLinea}</div>
+              </div>
+              <div style={{width:2,background:"#e2e8f0",height:"60%",borderRadius:1}}/>
+            </>)}
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
               <svg width={compatto?20:34} height={compatto?20:34} viewBox="0 0 36 36" fill="none">
                 <circle cx="18" cy="18" r="17" stroke="#f59e0b" strokeWidth="2"/>
@@ -2841,7 +2850,6 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
                             <div style={{display:"inline-flex",alignItems:"baseline",gap:6,marginLeft:8}}>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#ef4444",lineHeight:1}}>KO {qData.ko||0}</span>
                               <span style={{fontSize:fSep,fontWeight:700,color:"#f59e0b",lineHeight:1}}>MIGL {qData.migl||0}</span>
-                              {daRecuperareItem>0 && <span title="Borse arretrate in BNC ancora da controllare" style={{fontSize:fSep,fontWeight:800,color:"#c026d3",lineHeight:1}}>DA RECUP. {daRecuperareItem}</span>}
                               
                             </div>
                           </div>
