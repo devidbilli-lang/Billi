@@ -61,7 +61,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<!-- Babel non si carica più qui: lo carica il caricatore in fondo alla pagina, solo quando serve. -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#f0f2f5;font-family:'Montserrat',sans-serif;color:#e2e8f0;}
@@ -475,29 +475,22 @@ function useSheets() { const [linee,setLinee]         = useState(LINEE_DEFAULT);
     // Articoli e difetti arrivano da D1, tramite il worker: è la fonte principale. La configurazione
     // di Apps Script resta il ripiego, finché l'anagrafica non è stata importata o se il worker non
     // risponde. Linee e operatori, per ora, continuano ad arrivare da Apps Script.
-    let anag = null;
-    try {
-      const r = await fetch(nexusUrl("anagraficaArticoli",{}), {mode:"cors"});
-      const j = await r.json();
-      if(j && j.ok && j.data && Array.isArray(j.data.skuList) && j.data.skuList.length > 1 && j.data.tcDisponibili) anag = j.data;
-    } catch(e) {}
+    // Le tre letture dal worker partono INSIEME (prima erano una dopo l'altra). Linee senza credenziali:
+    // le password si verificano sul worker.
+    const _leggi = async (azione, estrai)=>{
+      try { const r = await fetch(nexusUrl(azione,{}), {mode:"cors"}); return estrai(await r.json()); } catch(e) { return null; }
+    };
+    const [anag, lineeD1, operatoriD1] = await Promise.all([
+      _leggi("anagraficaArticoli",  j=> (j && j.ok && j.data && Array.isArray(j.data.skuList) && j.data.skuList.length > 1 && j.data.tcDisponibili) ? j.data : null),
+      _leggi("anagraficaLinee",     j=> (j && j.ok && j.data && Array.isArray(j.data.linee) && j.data.linee.length) ? j.data.linee : null),
+      _leggi("anagraficaOperatori", j=> (j && j.ok && j.data && Array.isArray(j.data.operatori) && j.data.operatori.length) ? j.data.operatori : null),
+    ]);
     if(anag){ setSkuList(anag.skuList); setDifettiList(anag.difetti||[]); }
-    // Linee da D1, senza credenziali: le password si verificano sul worker.
-    let lineeD1 = null;
-    try {
-      const r = await fetch(nexusUrl("anagraficaLinee",{}), {mode:"cors"});
-      const j = await r.json();
-      if(j && j.ok && j.data && Array.isArray(j.data.linee) && j.data.linee.length) lineeD1 = j.data.linee;
-    } catch(e) {}
     if(lineeD1) setLinee(lineeD1);
-    // Operatori da D1; la configurazione resta il ripiego finché non viene svuotata.
-    let operatoriD1 = null;
-    try {
-      const r = await fetch(nexusUrl("anagraficaOperatori",{}), {mode:"cors"});
-      const j = await r.json();
-      if(j && j.ok && j.data && Array.isArray(j.data.operatori) && j.data.operatori.length) operatoriD1 = j.data.operatori;
-    } catch(e) {}
     if(operatoriD1) setOperatori(operatoriD1);
+    // Tutto arrivato da D1: si parte subito, senza aspettare Apps Script (la chiamata più lenta).
+    if(anag && lineeD1 && operatoriD1){ setSync("ok"); setTs(new Date()); return; }
+    // Ripiego: la configurazione di Apps Script, solo per ciò che D1 non ha dato.
     try { const d = await api.config();
       if(d){ if(!lineeD1 && d.linee&&d.linee.length) setLinee(d.linee);
         if(!operatoriD1 && d.operatori && d.operatori.length) setOperatori(d.operatori);
@@ -10104,6 +10097,77 @@ function App() { const [view,setView]             = useState("login");
   );
 }
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+<!-- AVVIO VELOCE ───────────────────────────────────────────────────────────────────────────────────
+     Il codice dell'app qui sopra (JSX) va tradotto da Babel prima di essere eseguito. Lo si traduce una
+     sola volta per versione e il risultato si salva in IndexedDB, uno spazio del browser separato da
+     quello delle impostazioni (localStorage). Dalle aperture successive si esegue la traduzione salvata,
+     senza scaricare Babel. L'impronta della versione cambia a ogni deploy, quindi gira sempre il codice
+     attuale; se IndexedDB non è disponibile si traduce ogni volta, come prima. Solo codice: nessun dato. -->
+<script>
+(function(){
+  var BABEL_URL = "https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js";
+  // Le stesse regole che Babel usa da solo per gli script della pagina, senza la mappa di debug.
+  var OPZIONI = { presets:["react","env"], filename:"nexus.jsx",
+    plugins:["transform-class-properties","transform-object-rest-spread","transform-flow-strip-types"] };
+  var tag = document.querySelector('script[type="text/babel"]');
+  if (!tag) return;
+  var sorgente = tag.textContent;
+  var h = 0x811c9dc5;                                        // impronta della versione (FNV-1a)
+  for (var i = 0; i < sorgente.length; i++) { h ^= sorgente.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  var chiave = "v-" + (h >>> 0).toString(16) + "-" + sorgente.length;
+  function esegui(js) { var s = document.createElement("script"); s.textContent = js; document.body.appendChild(s); }
+  function apriDB() {
+    return new Promise(function(ok) {
+      try {
+        var r = indexedDB.open("nexus-avvio", 1);
+        r.onupgradeneeded = function() { r.result.createObjectStore("codice"); };
+        r.onsuccess = function() { ok(r.result); };
+        r.onerror = function() { ok(null); };
+        r.onblocked = function() { ok(null); };
+      } catch (e) { ok(null); }
+    });
+  }
+  function leggi(db) {
+    return new Promise(function(ok) {
+      if (!db) return ok(null);
+      try {
+        var q = db.transaction("codice", "readonly").objectStore("codice").get(chiave);
+        q.onsuccess = function() { ok(typeof q.result === "string" ? q.result : null); };
+        q.onerror = function() { ok(null); };
+      } catch (e) { ok(null); }
+    });
+  }
+  function salva(db, js) {                                   // tiene solo la versione attuale
+    if (!db) return;
+    try { var st = db.transaction("codice", "readwrite").objectStore("codice"); st.clear(); st.put(js, chiave); } catch (e) {}
+  }
+  function traduci() {
+    return new Promise(function(ok, ko) {
+      var s = document.createElement("script");
+      s.src = BABEL_URL;
+      s.onload = function() {
+        try {
+          if (window.Babel && Babel.disableScriptTags) Babel.disableScriptTags();   // mai due esecuzioni
+          ok(Babel.transform(sorgente, OPZIONI).code);
+        } catch (e) { ko(e); }
+      };
+      s.onerror = function() { ko(new Error("Babel non raggiungibile")); };
+      document.head.appendChild(s);
+    });
+  }
+  apriDB().then(function(db) {
+    return leggi(db).then(function(js) {
+      if (js) { esegui(js); return; }                        // apertura veloce
+      return traduci().then(function(nuovo) { esegui(nuovo); salva(db, nuovo); });
+    });
+  }).catch(function(e) {
+    console.error("[avvio]", e);
+    var r = document.getElementById("root");
+    if (r) r.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#ef4444;font-weight:700">Impossibile avviare NEXUS (' +
+      String(e && e.message || e).replace(/</g, "&lt;") + '). Controlla la connessione e ricarica la pagina.</div>';
+  });
+})();
 </script>
 </body>
 </html>
