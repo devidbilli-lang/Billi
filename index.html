@@ -683,7 +683,7 @@ function PillolaRecupero({ n }) {
   return (
     <span title="Borse arretrate in BNC ancora da controllare" style={{display:"inline-flex",alignItems:"baseline",gap:6,flexShrink:0,
       ...STILE_RECUPERO,borderRadius:8,padding:"3px 10px",lineHeight:1}}>
-      <span style={{fontSize:"clamp(10px,1.2vw,13px)",fontWeight:800,letterSpacing:0.5}}>Recupero</span>
+      <span style={{fontSize:"clamp(10px,1.2vw,13px)",fontWeight:800,letterSpacing:0.5}}>Debito</span>
       <span style={{fontSize:"clamp(14px,1.8vw,20px)",fontWeight:900}}>{Number(n)||0}</span>
     </span>
   );
@@ -2305,7 +2305,7 @@ function ObiettivoProduzione({ sessioni:_sessioni, lineaId, skuList:_skuList, bo
               {/* Borse arretrate in BNC ancora da controllare, su tutta la linea */}
               <div title="Borse arretrate in BNC ancora da controllare" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
                 ...STILE_RECUPERO,borderRadius:10,padding:compatto?"3px 10px":"5px 14px"}}>
-                <div style={{fontSize:compatto?"clamp(10px,1.3vw,14px)":"clamp(11px,1.6vw,18px)",fontWeight:800,letterSpacing:0.5,lineHeight:1,textAlign:"center"}}>Recupero</div>
+                <div style={{fontSize:compatto?"clamp(10px,1.3vw,14px)":"clamp(11px,1.6vw,18px)",fontWeight:800,letterSpacing:0.5,lineHeight:1,textAlign:"center"}}>Debito</div>
                 <div style={{fontSize:compatto?"clamp(16px,2.2vw,26px)":"clamp(24px,3.6vw,44px)",fontWeight:900,lineHeight:1,textAlign:"center"}}>{_bncTotLinea}</div>
               </div>
               <div style={{width:2,background:"#e2e8f0",height:"60%",borderRadius:1}}/>
@@ -3398,7 +3398,7 @@ function FotoProduzione({ foto, carica, giorno, linee, lineaFiltro, ordine, grid
                   <span style={{fontSize:11,fontWeight:800,color:"#ef4444",whiteSpace:"nowrap"}}>KO {d.ko||0}</span>
                   <span style={{fontSize:11,fontWeight:800,color:"#f59e0b",whiteSpace:"nowrap"}}>MIGL {d.migl||0}</span>
                   {(()=>{ const n=(d.articoli||[]).reduce((t,a)=>t+(Number(a&&a.daRecuperare)||0),0);
-                    return n>0 ? <span title="Borse arretrate in BNC ancora da controllare a fine giornata" style={{fontSize:11,fontWeight:800,whiteSpace:"nowrap",...STILE_RECUPERO,borderWidth:1.5,borderRadius:6,padding:"1px 7px"}}>Recupero {n}</span> : null; })()}
+                    return n>0 ? <span title="Borse arretrate in BNC ancora da controllare a fine giornata" style={{fontSize:11,fontWeight:800,whiteSpace:"nowrap",...STILE_RECUPERO,borderWidth:1.5,borderRadius:6,padding:"1px 7px"}}>Debito {n}</span> : null; })()}
                 </div>
               </div>
               <div style={{flex:1,overflow:"hidden",zoom:zoomCard,padding:"2px 2px"}}>
@@ -3674,7 +3674,7 @@ function TabProduzione({ dati, linee, isAdmin, lineaFiltro, sessioni, skuList, q
                         if(!attivo) return;
                         visti.add(sk); n += daRecuperareBnc((q||{}).ok, Number(bncRecupero[k])||0);
                       });
-                      return n>0 ? <span title="Borse arretrate in BNC ancora da controllare" style={{fontSize:11,fontWeight:800,whiteSpace:"nowrap",...STILE_RECUPERO,borderWidth:1.5,borderRadius:6,padding:"1px 7px"}}>Recupero {n}</span> : null;
+                      return n>0 ? <span title="Borse arretrate in BNC ancora da controllare" style={{fontSize:11,fontWeight:800,whiteSpace:"nowrap",...STILE_RECUPERO,borderWidth:1.5,borderRadius:6,padding:"1px 7px"}}>Debito {n}</span> : null;
                     })()}
                     
                   </div>
@@ -5718,7 +5718,7 @@ function DashboardQualita({ linea, linee, skuList, difettiList=[], onEsci }) {
                       return _rec > 0 ? (
                         <div title="Borse arretrate in BNC ancora da controllare" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,
                           alignSelf:"stretch",marginLeft:"auto",flexShrink:0,minWidth:100,boxSizing:"border-box",...STILE_RECUPERO,borderRadius:8,padding:"6px 14px"}}>
-                          <span style={{fontSize:9,fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.25,textAlign:"center"}}>Recupero</span>
+                          <span style={{fontSize:9,fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:1.25,textAlign:"center"}}>Debito</span>
                           <span style={{fontSize:22,fontWeight:900,lineHeight:1}}>{_rec}</span>
                         </div>
                       ) : null;
