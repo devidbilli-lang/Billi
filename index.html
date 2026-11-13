@@ -216,6 +216,8 @@ tbody tr:hover{background:#eeeeff;}
 .ddt-delta.delta-red{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;}
 .ddt-delta.delta-green{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
 .ddt-delta.delta-yellow{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}
+/* "Aperto" e "In attesa" nelle righe: lo stesso giallo dei riquadri Ordini Aperti / In Attesa */
+.ddt-delta.delta-neon{background:#f5ff00;color:#1a1a2e;border:1px solid #e2eb00;box-shadow:0 0 6px rgba(245,255,0,0.8);}
 .empty{text-align:center;padding:48px;color:var(--text-muted);font-size:17px;font-weight:600;}
 code.codice{font-family:'Montserrat',sans-serif;font-size:13px;background:#cdf6fb;color:#0c6b78;padding:3px 8px;border-radius:4px;font-weight:700;letter-spacing:0.5px;}
 .suppliers-cell{text-align:center;padding:10px 12px !important;}
@@ -3032,7 +3034,7 @@ function renderOrdini(){
       const exp = ordExpanded.has(String(g.numero));
       const caret = exp ? '\u25be' : '\u25b8';
       const statoBadge = aperto
-        ? '<span class="ddt-delta delta-yellow">Aperto</span>'
+        ? '<span class="ddt-delta delta-neon">Aperto</span>'
         : '<span class="ddt-delta delta-green">Chiuso</span>';
       const mDdtClass = (g.arrivata>=g.qta && g.qta>0) ? 'complete' : (g.nDdt===0 ? 'empty-ddt' : 'partial');
       const master =
@@ -3897,7 +3899,7 @@ let editingLineaId = null;
 let lineaMatSel = new Set();
 const TITOLO_BASE = document.title;
 const RICH_STATO = {
-  in_attesa: ['In attesa', 'delta-yellow'],
+  in_attesa: ['In attesa', 'delta-neon'],
   evasa: ['Evasa', 'delta-green'],
   rifiutata: ['Rifiutata', 'delta-red'],
   annullata: ['Annullata dalla linea', 'delta-grigio']
