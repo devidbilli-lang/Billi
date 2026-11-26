@@ -88,7 +88,24 @@ button:hover{filter:brightness(1.12);}
 </style>
 <!-- NEXUS-TEMA: inizio (tema scuro "Blu notte"; generato, non modificare a mano) -->
 <style>#nexus-tema-btn{position:fixed;left:calc(50% - 19px);top:10px;position:absolute;z-index:2147483000;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 2px 8px rgba(15,23,42,0.18)}
-@media print{#nexus-tema-btn{display:none}}</style>
+#nexus-tema-menu{position:absolute;z-index:2147483001;width:224px;padding:6px;border-radius:12px;background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 12px 32px rgba(15,23,42,0.18);font-family:'Montserrat',sans-serif;box-sizing:border-box}
+#nexus-tema-menu[hidden]{display:none}
+#nexus-tema-menu .nx-tema-tit{padding:6px 10px 4px;font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8}
+#nexus-tema-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;margin:0;border:0;border-radius:8px;background:transparent;color:#1e293b;cursor:pointer;text-align:left;font-family:inherit}
+#nexus-tema-menu button:hover,#nexus-tema-menu button:focus-visible{background:#f1f5f9;outline:none}
+#nexus-tema-menu button[aria-checked="true"]{background:#f5f3ff;color:#6d28d9}
+#nexus-tema-menu .nx-tema-ico{display:flex;flex-shrink:0}
+#nexus-tema-menu .nx-tema-txt{display:flex;flex-direction:column;flex:1;line-height:1.25}
+#nexus-tema-menu .nx-tema-txt b{font-size:13px;font-weight:700}
+#nexus-tema-menu .nx-tema-txt small{font-size:11px;font-weight:500;color:#64748b}
+#nexus-tema-menu .nx-tema-ok{display:flex;opacity:0}
+#nexus-tema-menu button[aria-checked="true"] .nx-tema-ok{opacity:1}
+html[data-tema="scuro"] #nexus-tema-menu{background:#131c2e;border-color:#26324a;box-shadow:0 12px 32px rgba(0,0,0,0.5)}
+html[data-tema="scuro"] #nexus-tema-menu button{color:#eef2f8}
+html[data-tema="scuro"] #nexus-tema-menu button:hover,html[data-tema="scuro"] #nexus-tema-menu button:focus-visible{background:#1b2740}
+html[data-tema="scuro"] #nexus-tema-menu button[aria-checked="true"]{background:#2a1f4d;color:#c4b5fd}
+html[data-tema="scuro"] #nexus-tema-menu .nx-tema-txt small{color:#94a3b8}
+@media print{#nexus-tema-btn,#nexus-tema-menu{display:none}}</style>
 <style id="nexus-tema-scuro" media="not all">
 /* NEXUS · tema scuro Blu notte. Generato da tema_scuro_gen.py: non modificare a mano. */
 html{color-scheme:dark}
@@ -297,23 +314,66 @@ tr[style*="background: rgb(254, 226, 226)"]{background-color:#4c2127!important}
 [style*="min-height: calc(100vh"][style*="background: rgb(2"]{background-color:#0b1220!important}
 </style>
 <script>
-/* Tema chiaro/scuro: la scelta resta salvata su questo dispositivo. Senza scelta, NEXUS resta chiaro come sempre. */
+/* Tema: Automatico (segue il chiaro/scuro del dispositivo), Chiaro o Scuro. La scelta resta salvata su questo
+   dispositivo. Senza scelta, NEXUS resta chiaro come sempre. */
 (function(){
   var K="nexus_tema", F=document.getElementById("nexus-tema-scuro");
-  var LUNA='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
-  var SOLE='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
-  function scuro(){ try{ return localStorage.getItem(K)==="scuro"; }catch(e){ return false; } }
+  var MQ=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+  var SVG='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  var ICO={
+    auto:SVG+'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg>',
+    chiaro:SVG+'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    scuro:SVG+'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'
+  };
+  var OK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  var NOMI={auto:"Automatico",chiaro:"Chiaro",scuro:"Scuro"};
+  var SPIEGA={auto:"Segue il dispositivo",chiaro:"Sempre chiaro",scuro:"Sempre scuro"};
+  function scelta(){ try{ var v=localStorage.getItem(K); return (v==="scuro"||v==="auto")?v:"chiaro"; }catch(e){ return "chiaro"; } }
+  function scuro(){ var c=scelta(); return c==="scuro"||(c==="auto"&&!!(MQ&&MQ.matches)); }
   function applica(){
-    var s=scuro(); F.media=s?"screen":"not all"; document.documentElement.setAttribute("data-tema",s?"scuro":"chiaro");
+    var c=scelta(), s=scuro(), h=document.documentElement;
+    F.media=s?"screen":"not all"; h.setAttribute("data-tema",s?"scuro":"chiaro"); h.setAttribute("data-tema-scelta",c);
     var b=document.getElementById("nexus-tema-btn");
-    if(b){ b.innerHTML=s?SOLE:LUNA; b.title=s?"Passa al tema chiaro":"Passa al tema scuro"; b.setAttribute("aria-label",b.title); }
+    if(b){ b.innerHTML=ICO[c]; b.title="Tema: "+NOMI[c]+(c==="auto"?(s?" (ora scuro)":" (ora chiaro)"):""); b.setAttribute("aria-label",b.title); }
+    var m=document.getElementById("nexus-tema-menu");
+    if(m){ [].forEach.call(m.querySelectorAll("[data-tema-v]"),function(x){ x.setAttribute("aria-checked",x.getAttribute("data-tema-v")===c?"true":"false"); }); }
   }
   applica();
+  if(MQ){ var cambia=function(){ if(scelta()==="auto") applica(); };
+    if(MQ.addEventListener) MQ.addEventListener("change",cambia); else if(MQ.addListener) MQ.addListener(cambia); }
   document.addEventListener("DOMContentLoaded",function(){
     var b=document.createElement("button"); b.id="nexus-tema-btn"; b.type="button";
     b.style.background="#ffffff"; b.style.color="#475569"; b.style.border="1px solid #cbd5e1";
-    b.addEventListener("click",function(){ try{ localStorage.setItem(K,scuro()?"chiaro":"scuro"); }catch(e){} applica(); });
-    document.body.appendChild(b); applica();
+    b.setAttribute("aria-haspopup","menu"); b.setAttribute("aria-expanded","false"); b.setAttribute("aria-controls","nexus-tema-menu");
+    var m=document.createElement("div"); m.id="nexus-tema-menu"; m.setAttribute("role","menu"); m.setAttribute("aria-label","Tema"); m.hidden=true;
+    var html='<div class="nx-tema-tit">Tema</div>';
+    ["auto","chiaro","scuro"].forEach(function(v){
+      html+='<button type="button" role="menuitemradio" data-tema-v="'+v+'" aria-checked="false"><span class="nx-tema-ico">'+ICO[v]+
+        '</span><span class="nx-tema-txt"><b>'+NOMI[v]+'</b><small>'+SPIEGA[v]+'</small></span><span class="nx-tema-ok">'+OK+'</span></button>';
+    });
+    m.innerHTML=html;
+    function apri(){
+      m.hidden=false;
+      var x=b.offsetLeft+b.offsetWidth/2-m.offsetWidth/2, max=document.documentElement.clientWidth-m.offsetWidth-8;
+      m.style.left=Math.max(8,Math.min(x,max))+"px"; m.style.top=(b.offsetTop+b.offsetHeight+8)+"px";
+      b.setAttribute("aria-expanded","true");
+      var sel=m.querySelector('[aria-checked="true"]')||m.querySelector("[data-tema-v]"); if(sel) sel.focus();
+    }
+    function chiudi(fuoco){ if(m.hidden) return; m.hidden=true; b.setAttribute("aria-expanded","false"); if(fuoco) b.focus(); }
+    b.addEventListener("click",function(e){ e.stopPropagation(); if(m.hidden) apri(); else chiudi(false); });
+    m.addEventListener("click",function(e){
+      var x=e.target.closest&&e.target.closest("[data-tema-v]"); if(!x) return;
+      try{ localStorage.setItem(K,x.getAttribute("data-tema-v")); }catch(er){}
+      applica(); chiudi(true);
+    });
+    m.addEventListener("keydown",function(e){
+      var it=[].slice.call(m.querySelectorAll("[data-tema-v]")), i=it.indexOf(document.activeElement);
+      if(e.key==="ArrowDown"||e.key==="ArrowUp"){ e.preventDefault(); it[(i+(e.key==="ArrowDown"?1:it.length-1))%it.length].focus(); }
+    });
+    document.addEventListener("click",function(e){ if(!m.hidden&&!m.contains(e.target)&&!b.contains(e.target)) chiudi(false); });
+    document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&!m.hidden){ e.preventDefault(); chiudi(true); } });
+    window.addEventListener("resize",function(){ chiudi(false); });
+    document.body.appendChild(b); document.body.appendChild(m); applica();
   });
 })();
 </script>
@@ -439,7 +499,7 @@ tr[style*="background: rgb(254, 226, 226)"]{background-color:#4c2127!important}
 
   // ---- ingresso di un blocco qualsiasi (schermata, sezione) ----
   function entraBlocco(el, i){
-    if (entrati.has(el) || el.getAttribute("data-mo") === "zona" || el.id === "nexus-tema-btn") return; entrati.add(el);
+    if (entrati.has(el) || el.getAttribute("data-mo") === "zona" || el.id === "nexus-tema-btn" || el.id === "nexus-tema-menu") return; entrati.add(el);
     var st = el.style; if (!st || st.position === "fixed" || st.position === "sticky") return;
     var rit = Math.min(i || 0, 8) * 0.05, op = st.opacity, tr = st.transform;
     function ripristina(){ el.style.opacity = op; el.style.transform = tr; }
