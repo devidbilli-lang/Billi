@@ -88,7 +88,7 @@ button:hover{filter:brightness(1.12);}
 </style>
 <!-- NEXUS-TEMA: inizio (tema scuro "Blu notte"; generato, non modificare a mano) -->
 <style>#nexus-tema-btn{position:fixed;left:calc(50% - 19px);top:10px;position:absolute;z-index:2147483000;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 2px 8px rgba(15,23,42,0.18)}
-#nexus-tema-menu{position:absolute;z-index:2147483001;width:224px;padding:6px;border-radius:12px;background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 12px 32px rgba(15,23,42,0.18);font-family:'Montserrat',sans-serif;box-sizing:border-box}
+#nexus-tema-menu{position:absolute;z-index:2147483001;width:248px;padding:6px;border-radius:12px;background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 12px 32px rgba(15,23,42,0.18);font-family:'Montserrat',sans-serif;box-sizing:border-box}
 #nexus-tema-menu[hidden]{display:none}
 #nexus-tema-menu .nx-tema-tit{padding:6px 10px 4px;font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8}
 #nexus-tema-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;margin:0;border:0;border-radius:8px;background:transparent;color:#1e293b;cursor:pointer;text-align:left;font-family:inherit}
@@ -97,7 +97,7 @@ button:hover{filter:brightness(1.12);}
 #nexus-tema-menu .nx-tema-ico{display:flex;flex-shrink:0}
 #nexus-tema-menu .nx-tema-txt{display:flex;flex-direction:column;flex:1;line-height:1.25}
 #nexus-tema-menu .nx-tema-txt b{font-size:13px;font-weight:700}
-#nexus-tema-menu .nx-tema-txt small{font-size:11px;font-weight:500;color:#64748b}
+#nexus-tema-menu .nx-tema-txt small{font-size:11px;font-weight:500;color:#64748b;white-space:nowrap}
 #nexus-tema-menu .nx-tema-ok{display:flex;opacity:0}
 #nexus-tema-menu button[aria-checked="true"] .nx-tema-ok{opacity:1}
 html[data-tema="scuro"] #nexus-tema-menu{background:#131c2e;border-color:#26324a;box-shadow:0 12px 32px rgba(0,0,0,0.5)}
@@ -314,11 +314,12 @@ tr[style*="background: rgb(254, 226, 226)"]{background-color:#4c2127!important}
 [style*="min-height: calc(100vh"][style*="background: rgb(2"]{background-color:#0b1220!important}
 </style>
 <script>
-/* Tema: Automatico (segue il chiaro/scuro del dispositivo), Chiaro o Scuro. La scelta resta salvata su questo
+/* Tema: Automatico (scuro dal tramonto all'alba, calcolati sul dispositivo come fanno i navigatori, con la posizione
+   del dispositivo se la concede, altrimenti quella di Valentano), Chiaro o Scuro. La scelta resta salvata su questo
    dispositivo. Senza scelta, NEXUS resta chiaro come sempre. */
 (function(){
-  var K="nexus_tema", F=document.getElementById("nexus-tema-scuro");
-  var MQ=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+  var K="nexus_tema", KP="nexus_tema_pos", F=document.getElementById("nexus-tema-scuro");
+  var CASA={lat:42.57, lon:11.82};   // Valentano: vale finché il dispositivo non dà la sua posizione
   var SVG='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
   var ICO={
     auto:SVG+'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg>',
@@ -327,20 +328,58 @@ tr[style*="background: rgb(254, 226, 226)"]{background-color:#4c2127!important}
   };
   var OK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   var NOMI={auto:"Automatico",chiaro:"Chiaro",scuro:"Scuro"};
-  var SPIEGA={auto:"Segue il dispositivo",chiaro:"Sempre chiaro",scuro:"Sempre scuro"};
-  function scelta(){ try{ var v=localStorage.getItem(K); return (v==="scuro"||v==="auto")?v:"chiaro"; }catch(e){ return "chiaro"; } }
-  function scuro(){ var c=scelta(); return c==="scuro"||(c==="auto"&&!!(MQ&&MQ.matches)); }
+  var SPIEGA={auto:"Scuro dal tramonto all'alba",chiaro:"Sempre chiaro",scuro:"Sempre scuro"};
+  // Alba e tramonto del giorno nel punto dato: algoritmo astronomico standard, precisione di qualche minuto.
+  function soleDi(d,lat,lon){
+    var R=Math.PI/180, y=d.getFullYear(), mo=d.getMonth(), g=d.getDate();
+    var N=Math.round((Date.UTC(y,mo,g)-Date.UTC(y,0,0))/864e5), lh=lon/15;
+    function ora(alba){
+      var t=N+((alba?6:18)-lh)/24, M=0.9856*t-3.289;
+      var L=M+1.916*Math.sin(M*R)+0.020*Math.sin(2*M*R)+282.634; L=(L%360+360)%360;
+      var RA=Math.atan(0.91764*Math.tan(L*R))/R; RA=(RA%360+360)%360; RA=(RA+Math.floor(L/90)*90-Math.floor(RA/90)*90)/15;
+      var sd=0.39782*Math.sin(L*R), cd=Math.cos(Math.asin(sd));
+      var cH=(Math.cos(90.833*R)-sd*Math.sin(lat*R))/(cd*Math.cos(lat*R)); cH=Math.max(-1,Math.min(1,cH));
+      var H=(alba?360-Math.acos(cH)/R:Math.acos(cH)/R)/15, T=H+RA-0.06571*t-6.622, UT=((T-lh)%24+24)%24;
+      return new Date(Date.UTC(y,mo,g)+UT*36e5);
+    }
+    return {alba:ora(true), tramonto:ora(false)};
+  }
+  function hhmm(d){ return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
+  function posSalvata(){ try{ var p=JSON.parse(localStorage.getItem(KP)||"null"); if(p&&isFinite(p.lat)&&isFinite(p.lon)) return p; }catch(e){} return null; }
+  function sole(){ var p=posSalvata()||CASA; return soleDi(new Date(),p.lat,p.lon); }
+  function notte(){ var n=new Date(), s=sole(); return n<s.alba||n>=s.tramonto; }
+  function scelta(){ try{ var v=localStorage.getItem(K); if(v==="sole") v="auto"; return (v==="scuro"||v==="auto")?v:"chiaro"; }catch(e){ return "chiaro"; } }
+  function scuro(){ var c=scelta(); return c==="scuro"||(c==="auto"&&notte()); }
   function applica(){
     var c=scelta(), s=scuro(), h=document.documentElement;
     F.media=s?"screen":"not all"; h.setAttribute("data-tema",s?"scuro":"chiaro"); h.setAttribute("data-tema-scelta",c);
     var b=document.getElementById("nexus-tema-btn");
     if(b){ b.innerHTML=ICO[c]; b.title="Tema: "+NOMI[c]+(c==="auto"?(s?" (ora scuro)":" (ora chiaro)"):""); b.setAttribute("aria-label",b.title); }
     var m=document.getElementById("nexus-tema-menu");
-    if(m){ [].forEach.call(m.querySelectorAll("[data-tema-v]"),function(x){ x.setAttribute("aria-checked",x.getAttribute("data-tema-v")===c?"true":"false"); }); }
+    if(m){
+      [].forEach.call(m.querySelectorAll("[data-tema-v]"),function(x){ x.setAttribute("aria-checked",x.getAttribute("data-tema-v")===c?"true":"false"); });
+      var o=sole(), a=m.querySelector('[data-tema-v="auto"] .nx-tema-orari'), q=m.querySelector('[data-tema-v="auto"] .nx-tema-pos');
+      if(a) a.textContent="Scuro dalle "+hhmm(o.tramonto)+" alle "+hhmm(o.alba);
+      if(q) q.textContent=posSalvata()?"Posizione del dispositivo":"Posizione: Valentano";
+    }
+  }
+  // Posizione del dispositivo (arrotondata a circa 100 m, salvata solo qui). La si chiede quando si sceglie Automatico;
+  // dopo, la si aggiorna da sola al massimo ogni 12 ore e solo se il permesso è già stato dato: nessuna richiesta ripetuta.
+  function chiediPos(subito){
+    if(!navigator.geolocation) return;
+    var vai=function(){ navigator.geolocation.getCurrentPosition(function(p){
+      try{ localStorage.setItem(KP,JSON.stringify({lat:+p.coords.latitude.toFixed(3),lon:+p.coords.longitude.toFixed(3),t:Date.now()})); }catch(e){}
+      applica(); }, function(){}, {enableHighAccuracy:false,timeout:15000,maximumAge:6*36e5}); };
+    if(subito) return vai();
+    var p=posSalvata(); if(p&&Date.now()-(p.t||0)<12*36e5) return;
+    try{ if(navigator.permissions&&navigator.permissions.query) navigator.permissions.query({name:"geolocation"}).then(function(r){ if(r.state==="granted") vai(); },function(){}); }catch(e){}
   }
   applica();
-  if(MQ){ var cambia=function(){ if(scelta()==="auto") applica(); };
-    if(MQ.addEventListener) MQ.addEventListener("change",cambia); else if(MQ.addListener) MQ.addListener(cambia); }
+  if(scelta()==="auto") chiediPos(false);
+  // Ogni minuto (e quando la pagina torna visibile) si controlla se è arrivato il tramonto o l'alba.
+  function controlla(){ if(scelta()==="auto"&&(scuro()?"scuro":"chiaro")!==document.documentElement.getAttribute("data-tema")) applica(); }
+  setInterval(controlla,60000);
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden){ controlla(); if(scelta()==="auto") chiediPos(false); } });
   document.addEventListener("DOMContentLoaded",function(){
     var b=document.createElement("button"); b.id="nexus-tema-btn"; b.type="button";
     b.style.background="#ffffff"; b.style.color="#475569"; b.style.border="1px solid #cbd5e1";
@@ -349,11 +388,12 @@ tr[style*="background: rgb(254, 226, 226)"]{background-color:#4c2127!important}
     var html='<div class="nx-tema-tit">Tema</div>';
     ["auto","chiaro","scuro"].forEach(function(v){
       html+='<button type="button" role="menuitemradio" data-tema-v="'+v+'" aria-checked="false"><span class="nx-tema-ico">'+ICO[v]+
-        '</span><span class="nx-tema-txt"><b>'+NOMI[v]+'</b><small>'+SPIEGA[v]+'</small></span><span class="nx-tema-ok">'+OK+'</span></button>';
+        '</span><span class="nx-tema-txt"><b>'+NOMI[v]+'</b>'+(v==="auto"?'<small class="nx-tema-orari">'+SPIEGA[v]+'</small><small class="nx-tema-pos"></small>':'<small>'+SPIEGA[v]+'</small>')+
+        '</span><span class="nx-tema-ok">'+OK+'</span></button>';
     });
     m.innerHTML=html;
     function apri(){
-      m.hidden=false;
+      applica(); m.hidden=false;
       var x=b.offsetLeft+b.offsetWidth/2-m.offsetWidth/2, max=document.documentElement.clientWidth-m.offsetWidth-8;
       m.style.left=Math.max(8,Math.min(x,max))+"px"; m.style.top=(b.offsetTop+b.offsetHeight+8)+"px";
       b.setAttribute("aria-expanded","true");
@@ -363,7 +403,9 @@ tr[style*="background: rgb(254, 226, 226)"]{background-color:#4c2127!important}
     b.addEventListener("click",function(e){ e.stopPropagation(); if(m.hidden) apri(); else chiudi(false); });
     m.addEventListener("click",function(e){
       var x=e.target.closest&&e.target.closest("[data-tema-v]"); if(!x) return;
-      try{ localStorage.setItem(K,x.getAttribute("data-tema-v")); }catch(er){}
+      var v=x.getAttribute("data-tema-v");
+      try{ localStorage.setItem(K,v); }catch(er){}
+      if(v==="auto") chiediPos(true);
       applica(); chiudi(true);
     });
     m.addEventListener("keydown",function(e){
